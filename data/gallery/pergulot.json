@@ -1,0 +1,565 @@
+{
+  "projects": [
+    {
+      "id": "ashdod",
+      "title": {
+        "he": "פרויקט אשדוד",
+        "ru": "Проект Ашдод",
+        "en": "Ashdod Project"
+      },
+      "desc": {
+        "he": "פרגולת אלומיניום מעוצבת במרפסת פרטית",
+        "ru": "Дизайнерская алюминиевая пергола на частной террасе",
+        "en": "Designer aluminum pergola on private terrace"
+      },
+      "images": [
+        "/images/pergulot/ashdod/IMG_20230824_155546.webp",
+        "/images/pergulot/ashdod/IMG_20230824_155548.webp",
+        "/images/pergulot/ashdod/IMG_20230824_155603.webp",
+        "/images/pergulot/ashdod/IMG_20230824_155607.webp"
+      ]
+    },
+    {
+      "id": "ashkelon",
+      "title": {
+        "he": "פרויקט אשקלון",
+        "ru": "Проект Ашкелон",
+        "en": "Ashkelon Project"
+      },
+      "desc": {
+        "he": "פרגולת פרימיום עם תאורה משולבת",
+        "ru": "Премиум-пергола со встроенным освещением",
+        "en": "Premium pergola with integrated lighting"
+      },
+      "images": [
+        "/images/pergulot/ashkelon/IMG_20230806_161020.webp",
+        "/images/pergulot/ashkelon/IMG_20230806_161024.webp",
+        "/images/pergulot/ashkelon/IMG_20230806_161035.webp",
+        "/images/pergulot/ashkelon/IMG_20230806_161049.webp",
+        "/images/pergulot/ashkelon/IMG_20230806_161052.webp",
+        "/images/pergulot/ashkelon/IMG_20230806_161057.webp",
+        "/images/pergulot/ashkelon/IMG_20230806_161101.webp",
+        "/images/pergulot/ashkelon/IMG_20230824_104709.webp",
+        "/images/pergulot/ashkelon/IMG_20230824_121412.webp",
+        "/images/pergulot/ashkelon/IMG_20230824_121414.webp",
+        "/images/pergulot/ashkelon/IMG_20230824_121417.webp"
+      ]
+    },
+    {
+      "id": "ashkelon2",
+      "title": {
+        "he": "פרויקט אשקלון 2",
+        "ru": "Проект Ашкелон 2",
+        "en": "Ashkelon Project 2"
+      },
+      "desc": {
+        "he": "פרגולה מודרנית לגינה",
+        "ru": "Современная пергола для сада",
+        "en": "Modern garden pergola"
+      },
+      "images": [
+        "/images/pergulot/ashkelon2/IMG_20240311_162903.webp",
+        "/images/pergulot/ashkelon2/IMG_20240311_162910.webp",
+        "/images/pergulot/ashkelon2/IMG_20240312_134433.webp",
+        "/images/pergulot/ashkelon2/IMG_20240312_134444.webp",
+        "/images/pergulot/ashkelon2/IMG_20240312_134451.webp"
+      ]
+    },
+    {
+      "id": "barkan",
+      "title": {
+        "he": "פרויקט ברקן",
+        "ru": "Проект Баркан",
+        "en": "Barkan Project"
+      },
+      "desc": {
+        "he": "פרגולה קומפקטית למרפסת קטנה",
+        "ru": "Компактная пергола для небольшой террасы",
+        "en": "Compact pergola for small terrace"
+      },
+      "images": [
+        "/images/pergulot/barkan/IMG_20240726_122838.webp",
+        "/images/pergulot/barkan/IMG_20240726_122842.webp"
+      ]
+    },
+    {
+      "id": "beit_sefer",
+      "title": {
+        "he": "פרויקט בית ספר",
+        "ru": "Проект школы",
+        "en": "School Project"
+      },
+      "desc": {
+        "he": "פרגולה לחצר בית ספר",
+        "ru": "Пергола для школьного двора",
+        "en": "Pergola for school yard"
+      },
+      "images": [
+        "/images/pergulot/beit_sefer/IMG_20240724_115631.webp",
+        "/images/pergulot/beit_sefer/IMG_20240724_115641.webp",
+        "/images/pergulot/beit_sefer/IMG_20240724_115643.webp"
+      ]
+    },
+    {
+      "id": "beytar_elit",
+      "title": {
+        "he": "פרויקט ביתר עילית",
+        "ru": "Проект Бейтар-Илит",
+        "en": "Beitar Illit Project"
+      },
+      "desc": {
+        "he": "פרגולה משפחתית גדולה",
+        "ru": "Большая семейная пергола",
+        "en": "Large family pergola"
+      },
+      "images": [
+        "/images/pergulot/beytar_elit/IMG_20220929_104520.webp",
+        "/images/pergulot/beytar_elit/IMG_20220929_104523.webp",
+        "/images/pergulot/beytar_elit/IMG_20220929_104528.webp",
+        "/images/pergulot/beytar_elit/IMG_20220929_104534.webp",
+        "/images/pergulot/beytar_elit/IMG_20240728_104604.webp"
+      ]
+    },
+    {
+      "id": "eynav",
+      "title": {
+        "he": "פרויקט עינב",
+        "ru": "Проект Эйнав",
+        "en": "Eynav Project"
+      },
+      "desc": {
+        "he": "פרגולה יוקרתית למרפסת גג",
+        "ru": "Роскошная пергола для террасы на крыше",
+        "en": "Luxury rooftop pergola"
+      },
+      "images": [
+        "/images/pergulot/eynav/IMG_20230512_111753.webp",
+        "/images/pergulot/eynav/IMG_20230512_142158.webp",
+        "/images/pergulot/eynav/IMG_20230512_142205.webp",
+        "/images/pergulot/eynav/IMG_20230512_142210.webp",
+        "/images/pergulot/eynav/IMG_20230512_142211.webp",
+        "/images/pergulot/eynav/IMG_20230512_142217.webp"
+      ]
+    },
+    {
+      "id": "hertzlia",
+      "title": {
+        "he": "פרויקט הרצליה",
+        "ru": "Проект Герцлия",
+        "en": "Herzliya Project"
+      },
+      "desc": {
+        "he": "פרגולה מינימליסטית בעיר",
+        "ru": "Минималистичная пергола в городе",
+        "en": "Minimalist city pergola"
+      },
+      "images": [
+        "/images/pergulot/hertzlia/IMG_20240121_140348.webp",
+        "/images/pergulot/hertzlia/IMG_20240121_140359.webp",
+        "/images/pergulot/hertzlia/IMG_20240121_140408.webp"
+      ]
+    },
+    {
+      "id": "jerusalem",
+      "title": {
+        "he": "פרויקט ירושלים",
+        "ru": "Проект Иерусалим",
+        "en": "Jerusalem Project"
+      },
+      "desc": {
+        "he": "פרגולה קלאסית בסגנון ירושלמי",
+        "ru": "Классическая пергола в иерусалимском стиле",
+        "en": "Classic Jerusalem-style pergola"
+      },
+      "images": [
+        "/images/pergulot/jerusalem/IMG_20231005_081552.webp",
+        "/images/pergulot/jerusalem/IMG_20231005_081603.webp",
+        "/images/pergulot/jerusalem/IMG_20231005_111531.webp",
+        "/images/pergulot/jerusalem/IMG_20231005_111535.webp",
+        "/images/pergulot/jerusalem/IMG_20231005_113356.webp",
+        "/images/pergulot/jerusalem/IMG_20231005_113403.webp",
+        "/images/pergulot/jerusalem/IMG_20231005_113431.webp",
+        "/images/pergulot/jerusalem/IMG_20231005_113437.webp",
+        "/images/pergulot/jerusalem/IMG_20231005_113447.webp",
+        "/images/pergulot/jerusalem/IMG_20231005_113449.webp"
+      ]
+    },
+    {
+      "id": "jerusalem2",
+      "title": {
+        "he": "פרויקט ירושלים 2",
+        "ru": "Проект Иерусалим 2",
+        "en": "Jerusalem Project 2"
+      },
+      "desc": {
+        "he": "פרגולה מודרנית בירושלים",
+        "ru": "Современная пергола в Иерусалиме",
+        "en": "Modern Jerusalem pergola"
+      },
+      "images": [
+        "/images/pergulot/jerusalem2/IMG_20231215_134717.webp",
+        "/images/pergulot/jerusalem2/IMG_20231215_134718.webp",
+        "/images/pergulot/jerusalem2/IMG_20231215_134720.webp",
+        "/images/pergulot/jerusalem2/IMG_20231215_134722.webp",
+        "/images/pergulot/jerusalem2/IMG_20231215_134724.webp",
+        "/images/pergulot/jerusalem2/IMG_20231215_134838.webp"
+      ]
+    },
+    {
+      "id": "karney_shomron2",
+      "title": {
+        "he": "פרויקט כרני שומרון 2",
+        "ru": "Проект Карней-Шомрон 2",
+        "en": "Karnei Shomron 2 Project"
+      },
+      "desc": {
+        "he": "פרגולה גדולה לאירוח",
+        "ru": "Большая пергола для приема гостей",
+        "en": "Large entertaining pergola"
+      },
+      "images": [
+        "/images/pergulot/karney_shomron2/IMG_20230420_115510.webp",
+        "/images/pergulot/karney_shomron2/IMG_20230420_115513.webp",
+        "/images/pergulot/karney_shomron2/IMG_20230420_115524.webp",
+        "/images/pergulot/karney_shomron2/IMG_20230420_122633.webp",
+        "/images/pergulot/karney_shomron2/IMG_20230420_122639.webp",
+        "/images/pergulot/karney_shomron2/IMG_20230420_122645.webp",
+        "/images/pergulot/karney_shomron2/IMG_20230420_122655.webp",
+        "/images/pergulot/karney_shomron2/IMG_20230420_122702.webp"
+      ]
+    },
+    {
+      "id": "karney_shomron3",
+      "title": {
+        "he": "פרויקט כרני שומרון 3",
+        "ru": "Проект Карней-Шомрон 3",
+        "en": "Karnei Shomron 3 Project"
+      },
+      "desc": {
+        "he": "פרגולה עם עיצוב מיוחד",
+        "ru": "Пергола с особым дизайном",
+        "en": "Specially designed pergola"
+      },
+      "images": [
+        "/images/pergulot/karney_shomron3/IMG_20230524_085547.webp",
+        "/images/pergulot/karney_shomron3/IMG_20230524_141221.webp",
+        "/images/pergulot/karney_shomron3/IMG_20230524_141226.webp",
+        "/images/pergulot/karney_shomron3/IMG_20230524_141242.webp",
+        "/images/pergulot/karney_shomron3/IMG_20230524_141747.webp",
+        "/images/pergulot/karney_shomron3/IMG_20230524_141752.webp",
+        "/images/pergulot/karney_shomron3/IMG_20230524_141812.webp",
+        "/images/pergulot/karney_shomron3/IMG_20230524_143237.webp",
+        "/images/pergulot/karney_shomron3/IMG_20230524_143241.webp",
+        "/images/pergulot/karney_shomron3/IMG_20230524_143251.webp"
+      ]
+    },
+    {
+      "id": "karney_shomron4",
+      "title": {
+        "he": "פרויקט כרני שומרון 4",
+        "ru": "Проект Карней-Шомрон 4",
+        "en": "Karnei Shomron 4 Project"
+      },
+      "desc": {
+        "he": "פרגולה קומפקטית ומעוצבת",
+        "ru": "Компактная дизайнерская пергола",
+        "en": "Compact designer pergola"
+      },
+      "images": [
+        "/images/pergulot/karney_shomron4/IMG_20240104_172710.webp",
+        "/images/pergulot/karney_shomron4/IMG_20240104_172718.webp",
+        "/images/pergulot/karney_shomron4/IMG_20240108_101900.webp",
+        "/images/pergulot/karney_shomron4/IMG_20240108_101901.webp",
+        "/images/pergulot/karney_shomron4/IMG_20240108_101905.webp",
+        "/images/pergulot/karney_shomron4/IMG_20240108_115439.webp"
+      ]
+    },
+    {
+      "id": "kdumim",
+      "title": {
+        "he": "פרויקט קדומים",
+        "ru": "Проект Кдумим",
+        "en": "Kedumim Project"
+      },
+      "desc": {
+        "he": "פרגולה למשפחה גדולה",
+        "ru": "Пергола для большой семьи",
+        "en": "Pergola for large family"
+      },
+      "images": [
+        "/images/pergulot/kdumim/FB_IMG_1673415207404.webp",
+        "/images/pergulot/kdumim/FB_IMG_1673415211177.webp",
+        "/images/pergulot/kdumim/FB_IMG_1673415214065.webp",
+        "/images/pergulot/kdumim/FB_IMG_1673415225126.webp",
+        "/images/pergulot/kdumim/FB_IMG_1673415228549.webp",
+        "/images/pergulot/kdumim/IMG_20200916_120547_688.webp",
+        "/images/pergulot/kdumim/IMG_20201007_093537_055.webp"
+      ]
+    },
+    {
+      "id": "kdumim2",
+      "title": {
+        "he": "פרויקט קדומים 2",
+        "ru": "Проект Кдумим 2",
+        "en": "Kedumim Project 2"
+      },
+      "desc": {
+        "he": "פרגולה עם הצללה מושלמת",
+        "ru": "Пергола с идеальной тенью",
+        "en": "Perfectly shaded pergola"
+      },
+      "images": [
+        "/images/pergulot/kdumim2/FB_IMG_1680418417127.webp",
+        "/images/pergulot/kdumim2/IMG_20200723_155459_019.webp",
+        "/images/pergulot/kdumim2/IMG_20200723_155459_040.webp",
+        "/images/pergulot/kdumim2/IMG_20200723_155459_043.webp",
+        "/images/pergulot/kdumim2/IMG_20200723_155459_048.webp",
+        "/images/pergulot/kdumim2/IMG_20200723_155459_049.webp"
+      ]
+    },
+    {
+      "id": "kdumim3",
+      "title": {
+        "he": "פרויקט קדומים 3",
+        "ru": "Проект Кдумим 3",
+        "en": "Kedumim Project 3"
+      },
+      "desc": {
+        "he": "פרגולה מודרנית וגדולה",
+        "ru": "Современная большая пергола",
+        "en": "Modern large pergola"
+      },
+      "images": [
+        "/images/pergulot/kdumim3/IMG_20230508_093841.webp",
+        "/images/pergulot/kdumim3/IMG_20230508_125812.webp",
+        "/images/pergulot/kdumim3/IMG_20230508_152707.webp",
+        "/images/pergulot/kdumim3/IMG_20230508_152715.webp",
+        "/images/pergulot/kdumim3/IMG_20230508_152724.webp",
+        "/images/pergulot/kdumim3/IMG_20230508_152744.webp",
+        "/images/pergulot/kdumim3/IMG_20230508_152754.webp",
+        "/images/pergulot/kdumim3/IMG_20230508_152811.webp",
+        "/images/pergulot/kdumim3/IMG_20230508_152952.webp",
+        "/images/pergulot/kdumim3/IMG_20230531_122026.webp"
+      ]
+    },
+    {
+      "id": "kerney_shomron",
+      "title": {
+        "he": "פרויקט כרני שומרון",
+        "ru": "Проект Карней-Шомрон",
+        "en": "Karnei Shomron Project"
+      },
+      "desc": {
+        "he": "פרגולה אלגנטית לבית פרטי",
+        "ru": "Элегантная пергола для частного дома",
+        "en": "Elegant private home pergola"
+      },
+      "images": [
+        "/images/pergulot/kerney_shomron/FB_IMG_1673415181803.webp",
+        "/images/pergulot/kerney_shomron/FB_IMG_1673415184431.webp",
+        "/images/pergulot/kerney_shomron/FB_IMG_1673415187763.webp",
+        "/images/pergulot/kerney_shomron/FB_IMG_1673415190900.webp"
+      ]
+    },
+    {
+      "id": "kfar_yona",
+      "title": {
+        "he": "פרויקט כפר יונה",
+        "ru": "Проект Кфар-Йона",
+        "en": "Kfar Yona Project"
+      },
+      "desc": {
+        "he": "פרגולה גדולה עם פרטים מיוחדים",
+        "ru": "Большая пергола с особыми деталями",
+        "en": "Large pergola with special details"
+      },
+      "images": [
+        "/images/pergulot/kfar_yona/FB_IMG_1673415055655.webp",
+        "/images/pergulot/kfar_yona/FB_IMG_1673415059249.webp",
+        "/images/pergulot/kfar_yona/FB_IMG_1673415062042.webp",
+        "/images/pergulot/kfar_yona/FB_IMG_1673415091267.webp",
+        "/images/pergulot/kfar_yona/FB_IMG_1673415112961.webp",
+        "/images/pergulot/kfar_yona/FB_IMG_1673415116105.webp",
+        "/images/pergulot/kfar_yona/FB_IMG_1673415119892.webp",
+        "/images/pergulot/kfar_yona/FB_IMG_1673415170363.webp",
+        "/images/pergulot/kfar_yona/FB_IMG_1673415174484.webp",
+        "/images/pergulot/kfar_yona/IMG_20201002_174931_875.webp",
+        "/images/pergulot/kfar_yona/IMG_20201002_174931_876.webp",
+        "/images/pergulot/kfar_yona/IMG_20201002_174931_877.webp"
+      ]
+    },
+    {
+      "id": "merkaz_asakim",
+      "title": {
+        "he": "מרכז עסקים",
+        "ru": "Бизнес-центр",
+        "en": "Business Center"
+      },
+      "desc": {
+        "he": "פרגולה מסחרית למרכז עסקים",
+        "ru": "Коммерческая пергола для бизнес-центра",
+        "en": "Commercial business center pergola"
+      },
+      "images": [
+        "/images/pergulot/merkaz_asakim/IMG_0394.webp",
+        "/images/pergulot/merkaz_asakim/IMG_0395.webp",
+        "/images/pergulot/merkaz_asakim/IMG_0398.webp",
+        "/images/pergulot/merkaz_asakim/IMG_0399.webp",
+        "/images/pergulot/merkaz_asakim/IMG_0400.webp"
+      ]
+    },
+    {
+      "id": "nes_tziona",
+      "title": {
+        "he": "פרויקט נס ציונה",
+        "ru": "Проект Нес-Циона",
+        "en": "Nes Ziona Project"
+      },
+      "desc": {
+        "he": "פרגולה במרפסת גג",
+        "ru": "Пергола на террасе крыши",
+        "en": "Rooftop terrace pergola"
+      },
+      "images": [
+        "/images/pergulot/nes_tziona/IMG_20240328_103456.webp",
+        "/images/pergulot/nes_tziona/IMG_20240328_103828.webp",
+        "/images/pergulot/nes_tziona/IMG_20250122_111257.webp"
+      ]
+    },
+    {
+      "id": "petah_tikva",
+      "title": {
+        "he": "פרויקט פתח תקווה",
+        "ru": "Проект Петах-Тиква",
+        "en": "Petah Tikva Project"
+      },
+      "desc": {
+        "he": "פרגולה עירונית מודרנית",
+        "ru": "Современная городская пергола",
+        "en": "Modern urban pergola"
+      },
+      "images": [
+        "/images/pergulot/petah_tikva/IMG_20230801_131047.webp",
+        "/images/pergulot/petah_tikva/IMG_20230801_131051.webp",
+        "/images/pergulot/petah_tikva/IMG_20230801_181933.webp",
+        "/images/pergulot/petah_tikva/IMG_20230801_181939.webp",
+        "/images/pergulot/petah_tikva/IMG_20230803_092423.webp",
+        "/images/pergulot/petah_tikva/IMG_20230803_092426.webp"
+      ]
+    },
+    {
+      "id": "petah_tikva2",
+      "title": {
+        "he": "פרויקט פתח תקווה 2",
+        "ru": "Проект Петах-Тиква 2",
+        "en": "Petah Tikva Project 2"
+      },
+      "desc": {
+        "he": "פרגולה עם עיצוב ייחודי",
+        "ru": "Пергола с уникальным дизайном",
+        "en": "Uniquely designed pergola"
+      },
+      "images": [
+        "/images/pergulot/petah_tikva2/IMG_20240206_150603.webp",
+        "/images/pergulot/petah_tikva2/IMG_20240207_153014.webp",
+        "/images/pergulot/petah_tikva2/IMG_20240207_153024.webp",
+        "/images/pergulot/petah_tikva2/IMG_20240207_153039.webp"
+      ]
+    },
+    {
+      "id": "revava",
+      "title": {
+        "he": "פרויקט רווחה",
+        "ru": "Проект Ревава",
+        "en": "Revava Project"
+      },
+      "desc": {
+        "he": "פרגולה למרפסת פרטית",
+        "ru": "Пергола для частной террасы",
+        "en": "Private terrace pergola"
+      },
+      "images": [
+        "/images/pergulot/revava/IMG_20230810_162003.webp",
+        "/images/pergulot/revava/IMG_20230813_145409.webp",
+        "/images/pergulot/revava/IMG_20230813_145416.webp",
+        "/images/pergulot/revava/IMG_20230813_145426.webp",
+        "/images/pergulot/revava/IMG_20230820_154050.webp",
+        "/images/pergulot/revava/IMG_20230820_154052.webp"
+      ]
+    },
+    {
+      "id": "rishon",
+      "title": {
+        "he": "פרויקט ראשון לציון",
+        "ru": "Проект Ришон-ле-Цион",
+        "en": "Rishon LeZion Project"
+      },
+      "desc": {
+        "he": "פרגולה גדולה עם פרטי פרימיום",
+        "ru": "Большая пергола с премиум-деталями",
+        "en": "Large pergola with premium details"
+      },
+      "images": [
+        "/images/pergulot/rishon/IMG_20230911_164715.webp",
+        "/images/pergulot/rishon/IMG_20230911_164719.webp",
+        "/images/pergulot/rishon/IMG_20230911_164727.webp",
+        "/images/pergulot/rishon/IMG_20230926_153045.webp",
+        "/images/pergulot/rishon/IMG_20230926_153053.webp",
+        "/images/pergulot/rishon/IMG_20230926_153056.webp",
+        "/images/pergulot/rishon/IMG_20230926_153100.webp",
+        "/images/pergulot/rishon/IMG_20230926_155758.webp",
+        "/images/pergulot/rishon/IMG_20230926_161045.webp",
+        "/images/pergulot/rishon/IMG_20230926_161052.webp"
+      ]
+    },
+    {
+      "id": "tel_mond",
+      "title": {
+        "he": "פרויקט תל מונד",
+        "ru": "Проект Тель-Монд",
+        "en": "Tel Mond Project"
+      },
+      "desc": {
+        "he": "פרגולה מעוצבת לגינה",
+        "ru": "Дизайнерская садовая пергола",
+        "en": "Designer garden pergola"
+      },
+      "images": [
+        "/images/pergulot/tel_mond/FB_IMG_1680418430489.webp",
+        "/images/pergulot/tel_mond/FB_IMG_1680418432728.webp",
+        "/images/pergulot/tel_mond/FB_IMG_1680418436386.webp",
+        "/images/pergulot/tel_mond/FB_IMG_1680418439090.webp",
+        "/images/pergulot/tel_mond/FB_IMG_1680418442020.webp",
+        "/images/pergulot/tel_mond/FB_IMG_1680418444481.webp",
+        "/images/pergulot/tel_mond/FB_IMG_1680418446761.webp"
+      ]
+    },
+    {
+      "id": "yakir",
+      "title": {
+        "he": "פרויקט יקיר",
+        "ru": "Проект Якир",
+        "en": "Yakir Project"
+      },
+      "desc": {
+        "he": "פרגולה פרימיום עם פרטים מיוחדים",
+        "ru": "Премиум-пергола с особыми деталями",
+        "en": "Premium pergola with special details"
+      },
+      "images": [
+        "/images/pergulot/yakir/IMG_0149.webp",
+        "/images/pergulot/yakir/IMG_0150.webp",
+        "/images/pergulot/yakir/IMG_0151.webp",
+        "/images/pergulot/yakir/IMG_0154.webp",
+        "/images/pergulot/yakir/IMG_0155.webp",
+        "/images/pergulot/yakir/IMG_0156.webp",
+        "/images/pergulot/yakir/IMG_0157.webp",
+        "/images/pergulot/yakir/IMG_0161.webp",
+        "/images/pergulot/yakir/IMG_0162.webp",
+        "/images/pergulot/yakir/IMG_0163.webp",
+        "/images/pergulot/yakir/IMG_0164.webp",
+        "/images/pergulot/yakir/IMG_0165.webp"
+      ]
+    }
+  ]
+}

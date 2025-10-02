@@ -1,0 +1,28 @@
+import '../globals.css'
+import type { Metadata } from 'next'
+import { ThemeProvider } from 'next-themes'
+import Navbar from '@/components/navbar'
+import { Locale, isRTL } from '@/lib/locales'
+import clsx from 'clsx'
+
+export const metadata: Metadata = {
+  title: 'פשקובסקי מעקות ופרגולות',
+  description: 'פרגולות אלומיניום פרימיום בהתאמה אישית',
+  icons: {
+    icon: '/favicon.svg',
+  },
+}
+
+export default function RootLayout({ children, params: { locale } }: { children: React.ReactNode; params: { locale: Locale }}) {
+  const dir = isRTL(locale) ? 'rtl' : 'ltr'
+  return (
+    <html lang={locale} dir={dir} suppressHydrationWarning>
+      <body className={clsx('min-h-screen', dir==='rtl'?'rtl':'ltr')}>
+        <ThemeProvider attribute='class' defaultTheme='dark' enableSystem={false}>
+          <Navbar locale={locale} />
+          {children}
+        </ThemeProvider>
+      </body>
+    </html>
+  )
+}

@@ -1,0 +1,36 @@
+{
+  "name": "pashkovsky-pergolas",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "gen:gallery": "node scripts/generate-gallery.mjs",
+    "gen:pergulot": "node scripts/generate-pergulot-i18n.mjs",
+    "heic:jpg": "node scripts/convert-heic.mjs",
+    "jpg:webp": "node scripts/convert-to-webp.mjs"
+  },
+  "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.15",
+    "clsx": "^2.1.0",
+    "framer-motion": "^12.23.22",
+    "heic-convert": "^2.1.0",
+    "lucide-react": "^0.544.0",
+    "next": "14.2.5",
+    "next-themes": "^0.3.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "sharp": "^0.34.4",
+    "swiper": "^12.0.2"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.20",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "14.2.5",
+    "postcss": "^8.4.45",
+    "tailwindcss": "^3.4.10",
+    "typescript": "^5.6.2"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "categories": [
+    {
+      "key": "fancy",
+      "count": 67
+    },
+    {
+      "key": "mestor",
+      "count": 17
+    },
+    {
+      "key": "rails",
+      "count": 47
+    },
+    {
+      "key": "pergulot",
+      "count": 26
+    },
+    {
+      "key": "dgamim",
+      "count": 6
+    }
+  ]
+}
