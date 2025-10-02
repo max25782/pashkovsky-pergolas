@@ -2,6 +2,7 @@
 
 import { motion, useScroll, useTransform, useMotionValueEvent } from "framer-motion";
 import { useRef, useState } from "react";
+import { uiStore } from "@/stores/ui-store";
 import Image from "next/image";
 
 export function HeroSection() {
@@ -17,7 +18,11 @@ export function HeroSection() {
   // вычисляем какой индекс картинки показывать при скролле
   const [currentFrame, setCurrentFrame] = useState(0);
   const frameMv = useTransform(scrollYProgress, [0, 1], [0, steps.length - 1]);
-  useMotionValueEvent(frameMv, "change", (v) => setCurrentFrame(Math.round(v)));
+  useMotionValueEvent(frameMv, "change", (v) => {
+    const frame = Math.round(v)
+    setCurrentFrame(frame)
+    uiStore.setHeroFrame(frame)
+  });
 
   return (
     <section ref={ref} className="relative h-[150vh]">

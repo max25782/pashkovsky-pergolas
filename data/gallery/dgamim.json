@@ -5,8 +5,11 @@
       "degem": "atlas",
       "images": [
         "/images/dgamim/atlas/1.jpg",
+        "/images/dgamim/atlas/1.webp",
         "/images/dgamim/atlas/FB_IMG_1673415055655.jpg",
-        "/images/dgamim/atlas/FB_IMG_1673415062042.jpg"
+        "/images/dgamim/atlas/FB_IMG_1673415055655.webp",
+        "/images/dgamim/atlas/FB_IMG_1673415062042.jpg",
+        "/images/dgamim/atlas/FB_IMG_1673415062042.webp"
       ]
     },
     {
@@ -14,9 +17,13 @@
       "degem": "horizon",
       "images": [
         "/images/dgamim/horizon/1.jpg",
+        "/images/dgamim/horizon/1.webp",
         "/images/dgamim/horizon/IMG_20200723_155459_043.jpg",
+        "/images/dgamim/horizon/IMG_20200723_155459_043.webp",
         "/images/dgamim/horizon/IMG_20200723_155459_048.jpg",
-        "/images/dgamim/horizon/IMG_20200723_155459_049.jpg"
+        "/images/dgamim/horizon/IMG_20200723_155459_048.webp",
+        "/images/dgamim/horizon/IMG_20200723_155459_049.jpg",
+        "/images/dgamim/horizon/IMG_20200723_155459_049.webp"
       ]
     },
     {
@@ -24,9 +31,13 @@
       "degem": "nova",
       "images": [
         "/images/dgamim/nova/1.jpg",
+        "/images/dgamim/nova/1.webp",
         "/images/dgamim/nova/IMG_20230824_155546.jpg",
+        "/images/dgamim/nova/IMG_20230824_155546.webp",
         "/images/dgamim/nova/IMG_20230824_155548.jpg",
-        "/images/dgamim/nova/IMG_20230824_155607.jpg"
+        "/images/dgamim/nova/IMG_20230824_155548.webp",
+        "/images/dgamim/nova/IMG_20230824_155607.jpg",
+        "/images/dgamim/nova/IMG_20230824_155607.webp"
       ]
     },
     {
@@ -34,12 +45,19 @@
       "degem": "orion",
       "images": [
         "/images/dgamim/orion/1.jpg",
+        "/images/dgamim/orion/1.webp",
         "/images/dgamim/orion/IMG_20230508_152707.jpg",
+        "/images/dgamim/orion/IMG_20230508_152707.webp",
         "/images/dgamim/orion/IMG_20230508_152724.jpg",
+        "/images/dgamim/orion/IMG_20230508_152724.webp",
         "/images/dgamim/orion/IMG_20230508_152754.jpg",
+        "/images/dgamim/orion/IMG_20230508_152754.webp",
         "/images/dgamim/orion/IMG_20230508_152811.jpg",
+        "/images/dgamim/orion/IMG_20230508_152811.webp",
         "/images/dgamim/orion/IMG_20230508_152952.jpg",
-        "/images/dgamim/orion/IMG_20230531_122026.jpg"
+        "/images/dgamim/orion/IMG_20230508_152952.webp",
+        "/images/dgamim/orion/IMG_20230531_122026.jpg",
+        "/images/dgamim/orion/IMG_20230531_122026.webp"
       ]
     },
     {
@@ -47,15 +65,25 @@
       "degem": "santa fe",
       "images": [
         "/images/dgamim/santa fe/1.jpg",
+        "/images/dgamim/santa fe/1.webp",
         "/images/dgamim/santa fe/IMG_20230524_085547.jpg",
+        "/images/dgamim/santa fe/IMG_20230524_085547.webp",
         "/images/dgamim/santa fe/IMG_20230524_141221.jpg",
+        "/images/dgamim/santa fe/IMG_20230524_141221.webp",
         "/images/dgamim/santa fe/IMG_20230524_141226.jpg",
+        "/images/dgamim/santa fe/IMG_20230524_141226.webp",
         "/images/dgamim/santa fe/IMG_20230524_141747.jpg",
+        "/images/dgamim/santa fe/IMG_20230524_141747.webp",
         "/images/dgamim/santa fe/IMG_20230524_141752.jpg",
+        "/images/dgamim/santa fe/IMG_20230524_141752.webp",
         "/images/dgamim/santa fe/IMG_20230524_141812.jpg",
+        "/images/dgamim/santa fe/IMG_20230524_141812.webp",
         "/images/dgamim/santa fe/IMG_20230524_143237.jpg",
+        "/images/dgamim/santa fe/IMG_20230524_143237.webp",
         "/images/dgamim/santa fe/IMG_20230524_143241.jpg",
-        "/images/dgamim/santa fe/IMG_20230524_143251.jpg"
+        "/images/dgamim/santa fe/IMG_20230524_143241.webp",
+        "/images/dgamim/santa fe/IMG_20230524_143251.jpg",
+        "/images/dgamim/santa fe/IMG_20230524_143251.webp"
       ]
     },
     {
@@ -63,10 +91,15 @@
       "degem": "serenity",
       "images": [
         "/images/dgamim/serenity/1.jpg",
+        "/images/dgamim/serenity/1.webp",
         "/images/dgamim/serenity/IMG_0161.jpg",
+        "/images/dgamim/serenity/IMG_0161.webp",
         "/images/dgamim/serenity/IMG_0162.jpg",
+        "/images/dgamim/serenity/IMG_0162.webp",
         "/images/dgamim/serenity/IMG_0164.jpg",
-        "/images/dgamim/serenity/IMG_0165.jpg"
+        "/images/dgamim/serenity/IMG_0164.webp",
+        "/images/dgamim/serenity/IMG_0165.jpg",
+        "/images/dgamim/serenity/IMG_0165.webp"
       ]
     }
   ]

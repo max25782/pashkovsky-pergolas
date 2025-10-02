@@ -1,3 +1,5 @@
+'use client'
+
 import type { Locale } from '@/lib/locales'
 import { PergulaGallery } from '@/components/pergulas/pergula-gallery'
 import ProjectsGallery from '@/components/pergulas/ProjectsGallery'

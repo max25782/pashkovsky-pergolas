@@ -49,3 +49,4 @@ for (const dir of searchDirs) {
   console.log(`\n✓ Done. Converted ${pending.length} file(s) to WebP.`)
 })()
 
+

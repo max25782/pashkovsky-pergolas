@@ -1,46 +1,58 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useEffect } from "react";
+import { observer } from "mobx-react-lite";
+import { uiStore } from "@/stores/ui-store";
 import projects from "@/data/gallery/pergulot.json";
-
-// shadcn/ui dialog
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-
-// swiper
-import { Swiper, SwiperSlide } from "swiper/react";
-import { Navigation, Pagination, Keyboard, Zoom, A11y } from "swiper/modules";
-import "swiper/css";
-import "swiper/css/navigation";
-import "swiper/css/pagination";
-import "swiper/css/zoom";
 
 type Locale = "he" | "en" | "ru";
 
-type Project = {
+interface ProjectNormalized {
   id: string;
   title: { he: string; en: string; ru: string };
   desc: { he: string; en: string; ru: string };
   images: string[];
-};
+}
 
-export default function ProjectsGallery({ locale = "he" }: { locale?: Locale }) {
-  const data = (projects as { projects: Project[] }).projects;
+function ProjectsGalleryImpl({ locale = "he" }: { locale?: Locale }) {
+  const raw = (projects as { projects: any[] }).projects;
 
-  const [open, setOpen] = useState(false);
-  const [activeProject, setActiveProject] = useState<Project | null>(null);
-  const [startIndex, setStartIndex] = useState<number>(0);
+  const data: ProjectNormalized[] = useMemo(() => {
+    return raw.map((p: any, idx: number) => {
+      const id: string = p.id ?? p.slug ?? String(idx);
+      const images: string[] = Array.isArray(p.images)
+        ? p.images
+        : Array.isArray(p.media)
+          ? p.media.filter((m: any) => m.type === "image").map((m: any) => m.src)
+          : [];
+      const titleValue = typeof p.title === 'string' ? p.title : (p.title?.he ?? id);
+      const descValue = typeof p.desc === 'string' ? p.desc : (p.desc?.he ?? '');
+      return {
+        id,
+        title: {
+          he: p.title?.he ?? titleValue,
+          en: p.title?.en ?? titleValue,
+          ru: p.title?.ru ?? titleValue,
+        },
+        desc: {
+          he: p.desc?.he ?? descValue,
+          en: p.desc?.en ?? descValue,
+          ru: p.desc?.ru ?? descValue,
+        },
+        images,
+      } as ProjectNormalized;
+    });
+  }, [raw]);
+
+  const currentProject = useMemo(() => {
+    return data.find(p => p.id === uiStore.projects.projectId) || null;
+  }, [data, uiStore.projects.projectId]);
 
   const title = useMemo(() => {
     switch (locale) {
       case "en":
-        return "A selection of projects we’ve completed across the country – top-quality, custom-made aluminum pergolas.";
+        return "A selection of projects we've completed across the country – top-quality, custom-made aluminum pergolas.";
       case "ru":
         return "Подборка проектов по всему Израилю — алюминиевые перголы высшего качества, изготовленные под заказ.";
       default:
@@ -48,19 +60,41 @@ export default function ProjectsGallery({ locale = "he" }: { locale?: Locale }) 
     }
   }, [locale]);
 
-  const openModal = useCallback((project: Project, index = 0) => {
-    setActiveProject(project);
-    setStartIndex(index);
-    setOpen(true);
+  const openModal = useCallback((project: ProjectNormalized, index = 0) => {
+    uiStore.openProject(project.id, index);
   }, []);
 
   const closeModal = useCallback(() => {
-    setOpen(false);
-    setTimeout(() => {
-      setActiveProject(null);
-      setStartIndex(0);
-    }, 200);
+    uiStore.closeProject();
   }, []);
+
+  const nextImage = useCallback(() => {
+    const total = currentProject?.images?.length ?? 0;
+    uiStore.nextProjectImage(total);
+  }, [currentProject?.images?.length]);
+
+  const prevImage = useCallback(() => {
+    const total = currentProject?.images?.length ?? 0;
+    uiStore.prevProjectImage(total);
+  }, [currentProject?.images?.length]);
+
+  useEffect(() => {
+    if (!uiStore.projects.open) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeModal();
+      if (e.key === "ArrowLeft") nextImage();
+      if (e.key === "ArrowRight") prevImage();
+    };
+    window.addEventListener("keydown", onKey);
+
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [uiStore.projects.open, nextImage, prevImage, closeModal]);
 
   return (
     <section className="py-24 bg-gradient-to-b from-[#0f172a] to-[#1e293b] text-white">
@@ -81,7 +115,7 @@ export default function ProjectsGallery({ locale = "he" }: { locale?: Locale }) 
           {data.map((p, idx) => {
             const cityText = p.title?.[locale] ?? p.title?.he;
             const descText = p.desc?.[locale] ?? p.desc?.he;
-            const cover = p.images?.[0];
+            const cover = chooseCover(p.images);
 
             return (
               <button
@@ -97,9 +131,11 @@ export default function ProjectsGallery({ locale = "he" }: { locale?: Locale }) 
                       fill
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                       className="object-cover transition-transform duration-500 group-hover:scale-110"
-                      quality={100}
-                      priority={idx === 0}
-                      loading={idx === 0 ? 'eager' : 'lazy'}
+                      quality={75}
+                      priority={idx < 3}
+                      loading={idx < 3 ? 'eager' : 'lazy'}
+                      placeholder="blur"
+                      blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
                     />
                   )}
                   {/* subtle gradient overlay for readability */}
@@ -133,65 +169,87 @@ export default function ProjectsGallery({ locale = "he" }: { locale?: Locale }) 
         </div>
       </div>
 
-      {/* Modal with Swiper */}
-      <Dialog open={open} onOpenChange={(v) => (v ? setOpen(true) : closeModal())}>
-        <DialogContent
-          className="max-w-[90vw] md:max-w-[80vw] w-full p-0 bg-[#0b1220] text-white border border-white/10"
-          // scale-in effect
-        >
-          <DialogHeader
-            className={`px-6 pt-6 ${
-              locale === "he" ? "text-right" : "text-left"
-            }`}
-          >
-            <DialogTitle className="text-2xl md:text-3xl font-bold">
-              {activeProject ? activeProject.title?.[locale] ?? activeProject.title?.he : ""}
-            </DialogTitle>
-            <DialogDescription
-              className="!mt-2 text-white/80 text-sm md:text-base"
-              asChild
-            >
-              <p>
-                {activeProject
-                  ? activeProject.desc?.[locale] ?? activeProject.desc?.he
-                  : ""}
+      {/* Simple Modal */}
+      {uiStore.projects.open && currentProject && (
+        <div className="fixed inset-0 z-50 bg-black/95 flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 bg-[#0b1220]/80 border-b border-white/10">
+            <div className={locale === "he" ? "text-right" : "text-left"}>
+              <h2 className="text-2xl md:text-3xl font-bold">
+                {currentProject.title?.[locale] ?? currentProject.title?.he}
+              </h2>
+              <p className="text-white/80 text-sm md:text-base mt-1">
+                {currentProject.desc?.[locale] ?? currentProject.desc?.he}
               </p>
-            </DialogDescription>
-          </DialogHeader>
-
-          {/* Swiper area */}
-          <div className="relative w-full h-[50vh] md:h-[65vh] mt-4 mb-6">
-            {activeProject && (
-              <Swiper
-                modules={[Navigation, Pagination, Keyboard, Zoom, A11y]}
-                navigation
-                pagination={{ clickable: true }}
-                keyboard={{ enabled: true }}
-                zoom={{ maxRatio: 2 }}
-                initialSlide={startIndex}
-                className="w-full h-full"
-              >
-                {activeProject.images.map((src, i) => (
-                  <SwiperSlide key={i}>
-                    <div className="swiper-zoom-container w-full h-full flex items-center justify-center bg-black/20 relative">
-                      <Image
-                        src={src}
-                        alt={`${activeProject.title?.[locale] ?? ""} – ${i + 1}`}
-                        fill
-                        sizes="100vw"
-                        className="object-contain"
-                        quality={100}
-                        loading="eager"
-                        unoptimized={false}
-                      />
-                    </div>
-                  </SwiperSlide>
-                ))}
-              </Swiper>
-            )}
+            </div>
+            <button
+              onClick={closeModal}
+              className="text-white/90 hover:text-white text-3xl ml-4"
+              aria-label="Close"
+            >
+              ✕
+            </button>
           </div>
-        </DialogContent>
-      </Dialog>
+
+          {/* Image Area */}
+          <div className="flex-1 relative flex items-center justify-center p-4">
+            {currentProject.images[uiStore.projects.currentIndex] && (
+              <img
+                src={currentProject.images[uiStore.projects.currentIndex]}
+                alt={`${currentProject.title?.[locale] ?? ""} – ${
+                  uiStore.projects.currentIndex + 1
+                }`}
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '75vh',
+                  width: 'auto',
+                  height: 'auto',
+                  objectFit: 'contain'
+                }}
+              />
+            )}
+
+            {/* Navigation Arrows */}
+            <button
+              onClick={prevImage}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-white/90 hover:text-white text-5xl z-10 bg-black/30 hover:bg-black/50 rounded-full w-14 h-14 flex items-center justify-center"
+              aria-label="Previous"
+            >
+              ‹
+            </button>
+            <button
+              onClick={nextImage}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-white/90 hover:text-white text-5xl z-10 bg-black/30 hover:bg-black/50 rounded-full w-14 h-14 flex items-center justify-center"
+              aria-label="Next"
+            >
+              ›
+            </button>
+          </div>
+
+          {/* Footer - Counter */}
+          <div className="text-center py-4 text-white/70 text-sm bg-[#0b1220]/80 border-t border-white/10">
+            {uiStore.projects.currentIndex + 1} / {currentProject.images.length}
+          </div>
+        </div>
+      )}
     </section>
   );
 }
+function useCurrentProject(projectsList: ProjectNormalized[], projectId: string | null) {
+  return useMemo(() => projectsList.find(p => p.id === projectId) || null, [projectsList, projectId]);
+}
+
+function chooseCover(images: string[]) {
+  const preferred = images.find(src => src.toLowerCase().endsWith('.webp'));
+  return preferred ?? images[0] ?? null;
+}
+
+function cryptoRandomId(seed: any) {
+  try {
+    return typeof crypto !== 'undefined' && 'randomUUID' in crypto ? (crypto as any).randomUUID() : String(seed ?? Math.random());
+  } catch {
+    return String(seed ?? Math.random());
+  }
+}
+
+export default observer(ProjectsGalleryImpl);

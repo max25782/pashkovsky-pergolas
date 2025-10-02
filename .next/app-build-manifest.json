@@ -11,11 +11,11 @@
       "static/css/app/[locale]/layout.css",
       "static/chunks/app/[locale]/layout.js"
     ],
-    "/[locale]/pergulas/page": [
+    "/[locale]/fences/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/app/[locale]/pergulas/page.css",
-      "static/chunks/app/[locale]/pergulas/page.js"
+      "static/css/app/[locale]/fences/page.css",
+      "static/chunks/app/[locale]/fences/page.js"
     ]
   }
 }
