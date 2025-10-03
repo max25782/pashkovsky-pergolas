@@ -40,8 +40,12 @@ export function HeroSection() {
                 src={src}
                 alt={`Pergola step ${i + 1}`}
                 fill
+                sizes="100vw"
+                quality={85}
                 className="object-cover"
                 priority={i === 0}
+                placeholder="blur"
+                blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYGD4DwABBAEAW9JTEQAAAABJRU5ErkJggg=="
               />
             </motion.div>
           ))}

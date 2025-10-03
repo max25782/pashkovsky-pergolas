@@ -10,12 +10,6 @@
       "static/chunks/main-app.js",
       "static/css/app/[locale]/layout.css",
       "static/chunks/app/[locale]/layout.js"
-    ],
-    "/[locale]/fences/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/css/app/[locale]/fences/page.css",
-      "static/chunks/app/[locale]/fences/page.js"
     ]
   }
 }

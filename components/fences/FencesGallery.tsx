@@ -1,12 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { observer } from "mobx-react-lite";
 import { uiStore } from "@/stores/ui-store";
 import dynamic from "next/dynamic";
 import fences from "@/data/gallery/fancy.json";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 // Lazy-load Swiper only when used (client-only)
 const Swiper = dynamic(() => import("swiper/react").then(m => m.Swiper), { ssr: false });
 const SwiperSlide = dynamic(() => import("swiper/react").then(m => m.SwiperSlide), { ssr: false });
@@ -32,24 +32,19 @@ function FencesGalleryImpl() {
           גלריית גדרות האלומיניום שלנו
         </h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Videos first as reels */}
-          {videos.map((v, idx) => (
-            <div key={`vid-${idx}`} className="relative w-full h-[65vh] sm:h-[70vh] lg:h-[80vh] overflow-hidden rounded-2xl">
-              <video
-                src={v.src}
-                muted
-                playsInline
-                preload="metadata"
-                className="w-full h-full object-cover"
-                onMouseEnter={e => e.currentTarget.play()}
-                onMouseLeave={e => { e.currentTarget.pause(); e.currentTarget.currentTime = 0; }}
-                onTouchStart={e => (e.currentTarget as HTMLVideoElement).play()}
-              />
-            </div>
-          ))}
+        {/* Videos grid: 2 per row on sm+ */}
+        {videos.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6 mb-6">
+            {videos.map((v, idx) => (
+              <div key={`vid-${idx}`} className="relative w-full h-[65vh] sm:h-[70vh] lg:h-[80vh] overflow-hidden rounded-2xl">
+                <VideoReel src={v.src} />
+              </div>
+            ))}
+          </div>
+        )}
 
-          {/* Then images */}
+        {/* Images grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {images.map((src, idx) => (
             <button
               key={idx}
@@ -61,11 +56,12 @@ function FencesGalleryImpl() {
                 alt={`Fence ${idx + 1}`}
                 fill
                 className="object-cover"
-                quality={75}
+                quality={80}
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                priority={idx < 3}
                 placeholder="blur"
-                blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
-                loading="lazy"
+                blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYGD4DwABBAEAW9JTEQAAAABJRU5ErkJggg=="
+                loading={idx < 3 ? 'eager' : 'lazy'}
               />
             </button>
           ))}
@@ -75,6 +71,7 @@ function FencesGalleryImpl() {
       <Dialog open={uiStore.lightbox.open} onOpenChange={(v)=> v ? null : uiStore.closeLightbox()}>
         <DialogContent className="max-w-[90vw] md:max-w-[80vw] w-full p-0 bg-[#0b1220] text-white border border-white/10">
           <DialogTitle className="sr-only">Fancy gallery lightbox</DialogTitle>
+          <DialogDescription className="sr-only">View fancy image in lightbox</DialogDescription>
           {uiStore.lightbox.open && (
           <Swiper
             modules={[Navigation, Pagination]}
@@ -85,19 +82,7 @@ function FencesGalleryImpl() {
           >
             {images.map((src, i) => (
               <SwiperSlide key={i}>
-                <div className="relative w-full h-full">
-                  <Image
-                    src={src}
-                    alt={`Fence ${i + 1}`}
-                    fill
-                    className="object-contain"
-                    quality={80}
-                    sizes="(max-width: 1024px) 100vw, 80vw"
-                    placeholder="blur"
-                    blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
-                    loading="lazy"
-                  />
-                </div>
+                <ModalImage src={src} alt={`Fence ${i + 1}`} />
               </SwiperSlide>
             ))}
           </Swiper>
@@ -109,3 +94,85 @@ function FencesGalleryImpl() {
 }
 
 export default observer(FencesGalleryImpl);
+
+function VideoReel({ src }: { src: string }){
+  const ref = useRef<HTMLVideoElement | null>(null)
+  const [isPlaying, setIsPlaying] = useState(false)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+
+    el.muted = true
+    el.playsInline = true
+    el.loop = true
+
+    const onLeave = () => { el.pause(); el.currentTime = 0; setIsPlaying(false) }
+
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) onLeave()
+      })
+    }, { threshold: 0.4 })
+
+    io.observe(el)
+    return () => { io.disconnect(); onLeave() }
+  }, [])
+
+  function handlePlay(){
+    const el = ref.current
+    if (!el) return
+    el.play().then(() => setIsPlaying(true)).catch(() => {})
+  }
+
+  return (
+    <div className="absolute inset-0">
+      <video
+        ref={ref}
+        src={src}
+        preload="metadata"
+        className="w-full h-full object-cover"
+        onClick={() => {
+          const el = ref.current
+          if (!el) return
+          if (isPlaying) {
+            el.pause()
+            el.currentTime = 0
+            setIsPlaying(false)
+          }
+        }}
+      />
+      <div className={`absolute inset-0 flex items-center justify-center transition-opacity ${isPlaying ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+        <button type="button" onClick={handlePlay} className="rounded-full bg-black/60 hover:bg-black/70 text-white w-16 h-16 flex items-center justify-center text-3xl">
+          ▶
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function ModalImage({ src, alt }: { src: string; alt: string }){
+  const [loaded, setLoaded] = useState(false)
+  return (
+    <div className="relative w-full h-full flex items-center justify-center p-4 bg-black/20">
+      {!loaded && (
+        <div className="absolute inset-4 rounded-xl bg-gradient-to-br from-white/5 to-white/10 animate-pulse backdrop-blur-md" />
+      )}
+      <img
+        src={src}
+        alt={alt}
+        loading="lazy"
+        onLoad={() => setLoaded(true)}
+        className="transition-opacity duration-300"
+        style={{
+          maxWidth: '100%',
+          maxHeight: '76vh',
+          width: loaded ? 'auto' : 0,
+          height: loaded ? 'auto' : 0,
+          opacity: loaded ? 1 : 0,
+          objectFit: 'contain'
+        }}
+      />
+    </div>
+  )
+}
