@@ -37,7 +37,7 @@ function FencesGalleryImpl() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6 mb-6">
             {videos.map((v, idx) => (
               <div key={`vid-${idx}`} className="relative w-full h-[65vh] sm:h-[70vh] lg:h-[80vh] overflow-hidden rounded-2xl">
-                <VideoReel src={v.src} />
+                <VideoReel src={v.src} poster={v.src.replace(/\.(mp4|webm)$/i, '.webp')} />
               </div>
             ))}
           </div>
@@ -95,9 +95,10 @@ function FencesGalleryImpl() {
 
 export default observer(FencesGalleryImpl);
 
-function VideoReel({ src }: { src: string }){
+function VideoReel({ src, poster }: { src: string; poster?: string }){
   const ref = useRef<HTMLVideoElement | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
+  const [videoSrc, setVideoSrc] = useState<string | null>(null)
 
   useEffect(() => {
     const el = ref.current
@@ -113,7 +114,7 @@ function VideoReel({ src }: { src: string }){
       entries.forEach(entry => {
         if (!entry.isIntersecting) onLeave()
       })
-    }, { threshold: 0.4 })
+    }, { threshold: 0.5 })
 
     io.observe(el)
     return () => { io.disconnect(); onLeave() }
@@ -122,16 +123,30 @@ function VideoReel({ src }: { src: string }){
   function handlePlay(){
     const el = ref.current
     if (!el) return
-    el.play().then(() => setIsPlaying(true)).catch(() => {})
+    if (!videoSrc) {
+      setVideoSrc(src)
+      // дождаться привязки src, затем загрузить и воспроизвести
+      requestAnimationFrame(() => {
+        const v = ref.current
+        if (!v) return
+        v.load()
+        v.play().then(() => setIsPlaying(true)).catch(() => {})
+      })
+    } else {
+      el.play().then(() => setIsPlaying(true)).catch(() => {})
+    }
   }
 
   return (
     <div className="absolute inset-0">
       <video
         ref={ref}
-        src={src}
-        preload="metadata"
+        src={videoSrc ?? undefined}
+        preload="none"
+        poster={poster}
         className="w-full h-full object-cover"
+        disablePictureInPicture
+        controls={false}
         onClick={() => {
           const el = ref.current
           if (!el) return

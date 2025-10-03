@@ -1,13 +1,15 @@
 {
   "/_not-found/page": "app/_not-found/page.js",
+  "/robots.txt/route": "app/robots.txt/route.js",
   "/icon.svg/route": "app/icon.svg/route.js",
+  "/sitemap.xml/route": "app/sitemap.xml/route.js",
+  "/[locale]/mistora/page": "app/[locale]/mistora/page.js",
+  "/[locale]/fences/page": "app/[locale]/fences/page.js",
   "/[locale]/about/page": "app/[locale]/about/page.js",
   "/[locale]/contact/page": "app/[locale]/contact/page.js",
   "/[locale]/models/page": "app/[locale]/models/page.js",
-  "/[locale]/fences/page": "app/[locale]/fences/page.js",
-  "/[locale]/mistora/page": "app/[locale]/mistora/page.js",
   "/[locale]/page": "app/[locale]/page.js",
-  "/[locale]/pergulas/page": "app/[locale]/pergulas/page.js",
   "/[locale]/railings/page": "app/[locale]/railings/page.js",
-  "/[locale]/services/page": "app/[locale]/services/page.js"
+  "/[locale]/services/page": "app/[locale]/services/page.js",
+  "/[locale]/pergulas/page": "app/[locale]/pergulas/page.js"
 }

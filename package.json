@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "scripts": {
     "dev": "next dev",
-    "prebuild": "npm run gen:gallery && npm run gen:pergulot",
+    "prebuild": "npm run gen:gallery && npm run gen:pergulot && npm run video:posters",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -12,7 +12,8 @@
     "gen:pergulot": "node scripts/generate-pergulot-i18n.mjs",
     "heic:jpg": "node scripts/convert-heic.mjs",
     "jpg:webp": "node scripts/convert-to-webp.mjs",
-    "compress:videos": "node scripts/compress-videos.mjs"
+    "compress:videos": "node scripts/compress-videos.mjs",
+    "video:posters": "node scripts/generate-video-posters.mjs"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",

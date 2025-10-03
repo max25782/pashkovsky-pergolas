@@ -41,8 +41,11 @@ export function RotatingImage({ sources, intervalMs = 2000, alt = 'Degem', prior
           fill
           className="object-cover"
           sizes="(min-width:1024px) 33vw, (min-width:768px) 50vw, 90vw"
-          unoptimized
+          quality={75}
           priority={priority}
+          loading={priority ? "eager" : "lazy"}
+          placeholder="blur"
+          blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYGD4DwABBAEAW9JTEQAAAABJRU5ErkJggg=="
         />
       )}
     </div>

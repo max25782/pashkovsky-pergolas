@@ -61,9 +61,9 @@ export function DgamimCarousel(){
           }
           return (
             <div key={`${item.type}-${item.degem}-${i}`} className="flex-none w-[85%] sm:w-[70%] md:w-1/2 lg:w-1/3 rounded-2xl overflow-hidden border border-white/10 bg-white/5">
-              <div className="relative h-[50vh] sm:h-[60vh] lg:h-[70vh]">
+              <div className="relative h-[50vh] sm:h-[60vh] lg:h-[70vh] bg-gray-800">
                 <button aria-label="Open images" className="absolute inset-0 z-10" onClick={()=> setLightbox({ open:true, images:item.images, start:0 })} />
-                <RotatingImage sources={item.images} alt={`${item.type} - ${item.degem}`} intervalMs={1000} priority={i===0} />
+                <RotatingImage sources={item.images} alt={`${item.type} - ${item.degem}`} intervalMs={1000} priority={i < 2} />
               </div>
               <div className="p-4 text-right">
                 <div className="font-extrabold">{info.title}</div>

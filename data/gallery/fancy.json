@@ -257,16 +257,32 @@
       "type": "video"
     },
     {
+      "src": "/images/fancy/VID_20230813_145354.webp",
+      "type": "image"
+    },
+    {
       "src": "/images/fancy/VID_20240401_151649.mp4",
       "type": "video"
+    },
+    {
+      "src": "/images/fancy/VID_20240401_151649.webp",
+      "type": "image"
     },
     {
       "src": "/images/fancy/VID_20240401_151707.mp4",
       "type": "video"
     },
     {
+      "src": "/images/fancy/VID_20240401_151707.webp",
+      "type": "image"
+    },
+    {
       "src": "/images/fancy/VID_20240927_135442.mp4",
       "type": "video"
+    },
+    {
+      "src": "/images/fancy/VID_20240927_135442.webp",
+      "type": "image"
     }
   ]
 }

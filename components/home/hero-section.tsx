@@ -25,31 +25,38 @@ export function HeroSection() {
   });
 
   return (
-    <section ref={ref} className="relative h-[150vh]">
+    <section ref={ref} className="relative h-[150vh]" style={{ minHeight: '150vh' }}>
       {/* Фиксированная область */}
-      <div className="sticky top-0 h-screen flex flex-col items-center justify-center bg-black text-white">
-        <motion.div className="absolute inset-0">
-          {steps.map((src, i) => (
-            <motion.div
-              key={i}
-              className="absolute inset-0"
-              animate={{ opacity: currentFrame === i ? 1 : 0 }}
-              transition={{ duration: 0.4 }}
-            >
-              <Image
-                src={src}
-                alt={`Pergola step ${i + 1}`}
-                fill
-                sizes="100vw"
-                quality={75}
-                className="object-cover"
-                priority={i === 0}
-                loading={i === 0 ? "eager" : "lazy"}
-                placeholder="blur"
-                blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYGD4DwABBAEAW9JTEQAAAABJRU5ErkJggg=="
-              />
-            </motion.div>
-          ))}
+      <div className="sticky top-0 h-screen flex flex-col items-center justify-center bg-black text-white" style={{ minHeight: '100vh' }}>
+        <motion.div className="absolute inset-0 will-change-opacity">
+          {steps.map((src, i) => {
+            // Показываем только текущий и соседние фреймы для производительности
+            const shouldRender = Math.abs(i - currentFrame) <= 1 || i === 0;
+            if (!shouldRender && i !== currentFrame) return null;
+            
+            return (
+              <motion.div
+                key={i}
+                className="absolute inset-0"
+                animate={{ opacity: currentFrame === i ? 1 : 0 }}
+                transition={{ duration: 0.3, ease: "linear" }}
+              >
+                <Image
+                  src={src}
+                  alt={`Pergola step ${i + 1}`}
+                  fill
+                  sizes="100vw"
+                  quality={70}
+                  className="object-cover will-change-transform"
+                  priority={i === 0}
+                  loading={i === 0 ? "eager" : "lazy"}
+                  placeholder="blur"
+                  blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYGD4DwABBAEAW9JTEQAAAABJRU5ErkJggg=="
+                  decoding="async"
+                />
+              </motion.div>
+            );
+          })}
         </motion.div>
 
         {/* Текст */}

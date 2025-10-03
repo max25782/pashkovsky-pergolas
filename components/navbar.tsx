@@ -10,7 +10,6 @@ export default function Navbar({ locale }: { locale: Locale }){
   const tabs = [
     { href: `/${locale}`, label: locale==='he'?'דף הבית': locale==='ru'?'Главная':'Home' },
     { href: `/${locale}/about`, label: locale==='he'?'על החברה': locale==='ru'?'О компании':'About' },
-    { href: `/${locale}/models`, label: locale==='he'?'הדגמים של פרגולות שלנו': locale==='ru'?'Наши модели':'Models' },
     { href: `/${locale}#services`, label: locale==='he'?'השירותים שלנו': locale==='ru'?'Наши услуги':'Services' },
     { href: `/${locale}/contact`, label: locale==='he'?'צור קשר': locale==='ru'?'Контакты':'Contact' },
   ]

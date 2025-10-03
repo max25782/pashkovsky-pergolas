@@ -8,6 +8,7 @@ import clsx from 'clsx'
 export const metadata: Metadata = {
   title: 'פשקובסקי מעקות ופרגולות',
   description: 'פרגולות אלומיניום פרימיום בהתאמה אישית',
+  metadataBase: new URL('https://pashkovsky-pergolas.vercel.app'),
   icons: {
     icon: '/favicon.svg',
   },
