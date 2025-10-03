@@ -11,7 +11,8 @@
     "gen:gallery": "node scripts/generate-gallery.mjs",
     "gen:pergulot": "node scripts/generate-pergulot-i18n.mjs",
     "heic:jpg": "node scripts/convert-heic.mjs",
-    "jpg:webp": "node scripts/convert-to-webp.mjs"
+    "jpg:webp": "node scripts/convert-to-webp.mjs",
+    "compress:videos": "node scripts/compress-videos.mjs"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
@@ -29,9 +30,11 @@
     "swiper": "^12.0.2"
   },
   "devDependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "autoprefixer": "^10.4.20",
     "eslint": "^8.57.0",
     "eslint-config-next": "14.2.5",
+    "fluent-ffmpeg": "^2.1.3",
     "postcss": "^8.4.45",
     "tailwindcss": "^3.4.10",
     "typescript": "^5.6.2"
