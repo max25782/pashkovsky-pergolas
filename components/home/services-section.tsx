@@ -51,13 +51,17 @@ export function ServicesSection({ locale }: { locale: Locale }) {
               href={`/${locale}${service.link}`}
               className="group bg-[#1e293b] hover:bg-[#334155] rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden transform hover:-translate-y-2 cursor-pointer"
             >
-              <div className="relative w-full h-56 overflow-hidden">
+              <div className="relative w-full h-56 overflow-hidden bg-gray-800">
                 <Image
                   src={service.img}
                   alt={service.title}
                   fill
                   sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
                   className="object-cover group-hover:scale-110 transition-transform duration-500"
+                  loading={index < 2 ? "eager" : "lazy"}
+                  quality={80}
+                  placeholder="blur"
+                  blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYGD4DwABBAEAW9JTEQAAAABJRU5ErkJggg=="
                 />
               </div>
               <div className="p-6 text-right">

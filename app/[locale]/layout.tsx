@@ -17,6 +17,10 @@ export default function RootLayout({ children, params: { locale } }: { children:
   const dir = isRTL(locale) ? 'rtl' : 'ltr'
   return (
     <html lang={locale} dir={dir} suppressHydrationWarning>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+      </head>
       <body className={clsx('min-h-screen', dir==='rtl'?'rtl':'ltr')}>
         <ThemeProvider attribute='class' defaultTheme='dark' enableSystem={false}>
           <Navbar locale={locale} />

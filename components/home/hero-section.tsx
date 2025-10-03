@@ -41,9 +41,10 @@ export function HeroSection() {
                 alt={`Pergola step ${i + 1}`}
                 fill
                 sizes="100vw"
-                quality={85}
+                quality={75}
                 className="object-cover"
                 priority={i === 0}
+                loading={i === 0 ? "eager" : "lazy"}
                 placeholder="blur"
                 blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYGD4DwABBAEAW9JTEQAAAABJRU5ErkJggg=="
               />
