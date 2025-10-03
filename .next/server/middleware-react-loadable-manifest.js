@@ -1,1 +1,1 @@
-self.__REACT_LOADABLE_MANIFEST="{}"
+self.__REACT_LOADABLE_MANIFEST='{"components\\\\fences\\\\FencesGallery.tsx -> swiper/react":{"id":3267,"files":["static/chunks/267.56cf7e0af9550f58.js"]}}';
