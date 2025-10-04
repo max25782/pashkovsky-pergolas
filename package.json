@@ -13,7 +13,8 @@
     "heic:jpg": "node scripts/convert-heic.mjs",
     "jpg:webp": "node scripts/convert-to-webp.mjs",
     "compress:videos": "node scripts/compress-videos.mjs",
-    "video:posters": "node scripts/generate-video-posters.mjs"
+    "video:posters": "node scripts/generate-video-posters.mjs",
+    "gen:videos": "node scripts/generate-videos-json.mjs"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",

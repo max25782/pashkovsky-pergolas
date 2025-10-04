@@ -73,7 +73,7 @@ export function DgamimCarousel(){
             </div>
           )
         })}
-        <ModelLightbox open={lightbox.open} images={lightbox.images} startIndex={lightbox.start} onClose={()=> setLightbox({ open:false, images:[], start:0 })} />
+        <ModelLightbox open={lightbox.open} images={lightbox.images} startIndex={lightbox.start} onClose={()=> setLightbox({ open:false, images:[], start:0 })} locale={typeof document !== 'undefined' && document.documentElement.lang === 'ru' ? 'ru' : (typeof document !== 'undefined' && document.documentElement.lang === 'en' ? 'en' : 'he')} />
       </div>
     </div>
   )

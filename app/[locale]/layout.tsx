@@ -21,6 +21,7 @@ export default function RootLayout({ children, params: { locale } }: { children:
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+        {/* Preload removed to avoid warnings on non-home pages; hero uses priority/fetchPriority */}
       </head>
       <body className={clsx('min-h-screen', dir==='rtl'?'rtl':'ltr')}>
         <ThemeProvider attribute='class' defaultTheme='dark' enableSystem={false}>

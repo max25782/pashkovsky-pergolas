@@ -4,21 +4,14 @@ import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
 import { observer } from "mobx-react-lite";
 import { uiStore } from "@/stores/ui-store";
-import dynamic from "next/dynamic";
 import fences from "@/data/gallery/fancy.json";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-// Lazy-load Swiper only when used (client-only)
-const Swiper = dynamic(() => import("swiper/react").then(m => m.Swiper), { ssr: false });
-const SwiperSlide = dynamic(() => import("swiper/react").then(m => m.SwiperSlide), { ssr: false });
-import { Navigation, Pagination } from "swiper/modules";
-
-import "swiper/css";
-import "swiper/css/navigation";
-import "swiper/css/pagination";
+import { PlayButton, GradientOverlay } from "@/components/ui/play-overlay";
 
 function FencesGalleryImpl() {
   const [open, setOpen] = useState(false);
   const [startIndex, setStartIndex] = useState(0);
+  const [videoModal, setVideoModal] = useState<{ open: boolean; index: number | null }>({ open: false, index: null });
   const items = (fences as { items: { src: string; type: string }[] }).items;
   const videos = items.filter(i => i.type === 'video');
   const images = items
@@ -29,6 +22,7 @@ function FencesGalleryImpl() {
     <section className="py-24 bg-gradient-to-b from-[#0f172a] to-[#1e293b] text-white">
       <div className="container mx-auto px-4">
         <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">
+          {/* i18n minimal: no locale param here, keep HE as default text */}
           גלריית גדרות האלומיניום שלנו
         </h2>
 
@@ -37,7 +31,7 @@ function FencesGalleryImpl() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6 mb-6">
             {videos.map((v, idx) => (
               <div key={`vid-${idx}`} className="relative w-full h-[65vh] sm:h-[70vh] lg:h-[80vh] overflow-hidden rounded-2xl">
-                <VideoReel src={v.src} poster={v.src.replace(/\.(mp4|webm)$/i, '.webp')} />
+                <VideoReel src={v.src} poster={v.src.replace(/\.(mp4|webm)$/i, '.webp')} onOpen={()=> setVideoModal({ open:true, index: idx })} />
               </div>
             ))}
           </div>
@@ -46,9 +40,12 @@ function FencesGalleryImpl() {
         {/* Images grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {images.map((src, idx) => (
-            <button
+            <div
               key={idx}
+              role="button"
+              tabIndex={0}
               onClick={() => uiStore.openLightbox(idx)}
+              onKeyDown={(e)=>{ if (e.key==='Enter'||e.key===' ') { e.preventDefault(); uiStore.openLightbox(idx) } }}
               className="relative w-full h-64 overflow-hidden rounded-2xl hover:scale-105 transition-transform duration-300"
             >
               <Image
@@ -63,7 +60,7 @@ function FencesGalleryImpl() {
                 blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYGD4DwABBAEAW9JTEQAAAABJRU5ErkJggg=="
                 loading={idx < 3 ? 'eager' : 'lazy'}
               />
-            </button>
+            </div>
           ))}
         </div>
       </div>
@@ -72,20 +69,24 @@ function FencesGalleryImpl() {
         <DialogContent className="max-w-[90vw] md:max-w-[80vw] w-full p-0 bg-[#0b1220] text-white border border-white/10">
           <DialogTitle className="sr-only">Fancy gallery lightbox</DialogTitle>
           <DialogDescription className="sr-only">View fancy image in lightbox</DialogDescription>
-          {uiStore.lightbox.open && (
-          <Swiper
-            modules={[Navigation, Pagination]}
-            navigation
-            pagination={{ clickable: true }}
-            initialSlide={uiStore.lightbox.startIndex}
-            className="w-full h-[80vh]"
-          >
-            {images.map((src, i) => (
-              <SwiperSlide key={i}>
-                <ModalImage src={src} alt={`Fence ${i + 1}`} />
-              </SwiperSlide>
-            ))}
-          </Swiper>
+          {uiStore.lightbox.open && images.length > 0 && (
+            <CustomLightbox images={images} startIndex={uiStore.lightbox.startIndex} />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Video fullscreen modal */}
+      <Dialog open={videoModal.open} onOpenChange={(v)=> setVideoModal(v ? videoModal : { open:false, index:null })}>
+        <DialogContent className="max-w-[95vw] md:max-w-[90vw] w-full p-0 bg-black text-white border border-white/10">
+          <DialogTitle className="sr-only">Video player</DialogTitle>
+          <DialogDescription className="sr-only">Watch video in fullscreen modal</DialogDescription>
+          {videoModal.open && videoModal.index !== null && videos[videoModal.index] && (
+            <div className="relative w-full h-[85vh] flex items-center justify-center bg-black select-none">
+              <button aria-label="Prev" onClick={()=> setVideoModal(s=>({ open:true, index: ((s.index ?? 0) - 1 + videos.length) % videos.length }))} className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 text-white/90 hover:text-white text-4xl z-20">‹</button>
+              <button aria-label="Next" onClick={()=> setVideoModal(s=>({ open:true, index: ((s.index ?? 0) + 1) % videos.length }))} className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 text-white/90 hover:text-white text-4xl z-20">›</button>
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-xs text-white/70 z-20">{((videoModal.index ?? 0) + 1)} / {videos.length}</div>
+              <video src={videos[videoModal.index].src} autoPlay controls className="max-w-full max-h-full" />
+            </div>
           )}
         </DialogContent>
       </Dialog>
@@ -95,7 +96,33 @@ function FencesGalleryImpl() {
 
 export default observer(FencesGalleryImpl);
 
-function VideoReel({ src, poster }: { src: string; poster?: string }){
+function CustomLightbox({ images, startIndex }: { images: string[]; startIndex: number }){
+  const [idx, setIdx] = useState(startIndex)
+  useEffect(()=>{ setIdx(startIndex) }, [startIndex])
+
+  function prev(){ setIdx(i => (i - 1 + images.length) % images.length) }
+  function next(){ setIdx(i => (i + 1) % images.length) }
+
+  if (images.length === 1){
+    return (
+      <div className="relative w-full h-[80vh] flex items-center justify-center">
+        <ModalImage src={images[0]} alt="Fence" eager />
+      </div>
+    )
+  }
+
+  const current = images[idx]
+  return (
+    <div className="relative w-full h-[80vh] flex items-center justify-center select-none">
+      <button aria-label="Prev" onClick={prev} className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 text-white/90 hover:text-white text-4xl z-20">‹</button>
+      <button aria-label="Next" onClick={next} className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 text-white/90 hover:text-white text-4xl z-20">›</button>
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-xs text-white/70 z-20">{idx + 1} / {images.length}</div>
+      <ModalImage src={current} alt={`Fence ${idx + 1}`} eager />
+    </div>
+  )
+}
+
+function VideoReel({ src, poster, onOpen }: { src: string; poster?: string; onOpen?: (src:string)=>void }){
   const ref = useRef<HTMLVideoElement | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [videoSrc, setVideoSrc] = useState<string | null>(null)
@@ -123,6 +150,7 @@ function VideoReel({ src, poster }: { src: string; poster?: string }){
   function handlePlay(){
     const el = ref.current
     if (!el) return
+    if (onOpen){ onOpen(src); return }
     if (!videoSrc) {
       setVideoSrc(src)
       // дождаться привязки src, затем загрузить и воспроизвести
@@ -157,33 +185,33 @@ function VideoReel({ src, poster }: { src: string; poster?: string }){
           }
         }}
       />
+      <GradientOverlay />
       <div className={`absolute inset-0 flex items-center justify-center transition-opacity ${isPlaying ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
-        <button type="button" onClick={handlePlay} className="rounded-full bg-black/60 hover:bg-black/70 text-white w-16 h-16 flex items-center justify-center text-3xl">
-          ▶
-        </button>
+        <PlayButton onClick={handlePlay} />
       </div>
     </div>
   )
 }
 
-function ModalImage({ src, alt }: { src: string; alt: string }){
+function ModalImage({ src, alt, eager = false }: { src: string; alt: string; eager?: boolean }){
   const [loaded, setLoaded] = useState(false)
   return (
     <div className="relative w-full h-full flex items-center justify-center p-4 bg-black/20">
       {!loaded && (
-        <div className="absolute inset-4 rounded-xl bg-gradient-to-br from-white/5 to-white/10 animate-pulse backdrop-blur-md" />
+        <div className="absolute inset-4 z-0 rounded-xl bg-gradient-to-br from-white/5 to-white/10 animate-pulse backdrop-blur-md" />
       )}
       <img
         src={src}
         alt={alt}
-        loading="lazy"
+        loading={eager ? 'eager' : 'lazy'}
         onLoad={() => setLoaded(true)}
-        className="transition-opacity duration-300"
+        onError={() => setLoaded(true)}
+        className="relative z-10 transition-opacity duration-300"
         style={{
           maxWidth: '100%',
           maxHeight: '76vh',
-          width: loaded ? 'auto' : 0,
-          height: loaded ? 'auto' : 0,
+          width: 'auto',
+          height: 'auto',
           opacity: loaded ? 1 : 0,
           objectFit: 'contain'
         }}

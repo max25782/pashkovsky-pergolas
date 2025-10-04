@@ -97,7 +97,11 @@ function ProjectsGalleryImpl({ locale = "he" }: { locale?: Locale }) {
   }, [uiStore.projects.open, nextImage, prevImage, closeModal]);
 
   return (
-    <section className="py-24 bg-gradient-to-b from-[#0f172a] to-[#1e293b] text-white">
+    <section className="py-24 text-white"
+    style={{
+      background: 'bg-gradient-to-br from-zinc-900 to-zinc-700)'
+    }}
+    >
       <div className="container mx-auto px-4">
         <h2 className="text-3xl md:text-4xl font-extrabold mb-4 text-center">
           {locale === "en"

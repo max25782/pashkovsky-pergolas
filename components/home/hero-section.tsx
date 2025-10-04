@@ -28,11 +28,11 @@ export function HeroSection() {
     <section ref={ref} className="relative h-[150vh]" style={{ minHeight: '150vh' }}>
       {/* Фиксированная область */}
       <div className="sticky top-0 h-screen flex flex-col items-center justify-center bg-black text-white" style={{ minHeight: '100vh' }}>
-        <motion.div className="absolute inset-0 will-change-opacity">
+        <motion.div className="absolute inset-0">
           {steps.map((src, i) => {
-            // Показываем только текущий и соседние фреймы для производительности
-            const shouldRender = Math.abs(i - currentFrame) <= 1 || i === 0;
-            if (!shouldRender && i !== currentFrame) return null;
+            // На первом экране рендерим только 0-й кадр; после прокрутки — текущий и соседние
+            const shouldRender = currentFrame === 0 ? i === 0 : Math.abs(i - currentFrame) <= 1;
+            if (!shouldRender) return null;
             
             return (
               <motion.div
@@ -45,10 +45,11 @@ export function HeroSection() {
                   src={src}
                   alt={`Pergola step ${i + 1}`}
                   fill
-                  sizes="100vw"
+                  sizes="(max-width: 1280px) 100vw, 1280px"
                   quality={70}
-                  className="object-cover will-change-transform"
+                  className="object-cover"
                   priority={i === 0}
+                  fetchPriority={i === 0 ? 'high' : 'auto'}
                   loading={i === 0 ? "eager" : "lazy"}
                   placeholder="blur"
                   blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYGD4DwABBAEAW9JTEQAAAABJRU5ErkJggg=="

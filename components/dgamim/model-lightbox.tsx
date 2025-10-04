@@ -7,9 +7,11 @@ interface ModelLightboxProps {
   open: boolean
   startIndex?: number
   onClose: () => void
+  locale?: 'he' | 'ru' | 'en'
 }
 
-export function ModelLightbox({ images, open, startIndex = 0, onClose }: ModelLightboxProps){
+export function ModelLightbox({ images, open, startIndex = 0, onClose, locale = 'he' }: ModelLightboxProps){
+  const t = (he:string, ru:string, en:string) => (locale==='he'?he: locale==='ru'?ru: en)
   const [index, setIndex] = useState(startIndex)
 
   useEffect(()=>{ setIndex(startIndex) }, [startIndex])
@@ -45,9 +47,9 @@ export function ModelLightbox({ images, open, startIndex = 0, onClose }: ModelLi
 
   return (
     <div className="fixed inset-0 z-50 bg-black/90">
-      <button aria-label="Close" onClick={onClose} className="absolute z-50 top-4 right-4 text-white/90 hover:text-white text-xl">✕</button>
-      <button aria-label="Next" onClick={next} className="absolute z-50 left-4 top-1/2 -translate-y-1/2 text-white/90 hover:text-white text-3xl">›</button>
-      <button aria-label="Prev" onClick={prev} className="absolute z-50 right-4 top-1/2 -translate-y-1/2 text-white/90 hover:text-white text-3xl">‹</button>
+      <button aria-label={t('סגור', 'Закрыть', 'Close')} onClick={onClose} className="absolute z-50 top-4 right-4 text-white/90 hover:text-white text-xl">✕</button>
+      <button aria-label={t('הבא', 'Далее', 'Next')} onClick={next} className="absolute z-50 left-4 top-1/2 -translate-y-1/2 text-white/90 hover:text-white text-3xl">›</button>
+      <button aria-label={t('הקודם', 'Назад', 'Prev')} onClick={prev} className="absolute z-50 right-4 top-1/2 -translate-y-1/2 text-white/90 hover:text-white text-3xl">‹</button>
       <div className="absolute inset-0 z-10 grid place-items-center p-4">
         <div className="relative w-full h-full max-w-6xl max-h-[85vh]">
           {src && (
@@ -55,7 +57,7 @@ export function ModelLightbox({ images, open, startIndex = 0, onClose }: ModelLi
           )}
         </div>
       </div>
-      <div className="absolute z-50 bottom-4 left-1/2 -translate-x-1/2 text-white/70 text-sm">{index+1} / {images.length}</div>
+      <div className="absolute z-50 bottom-4 left-1/2 -translate-x-1/2 text-white/70 text-sm">{t('תמונה', 'Изображение', 'Image')} {index+1} / {images.length}</div>
     </div>
   )
 }

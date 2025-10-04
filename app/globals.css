@@ -9,8 +9,15 @@
 
 :root { color-scheme: light dark; }
 html, body { height: 100%; }
+html { scrollbar-gutter: stable both-edges; }
 body { @apply text-white; background-color: #0e0f12; }
 .container { @apply max-w-screen-xl mx-auto px-4; }
+
+/* Performance helpers */
+.cv-auto { content-visibility: auto; contain-intrinsic-size: 800px 1200px; }
+@media (prefers-reduced-motion: reduce){
+  .no-motion *{ transition: none !important; animation: none !important; }
+}
 
 .marquee-track { display:flex; gap:1rem; will-change: transform; animation: marquee 25s linear infinite; }
 .marquee-paused { animation-play-state: paused; }
