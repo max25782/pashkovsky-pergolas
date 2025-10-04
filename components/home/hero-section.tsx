@@ -60,7 +60,7 @@ export function HeroSection() {
           })}
         </motion.div>
 
-        {/* Текст */}
+        {/* Text (i18n) */}
         <div className="relative z-10 text-center px-6 max-w-4xl mx-auto">
           <motion.h1
             className="text-4xl md:text-6xl font-bold mb-4 drop-shadow-lg"
@@ -68,7 +68,7 @@ export function HeroSection() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            הפרגולה המושלמת מתחילה כאן
+            {typeof document !== 'undefined' && document.documentElement.lang === 'ru' ? 'Идеальная пергола начинается здесь' : (typeof document !== 'undefined' && document.documentElement.lang === 'en' ? 'The perfect pergola starts here' : 'הפרגולה המושלמת מתחילה כאן')}
           </motion.h1>
 
           <motion.p
@@ -77,7 +77,7 @@ export function HeroSection() {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4, duration: 0.8 }}
           >
-            פרגולות אלומיניום בהתאמה מושלמת לבית שלך – פתרון מעוצב, עמיד ויפהפה לאורך שנים
+            {typeof document !== 'undefined' && document.documentElement.lang === 'ru' ? 'Алюминиевые перголы, идеально подходящие к вашему дому — стильное, долговечное и красивое решение на годы' : (typeof document !== 'undefined' && document.documentElement.lang === 'en' ? 'Aluminum pergolas, perfectly tailored to your home — stylish, durable and beautiful for years' : 'פרגולות אלומיניום בהתאמה מושלמת לבית שלך – פתרון מעוצב, עמיד ויפהפה לאורך שנים')}
           </motion.p>
 
           {/* CTA */}
@@ -90,7 +90,7 @@ export function HeroSection() {
               boxShadow: "0 0 20px rgba(59,130,246,0.5)",
             }}
           >
-            📞 קבל הצעת מחיר
+            {typeof document !== 'undefined' && document.documentElement.lang === 'ru' ? '📞 Получить предложение' : (typeof document !== 'undefined' && document.documentElement.lang === 'en' ? '📞 Get a quote' : '📞 קבל הצעת מחיר')}
           </motion.a>
         </div>
       </div>
