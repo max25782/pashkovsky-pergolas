@@ -1,6 +1,6 @@
 import '../globals.css'
 import type { Metadata } from 'next'
-import { ThemeProvider } from 'next-themes'
+import { Providers } from '@/components/providers'
 import Navbar from '@/components/navbar'
 import { Locale, isRTL } from '@/lib/locales'
 import clsx from 'clsx'
@@ -24,10 +24,10 @@ export default function RootLayout({ children, params: { locale } }: { children:
         {/* Preload removed to avoid warnings on non-home pages; hero uses priority/fetchPriority */}
       </head>
       <body className={clsx('min-h-screen', dir==='rtl'?'rtl':'ltr')}>
-        <ThemeProvider attribute='class' defaultTheme='dark' enableSystem={false}>
+        <Providers>
           <Navbar locale={locale} />
           {children}
-        </ThemeProvider>
+        </Providers>
       </body>
     </html>
   )

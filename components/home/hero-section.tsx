@@ -24,6 +24,13 @@ export function HeroSection() {
     uiStore.setHeroFrame(frame)
   });
 
+  // Build WhatsApp link with localized prefilled text (client-safe)
+  const lang = typeof document !== 'undefined' ? document.documentElement.lang : 'he'
+  const prefilledMessage = lang === 'ru'
+    ? 'Здравствуйте! Хочу получить предложение на перголу.'
+    : (lang === 'en' ? 'Hi! I would like to get a quote for a pergola.' : 'היי! אשמח להצעת מחיר לפרגולה.')
+  const whatsappUrl = `https://wa.me/972524494848?text=${encodeURIComponent(prefilledMessage)}`
+
   return (
     <section ref={ref} className="relative h-[150vh]" style={{ minHeight: '150vh' }}>
       {/* Фиксированная область */}
@@ -82,7 +89,9 @@ export function HeroSection() {
 
           {/* CTA */}
           <motion.a
-            href="tel:0524494848"
+            href={whatsappUrl}
+            target="_blank"
+            rel="noopener noreferrer"
             className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-3 rounded-full shadow-lg transition-colors"
             initial={{ scale: 1 }}
             whileHover={{ scale: 1.05 }}
