@@ -2,13 +2,52 @@ import '../globals.css'
 import type { Metadata } from 'next'
 import { Providers } from '@/components/providers'
 import Navbar from '@/components/navbar'
+import UTMTracker from '@/components/utm-tracker'
 import { Locale, isRTL } from '@/lib/locales'
 import clsx from 'clsx'
 
 export const metadata: Metadata = {
-  title: 'פשקובסקי מעקות ופרגולות',
-  description: 'פרגולות אלומיניום פרימיום בהתאמה אישית',
-  metadataBase: new URL('https://pashkovsky-pergolas.vercel.app'),
+  metadataBase: new URL('https://pashkovsky-group.com'),
+  title: {
+    default: 'Pashkovski Group | פרגולות ומעקות אלומיניום',
+    template: '%s | Pashkovski Group',
+  },
+  description:
+    'מאז 2019 Pashkovski Group מתמחה בייצור והתקנה של פרגולות, מעקות ומסתורים באיכות הגבוהה ביותר בישראל. ייצור מקומי, עיצוב יוקרתי ושירות אישי.',
+  keywords: [
+    'פרגולות אלומיניום', 'מעקות זכוכית', 'מסתורי כביסה',
+    'Pergolas Israel', 'Pashkovski Group', 'אלומיניום איכותי', 'פרגולות חשמליות'
+  ],
+  authors: [{ name: 'Pashkovski Group', url: 'https://pashkovski.com' }],
+  openGraph: {
+    title: 'Pashkovski Group | פרגולות ומעקות אלומיניום',
+    description: 'פרגולות אלומיניום, מעקות ומסתורים בעיצוב יוקרתי וברמה הגבוהה בישראל.',
+    url: 'https://pashkovsky-group.com',
+    siteName: 'Pashkovski Group',
+    images: [
+      {
+        url: 'https://pashkovsky-group.com/og-image.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'פרגולות אלומיניום בעיצוב יוקרתי',
+      },
+    ],
+    locale: 'he_IL',
+    type: 'website',
+  },
+  alternates: {
+    canonical: 'https://pashkovsky-group.com',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Pashkovski Group',
+    description: 'פרגולות ומעקות אלומיניום בישראל ברמה הגבוהה ביותר.',
+    images: ['https://pashkovsky-group.com/og-image.jpg'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
   icons: {
     icon: '/favicon.svg',
   },
@@ -25,6 +64,7 @@ export default function RootLayout({ children, params: { locale } }: { children:
       </head>
       <body className={clsx('min-h-screen', dir==='rtl'?'rtl':'ltr')}>
         <Providers>
+          <UTMTracker />
           <Navbar locale={locale} />
           {children}
         </Providers>

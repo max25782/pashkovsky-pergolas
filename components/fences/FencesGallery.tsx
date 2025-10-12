@@ -7,6 +7,7 @@ import { uiStore } from "@/stores/ui-store";
 import fences from "@/data/gallery/fancy.json";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { PlayButton, GradientOverlay } from "@/components/ui/play-overlay";
+import ContactSection from "../contact-section";
 
 function FencesGalleryImpl() {
   const [open, setOpen] = useState(false);
@@ -25,6 +26,7 @@ function FencesGalleryImpl() {
           {/* i18n minimal: no locale param here, keep HE as default text */}
           גלריית גדרות האלומיניום שלנו
         </h2>
+        <ContactSection />
 
         {/* Videos grid: 2 per row on sm+ */}
         {videos.length > 0 && (

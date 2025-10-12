@@ -127,7 +127,7 @@ function ProjectsGalleryImpl({ locale = "he" }: { locale?: Locale }) {
                 onClick={() => openModal(p, 0)}
                 className="group text-left rounded-3xl overflow-hidden bg-white/5 backdrop-blur-sm border border-white/10 hover:border-white/20 transition-all duration-300 shadow-lg hover:shadow-2xl hover:-translate-y-2 hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-blue-400"
               >
-                <div className="relative w-full h-56">
+                <div className="relative w-full h-72 sm:h-80 lg:h-96">
                   {cover && (
                     <Image
                       src={cover}

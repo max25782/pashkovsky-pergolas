@@ -1,0 +1,244 @@
+'use client'
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { FaWhatsapp } from 'react-icons/fa'
+import type { Locale } from '@/lib/locales'
+
+interface ContactSectionProps {
+  locale?: Locale
+}
+
+function getCopy(locale: Locale) {
+  if (locale === 'ru') {
+    return {
+      sectionTitle: 'Свяжитесь с нами напрямую',
+      sectionBody: 'Мы на связи по вопросам пергол, ограждений и экранов — получите консультацию, идеи и персональное предложение. Всё начинается с простого разговора.',
+      buttonCta: 'Связаться с нами',
+      modalTitle: 'Оставьте данные и мы свяжемся с вами',
+      modalSubtitle: 'Не обязательно WhatsApp — можем позвонить 🙂',
+      namePlaceholder: 'Полное имя',
+      phonePlaceholder: 'Телефон',
+      cityPlaceholder: 'Город',
+      submitButton: 'Отправить',
+      sending: 'Отправка...',
+      step2Title: 'Как вам удобнее продолжить?',
+      whatsappButton: 'Написать в WhatsApp',
+      callButton: 'Перезвоните мне',
+      whatsappMessage: (name: string, phone: string, city: string) =>
+        `Здравствуйте! Меня зовут ${name}. Город: ${city}. Телефон: ${phone}. Хочу получить предложение на перголу.`
+    }
+  }
+  if (locale === 'en') {
+    return {
+      sectionTitle: 'Contact us directly',
+      sectionBody: 'We are available for any questions about pergolas, railings and screens — get expert advice, inspiration and a personalized quote. It all starts with a simple conversation.',
+      buttonCta: 'Contact Us',
+      modalTitle: 'Leave your details and we\'ll get back to you',
+      modalSubtitle: 'WhatsApp is optional — we can call too 🙂',
+      namePlaceholder: 'Full Name',
+      phonePlaceholder: 'Phone',
+      cityPlaceholder: 'City',
+      submitButton: 'Submit',
+      sending: 'Sending...',
+      step2Title: 'How would you like to continue?',
+      whatsappButton: 'Message on WhatsApp',
+      callButton: 'Call me back',
+      whatsappMessage: (name: string, phone: string, city: string) =>
+        `Hi! My name is ${name}. City: ${city}. Phone: ${phone}. I would like to get a quote for a pergola.`
+    }
+  }
+  return {
+    sectionTitle: 'דברו איתנו ישירות',
+    sectionBody: 'אנחנו זמינים לכל שאלה על פרגולות, מעקות ומסתורים — תקבלו ייעוץ מקצועי, השראה והצעת מחיר מותאמת אישית. השירות שלנו מתחיל בשיחה פשוטה.',
+    buttonCta: 'דברו איתנו',
+    modalTitle: 'השאירו פרטים ונחזור אליכם',
+    modalSubtitle: 'לא חייבים וואטסאפ – אפשר גם שיחה רגילה 🙂',
+    namePlaceholder: 'שם מלא',
+    phonePlaceholder: 'טלפון',
+    cityPlaceholder: 'עיר',
+    submitButton: 'שלח',
+    sending: 'שולח...',
+    step2Title: 'איך נוח לך להמשיך?',
+    whatsappButton: 'דברו איתי בוואטסאפ',
+    callButton: 'תחזרו אליי בטלפון',
+    whatsappMessage: (name: string, phone: string, city: string) =>
+      `שלום! שמי ${name}. עיר: ${city}. טלפון: ${phone}. אשמח להצעת מחיר לפרגולה.`
+  }
+}
+
+export default function ContactSection({ locale = 'he' }: ContactSectionProps) {
+  const copy = getCopy(locale)
+  const [isOpen, setIsOpen] = useState(false)
+  const [step, setStep] = useState(1)
+  const [loading, setLoading] = useState(false)
+  const [form, setForm] = useState({ name: '', phone: '', city: '' })
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) =>
+    setForm({ ...form, [e.target.name]: e.target.value })
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+
+    // Получаем UTM source из localStorage (если есть)
+    const utmSource = typeof window !== 'undefined' ? localStorage.getItem('lead_source') : null
+
+    // Отправляем на серверный API для безопасной записи в Supabase
+    await fetch('/api/leads', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: form.name,
+        phone: form.phone,
+        city: form.city,
+        source: utmSource || 'website',
+      })
+    })
+
+    setLoading(false)
+    setStep(2)
+  }
+
+  const handleWhatsApp = () => {
+    const message = encodeURIComponent(copy.whatsappMessage(form.name, form.phone, form.city))
+    window.open(`https://wa.me/972524494848?text=${message}`, '_blank')
+    setIsOpen(false)
+    setStep(1)
+    setForm({ name: '', phone: '', city: '' })
+  }
+
+  const handleCallLater = () => {
+    setIsOpen(false)
+    setStep(1)
+    setForm({ name: '', phone: '', city: '' })
+  }
+
+  return (
+    <section className="relative text-white py-20 px-6 text-center">
+      <div className="max-w-4xl mx-auto">
+        <h2 className="text-3xl md:text-4xl font-extrabold mb-6 tracking-tight">
+          {copy.sectionTitle}
+        </h2>
+        <p className="mb-10 text-lg md:text-xl text-white/70 leading-relaxed font-light">
+          {copy.sectionBody}
+        </p>
+
+        {/* Кнопка "Свяжитесь с нами" */}
+        <button
+          onClick={() => setIsOpen(true)}
+          className="inline-flex items-center justify-center gap-3 px-12 py-4 rounded-full text-lg font-semibold text-white bg-gradient-to-r from-green-700 to-green-600 hover:from-green-600 hover:to-green-500 shadow-lg shadow-green-600/20 transition-all duration-300"
+        >
+          <FaWhatsapp size={26} />
+          {copy.buttonCta}
+        </button>
+      </div>
+
+      {/* Модальное окно */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 px-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              dir={locale === 'he' ? 'rtl' : 'ltr'}
+              className="bg-white text-gray-900 rounded-3xl p-8 w-full max-w-md shadow-2xl relative"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Закрытие */}
+              <button
+                onClick={() => { setIsOpen(false); setStep(1) }}
+                className={`absolute top-4 text-gray-400 hover:text-gray-700 transition ${locale === 'he' ? 'left-4' : 'right-4'}`}
+              >
+                ✕
+              </button>
+
+              {/* --- Шаг 1: Форма --- */}
+              {step === 1 && (
+                <>
+                  <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                    {copy.modalTitle}
+                  </h2>
+                  <p className="text-sm text-gray-500 mb-6">
+                    {copy.modalSubtitle}
+                  </p>
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <input
+                      type="text"
+                      name="name"
+                      placeholder={copy.namePlaceholder}
+                      value={form.name}
+                      onChange={handleChange}
+                      required
+                      className="w-full border border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                    <input
+                      type="tel"
+                      name="phone"
+                      placeholder={copy.phonePlaceholder}
+                      value={form.phone}
+                      onChange={handleChange}
+                      required
+                      className="w-full border border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                    <input
+                      type="text"
+                      name="city"
+                      placeholder={copy.cityPlaceholder}
+                      value={form.city}
+                      onChange={handleChange}
+                      required
+                      className="w-full border border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-500 transition disabled:opacity-50"
+                    >
+                      {loading ? copy.sending : copy.submitButton}
+                    </button>
+                  </form>
+                </>
+              )}
+
+              {/* --- Шаг 2: Выбор --- */}
+              {step === 2 && (
+                <>
+                  <h2 className="text-2xl font-bold text-gray-800 mb-6">
+                    {copy.step2Title}
+                  </h2>
+                  <div className="space-y-3">
+                    <button
+                      onClick={handleWhatsApp}
+                      className="w-full bg-green-600 text-white py-4 rounded-xl font-semibold hover:bg-green-500 flex justify-center items-center gap-2 transition"
+                    >
+                      <FaWhatsapp size={22} />
+                      {copy.whatsappButton}
+                    </button>
+                    <button
+                      onClick={handleCallLater}
+                      className="w-full border-2 border-gray-300 py-4 rounded-xl hover:bg-gray-50 font-semibold text-gray-700 transition"
+                    >
+                      {copy.callButton}
+                    </button>
+                  </div>
+                </>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* декоративная полоса внизу */}
+      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-gray-700 via-gray-400 to-gray-700 opacity-40"></div>
+    </section>
+  )
+}

@@ -11,10 +11,30 @@
       "static/css/app/[locale]/layout.css",
       "static/chunks/app/[locale]/layout.js"
     ],
-    "/[locale]/about/page": [
+    "/[locale]/pergulas/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/[locale]/about/page.js"
+      "static/chunks/app/[locale]/pergulas/page.js"
+    ],
+    "/[locale]/fences/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/[locale]/fences/page.js"
+    ],
+    "/[locale]/railings/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/[locale]/railings/page.js"
+    ],
+    "/[locale]/mistora/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/[locale]/mistora/page.js"
+    ],
+    "/[locale]/windows/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/[locale]/windows/page.js"
     ]
   }
 }

@@ -47,28 +47,26 @@ export function DgamimCarousel(){
         {items
           .slice()
           .sort((a, b) => {
+            const lang = typeof document !== 'undefined' && document.documentElement.lang === 'ru' ? 'ru' : (typeof document !== 'undefined' && document.documentElement.lang === 'en' ? 'en' : 'he')
             const ai = dgamimInfo[a.degem.toLowerCase()]
             const bi = dgamimInfo[b.degem.toLowerCase()]
-            const ap = ai?.price ? parseInt(ai.price.replace(/[^0-9]/g, '')) : Number.MAX_SAFE_INTEGER
-            const bp = bi?.price ? parseInt(bi.price.replace(/[^0-9]/g, '')) : Number.MAX_SAFE_INTEGER
+            const ap = ai?.price?.[lang] ? parseInt(ai.price[lang].replace(/[^0-9]/g, '')) : Number.MAX_SAFE_INTEGER
+            const bp = bi?.price?.[lang] ? parseInt(bi.price[lang].replace(/[^0-9]/g, '')) : Number.MAX_SAFE_INTEGER
             return ap - bp
           })
           .map((item, i)=>{
-          const info = dgamimInfo[item.degem.toLowerCase()] || {
-            title: item.degem,
-            description: item.type,
-            price: ''
-          }
+          const lang = typeof document !== 'undefined' && document.documentElement.lang === 'ru' ? 'ru' : (typeof document !== 'undefined' && document.documentElement.lang === 'en' ? 'en' : 'he')
+          const info = dgamimInfo[item.degem.toLowerCase()] || undefined
           return (
             <div key={`${item.type}-${item.degem}-${i}`} className="flex-none w-[85%] sm:w-[70%] md:w-1/2 lg:w-1/3 rounded-2xl overflow-hidden border border-white/10 bg-white/5">
               <div className="relative h-[50vh] sm:h-[60vh] lg:h-[70vh] bg-gray-800">
                 <button aria-label="Open images" className="absolute inset-0 z-10" onClick={()=> setLightbox({ open:true, images:item.images, start:0 })} />
                 <RotatingImage sources={item.images} alt={`${item.type} - ${item.degem}`} intervalMs={1000} priority={i < 2} />
               </div>
-              <div className="p-4 text-right">
-                <div className="font-extrabold">{info.title}</div>
-                <div className="text-sm text-white/70 mt-1 leading-relaxed">{info.description}</div>
-                {info.price && <div className="mt-2 text-sm font-bold text-white/90">{info.price}</div>}
+                <div className="p-4 text-right">
+                  <div className="font-extrabold">{info ? info.title[lang] : item.degem}</div>
+                  <div className="text-sm text-white/70 mt-1 leading-relaxed">{info ? info.description[lang] : item.type}</div>
+                  {info?.price?.[lang] && <div className="mt-2 text-sm font-bold text-white/90">{info.price[lang]}</div>}
               </div>
             </div>
           )
