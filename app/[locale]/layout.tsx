@@ -58,7 +58,6 @@ export default function RootLayout({ children, params: { locale } }: { children:
   return (
     <html lang={locale} dir={dir} suppressHydrationWarning>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
         {/* Preload removed to avoid warnings on non-home pages; hero uses priority/fetchPriority */}
       </head>

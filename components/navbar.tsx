@@ -1,5 +1,6 @@
 'use client'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { ThemeToggle } from './theme-toggle'
 import { Locale, locales } from '@/lib/locales'
@@ -18,9 +19,17 @@ export default function Navbar({ locale }: { locale: Locale }){
     <div className="sticky top-0 z-50 border-b border-white/10 backdrop-blur bg-black/40">
       <div className="container flex items-center justify-between h-16">
         <Link href={`/${locale}`} className="flex items-center gap-3">
-          <div className="size-10 rounded-full bg-gradient-to-br from-brand-blue to-blue-600 grid place-items-center font-black">פ</div>
+          <Image
+            src="/logo-preview.png"
+            alt="Pashkovsky Group"
+            width={200}
+            height={80}
+            sizes="(max-width: 768px) 200px, 360px"
+            priority
+            className={clsx('object-contain h-[250px] w-auto invert')}
+          />
           <div className="leading-tight">
-            <div className="font-extrabold text-sm">Pashkovskiy Group</div>
+            <div className="font-extrabold text-sm text-white">פשקובסקי גרופ</div>
             <div className="text-xs text-white/60">אלומיניום. דיוק. חדשנות.</div>
           </div>
         </Link>

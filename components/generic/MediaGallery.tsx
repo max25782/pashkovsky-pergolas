@@ -22,11 +22,7 @@ export function MediaGallery({ title, items }: MediaGalleryProps){
   function openImage(idx:number){ setStartIndex(idx); setLightboxOpen(true) }
 
   return (
-      <section className="py-24 text-white"
-    style={{
-      background: 'bg-gradient-to-br from-zinc-900 to-zinc-700)'
-    }}
-    >
+      <section className="py-24 text-white ">
       <div className="container mx-auto px-4">
         {videos.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
@@ -46,12 +42,11 @@ export function MediaGallery({ title, items }: MediaGalleryProps){
                 alt={`Image ${idx+1}`}
                 fill
                 className="object-cover"
-                quality={80}
+                quality={60}
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                priority={idx < 3}
                 placeholder="blur"
                 blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYGD4DwABBAEAW9JTEQAAAABJRU5ErkJggg=="
-                loading={idx < 3 ? 'eager' : 'lazy'}
+                loading="lazy"
               />
             </div>
           ))}
@@ -60,7 +55,7 @@ export function MediaGallery({ title, items }: MediaGalleryProps){
 
       {/* Image lightbox */}
       <Dialog open={lightboxOpen} onOpenChange={(v)=> setLightboxOpen(v)}>
-        <DialogContent className="max-w-[90vw] md:max-w-[80vw] w-full p-0 bg-[#0b1220] text-white border border-white/10">
+        <DialogContent className="max-w-[90vw] md:max-w-[80vw] w-full p-0  text-white border border-white/10">
           <DialogTitle className="sr-only">Gallery lightbox</DialogTitle>
           <DialogDescription className="sr-only">View image</DialogDescription>
           {lightboxOpen && images.length>0 && (
@@ -112,23 +107,24 @@ function CustomLightbox({ images, startIndex }: { images: string[]; startIndex: 
 }
 
 function VideoReel({ src, poster, onOpen }: { src: string; poster?: string; onOpen?: (src:string)=>void }){
-  const ref = useRef<HTMLVideoElement | null>(null)
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [videoSrc, setVideoSrc] = useState<string | null>(null)
-  useEffect(() => {
-    const el = ref.current; if (!el) return
-    el.muted = true; el.playsInline = true; el.loop = true
-    const onLeave = () => { el.pause(); el.currentTime = 0; setIsPlaying(false) }
-    const io = new IntersectionObserver((entries) => { entries.forEach(entry => { if (!entry.isIntersecting) onLeave() }) }, { threshold: 0.5 })
-    io.observe(el); return () => { io.disconnect(); onLeave() }
-  }, [])
-  function handlePlay(){ if (onOpen){ onOpen(src); return } }
+  function handleOpen(){ onOpen?.(src) }
+  const posterSrc = poster || src.replace(/\.(mp4|webm)$/i, '.webp')
   return (
-    <div className="absolute inset-0">
-      <video ref={ref} src={videoSrc ?? undefined} preload="none" poster={poster} className="w-full h-full object-cover" />
+    <div className="absolute inset-0 cursor-pointer" onClick={handleOpen} role="button" aria-label="Open video">
+      <Image
+        src={posterSrc}
+        alt="Video preview"
+        fill
+        className="object-cover"
+        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+        quality={60}
+        loading="lazy"
+        placeholder="blur"
+        blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYGD4DwABBAEAW9JTEQAAAABJRU5ErkJggg=="
+      />
       <GradientOverlay />
-      <div className={`absolute inset-0 flex items-center justify-center`}>
-        <PlayButton onClick={handlePlay} />
+      <div className="absolute inset-0 flex items-center justify-center">
+        <PlayButton onClick={handleOpen} />
       </div>
     </div>
   )

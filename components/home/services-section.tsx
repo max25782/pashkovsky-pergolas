@@ -55,10 +55,7 @@ export function ServicesSection({ locale }: { locale: Locale }) {
   return (
     <section
       id="services"
-      className="relative py-24 text-white cv-auto no-motion"
-      style={{
-        background: 'bg-gradient-to-br from-zinc-900 to-zinc-700)'
-      }}
+      className="relative py-24 text-white bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-700"
     >
       <div className="container mx-auto px-4 text-center ">
         <h2 className="text-4xl font-extrabold mb-14">{locale==='he' ? 'השירותים שלנו' : locale==='ru' ? 'Наши услуги' : 'Our Services'}</h2>
@@ -76,10 +73,10 @@ export function ServicesSection({ locale }: { locale: Locale }) {
                   src={service.img}
                   alt={service.title[locale]}
                   fill
-                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                   className="object-cover group-hover:scale-105 transition-transform duration-150 will-change-transform"
-                  loading={index < 2 ? "eager" : "lazy"}
-                  quality={80}
+                  loading={index < 1 ? "eager" : "lazy"}
+                  quality={60}
                   placeholder="blur"
                   blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYGD4DwABBAEAW9JTEQAAAABJRU5ErkJggg=="
                   decoding="async"

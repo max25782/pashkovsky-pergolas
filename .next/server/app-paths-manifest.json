@@ -1,7 +1,20 @@
 {
+  "/_not-found/page": "app/_not-found/page.js",
+  "/robots.txt/route": "app/robots.txt/route.js",
+  "/icon.svg/route": "app/icon.svg/route.js",
+  "/sitemap.xml/route": "app/sitemap.xml/route.js",
+  "/api/webhooks/whatsapp/route": "app/api/webhooks/whatsapp/route.js",
+  "/api/leads/route": "app/api/leads/route.js",
+  "/[locale]/fences/page": "app/[locale]/fences/page.js",
+  "/[locale]/contact/page": "app/[locale]/contact/page.js",
+  "/[locale]/fromShetah/page": "app/[locale]/fromShetah/page.js",
+  "/[locale]/models/page": "app/[locale]/models/page.js",
+  "/[locale]/about/page": "app/[locale]/about/page.js",
   "/[locale]/page": "app/[locale]/page.js",
   "/[locale]/pergulas/page": "app/[locale]/pergulas/page.js",
   "/[locale]/railings/page": "app/[locale]/railings/page.js",
-  "/[locale]/fences/page": "app/[locale]/fences/page.js",
-  "/[locale]/mistora/page": "app/[locale]/mistora/page.js"
+  "/[locale]/mistora/page": "app/[locale]/mistora/page.js",
+  "/[locale]/windows/page": "app/[locale]/windows/page.js",
+  "/[locale]/services/page": "app/[locale]/services/page.js",
+  "/[locale]/pergulas/[id]/page": "app/[locale]/pergulas/[id]/page.js"
 }

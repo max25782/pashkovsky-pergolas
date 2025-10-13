@@ -4,6 +4,7 @@ import { ServicesSection } from '@/components/home/services-section'
 import { VideoGallery } from '@/components/video/VideoGallery'
 import ContactSection from '@/components/contact-section'
 import { PartnersLogos } from '@/components/home/partners-logos'
+import Footer from '@/components/footer/footer'
 
 export default function Page({ params: { locale } } : { params: { locale: Locale }}){
   return (
@@ -12,6 +13,7 @@ export default function Page({ params: { locale } } : { params: { locale: Locale
       <ServicesSection locale={locale} />
       <ContactSection locale={locale} />
       <PartnersLogos locale={locale} />
+      <Footer locale={locale} />
     </main>
   )
 }
