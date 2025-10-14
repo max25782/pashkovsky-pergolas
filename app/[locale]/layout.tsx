@@ -5,12 +5,13 @@ import Navbar from '@/components/navbar'
 import UTMTracker from '@/components/utm-tracker'
 import { Locale, isRTL } from '@/lib/locales'
 import clsx from 'clsx'
-import { Analytics } from "@vercel/analytics/next"
+import { Analytics } from "@vercel/analytics/react"
+import GA from '@/components/ga'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://pashkovsky-group.com'),
   title: {
-    default: 'Pashkovski Group | פרגולות ומעקות אלומיניום',
+    default: 'Pashkovski Group | פרגולות ומעקות אלומיניום בישראל',
     template: '%s | Pashkovski Group',
   },
   description:
@@ -69,6 +70,7 @@ export default function RootLayout({ children, params: { locale } }: { children:
       )}>
         <Providers>
           <UTMTracker />
+          <GA />
           <Navbar locale={locale} />
           {children}
         </Providers>
