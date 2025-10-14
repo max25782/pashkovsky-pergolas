@@ -72,6 +72,7 @@ export default function RootLayout({ children, params: { locale } }: { children:
           <Navbar locale={locale} />
           {children}
         </Providers>
+        <Analytics />
       </body>
     </html>
   )
