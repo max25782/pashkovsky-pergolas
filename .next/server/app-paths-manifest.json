@@ -1,7 +1,7 @@
 {
-  "/[locale]/page": "app/[locale]/page.js",
   "/[locale]/admin/articles/page": "app/[locale]/admin/articles/page.js",
   "/[locale]/pergulas/page": "app/[locale]/pergulas/page.js",
   "/[locale]/mistora/page": "app/[locale]/mistora/page.js",
-  "/[locale]/profiles/page": "app/[locale]/profiles/page.js"
+  "/[locale]/profiles/page": "app/[locale]/profiles/page.js",
+  "/[locale]/contact/page": "app/[locale]/contact/page.js"
 }
