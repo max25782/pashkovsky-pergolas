@@ -5,6 +5,7 @@ import Navbar from '@/components/navbar'
 import UTMTracker from '@/components/utm-tracker'
 import { Locale, isRTL } from '@/lib/locales'
 import clsx from 'clsx'
+import { Analytics } from "@vercel/analytics/next"
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://pashkovsky-group.com'),
