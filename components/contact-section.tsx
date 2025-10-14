@@ -84,19 +84,33 @@ export default function ContactSection({ locale = 'he' }: ContactSectionProps) {
     const utmSource = typeof window !== 'undefined' ? localStorage.getItem('lead_source') : null
 
     // Отправляем на серверный API для безопасной записи в Supabase
-    await fetch('/api/leads', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: form.name,
-        phone: form.phone,
-        city: form.city,
-        source: utmSource || 'website',
+    try {
+      const resp = await fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name,
+          phone: form.phone,
+          city: form.city,
+          source: utmSource || 'website',
+        })
       })
-    })
+      
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({ error: 'Unknown error' }))
+        console.error('API error:', errData)
+        alert(locale === 'he' ? 'שגיאה בשמירה, נסה שוב' : locale === 'ru' ? 'Ошибка сохранения, попробуйте снова' : 'Save failed, try again')
+        setLoading(false)
+        return
+      }
 
-    setLoading(false)
-    setStep(2)
+      setLoading(false)
+      setStep(2)
+    } catch (err) {
+      console.error('Network error:', err)
+      alert(locale === 'he' ? 'שגיאת רשת, בדוק חיבור' : locale === 'ru' ? 'Ошибка сети, проверьте соединение' : 'Network error')
+      setLoading(false)
+    }
   }
 
   const handleWhatsApp = () => {

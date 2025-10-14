@@ -1,15 +1,19 @@
 'use client'
 import Link from 'next/link'
 import type { Locale } from '@/lib/locales'
+import { useState } from 'react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
 interface Props { locale: Locale }
 
 export default function ContactPageClient({ locale }: Props){
   const t = (he: string, ru: string, en: string) => (locale === 'ru' ? ru : locale === 'en' ? en : he)
+  const [showSuccess, setShowSuccess] = useState(false)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    const fd = new FormData(e.currentTarget)
+    const form = e.currentTarget
+    const fd = new FormData(form)
     const name = String(fd.get('name') || '').trim()
     const phone = String(fd.get('phone') || '').trim()
     const city = String(fd.get('city') || '').trim()
@@ -22,8 +26,8 @@ export default function ContactPageClient({ locale }: Props){
         body: JSON.stringify({ name, phone, city, source: utmSource || 'website' }),
       })
       if (!resp.ok) throw new Error('Failed to save')
-      alert(t('✔️ קיבלנו את הפרטים, נחזור אליך בהקדם!', '✔️ Заявка получена, свяжемся с вами в ближайшее время!', '✔️ We received your details, we will contact you shortly!'))
-      e.currentTarget.reset()
+      form.reset()
+      setShowSuccess(true)
     } catch (err) {
       console.error(err)
       alert(t('אירעה שגיאה בשליחה. נסה שוב בבקשה.', 'Произошла ошибка при отправке. Попробуйте ещё раз.', 'An error occurred. Please try again.'))
@@ -196,6 +200,32 @@ export default function ContactPageClient({ locale }: Props){
           </div>
         </div>
       </section>
+
+      {/* Success Modal */}
+      <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
+        <DialogContent className="max-w-md bg-white text-gray-900" dir={locale === 'he' ? 'rtl' : 'ltr'}>
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-center mb-4">
+              {t('תודה!', 'Спасибо!', 'Thank you!')}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="text-center space-y-4 py-6">
+            <div className="text-6xl mb-4">✅</div>
+            <p className="text-lg font-semibold">
+              {t('קיבלנו את הפרטים שלך', 'Мы получили ваши данные', 'We received your details')}
+            </p>
+            <p className="text-gray-600">
+              {t('נחזור אליך בהקדם!', 'Свяжемся с вами в ближайшее время!', 'We will contact you shortly!')}
+            </p>
+            <button
+              onClick={() => setShowSuccess(false)}
+              className="mt-6 px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition"
+            >
+              {t('סגור', 'Закрыть', 'Close')}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </main>
   )
 }

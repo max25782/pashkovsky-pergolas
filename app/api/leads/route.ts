@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     return new Response('Bad JSON', { status: 400 })
   }
 
-  const { name, phone, city, email, source = 'whatsapp' } = body ?? {}
+  const { name, phone, city, email, source = 'website' } = body ?? {}
   if (!name || !phone) {
     return new Response('Missing required fields', { status: 400 })
   }
@@ -23,33 +23,40 @@ export async function POST(req: NextRequest) {
     const SUPABASE_URL = getEnv('SUPABASE_URL')
     const SERVICE_KEY = getEnv('SUPABASE_SERVICE_ROLE_KEY')
 
-    // Формируем сообщение для last_message и notes
-    const message = `Телефон: ${phone}${city ? `\nГород: ${city}` : ''}${email ? `\nEmail: ${email}` : ''}`
-    
+    // Prepare the payload - notes column stores city/email info
     const payload: any = {
       name,
       phone,
       source,
-      last_message: message,
-      last_message_at: new Date().toISOString(),
-      notes: city || email || null,
+    }
+    
+    // The 'notes' column in Supabase is used to store city info
+    if (city) {
+      payload.notes = city
+    }
+    
+    // If email is provided, append it to notes
+    if (email) {
+      payload.notes = payload.notes ? `${payload.notes}\nEmail: ${email}` : `Email: ${email}`
     }
 
     const resp = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept-Profile': 'public',
         'Content-Profile': 'public',
-        apikey: SERVICE_KEY,
-        Authorization: `Bearer ${SERVICE_KEY}`,
-        Prefer: 'return=minimal',
+        'apikey': SERVICE_KEY,
+        'Authorization': `Bearer ${SERVICE_KEY}`,
+        'Prefer': 'return=representation',
       },
-      body: JSON.stringify([payload]),
+      body: JSON.stringify(payload),
       cache: 'no-store',
     })
 
     if (!resp.ok) {
-      const errText = await resp.text()
+      let errText: any
+      try { errText = await resp.json() } catch { errText = await resp.text() }
       console.error('Supabase insert error:', resp.status, errText)
       return new Response(JSON.stringify({ error: 'Supabase error', status: resp.status, detail: errText }), {
         status: 500,
