@@ -3,10 +3,12 @@ import { Suspense } from 'react'
 import { PergulaGallery } from '@/components/pergulas/pergula-gallery'
 import ProjectsGallery from '@/components/pergulas/ProjectsGallery'
 import ContactSection from '@/components/contact-section'
+import ArticleModal from '@/components/articleModal'
 
 export default function Page({ params: { locale } }: { params: { locale: Locale } }) {
   return (
     <main className="container py-16">
+      <ArticleModal articleSlug="pergolas-aluminum" lang={locale} />
       <Suspense fallback={<div className="mb-16 h-[60vh] w-full rounded-2xl bg-white/5 border border-white/10" />}> 
         <PergulaGallery locale={locale} />
       </Suspense>

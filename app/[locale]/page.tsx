@@ -5,11 +5,13 @@ import { VideoGallery } from '@/components/video/VideoGallery'
 import ContactSection from '@/components/contact-section'
 import { PartnersLogos } from '@/components/home/partners-logos'
 import Footer from '@/components/footer/footer'
+import WhyChooseUs from '@/components/home/WhyChooseUs'
 
 export default function Page({ params: { locale } } : { params: { locale: Locale }}){
   return (
     <main>
       <HeroSection />
+      <WhyChooseUs locale={locale} />
       <ServicesSection locale={locale} />
       <ContactSection locale={locale} />
       <PartnersLogos locale={locale} />

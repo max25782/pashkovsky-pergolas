@@ -1,0 +1,236 @@
+{
+  "articles": [
+    {
+      "id": 1,
+      "slug": "pergolas-aluminum",
+      "title": {
+        "he": "פרגולות אלומיניום – עמידות, עיצוב ונוחות",
+        "en": "Aluminum Pergolas – Durability, Design, and Comfort",
+        "ru": "Алюминиевые перголы — надёжность, стиль и комфорт"
+      },
+      "summary": {
+        "he": "פרגולה מודרנית מאלומיניום הופכת כל מרפסת או חצר למרחב מוצל, פונקציונלי ומעוצב – עם תחזוקה מינימלית ועמידות מקסימלית.",
+        "en": "A modern aluminum pergola transforms any terrace or yard into a shaded, functional, and stylish space with minimal maintenance and maximum durability.",
+        "ru": "Современная алюминиевая пергола превращает террасу или двор в функциональное теневое пространство с минимальным уходом и максимальной долговечностью."
+      },
+      "sections": [
+        {
+          "heading": { "he": "מהי פרגולה ולמה היא נדרשת", "en": "What Is a Pergola and Why It Matters", "ru": "Что такое пергола и зачем она нужна" },
+          "body": {
+            "he": "פרגולה היא מערכת הצללה/כיסוי קבועה או צמודת-קיר, שמספקת צל, הגנה חלקית מגשם, תחושת אינטימיות ותוספת עיצובית לחלל החוץ. בישראל, עם שמש חזקה ורוחות אזוריות, היא מגדילה משמעותית את זמן השימוש במרפסות ובחצרות.",
+            "en": "A pergola is a fixed or wall-attached shading structure that provides shade, partial rain protection, privacy, and a distinctive architectural accent. In Israel’s climate, it significantly increases outdoor usability throughout the year.",
+            "ru": "Пергола — это стационарная или пристенная система тени, которая даёт укрытие от солнца и частично от дождя, добавляет приватности и архитектурной выразительности. В израильском климате она существенно увеличивает полезность открытых пространств."
+          }
+        },
+        {
+          "heading": { "he": "למה אלומיניום", "en": "Why Aluminum", "ru": "Почему алюминий" },
+          "body": {
+            "he": "אלומיניום אינו מחליד, קל יחסית אך חזק, ואינו דורש צביעה תחזוקתית. הוא מאפשר מפתחים גדולים, קווים נקיים והתאמה מלאה לצבעי RAL. זהו חומר אידיאלי לאקלים הישראלי – קרינת UV, לחות ומליחות.",
+            "en": "Aluminum doesn’t rust, is light yet strong, and requires no maintenance repainting. It enables large spans, clean lines, and full RAL color customization. It’s ideal for Israel’s UV, humidity, and salinity.",
+            "ru": "Алюминий не ржавеет, лёгкий и прочный, не требует регулярной покраски. Позволяет делать большие пролёты, чистые линии и любой цвет по RAL. Идеален для израильского климата: UV, влажность, солёный воздух."
+          }
+        },
+        {
+          "heading": { "he": "עובי פרופיל ואיכות מבנית", "en": "Profile Thickness and Structural Quality", "ru": "Толщина профиля и прочность" },
+          "body": {
+            "he": "עובי הדופן של הפרופיל משפיע ישירות על יציבות, קשיחות ועמידות. ככל שהפרופיל עבה יותר (למשל 2.0 מ\"מ לעומת 1.2 מ\"מ), כך הפרגולה עמידה יותר לרוחות, עומס סנטף/פנלים ומִפתחים גדולים. בחירת חתכים נכונים לעמודים, קורות היקף וקורות ביניים היא קריטית.",
+            "en": "Wall thickness directly affects stability, stiffness, and longevity. Thicker profiles (e.g., 2.0 mm vs 1.2 mm) improve resistance to wind, roof loads, and large spans. Proper sizing of posts, perimeter beams, and inner beams is critical.",
+            "ru": "Толщина стенки профиля напрямую влияет на жёсткость и срок службы. Более толстые профили (например, 2,0 мм против 1,2 мм) лучше держат ветер, нагрузку покрытия и большие пролёты. Важно правильно подбирать сечения стоек, рам и внутренних балок."
+          }
+        },
+        {
+          "heading": { "he": "צביעה תקינה (אבקה/תנור) ועמידות UV", "en": "Proper Coating and UV Resistance", "ru": "Покраска и защита от UV" },
+          "body": {
+            "he": "צביעת אבקה בתנור (Qualicoat) מגינה מפני UV, לחות ומליחות, שומרת על גוון ומונעת קילופים. שימוש בקו ציפוי מוסמך ושטיפה/פריימר נכונים מאריך חיי מוצר משמעותית.",
+            "en": "Powder coating (Qualicoat) protects against UV, humidity, and salinity, preserving color and preventing peeling. Certified lines with proper pre-treatment dramatically extend lifespan.",
+            "ru": "Порошковая покраска (Qualicoat) защищает от UV, влаги и соли, сохраняет цвет и предотвращает отслоение. Сертифицированная линия и правильная подготовка поверхности значительно продлевают срок службы."
+          }
+        },
+        {
+          "heading": { "he": "סנטף וקונפיגורציה", "en": "Roofing (Polycarbonate) and Configuration", "ru": "Покрытие (поликарбонат) и конфигурация" },
+          "body": {
+            "he": "בסיס: פרגולה פתוחה/הצללה. תוספות נפוצות: סנטף BH (≈85 ₪/מ\"ר לפני מע\"מ), תאורה, הכנה לחשמל, מיסגור מחוזק לרוח. תכנון נכון של מרווחי הצללה (למשל 70/20 עם רווחי אור 2–5 ס\"מ) משפיע על משקל, עלות ונראות.",
+            "en": "Base: open/shade pergola. Common add-ons: solid polycarbonate (≈₪85/m² ex-VAT), lighting, electrical prep, wind-reinforced framing. Slat spacing (e.g., 70/20 with 2–5 cm gaps) impacts weight, cost, and aesthetics.",
+            "ru": "База: открытая/затеняющая пергола. Опции: поликарбонат (≈85 шек/м² без НДС), освещение, подготовка под электрику, усиление от ветра. Шаг реек (напр. 70/20 с просветом 2–5 см) влияет на вес, стоимость и вид."
+          }
+        },
+        {
+          "heading": { "he": "סיכום", "en": "Conclusion", "ru": "Итог" },
+          "body": {
+            "he": "פרגולת אלומיניום איכותית היא השקעה בנוחות ובסטייל לאורך שנים. ב-Pashkovski Group התכנון, הייצור וההתקנה נעשים בקפדנות — כדי שתהנו מפרגולה יציבה, יפה ועמידה.",
+            "en": "A quality aluminum pergola is a long-term investment in comfort and style. At Pashkovski Group, design, fabrication, and installation are handled meticulously for stability, beauty, and durability.",
+            "ru": "Качественная алюминиевая пергола — инвестиция в комфорт и стиль на годы. В Pashkovski Group проектирование, производство и монтаж выполняются максимально тщательно."
+          }
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "slug": "glass-railings",
+      "title": {
+        "he": "מעקות אלומיניום בשילוב זכוכית – יופי ובטיחות לפי תקן",
+        "en": "Aluminum + Glass Railings – Beauty and Safety by Standard",
+        "ru": "Стеклянные перила с алюминием — красота и безопасность по стандарту"
+      },
+      "summary": {
+        "he": "שילוב של פרופילי אלומיניום وزכוכית יוצר מראה יוקרתי ופתוח, תוך שמירה על בטיחות ועמידה בתקן.",
+        "en": "Combining aluminum profiles with glass delivers a luxurious open look while meeting safety standards.",
+        "ru": "Сочетание алюминиевых профилей и стекла даёт лёгкий премиальный вид при соблюдении всех требований безопасности."
+      },
+      "sections": [
+        {
+          "heading": { "he": "הערך העיצובי והפרקטי", "en": "Design and Practical Value", "ru": "Дизайн и практичность" },
+          "body": {
+            "he": "מעקה זכוכית מאפשר שקיפות, אור ונוף נקי; האלומיניום מספק קשיחות ודיוק בקווים. יחד מתקבל מראה מינימליסטי, מודרני ואל-זמני.",
+            "en": "Glass railings provide transparency, light, and unobstructed views; aluminum adds rigidity and precise lines. Together they create a minimal, modern, timeless look.",
+            "ru": "Стекло даёт свет, прозрачность и чистый вид; алюминий обеспечивает жёсткость и точные линии. В итоге — минималистичный, современный и вне времени образ."
+          }
+        },
+        {
+          "heading": { "he": "תקן ו סוגי זכוכית", "en": "Standards and Glass Types", "ru": "Стандарты и виды стекла" },
+          "body": {
+            "he": "בבנייני מגורים מקובל להשתמש בטריפלקס למינציה שאינה מחוסמת (למשל 6+0.76+6), כל עוד יש מסגרת/חיבור תקני. במבנים ציבוריים או היכן שיש עומסי קהל/רוח גבוהים, נדרש טריפלקס מחוסם לפי ת\"י 1142 (למשל 8T+1.52+8T או 10T+1.52+10T). הבחירה תלויה בגובה, בסוג המבנה ובחשיפה לרוח.",
+            "en": "In residential buildings, non-tempered laminated (triplex) glass such as 6+0.76+6 is commonly used when a proper frame/attachment exists. In public/commercial settings or high crowd/wind loads, tempered laminated glass per Israeli Standard 1142 is required (e.g., 8T+1.52+8T or 10T+1.52+10T). Selection depends on height, building type, and wind exposure.",
+            "ru": "В жилых домах обычно допустим незакалённый триплекс (например, 6+0,76+6) при условии корректной рамки/крепления. В общественных/коммерческих местах или при больших нагрузках — обязателен закалённый триплекс по израильскому стандарту 1142 (напр., 8T+1,52+8T или 10T+1,52+10T). Выбор зависит от высоты, типа объекта и ветровых нагрузок."
+          }
+        },
+        {
+          "heading": { "he": "למה מתקין מקצועי", "en": "Why a Professional Installer Matters", "ru": "Почему важен профессиональный монтаж" },
+          "body": {
+            "he": "חישוב עוביים, בחירת זיגוג, אטימה, ניקוז ותושבות — דורשים ידע. עבודה חובבנית תוביל לסדקים, רטיבות או חוסר יציבות. מתקין מוסמך מבטיח דיוק, אטימות ועמידה בעומסים.",
+            "en": "Thickness calculations, glazing selection, sealing, drainage, and anchoring require expertise. Amateur work risks cracks, leaks, and instability. A certified installer ensures precision, sealing, and load compliance.",
+            "ru": "Расчёт толщин, выбор стекла, герметизация, дренаж и закладные требуют опыта. Дилетантская установка ведёт к трещинам, протечкам и нестабильности. Профессионал гарантирует точность, герметичность и соответствие нагрузкам."
+          }
+        },
+        {
+          "heading": { "he": "סימני איכות בביצוע", "en": "Signs of Quality", "ru": "Признаки качества" },
+          "body": {
+            "he": "פרופילים עבים, זיגוג לפי תקן, חיבורים נקיים ללא ברגים בולטים, קווים ישרים, אטמים איכותיים נגד מים ומליחות, וגימור צבע בתקן.",
+            "en": "Thick profiles, standard-compliant glazing, clean concealed fixings, straight lines, premium gaskets against water/salt, and certified coating.",
+            "ru": "Толстые профили, остекление по стандарту, скрытые крепления, ровная геометрия, качественные уплотнители от воды/соли, сертифицированная окраска."
+          }
+        },
+        {
+          "heading": { "he": "סיכום", "en": "Conclusion", "ru": "Итог" },
+          "body": {
+            "he": "ב-Pashkovski Group כל מעקה מתוכנן ומותקן לפי תקן ובסטנדרט גימור גבוה — שילוב של יופי, בטיחות ועמידות ארוכת שנים.",
+            "en": "At Pashkovski Group, every railing is designed and installed to standard with premium finishes — combining beauty, safety, and long-term durability.",
+            "ru": "В Pashkovski Group каждый проект поручней выполняется по стандартам, с высоким уровнем отделки — сочетание красоты, безопасности и долговечности."
+          }
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "slug": "fences-gates",
+      "title": {
+        "he": "גדרות ושערי אלומיניום – הגנה, פרטיות ועיצוב",
+        "en": "Aluminum Fences & Gates – Protection, Privacy, Design",
+        "ru": "Алюминиевые заборы и ворота — защита, приватность, дизайн"
+      },
+      "summary": {
+        "he": "אלומיניום לא מחליד, קל לתחזוקה ומתאים לאקלים הישראלי. פתרון מושלם לגדרות ושערים עמידים ואלגנטיים.",
+        "en": "Aluminum doesn’t rust and suits Israel’s climate — the perfect solution for durable, elegant fences and gates.",
+        "ru": "Алюминий не ржавеет и идеально подходит для климата Израиля — лучшее решение для долговечных и стильных заборов и ворот."
+      },
+      "sections": [
+        {
+          "heading": { "he": "למה אלומיניום עדיף על ברזל/עץ", "en": "Why Aluminum over Iron/Wood", "ru": "Почему алюминий лучше железа/дерева" },
+          "body": {
+            "he": "ברזל מחליד ודורש צביעה קבועה; עץ דוהה ומתעוות. אלומיניום עמיד, קל, לא דורש צביעה שוטפת ושומר על מראה חדש שנים.",
+            "en": "Iron rusts and needs constant painting; wood fades/warps. Aluminum is durable, light, maintenance-free, and looks new for years.",
+            "ru": "Железо ржавеет и требует покраски; дерево выцветает и ведёт. Алюминий долговечен, лёгок, не требует ухода и годами выглядит как новый."
+          }
+        },
+        {
+          "heading": { "he": "עיצוב והתאמה אישית", "en": "Design & Customization", "ru": "Дизайн и кастомизация" },
+          "body": {
+            "he": "הכל לפי RAL, פרופילים אנכיים/אופקיים, שילובי זכוכית/דמוי-עץ, ופרזול איכותי. נבנה לפי שיפועים, שערי כניסה/חניה, ומעבר נוח.",
+            "en": "Any RAL color, vertical/horizontal slats, glass/wood-like inserts, premium hardware. Tailored to slopes, walk-in/driveway gates, and easy access.",
+            "ru": "Любой цвет RAL, вертикальные/горизонтальные ламели, вставки стекла/под дерево, качественная фурнитура. Учёт уклонов, калиток/проездов и удобства."
+          }
+        },
+        {
+          "heading": { "he": "אוטומציה ובטיחות", "en": "Automation & Safety", "ru": "Автоматика и безопасность" },
+          "body": {
+            "he": "מנועים סגירה שקטה, פוטו-תאים, שלט/אפליקציה. תכנון נכון של צירים/מסילות מבטיח פעולה חלקה ועמידה ברוחות.",
+            "en": "Quiet motors, photo-sensors, remote/app control. Proper hinge/track design ensures smooth operation and wind resistance.",
+            "ru": "Тихие приводы, фотоэлементы, управление пультом/приложением. Правильные петли/рельсы — плавность и устойчивость к ветру."
+          }
+        },
+        {
+          "heading": { "he": "גימור ועמידות", "en": "Finish & Durability", "ru": "Отделка и долговечность" },
+          "body": {
+            "he": "צביעת אבקה בתנור, אטמים נגד מים ומליחות, ברגים נירוסטה. תחזוקה מינימלית לאורך שנים.",
+            "en": "Oven-cured powder coat, seals against water/salt, stainless screws. Minimal maintenance for years.",
+            "ru": "Порошковая покраска, уплотнение от воды/соли, нержавеющий крепёж. Минимум ухода на долгие годы."
+          }
+        },
+        {
+          "heading": { "he": "סיכום", "en": "Conclusion", "ru": "Итог" },
+          "body": {
+            "he": "ב-Pashkovski Group כל גדר/שער מתוכננים אישית — שילוב של ביטחון, פרטיות ועיצוב פרימיום שמתאים בדיוק לבית שלך.",
+            "en": "At Pashkovski Group, every fence/gate is custom-designed — combining security, privacy, and premium design tailored to your home.",
+            "ru": "В Pashkovski Group каждый забор/ворота проектируются индивидуально — безопасность, приватность и премиальный дизайн под ваш дом."
+          }
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "slug": "windows-installation",
+      "title": {
+        "he": "חלונות אלומיניום – הדיוק שעושה את ההבדל",
+        "en": "Aluminum Windows – Precision That Makes the Difference",
+        "ru": "Алюминиевые окна — точность, которая решает всё"
+      },
+      "summary": {
+        "he": "גם חלון איכותי יאכזב אם יותקן לא נכון. מדידה, עיגון ואיטום מקצועיים קובעים בידוד, שקט ועמידות לשנים.",
+        "en": "Even premium windows disappoint if installed poorly. Professional measurement, anchoring, and sealing ensure insulation, silence, and longevity.",
+        "ru": "Даже премиальные окна разочаруют при неправильном монтаже. Профессиональные замер, крепление и герметизация дают тепло-, шумоизоляцию и долговечность."
+      },
+      "sections": [
+        {
+          "heading": { "he": "מדידה מקצועית", "en": "Professional Survey", "ru": "Профессиональный замер" },
+          "body": {
+            "he": "בדיקת גאומטריית הפתח, עובי קיר, בידוד קיים וכיווני שמש/רוח. התאמת מערכת הפרופילים והתריסים לשימוש בפועל.",
+            "en": "Check opening geometry, wall thickness, existing insulation, sun/wind directions. Match profile systems and shutters to real use.",
+            "ru": "Проверка геометрии проёма, толщины стен, существующей изоляции, направлений солнца/ветра. Подбор профильной системы и роллет под сценарий."
+          }
+        },
+        {
+          "heading": { "he": "התקנה ואיטום", "en": "Installation & Sealing", "ru": "Монтаж и герметизация" },
+          "body": {
+            "he": "עיגון נכון, פילוס, מרווחי התפשטות, קצף/סיליקון ייעודיים, ניקוז תקני. דילוג על שלב גורם לחדירות מים/רוח, רעשים ועיוותים.",
+            "en": "Proper anchoring, leveling, expansion gaps, dedicated foam/sealants, and standard drainage. Skipping steps leads to leaks, drafts, noise, and warping.",
+            "ru": "Правильное крепление, вывод в уровень, компенсационные зазоры, профильная пена/герметики, дренаж по стандарту. Пропуск этапов — протечки, сквозняки, шумы, деформация."
+          }
+        },
+        {
+          "heading": { "he": "זיגוג ובידוד תרמי/אקוסטי", "en": "Glazing & Thermal/Acoustic Performance", "ru": "Стеклопакеты и тепло/шумоизоляция" },
+          "body": {
+            "he": "בחירת זיגוג לפי אקלים ושימוש: בידודית, טריפלקס, Low-E. אטמים איכותיים ומרכיבי פרופיל משפרים ביצועים לאורך שנים.",
+            "en": "Choose glazing by climate/use: insulated units, laminated, Low-E. Quality gaskets and profile components sustain performance for years.",
+            "ru": "Выбор стеклопакета по климату/задаче: энергоэффективные, триплекс, Low-E. Качественные уплотнители и комплектующие держат характеристики годами."
+          }
+        },
+        {
+          "heading": { "he": "בקרת איכות ושירות", "en": "Quality Control & Service", "ru": "Контроль качества и сервис" },
+          "body": {
+            "he": "כיוונון פרזול, בדיקות אטימה, הדרכת שימוש וניקיון. תיעוד אחריות ומתווה שירות חכם מונעים תקלות עתידיות.",
+            "en": "Hardware adjustment, sealing checks, user guidance. Warranty documentation and smart service plan prevent future issues.",
+            "ru": "Регулировка фурнитуры, проверка герметичности, инструктаж. Документы по гарантии и план сервиса предотвращают проблемы."
+          }
+        },
+        {
+          "heading": { "he": "סיכום", "en": "Conclusion", "ru": "Итог" },
+          "body": {
+            "he": "ב-Pashkovski Group כל שלב — מהמדידה ועד הסיליקון — מתבצע לפי תקן ובקפדנות הנדסית. התוצאה: חלונות שקטים, אטומים ועמידים לשנים.",
+            "en": "At Pashkovski Group every stage — from survey to sealant — follows standards with engineering rigor. The result: quiet, tight, and durable windows.",
+            "ru": "В Pashkovski Group каждый этап — от замера до герметика — выполняется по стандартам и с инженерной точностью. Результат: тихие, тёплые и долговечные окна."
+          }
+        }
+      ]
+    }
+  ]
+}

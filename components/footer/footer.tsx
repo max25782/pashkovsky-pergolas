@@ -27,7 +27,8 @@ export default function Footer({ locale = 'he' }: { locale?: Locale }) {
           <a href={`/${locale}`} className="hover:text-white transition">{t('דף הבית','Главная','Home')}</a>
           <a href={`/${locale}/pergulas`} className="hover:text-white transition">{t('פרגולות','Перголы','Pergolas')}</a>
           <a href={`/${locale}/railings`} className="hover:text-white transition">{t('מעקות','Перила','Railings')}</a>
-          <a href={`/${locale}/fences`} className="hover:text-white transition">{t('מסתורים','Экраны','Screens')}</a>
+          <a href={`/${locale}/profiles`} className="hover:text-white transition">{t('פרופילים','Профили','Profiles')}</a>
+          <a href={`/${locale}/blog`} className="hover:text-white transition">{t('בלוג','Блог','Blog')}</a>
           <a href={`/${locale}/about`} className="hover:text-white transition">{t('אודות','О нас','About')}</a>
           <a href={`/${locale}/contact`} className="hover:text-white transition">{t('צור קשר','Контакты','Contact')}</a>
         </div>
@@ -68,7 +69,7 @@ export default function Footer({ locale = 'he' }: { locale?: Locale }) {
               <FaFacebook size={18} />
             </a>
             <a
-              href="https://www.tiktok.com/"
+              href="https://www.tiktok.com/@pashkovsky.group"
               target="_blank"
               rel="noreferrer"
               aria-label="TikTok"

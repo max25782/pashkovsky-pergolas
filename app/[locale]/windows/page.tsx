@@ -2,6 +2,7 @@ import type { Locale } from '@/lib/locales'
 import { MediaGallery } from '@/components/generic/MediaGallery'
 import windows from '@/data/gallery/windows.json'
 import servicesJson from '@/data/gallery/index.json'
+import ArticleModal from '@/components/articleModal'
 
 export default function Page({ params: { locale } }: { params: { locale: Locale } }) {
   const t = (he: string, ru: string, en: string) => (locale === 'he' ? he : locale === 'ru' ? ru : en)
@@ -15,6 +16,7 @@ export default function Page({ params: { locale } }: { params: { locale: Locale 
   const descEn = 'Manufacture and installation of made‑to‑measure aluminum windows and storefronts — premium quality, excellent insulation, and a modern look that lasts.'
   return (
     <main className="container py-16">
+      <ArticleModal articleSlug="windows-installation" lang={locale} />
       <h1 className="text-3xl font-extrabold">{t(titleHe, titleRu, titleEn)}</h1>
       <p className="mt-3 text-white/70">{t(descHe, descRu, descEn)}</p>
       <MediaGallery title={t(titleHe, titleRu, titleEn)} items={items} />

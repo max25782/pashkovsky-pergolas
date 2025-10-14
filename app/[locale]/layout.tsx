@@ -61,7 +61,11 @@ export default function RootLayout({ children, params: { locale } }: { children:
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
         {/* Preload removed to avoid warnings on non-home pages; hero uses priority/fetchPriority */}
       </head>
-      <body className={clsx('min-h-screen', dir==='rtl'?'rtl':'ltr')}>
+      <body className={clsx(
+        'min-h-screen transition-colors duration-200',
+        'bg-white text-black dark:bg-neutral-950 dark:text-white',
+        dir==='rtl'?'rtl':'ltr'
+      )}>
         <Providers>
           <UTMTracker />
           <Navbar locale={locale} />
