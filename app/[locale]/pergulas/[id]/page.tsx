@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
 import projects from '@/data/gallery/pergulot.json'
 import Image from 'next/image'
 
@@ -54,17 +55,19 @@ export default function PergulaProjectPage({ params }: { params: { id: string; l
   const desc = project.desc[locale] ?? project.desc.he
 
   return (
-    <main className="container py-12">
-      <h1 className="text-3xl md:text-4xl font-extrabold mb-4 text-white">{title}</h1>
-      <p className="text-white/80 mb-8">{desc}</p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {project.images.map((src) => (
-          <div key={src} className="relative w-full aspect-[4/3] rounded-xl overflow-hidden">
-            <Image src={src} alt={title} fill className="object-cover" sizes="(max-width:640px) 100vw, (max-width:1024px) 50vw, 33vw" />
-          </div>
-        ))}
-      </div>
-    </main>
+    <Suspense fallback={<main className="container py-12"><div className="h-64 rounded-xl bg-white/5" /></main>}>
+      <main className="container py-12">
+        <h1 className="text-3xl md:text-4xl font-extrabold mb-4 text-white">{title}</h1>
+        <p className="text-white/80 mb-8">{desc}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {project.images.map((src) => (
+            <div key={src} className="relative w-full aspect-[4/3] rounded-xl overflow-hidden">
+              <Image src={src} alt={title} fill className="object-cover" sizes="(max-width:640px) 100vw, (max-width:1024px) 50vw, 33vw" />
+            </div>
+          ))}
+        </div>
+      </main>
+    </Suspense>
   )
 }
 
