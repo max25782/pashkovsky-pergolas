@@ -7,6 +7,7 @@ import { Locale, isRTL } from '@/lib/locales'
 import clsx from 'clsx'
 import { Analytics } from "@vercel/analytics/react"
 import GA from '@/components/ga'
+import { Suspense } from 'react'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://pashkovsky-group.com'),
@@ -70,8 +71,12 @@ export default function RootLayout({ children, params: { locale } }: { children:
       )}>
         <Providers>
           <UTMTracker />
-          <GA />
-          <Navbar locale={locale} />
+          <Suspense fallback={null}>
+            <GA />
+          </Suspense>
+          <Suspense fallback={null}>
+            <Navbar locale={locale} />
+          </Suspense>
           {children}
         </Providers>
         <Analytics />
