@@ -69,6 +69,20 @@ const features = [
       en: 'From measurement to maintenance — everything turnkey, without intermediaries.'
     }
   },
+  // Added: 7-year warranty feature
+  {
+    icon: ShieldCheck,
+    title: {
+      he: 'אחריות 7 שנים על הכל',
+      ru: 'Гарантия 7 лет на всё',
+      en: '7-year warranty on everything'
+    },
+    text: {
+      he: 'אחריות מלאה לכל רכיבי המערכת — מבנה, מנגנונים, צבע והתקנה.',
+      ru: 'Полная гарантия на все элементы системы — каркас, механизмы, покрытие и монтаж.',
+      en: 'Full warranty for all system components — structure, mechanisms, finish and installation.'
+    }
+  },
 ]
 
 const content = {
