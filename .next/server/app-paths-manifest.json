@@ -1,3 +1,4 @@
 {
+  "/[locale]/admin/leads/page": "app/[locale]/admin/leads/page.js",
   "/[locale]/page": "app/[locale]/page.js"
 }

@@ -8,6 +8,7 @@ import clsx from 'clsx'
 import { Analytics } from "@vercel/analytics/react"
 import GA from '@/components/ga'
 import { Suspense } from 'react'
+import FloatingWhatsApp from '@/components/contact/FloatingWhatsApp'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://pashkovsky-group.com'),
@@ -78,6 +79,7 @@ export default function RootLayout({ children, params: { locale } }: { children:
             <Navbar locale={locale} />
           </Suspense>
           {children}
+          <FloatingWhatsApp locale={locale} />
         </Providers>
         <Analytics />
       </body>

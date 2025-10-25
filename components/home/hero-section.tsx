@@ -1,4 +1,5 @@
 "use client";
+import ContactCtaButton from '@/components/contact/ContactCtaButton'
 
 export function HeroSection() {
   const lang = typeof document !== 'undefined' ? document.documentElement.lang : 'he'
@@ -24,6 +25,9 @@ export function HeroSection() {
         <p className="text-lg md:text-2xl mb-6 drop-shadow-md">
           {lang === 'ru' ? 'Алюминиевые перголы, идеально подходящие к вашему дому — стильное, долговечное и красивое решение на годы' : (lang === 'en' ? 'Aluminum pergolas, perfectly tailored to your home — stylish, durable and beautiful for years' : 'פרגולות אלומיניום בהתאמה מושלמת לבית שלך – פתרון מעוצב, עמיד ויפהפה לאורך שנים')}
         </p>
+        <div className="flex items-center justify-center gap-3">
+          <ContactCtaButton locale={lang as any} />
+        </div>
       </div>
     </section>
   );

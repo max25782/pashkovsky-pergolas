@@ -30,7 +30,7 @@ export function LeadsTable({ adminToken }: Props){
   async function load(){
     setLoading(true); setError(null)
     try{
-      const url = `/api/admin/leads?q=${encodeURIComponent(q)}&limit=${limit}&offset=${page*limit}`
+      const url = `/admin-api/leads?q=${encodeURIComponent(q)}&limit=${limit}&offset=${page*limit}`
       console.log('Fetching:', url, 'with token:', adminToken?.slice(0,4)+'...')
       const r = await fetch(url, { headers: { 'x-admin-token': adminToken } })
       console.log('Response status:', r.status)
@@ -49,15 +49,21 @@ export function LeadsTable({ adminToken }: Props){
   useEffect(()=>{ load() }, [q, page])
 
   async function patch(id: string, updates: Partial<Lead>){
-    const r = await fetch('/api/admin/leads', { method:'PATCH', headers: { 'Content-Type': 'application/json', 'x-admin-token': adminToken }, body: JSON.stringify({ id, ...updates }) })
+    const r = await fetch('/admin-api/leads', { method:'PATCH', headers: { 'Content-Type': 'application/json', 'x-admin-token': adminToken }, body: JSON.stringify({ id, ...updates }) })
     if(!r.ok) throw new Error(await r.text())
   }
 
   async function del(id: string){
     if(!confirm('Delete lead?')) return
-    const r = await fetch(`/api/admin/leads?id=${encodeURIComponent(id)}`, { method:'DELETE', headers: { 'x-admin-token': adminToken } })
-    if(!r.ok) throw new Error(await r.text())
-    await load()
+    try{
+      const r = await fetch(`/admin-api/leads?id=${encodeURIComponent(id)}`, { method:'DELETE', headers: { 'x-admin-token': adminToken } })
+      const body = await r.text()
+      if(!r.ok) throw new Error(`${r.status}: ${body}`)
+      await load()
+    }catch(e:any){
+      console.error('Delete error:', e)
+      alert(`Delete failed: ${e.message}`)
+    }
   }
 
   return (

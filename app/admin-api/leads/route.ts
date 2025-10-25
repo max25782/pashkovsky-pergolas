@@ -20,22 +20,6 @@ const supabase = SUPABASE_URL && SERVICE_KEY
   ? createClient(SUPABASE_URL, SERVICE_KEY, { db: { schema: 'public' } })
   : undefined
 
-async function sbFetch(path: string, init?: RequestInit) {
-  if (!SUPABASE_URL || !SERVICE_KEY) throw new Error('Missing Supabase env')
-  return fetch(`${SUPABASE_URL}${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept-Profile': 'public',
-      'Content-Profile': 'public',
-      'apikey': SERVICE_KEY,
-      'Authorization': `Bearer ${SERVICE_KEY}`,
-      ...(init?.headers || {}),
-    },
-    cache: 'no-store',
-  })
-}
-
 export async function GET(req: NextRequest) {
   if (!auth(req)) return new Response('Unauthorized', { status: 401 })
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
