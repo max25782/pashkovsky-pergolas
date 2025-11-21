@@ -1,4 +1,7 @@
 {
+  "/api/leads/route": "app/api/leads/route.js",
+  "/[locale]/admin/deals/page": "app/[locale]/admin/deals/page.js",
   "/[locale]/admin/leads/page": "app/[locale]/admin/leads/page.js",
-  "/[locale]/page": "app/[locale]/page.js"
+  "/[locale]/page": "app/[locale]/page.js",
+  "/[locale]/pergola3d/page": "app/[locale]/pergola3d/page.js"
 }

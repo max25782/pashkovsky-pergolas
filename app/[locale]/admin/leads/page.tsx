@@ -34,6 +34,12 @@ export default function AdminLeadsPage({ params: { locale } }: { params: { local
         <h1 className="text-2xl font-bold">Admin • Leads</h1>
         <div className="flex gap-2">
           <a 
+            href={`/${locale}/admin/deals`}
+            className="px-4 py-2 rounded bg-green-600 hover:bg-green-700 font-semibold"
+          >
+            Сделки
+          </a>
+          <a 
             href={`/${locale}/admin/articles`}
             className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 font-semibold"
           >

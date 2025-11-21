@@ -25,16 +25,42 @@ export async function GET(req: NextRequest) {
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
   const { searchParams } = new URL(req.url)
   const q = searchParams.get('q')?.trim() || ''
+  const source = searchParams.get('source')?.trim() || '' // Filter by source/campaign
+  const status = searchParams.get('status')?.trim() || '' // Filter by status
+  const startDate = searchParams.get('start_date')?.trim() || '' // Filter by start date
+  const endDate = searchParams.get('end_date')?.trim() || '' // Filter by end date
   const limit = Number(searchParams.get('limit') || 20)
   const offset = Number(searchParams.get('offset') || 0)
 
   let query = supabase.from('leads').select('*', { count: 'exact' }).order('created_at', { ascending: false }).range(offset, offset + limit - 1)
+  
+  // Filter by source (campaign)
+  if (source) {
+    query = query.eq('source', source)
+  }
+  
+  // Filter by status
+  if (status) {
+    query = query.eq('status', status)
+  }
+  
+  // Filter by date range
+  if (startDate) {
+    query = query.gte('created_at', startDate)
+  }
+  if (endDate) {
+    query = query.lte('created_at', endDate)
+  }
+  
+  // Search in name, phone, notes
   if (q) {
     const like = `%${q.replace(/\s+/g, '%')}%`
     query = query.or(`name.ilike.${like},phone.ilike.${like},notes.ilike.${like}`)
   }
+  
   const { data, error } = await query
   if (error) return new Response(JSON.stringify(error), { status: 400 })
+  
   return new Response(JSON.stringify(data ?? []), { status: 200, headers: { 'Content-Type': 'application/json' } })
 }
 
@@ -42,12 +68,90 @@ export async function PATCH(req: NextRequest) {
   if (!auth(req)) return new Response('Unauthorized', { status: 401 })
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
   let body: any
-  try { body = await req.json() } catch { return new Response('Bad JSON', { status: 400 }) }
+  try { 
+    body = await req.json() 
+  } catch (e) { 
+    console.error('PATCH: Bad JSON', e)
+    return new Response('Bad JSON', { status: 400 }) 
+  }
+  
   const { id, ...updates } = body || {}
-  if (!id) return new Response('Missing id', { status: 400 })
-  const { error } = await supabase.from('leads').update(updates).eq('id', id)
-  if (error) return new Response(JSON.stringify(error), { status: 400 })
-  return new Response('OK')
+  if (!id) {
+    console.error('PATCH: Missing id')
+    return new Response('Missing id', { status: 400 })
+  }
+  
+  // Convert empty string to null for status and notes
+  if (updates.status === '') updates.status = null
+  if (updates.notes === '') updates.notes = null
+  
+  console.log('PATCH: Updating lead', id, 'with', updates)
+  
+  // First, get the current lead to check if status is changing to 'won'
+  const { data: currentLead } = await supabase
+    .from('leads')
+    .select('*')
+    .eq('id', id)
+    .single()
+  
+  const isChangingToWon = updates.status === 'won' && currentLead?.status !== 'won'
+  
+  // Update the lead
+  const { data, error } = await supabase
+    .from('leads')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single()
+  
+  if (error) {
+    console.error('PATCH: Supabase error', error)
+    // Provide more helpful error message for constraint violations
+    let errorMessage = error.message
+    if (error.code === '23514' && error.message.includes('status_check')) {
+      errorMessage = 'Недопустимое значение статуса. Разрешенные значения: pending, confirmed, contacted, qualified, won, lost (или null)'
+    }
+    return new Response(JSON.stringify({ error: errorMessage, code: error.code, details: error }), { 
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    })
+  }
+  
+  // If status changed to 'won', automatically create a deal
+  if (isChangingToWon && data) {
+    try {
+      // Create deal from lead
+      const dealData = {
+        lead_id: data.id,
+        customer_name: data.name,
+        customer_phone: data.phone,
+        stage: 'new',
+        notes: `Создано из лида #${data.id}\n${data.notes || ''}`,
+      }
+      
+      const { data: newDeal, error: dealError } = await supabase
+        .from('deals')
+        .insert(dealData)
+        .select()
+        .single()
+      
+      if (dealError) {
+        console.error('Failed to create deal from won lead:', dealError)
+        // Don't fail the lead update, just log the error
+      } else {
+        console.log('Successfully created deal from won lead:', newDeal?.id)
+      }
+    } catch (dealErr) {
+      console.error('Error creating deal from won lead:', dealErr)
+      // Don't fail the lead update
+    }
+  }
+  
+  console.log('PATCH: Successfully updated', data)
+  return new Response(JSON.stringify(data), { 
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  })
 }
 
 export async function DELETE(req: NextRequest) {
@@ -60,5 +164,11 @@ export async function DELETE(req: NextRequest) {
   if (error) return new Response(JSON.stringify(error), { status: 400 })
   return new Response('OK')
 }
+
+
+
+
+
+
 
 

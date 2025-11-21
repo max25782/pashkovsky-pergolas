@@ -15,6 +15,7 @@ export default function Navbar({ locale }: { locale: Locale }){
     { href: `/${locale}/about`, label: locale==='he'?'על החברה': locale==='ru'?'О компании':'About' },
     { href: `/${locale}#services`, label: locale==='he'?'השירותים שלנו': locale==='ru'?'Наши услуги':'Services' },
     { href: `/${locale}/profiles`, label: locale==='he'?'פרופילים': locale==='ru'?'Профили':'Profiles' },
+    { href: `/${locale}/pergola3d`, label: locale==='he'?'קונפיגורטור 3D': locale==='ru'?'Конфигуратор 3D ':'Configurator 3D' },
     { href: `/${locale}/blog`, label: locale==='he'?'בלוג': locale==='ru'?'Блог':'Blog' },
     { href: `/${locale}/contact`, label: locale==='he'?'צור קשר': locale==='ru'?'Контакты':'Contact' },
   ]
