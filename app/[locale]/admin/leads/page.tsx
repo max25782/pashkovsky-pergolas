@@ -45,6 +45,12 @@ export default function AdminLeadsPage({ params: { locale } }: { params: { local
           >
             Статьи
           </a>
+          <a
+            href={`/${locale}/admin/gallery`}
+            className="px-4 py-2 rounded bg-purple-600 hover:bg-purple-700 font-semibold"
+          >
+            Галерея
+          </a>
           <button onClick={logout} className="px-3 py-2 rounded bg-white/10 hover:bg-white/20">Logout</button>
         </div>
       </div>

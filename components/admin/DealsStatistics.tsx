@@ -1,11 +1,15 @@
 "use client"
-import { useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import type { Deal } from './deal-types'
 import { formatCurrency } from './deal-utils'
+import { MonthlyDealsModal } from './MonthlyDealsModal'
 
 interface DealsStatisticsProps {
   deals: Deal[]
+  onDealClick?: (deal: Deal) => void
 }
+
+type StatisticType = 'all' | 'money' // 'all' - все сделки, 'money' - только завершенные
 
 interface MonthlyStats {
   month: string
@@ -16,12 +20,23 @@ interface MonthlyStats {
   dealCount: number
 }
 
-export function DealsStatistics({ deals }: DealsStatisticsProps) {
+export function DealsStatistics({ deals, onDealClick }: DealsStatisticsProps) {
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null)
+  const [selectedMonthLabel, setSelectedMonthLabel] = useState<string>('')
+  const [statisticType, setStatisticType] = useState<StatisticType>('money')
+  
   const monthlyStats = useMemo(() => {
     const statsMap = new Map<string, MonthlyStats>()
 
-    // Фильтруем только существующие сделки (с валидным id)
-    const validDeals = deals.filter(deal => deal && deal.id)
+    // Фильтруем сделки в зависимости от выбранного типа статистики
+    let validDeals = deals.filter(deal => deal && deal.id)
+    
+    // Если выбран тип 'money', показываем только завершенные сделки (done)
+    if (statisticType === 'money') {
+      validDeals = validDeals.filter(deal => {
+        return deal.stage === 'done'
+      })
+    }
     
     validDeals.forEach(deal => {
       // Используем дату установки (installation_date) в приоритете
@@ -65,7 +80,7 @@ export function DealsStatistics({ deals }: DealsStatisticsProps) {
     return Array.from(statsMap.values())
       .sort((a, b) => a.month.localeCompare(b.month))
       .reverse()
-  }, [deals])
+  }, [deals, statisticType])
 
   const totals = useMemo(() => {
     return monthlyStats.reduce(
@@ -81,12 +96,45 @@ export function DealsStatistics({ deals }: DealsStatisticsProps) {
 
   return (
     <div className="bg-white/5 rounded-lg border border-white/10 p-6">
-      <h2 className="text-2xl font-bold text-white mb-6">
-        הכנסות והוצאות לפי חודש (Доходы и расходы по месяцам)
-      </h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-white">
+          הכנסות והוצאות לפי חודש (Доходы и расходы по месяцам)
+        </h2>
+        
+        {/* Filter Toggle */}
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-white/70">סוג סטטיסטיקה (Тип статистики):</span>
+          <div className="flex gap-2 bg-white/10 rounded-lg p-1">
+            <button
+              onClick={() => setStatisticType('money')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                statisticType === 'money'
+                  ? 'bg-green-600 text-white'
+                  : 'text-white/60 hover:text-white'
+              }`}
+            >
+              עם כסף (С деньгами)
+            </button>
+            <button
+              onClick={() => setStatisticType('all')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                statisticType === 'all'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-white/60 hover:text-white'
+              }`}
+            >
+              הכל (Все)
+            </button>
+          </div>
+        </div>
+      </div>
       
       <div className="mb-4 text-sm text-white/60">
-        * Статистика основана на дате установки (תאריך התקנה), при отсутствии - на дате заказа или создания
+        {statisticType === 'money' ? (
+          <>* Показываются только завершенные сделки (Готово / done) - те, которые уже принесли деньги. Статистика основана на дате установки (תאריך התקנה), при отсутствии - на дате заказа или создания</>
+        ) : (
+          <>* Показываются все сделки. Статистика основана на дате установки (תאריך התקנה), при отсутствии - на дате заказа или создания</>
+        )}
       </div>
 
       {monthlyStats.length === 0 ? (
@@ -108,7 +156,15 @@ export function DealsStatistics({ deals }: DealsStatisticsProps) {
               </thead>
               <tbody>
                 {monthlyStats.map((stat) => (
-                  <tr key={stat.month} className="border-t border-white/5 hover:bg-white/5 transition-colors">
+                  <tr 
+                    key={stat.month} 
+                    className="border-t border-white/5 hover:bg-white/10 transition-colors cursor-pointer"
+                    onClick={() => {
+                      setSelectedMonth(stat.month)
+                      setSelectedMonthLabel(stat.monthLabel)
+                    }}
+                    title="לחץ כדי לראות עסקאות (Нажмите, чтобы увидеть сделки)"
+                  >
                     <td className="p-3 font-medium text-white">{stat.monthLabel}</td>
                     <td className="p-3 text-right text-white/70">{stat.dealCount}</td>
                     <td className="p-3 text-right font-semibold text-green-400">
@@ -179,6 +235,25 @@ export function DealsStatistics({ deals }: DealsStatisticsProps) {
             </div>
           </div>
         </>
+      )}
+
+      {/* Monthly Deals Modal */}
+      {selectedMonth && (
+        <MonthlyDealsModal
+          month={selectedMonth}
+          monthLabel={selectedMonthLabel}
+          deals={deals}
+          statisticType={statisticType}
+          onClose={() => {
+            setSelectedMonth(null)
+            setSelectedMonthLabel('')
+          }}
+          onDealClick={(deal) => {
+            setSelectedMonth(null)
+            setSelectedMonthLabel('')
+            onDealClick?.(deal)
+          }}
+        />
       )}
     </div>
   )

@@ -5,6 +5,7 @@ import fromShetah from '@/data/gallery/fromShetah.json'
 export default function Page({ params: { locale } }: { params: { locale: Locale } }) {
   const t = (he: string, ru: string, en: string) => (locale === 'he' ? he : locale === 'ru' ? ru : en)
   const items = (fromShetah as { items: { src: string; type: 'image' | 'video' }[] }).items
+  
   return (
     <main className="container py-16">
       <h1 className="text-3xl font-extrabold">{t('מהשטח – רגעים אמיתיים מהעבודה שלנו', 'Работы с объектов', 'From the Field')}</h1>

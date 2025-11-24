@@ -29,7 +29,7 @@ export interface Deal {
 export const STAGES = [
   { id: 'new', label: 'Новая', color: 'bg-gray-500' },
   { id: 'measure', label: 'Замер', color: 'bg-purple-500' },
-  { id: 'offer', label: 'Предложение', color: 'bg-yellow-500' },
+  { id: 'offer', label: 'הוזמן', color: 'bg-yellow-500' },
   { id: 'approved', label: 'Утверждено', color: 'bg-green-500' },
   { id: 'production', label: 'Производство', color: 'bg-orange-500' },
   { id: 'install', label: 'Установка', color: 'bg-indigo-500' },

@@ -111,7 +111,11 @@ export function DealsTable({ adminToken }: Props) {
 
       {showStatistics && (
         <div className="mb-6">
-          <DealsStatistics deals={deals} key={deals.length} />
+          <DealsStatistics 
+            deals={deals} 
+            key={deals.length}
+            onDealClick={setSelectedDeal}
+          />
         </div>
       )}
 

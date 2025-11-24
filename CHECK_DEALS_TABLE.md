@@ -105,3 +105,4 @@ CREATE TRIGGER update_deals_updated_at
 3. Проверьте, что вы используете правильный проект Supabase (проверьте переменные окружения)
 
 
+

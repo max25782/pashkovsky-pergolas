@@ -83,3 +83,4 @@ CREATE TRIGGER update_deals_updated_at
 COMMENT ON TABLE deals IS 'Closed leads and deals - advanced CRM table with comprehensive project management fields';
 
 
+

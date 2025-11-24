@@ -1,7 +1,10 @@
 {
-  "/api/leads/route": "app/api/leads/route.js",
+  "/admin-api/deals/route": "app/admin-api/deals/route.js",
   "/[locale]/admin/deals/page": "app/[locale]/admin/deals/page.js",
-  "/[locale]/admin/leads/page": "app/[locale]/admin/leads/page.js",
+  "/[locale]/pergola3d/page": "app/[locale]/pergola3d/page.js",
+  "/[locale]/fromShetah/page": "app/[locale]/fromShetah/page.js",
   "/[locale]/page": "app/[locale]/page.js",
-  "/[locale]/pergola3d/page": "app/[locale]/pergola3d/page.js"
+  "/[locale]/admin/leads/page": "app/[locale]/admin/leads/page.js",
+  "/[locale]/pergulas/page": "app/[locale]/pergulas/page.js",
+  "/[locale]/admin/gallery/page": "app/[locale]/admin/gallery/page.js"
 }

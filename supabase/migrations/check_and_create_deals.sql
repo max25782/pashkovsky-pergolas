@@ -112,3 +112,4 @@ AND table_name = 'deals'
 ORDER BY ordinal_position;
 
 
+

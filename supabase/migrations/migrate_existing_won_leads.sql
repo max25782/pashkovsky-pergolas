@@ -40,3 +40,4 @@ WHERE status = 'won'
 SELECT COUNT(*) as migrated_deals_count FROM deals WHERE notes LIKE 'Migrated from won lead%';
 
 
+

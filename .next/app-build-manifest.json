@@ -1,9 +1,9 @@
 {
   "pages": {
-    "/[locale]/admin/deals/page": [
+    "/[locale]/admin/gallery/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/[locale]/admin/deals/page.js"
+      "static/chunks/app/[locale]/admin/gallery/page.js"
     ],
     "/[locale]/layout": [
       "static/chunks/webpack.js",
@@ -11,20 +11,35 @@
       "static/css/app/[locale]/layout.css",
       "static/chunks/app/[locale]/layout.js"
     ],
-    "/[locale]/admin/leads/page": [
+    "/[locale]/admin/deals/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/[locale]/admin/leads/page.js"
+      "static/chunks/app/[locale]/admin/deals/page.js"
+    ],
+    "/[locale]/pergola3d/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/[locale]/pergola3d/page.js"
+    ],
+    "/[locale]/fromShetah/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/[locale]/fromShetah/page.js"
     ],
     "/[locale]/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/[locale]/page.js"
     ],
-    "/[locale]/pergola3d/page": [
+    "/[locale]/admin/leads/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/[locale]/pergola3d/page.js"
+      "static/chunks/app/[locale]/admin/leads/page.js"
+    ],
+    "/[locale]/pergulas/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/[locale]/pergulas/page.js"
     ]
   }
 }
