@@ -18,6 +18,8 @@
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
+    "@react-three/drei": "^9.114.3",
+    "@react-three/fiber": "^8.17.10",
     "@supabase/supabase-js": "^2.75.0",
     "@vercel/analytics": "^1.5.0",
     "clsx": "^2.1.0",
@@ -32,13 +34,15 @@
     "react-dom": "18.3.1",
     "react-icons": "^5.5.0",
     "sharp": "^0.34.4",
-    "swiper": "^12.0.2"
+    "swiper": "^12.0.2",
+    "three": "^0.169.0"
   },
   "devDependencies": {
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@types/node": "^20.14.0",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
+    "@types/three": "^0.169.0",
     "autoprefixer": "^10.4.20",
     "eslint": "^8.57.0",
     "eslint-config-next": "14.2.5",
