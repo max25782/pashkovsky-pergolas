@@ -54,7 +54,7 @@ export function PergolaMesh({ params, postSizeCm, beamHeightCm, beamDepthCm, lam
   }, [params.widthCm, beamDepthCm])
 
   // Post positions: base corners
-  const basePostPositions = params.attachedToWall
+  const basePostPositions: [number, number, number][] = params.attachedToWall
     ? [
         [-width / 2 + postSize / 2, height / 2, -depth / 2 + postSize / 2], // Front left
         [width / 2 - postSize / 2, height / 2, -depth / 2 + postSize / 2],  // Front right

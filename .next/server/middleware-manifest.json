@@ -3,6 +3,7 @@
   "middleware": {
     "/": {
       "files": [
+        "prerender-manifest.js",
         "server/edge-runtime-webpack.js",
         "server/middleware.js"
       ],
@@ -10,13 +11,17 @@
       "page": "/",
       "matchers": [
         {
-          "regexp": "^/.*$",
-          "originalSource": "/:path*"
+          "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?(?:\\/((?!_next|api|admin-api|images|.*\\..*).*))(.json)?[\\/#\\?]?$",
+          "originalSource": "/((?!_next|api|admin-api|images|.*\\..*).*)"
         }
       ],
       "wasm": [],
       "assets": [],
-      "environments": {}
+      "environments": {
+        "previewModeId": "eb5b576a0be5f839984b6685bf523f1c",
+        "previewModeSigningKey": "109045602487e1e9369cee49f3cda08775dac32e20c982ef347e3c16f7fff5db",
+        "previewModeEncryptionKey": "7d1098c9cf018a3900b6af0f30e2f7d7c1d89716b4ddebd93d90487be2f8b02d"
+      }
     }
   },
   "functions": {},

@@ -176,8 +176,7 @@ export async function POST(req: NextRequest) {
           console.error(`Upload error for ${file.name}:`, uploadError)
           return new Response(JSON.stringify({ 
             error: `Upload failed for ${file.name}`, 
-            details: uploadError.message,
-            code: uploadError.statusCode 
+            details: uploadError.message || String(uploadError)
           }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' }
