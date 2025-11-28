@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react"
 import type { Deal } from './deal-types'
 import { STAGES } from './deal-types'
+import { SketchModal } from './SketchModal'
+import { FileImage } from 'lucide-react'
 
 interface DealModalProps {
   deal: Deal
@@ -10,6 +12,7 @@ interface DealModalProps {
   onDelete: () => void
   formatCurrency: (amount: number | null | undefined) => string
   formatDate: (dateStr: string | null | undefined) => string
+  adminToken: string
 }
 
 export function DealModal({
@@ -18,10 +21,12 @@ export function DealModal({
   onUpdate,
   onDelete,
   formatCurrency,
-  formatDate
+  formatDate,
+  adminToken
 }: DealModalProps) {
   const [localDeal, setLocalDeal] = useState(deal)
   const [saving, setSaving] = useState(false)
+  const [showSketchModal, setShowSketchModal] = useState(false)
 
   useEffect(() => {
     console.log('DealModal received deal with dates:', {
@@ -439,6 +444,30 @@ export function DealModal({
             />
           </div>
 
+          {/* Sketch Section */}
+          <div className="pt-4 border-t border-white/10">
+            <div className="flex items-center justify-between mb-3">
+              <label className="block text-sm font-medium text-white/70">Эскиз проекта</label>
+              <button
+                onClick={() => setShowSketchModal(true)}
+                className="px-4 py-2 rounded-lg bg-amber-600/20 hover:bg-amber-600/30 text-amber-200 font-medium flex items-center gap-2"
+              >
+                <FileImage className="w-4 h-4" />
+                {localDeal.sketch_image_url ? 'Редактировать эскиз' : 'Открыть эскиз'}
+              </button>
+            </div>
+            {localDeal.sketch_image_url && (
+              <div className="mt-3">
+                <img 
+                  src={localDeal.sketch_image_url} 
+                  alt="Sketch preview" 
+                  className="max-w-full h-auto rounded-lg border border-white/20 cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => setShowSketchModal(true)}
+                />
+              </div>
+            )}
+          </div>
+
           {/* Metadata */}
           <div className="pt-4 border-t border-white/10 text-sm text-white/50 space-y-1">
             {deal.lead_id && <div>ID лида: {deal.lead_id}</div>}
@@ -470,6 +499,50 @@ export function DealModal({
           </div>
         </div>
       </div>
+
+      {/* Sketch Modal */}
+      {showSketchModal && (
+        <SketchModal
+          dealId={deal.id}
+          existingImageUrl={localDeal.sketch_image_url}
+          existingJson={localDeal.sketch_json}
+          onClose={() => setShowSketchModal(false)}
+          onSave={async (imageBlob: Blob, jsonData: any) => {
+            const formData = new FormData()
+            formData.append('dealId', deal.id)
+            formData.append('image', imageBlob, 'sketch.png')
+            formData.append('sketchJson', JSON.stringify(jsonData))
+
+            const response = await fetch('/admin-api/deals/sketch', {
+              method: 'POST',
+              headers: {
+                'x-admin-token': adminToken,
+              },
+              body: formData,
+            })
+
+            if (!response.ok) {
+              throw new Error('Failed to save sketch')
+            }
+
+            const result = await response.json()
+            
+            // Update local deal
+            setLocalDeal(prev => ({
+              ...prev,
+              sketch_image_url: result.imageUrl,
+              sketch_json: jsonData,
+            }))
+
+            // Update parent
+            await onUpdate({
+              sketch_image_url: result.imageUrl,
+              sketch_json: jsonData,
+            })
+          }}
+          adminToken={adminToken}
+        />
+      )}
     </div>
   )
 }

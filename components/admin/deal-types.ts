@@ -22,6 +22,8 @@ export interface Deal {
   notes?: string | null
   files?: any
   manager?: string | null
+  sketch_image_url?: string | null
+  sketch_json?: any
   created_at?: string | null
   updated_at?: string | null
 }

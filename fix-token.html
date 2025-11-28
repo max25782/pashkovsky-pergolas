@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fix Admin Token</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #1a1a1a; color: white; }
+        .container { max-width: 600px; margin: 0 auto; }
+        input { width: 100%; padding: 10px; margin: 10px 0; background: #2a2a2a; color: white; border: 1px solid #444; border-radius: 4px; }
+        button { padding: 10px 20px; background: #0066cc; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0052a3; }
+        .info { background: #2a2a2a; padding: 15px; border-radius: 4px; margin: 10px 0; }
+        .success { background: #2a5a2a; }
+        .error { background: #5a2a2a; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Fix Admin Token</h1>
+        
+        <div class="info">
+            <h3>Current localStorage token:</h3>
+            <p id="currentToken">Loading...</p>
+        </div>
+        
+        <div class="info">
+            <h3>Enter your ADMIN_TOKEN from .env.local:</h3>
+            <input type="text" id="newToken" placeholder="Paste your ADMIN_TOKEN here">
+            <button onclick="updateToken()">Update Token</button>
+        </div>
+        
+        <div id="result"></div>
+        
+        <div class="info">
+            <h3>Test Connection:</h3>
+            <button onclick="testConnection()">Test API</button>
+            <div id="testResult"></div>
+        </div>
+    </div>
+    
+    <script>
+        // Show current token
+        const currentToken = localStorage.getItem('admin_token');
+        document.getElementById('currentToken').textContent = currentToken || 'No token found';
+        
+        function updateToken() {
+            const newToken = document.getElementById('newToken').value.trim();
+            if (!newToken) {
+                alert('Please enter a token');
+                return;
+            }
+            
+            localStorage.setItem('admin_token', newToken);
+            document.getElementById('currentToken').textContent = newToken;
+            document.getElementById('result').innerHTML = '<div class="info success">Token updated successfully!</div>';
+        }
+        
+        async function testConnection() {
+            const token = localStorage.getItem('admin_token');
+            if (!token) {
+                document.getElementById('testResult').innerHTML = '<div class="info error">No token set</div>';
+                return;
+            }
+            
+            document.getElementById('testResult').innerHTML = '<div class="info">Testing...</div>';
+            
+            try {
+                const response = await fetch('/admin-api/deals', {
+                    headers: { 'x-admin-token': token }
+                });
+                
+                const text = await response.text();
+                
+                if (response.ok) {
+                    const data = JSON.parse(text);
+                    document.getElementById('testResult').innerHTML = `
+                        <div class="info success">
+                            <h4>Success!</h4>
+                            <p>Found ${data.count || data.data?.length || 0} deals</p>
+                            <p>Status: ${response.status}</p>
+                        </div>
+                    `;
+                } else {
+                    document.getElementById('testResult').innerHTML = `
+                        <div class="info error">
+                            <h4>Error ${response.status}</h4>
+                            <p>${text}</p>
+                            <p>Token doesn't match ADMIN_TOKEN in .env.local</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('testResult').innerHTML = `
+                    <div class="info error">
+                        <h4>Error</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
+

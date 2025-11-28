@@ -156,6 +156,7 @@ export function DealsTable({ adminToken }: Props) {
           }}
           formatCurrency={formatCurrency}
           formatDate={formatDate}
+          adminToken={adminToken}
         />
       )}
 
