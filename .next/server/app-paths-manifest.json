@@ -1,7 +1,4 @@
 {
   "/[locale]/admin/deals/page": "app/[locale]/admin/deals/page.js",
-  "/[locale]/page": "app/[locale]/page.js",
-  "/[locale]/admin/leads/page": "app/[locale]/admin/leads/page.js",
-  "/[locale]/pergulas/page": "app/[locale]/pergulas/page.js",
-  "/[locale]/admin/gallery/page": "app/[locale]/admin/gallery/page.js"
+  "/[locale]/admin/leads/page": "app/[locale]/admin/leads/page.js"
 }

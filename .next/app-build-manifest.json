@@ -1,9 +1,9 @@
 {
   "pages": {
-    "/[locale]/admin/gallery/page": [
+    "/[locale]/admin/leads/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/[locale]/admin/gallery/page.js"
+      "static/chunks/app/[locale]/admin/leads/page.js"
     ],
     "/[locale]/layout": [
       "static/chunks/webpack.js",
@@ -16,30 +16,10 @@
       "static/chunks/main-app.js",
       "static/chunks/app/[locale]/admin/deals/page.js"
     ],
-    "/[locale]/pergola3d/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/[locale]/pergola3d/page.js"
-    ],
-    "/[locale]/fromShetah/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/[locale]/fromShetah/page.js"
-    ],
     "/[locale]/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/[locale]/page.js"
-    ],
-    "/[locale]/admin/leads/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/[locale]/admin/leads/page.js"
-    ],
-    "/[locale]/pergulas/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/[locale]/pergulas/page.js"
     ]
   }
 }
