@@ -29,35 +29,12 @@ export function DealModal({
   const [showSketchModal, setShowSketchModal] = useState(false)
 
   useEffect(() => {
-    console.log('DealModal received deal with dates:', {
-      id: deal.id,
-      order_date: deal.order_date,
-      material_order_date: deal.material_order_date,
-      material_received_date: deal.material_received_date,
-      installation_date: deal.installation_date
-    })
-    console.log('DealModal setting localDeal to:', deal)
     setLocalDeal(deal)
   }, [deal])
-  
-  // Логируем текущее состояние localDeal при каждом рендере
-  console.log('DealModal render - current localDeal dates:', {
-    order_date: localDeal.order_date,
-    material_order_date: localDeal.material_order_date,
-    material_received_date: localDeal.material_received_date,
-    installation_date: localDeal.installation_date
-  })
 
   async function handleSave() {
     setSaving(true)
     try {
-      console.log('handleSave - localDeal dates before formatting:', {
-        order_date: localDeal.order_date,
-        material_order_date: localDeal.material_order_date,
-        material_received_date: localDeal.material_received_date,
-        installation_date: localDeal.installation_date
-      })
-      
       // Создаем объект только с измененными полями (updates)
       const updates: Partial<Deal> = {}
       
@@ -106,23 +83,11 @@ export function DealModal({
       
       // Проверяем, что есть хотя бы одно поле для обновления
       if (Object.keys(updates).length === 0) {
-        console.log('No changes detected, closing modal')
         onClose()
         return
       }
       
-      console.log('Saving deal updates with dates:', {
-        order_date: updates.order_date,
-        material_order_date: updates.material_order_date,
-        material_received_date: updates.material_received_date,
-        installation_date: updates.installation_date,
-        allUpdates: updates,
-        updatesCount: Object.keys(updates).length
-      })
-      
-      const result = await onUpdate(updates)
-      console.log('Save result:', result)
-      
+      await onUpdate(updates)
       onClose()
     } catch (e) {
       console.error('Save error:', e)
@@ -132,19 +97,12 @@ export function DealModal({
   }
 
   function updateField<K extends keyof Deal>(field: K, value: Deal[K]) {
-    console.log(`updateField: ${field} =`, value)
-    setLocalDeal(prev => {
-      const updated = { ...prev, [field]: value }
-      console.log(`updateField: updated localDeal.${field} =`, updated[field])
-      return updated
-    })
+    setLocalDeal(prev => ({ ...prev, [field]: value }))
   }
 
   // Преобразует дату из datetime-local в ISO формат для базы данных
   function formatDateForDB(dateValue: string | null): string | null {
     if (!dateValue || !dateValue.trim()) return null
-    
-    console.log('formatDateForDB input:', dateValue)
     
     // datetime-local возвращает формат "YYYY-MM-DDTHH:mm"
     // Преобразуем в ISO формат "YYYY-MM-DDTHH:mm:ss.sssZ"
@@ -153,9 +111,7 @@ export function DealModal({
       if (dateValue.includes('Z') || dateValue.includes('+')) {
         const date = new Date(dateValue)
         if (!isNaN(date.getTime())) {
-          const result = date.toISOString()
-          console.log('formatDateForDB ISO result:', result)
-          return result
+          return date.toISOString()
         }
       }
       
@@ -163,15 +119,11 @@ export function DealModal({
       // и преобразуем в ISO
       const date = new Date(dateValue)
       if (isNaN(date.getTime())) {
-        console.log('formatDateForDB: Invalid date:', dateValue)
         return null
       }
       
-      const result = date.toISOString()
-      console.log('formatDateForDB result:', result)
-      return result
+      return date.toISOString()
     } catch (error) {
-      console.error('formatDateForDB error:', error, 'for value:', dateValue)
       return null
     }
   }
@@ -179,13 +131,11 @@ export function DealModal({
   // Преобразует дату из базы данных в формат для datetime-local
   function formatDateForInput(dateValue: string | null | undefined): string {
     if (!dateValue) return ''
-    console.log('formatDateForInput input:', dateValue)
     
     try {
       // Создаем дату из строки
       const date = new Date(dateValue)
       if (isNaN(date.getTime())) {
-        console.log('Invalid date:', dateValue)
         return ''
       }
       
@@ -196,9 +146,7 @@ export function DealModal({
       const hours = String(date.getHours()).padStart(2, '0')
       const minutes = String(date.getMinutes()).padStart(2, '0')
       
-      const result = `${year}-${month}-${day}T${hours}:${minutes}`
-      console.log('formatDateForInput result:', result)
-      return result
+      return `${year}-${month}-${day}T${hours}:${minutes}`
     } catch (error) {
       console.error('formatDateForInput error:', error, 'for value:', dateValue)
       return ''
@@ -353,7 +301,6 @@ export function DealModal({
                 type="datetime-local"
                 value={formatDateForInput(localDeal.order_date)}
                 onChange={(e) => {
-                  console.log('order_date onChange:', e.target.value)
                   updateField('order_date', e.target.value || null)
                 }}
                 className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
@@ -365,7 +312,6 @@ export function DealModal({
                 type="datetime-local"
                 value={formatDateForInput(localDeal.material_order_date)}
                 onChange={(e) => {
-                  console.log('material_order_date onChange:', e.target.value)
                   updateField('material_order_date', e.target.value || null)
                 }}
                 className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
@@ -377,7 +323,6 @@ export function DealModal({
                 type="datetime-local"
                 value={formatDateForInput(localDeal.material_received_date)}
                 onChange={(e) => {
-                  console.log('material_received_date onChange:', e.target.value)
                   updateField('material_received_date', e.target.value || null)
                 }}
                 className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
@@ -389,7 +334,6 @@ export function DealModal({
                 type="datetime-local"
                 value={formatDateForInput(localDeal.installation_date)}
                 onChange={(e) => {
-                  console.log('installation_date onChange:', e.target.value)
                   updateField('installation_date', e.target.value || null)
                 }}
                 className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
@@ -444,28 +388,15 @@ export function DealModal({
             />
           </div>
 
-          {/* Sketch Section */}
+          {/* Sketch Button */}
           <div className="pt-4 border-t border-white/10">
-            <div className="flex items-center justify-between mb-3">
-              <label className="block text-sm font-medium text-white/70">Эскиз проекта</label>
-              <button
-                onClick={() => setShowSketchModal(true)}
-                className="px-4 py-2 rounded-lg bg-amber-600/20 hover:bg-amber-600/30 text-amber-200 font-medium flex items-center gap-2"
-              >
-                <FileImage className="w-4 h-4" />
-                {localDeal.sketch_image_url ? 'Редактировать эскиз' : 'Открыть эскиз'}
-              </button>
-            </div>
-            {localDeal.sketch_image_url && (
-              <div className="mt-3">
-                <img 
-                  src={localDeal.sketch_image_url} 
-                  alt="Sketch preview" 
-                  className="max-w-full h-auto rounded-lg border border-white/20 cursor-pointer hover:opacity-80 transition-opacity"
-                  onClick={() => setShowSketchModal(true)}
-                />
-              </div>
-            )}
+            <button
+              onClick={() => setShowSketchModal(true)}
+              className="w-full px-4 py-2 rounded-lg bg-amber-600/20 hover:bg-amber-600/30 text-amber-200 font-medium flex items-center justify-center gap-2"
+            >
+              <FileImage className="w-4 h-4" />
+              Открыть эскиз
+            </button>
           </div>
 
           {/* Metadata */}
@@ -527,14 +458,12 @@ export function DealModal({
 
             const result = await response.json()
             
-            // Update local deal
             setLocalDeal(prev => ({
               ...prev,
               sketch_image_url: result.imageUrl,
               sketch_json: jsonData,
             }))
 
-            // Update parent
             await onUpdate({
               sketch_image_url: result.imageUrl,
               sketch_json: jsonData,

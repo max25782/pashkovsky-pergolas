@@ -28,9 +28,9 @@ export async function POST(req: NextRequest) {
       return new Response('Missing dealId or image', { status: 400 })
     }
 
-    // Upload image to Supabase Storage
+    // Загрузка изображения в Supabase Storage
     const fileName = `sketches/${dealId}_${Date.now()}.png`
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('deal-files')
       .upload(fileName, image, {
         contentType: 'image/png',
@@ -38,31 +38,31 @@ export async function POST(req: NextRequest) {
       })
 
     if (uploadError) {
-      console.error('Storage upload error:', uploadError)
+      console.error('Ошибка загрузки в Storage:', uploadError)
       return new Response(JSON.stringify({ error: uploadError.message }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       })
     }
 
-    // Get public URL
+    // Получение публичного URL
     const { data: urlData } = supabase.storage
       .from('deal-files')
       .getPublicUrl(fileName)
 
     const imageUrl = urlData.publicUrl
 
-    // Parse JSON if provided
+    // Парсинг JSON
     let jsonData = null
     if (sketchJson) {
       try {
         jsonData = JSON.parse(sketchJson)
       } catch (e) {
-        console.error('Failed to parse sketchJson:', e)
+        console.error('Ошибка парсинга sketchJson:', e)
       }
     }
 
-    // Update deal with sketch data
+    // Обновление сделки с данными эскиза
     const { data: dealData, error: updateError } = await supabase
       .from('deals')
       .update({
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (updateError) {
-      console.error('Database update error:', updateError)
+      console.error('Ошибка обновления БД:', updateError)
       return new Response(JSON.stringify({ error: updateError.message }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
@@ -90,10 +90,11 @@ export async function POST(req: NextRequest) {
       headers: { 'Content-Type': 'application/json' }
     })
   } catch (error: any) {
-    console.error('POST sketch error:', error)
+    console.error('Ошибка POST sketch:', error)
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     })
   }
 }
+
