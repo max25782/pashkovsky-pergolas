@@ -33,9 +33,11 @@ export function middleware(request: NextRequest) {
         url.pathname = `/${defaultLocale}${pathname}`
         return NextResponse.rewrite(url)
       }
+      // If admin route already has locale, allow it
+      return NextResponse.next()
     }
     
-    // Redirect non-admin routes to admin
+    // Redirect ALL non-admin routes to admin/deals (including locale-only paths like /he, /ru, /en)
     if (!pathname.startsWith('/admin') && !pathname.startsWith('/api') && !pathname.startsWith('/_next')) {
       const url = request.nextUrl.clone()
       url.pathname = '/admin/deals'
