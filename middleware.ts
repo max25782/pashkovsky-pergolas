@@ -13,8 +13,13 @@ export function middleware(request: NextRequest) {
   const isCRMEnabled = process.env.ENABLE_CRM_SUBDOMAIN === 'true' || 
                        process.env.NODE_ENV !== 'production'
   
-  // CRM subdomain handling (only if enabled)
-  if (isCRMEnabled && (subdomain === 'crm' || subdomain === 'admin')) {
+  // CRM subdomain handling
+  // If accessing crm/admin subdomain, always enable CRM (regardless of environment)
+  // This allows CRM to work on subdomain even in production
+  const isCRMSubdomain = subdomain === 'crm' || subdomain === 'admin'
+  
+  // Handle CRM subdomain - always work on subdomain, regardless of environment
+  if (isCRMSubdomain) {
     // If accessing root, redirect to admin/deals
     if (pathname === '/') {
       const url = request.nextUrl.clone()
