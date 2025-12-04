@@ -140,3 +140,6 @@ Should return: `{ data: [...], count: ... }`
 4. Try creating a deal directly in Supabase dashboard
 5. Check if other tables (like `leads`) work
 
+
+
+

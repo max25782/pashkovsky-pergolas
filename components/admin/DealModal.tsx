@@ -1,9 +1,10 @@
 "use client"
 import { useEffect, useState } from "react"
 import type { Deal } from './deal-types'
-import { STAGES } from './deal-types'
+import { getStages } from './deal-types'
 import { SketchModal } from './SketchModal'
 import { FileImage } from 'lucide-react'
+import { useCRMTranslations } from './useCRMTranslations'
 
 interface DealModalProps {
   deal: Deal
@@ -24,6 +25,8 @@ export function DealModal({
   formatDate,
   adminToken
 }: DealModalProps) {
+  const t = useCRMTranslations()
+  const stages = getStages(t.deals)
   const [localDeal, setLocalDeal] = useState(deal)
   const [saving, setSaving] = useState(false)
   const [showSketchModal, setShowSketchModal] = useState(false)
@@ -163,7 +166,7 @@ export function DealModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 bg-gray-900/95 backdrop-blur border-b border-white/10 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-white">Сделка: {deal.customer_name || 'Без имени'}</h2>
+          <h2 className="text-2xl font-bold text-white">{t.deals.dealTitle}: {deal.customer_name || t.deals.withoutName}</h2>
           <button
             onClick={onClose}
             className="text-white/60 hover:text-white text-2xl leading-none"
@@ -176,16 +179,16 @@ export function DealModal({
           {/* Customer Info */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">Имя клиента</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.customerName}</label>
               <input
                 value={localDeal.customer_name || ''}
                 onChange={(e) => updateField('customer_name', e.target.value || null)}
                 className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
-                placeholder="Имя"
+                placeholder={t.deals.customerName}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">Телефон</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.customerPhone}</label>
               <input
                 value={localDeal.customer_phone || ''}
                 onChange={(e) => updateField('customer_phone', e.target.value || null)}
@@ -194,7 +197,7 @@ export function DealModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">Email</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.customerEmail}</label>
               <input
                 type="email"
                 value={localDeal.customer_email || ''}
@@ -204,12 +207,12 @@ export function DealModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">Город</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.customerCity}</label>
               <input
                 value={localDeal.customer_city || ''}
                 onChange={(e) => updateField('customer_city', e.target.value || null)}
                 className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
-                placeholder="Город"
+                placeholder={t.deals.customerCity}
               />
             </div>
           </div>
@@ -217,34 +220,34 @@ export function DealModal({
           {/* Project Info */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">Тип проекта</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.projectType}</label>
               <select
                 value={localDeal.project_type || ''}
                 onChange={(e) => updateField('project_type', (e.target.value || null) as any)}
                 className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
               >
                 <option value="">-</option>
-                <option value="pergola">Пергола</option>
-                <option value="railing">Перила</option>
-                <option value="gates">Ворота</option>
-                <option value="windows">Окна</option>
+                <option value="pergola">{t.deals.projectTypes.pergola}</option>
+                <option value="railing">{t.deals.projectTypes.railing}</option>
+                <option value="gates">{t.deals.projectTypes.gates}</option>
+                <option value="windows">{t.deals.projectTypes.windows}</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">Этап</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.stage}</label>
               <select
                 value={localDeal.stage || ''}
                 onChange={(e) => updateField('stage', (e.target.value || null) as any)}
                 className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
               >
                 <option value="">-</option>
-                {STAGES.map(s => (
+                {stages.map(s => (
                   <option key={s.id} value={s.id}>{s.label}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">Ширина (см)</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.width}</label>
               <input
                 type="number"
                 value={localDeal.width || ''}
@@ -254,7 +257,7 @@ export function DealModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">Глубина (см)</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.depth}</label>
               <input
                 type="number"
                 value={localDeal.depth || ''}
@@ -264,19 +267,19 @@ export function DealModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">Форма</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.shape}</label>
               <select
                 value={localDeal.shape || ''}
                 onChange={(e) => updateField('shape', (e.target.value || null) as any)}
                 className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
               >
                 <option value="">-</option>
-                <option value="прямоугольник">Прямоугольник</option>
-                <option value="Г-образная">Г-образная</option>
+                <option value="прямоугольник">{t.deals.rectangle}</option>
+                <option value="Г-образная">{t.deals.lShape}</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">Цена клиенту (₪)</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.price}</label>
               <input
                 type="number"
                 value={localDeal.price || ''}
@@ -286,7 +289,7 @@ export function DealModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">Моя стоимость (₪)</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.myCost}</label>
               <input
                 type="number"
                 value={localDeal.my_cost || ''}
@@ -296,7 +299,7 @@ export function DealModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">תאריך הזמנה (Дата заказа)</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.orderDate}</label>
               <input
                 type="datetime-local"
                 value={formatDateForInput(localDeal.order_date)}
@@ -307,7 +310,7 @@ export function DealModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">תאריך הזמנת חומר (Дата заказа материала)</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.materialOrderDate}</label>
               <input
                 type="datetime-local"
                 value={formatDateForInput(localDeal.material_order_date)}
@@ -318,7 +321,7 @@ export function DealModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">תאריך קבלת חומר (Дата получения материала)</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.materialReceivedDate}</label>
               <input
                 type="datetime-local"
                 value={formatDateForInput(localDeal.material_received_date)}
@@ -329,7 +332,7 @@ export function DealModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">תאריך התקנה (Дата установки)</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.installationDate}</label>
               <input
                 type="datetime-local"
                 value={formatDateForInput(localDeal.installation_date)}
@@ -340,51 +343,51 @@ export function DealModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">תאורה (Освещение)</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.lighting}</label>
               <input
                 value={localDeal.lighting || ''}
                 onChange={(e) => updateField('lighting', e.target.value || null)}
                 className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
-                placeholder="Описание освещения"
+                placeholder={t.deals.lighting}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">Материал</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.material}</label>
               <input
                 value={localDeal.material || ''}
                 onChange={(e) => updateField('material', e.target.value || null)}
                 className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
-                placeholder="Материал"
+                placeholder={t.deals.material}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">RAL</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.colorRal}</label>
               <input
                 value={localDeal.color_ral || ''}
                 onChange={(e) => updateField('color_ral', e.target.value || null)}
                 className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
-                placeholder="RAL код"
+                placeholder={t.deals.colorRal}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">Менеджер</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.manager}</label>
               <input
                 value={localDeal.manager || ''}
                 onChange={(e) => updateField('manager', e.target.value || null)}
                 className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
-                placeholder="Менеджер"
+                placeholder={t.deals.manager}
               />
             </div>
           </div>
 
           {/* Notes */}
           <div>
-            <label className="block text-sm font-medium text-white/70 mb-2">Заметки</label>
+            <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.notes}</label>
             <textarea
               value={localDeal.notes || ''}
               onChange={(e) => updateField('notes', e.target.value || null)}
               className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none min-h-[120px]"
-              placeholder="Заметки о сделке..."
+              placeholder={t.deals.notes}
             />
           </div>
 
@@ -395,15 +398,15 @@ export function DealModal({
               className="w-full px-4 py-2 rounded-lg bg-amber-600/20 hover:bg-amber-600/30 text-amber-200 font-medium flex items-center justify-center gap-2"
             >
               <FileImage className="w-4 h-4" />
-              Открыть эскиз
+              {t.deals.openSketch}
             </button>
           </div>
 
           {/* Metadata */}
           <div className="pt-4 border-t border-white/10 text-sm text-white/50 space-y-1">
-            {deal.lead_id && <div>ID лида: {deal.lead_id}</div>}
-            <div>Создано: {formatDate(deal.created_at)}</div>
-            <div>Обновлено: {formatDate(deal.updated_at)}</div>
+            {deal.lead_id && <div>{t.deals.leadId}: {deal.lead_id}</div>}
+            <div>{t.deals.createdAt}: {formatDate(deal.created_at)}</div>
+            <div>{t.deals.updatedAt}: {formatDate(deal.updated_at)}</div>
           </div>
 
           {/* Actions */}
@@ -413,19 +416,19 @@ export function DealModal({
               disabled={saving}
               className="flex-1 px-4 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {saving ? 'Сохранение...' : 'Сохранить'}
+              {saving ? t.common.saving : t.common.save}
             </button>
             <button
               onClick={onDelete}
               className="px-4 py-3 rounded-lg bg-red-600/20 hover:bg-red-600/30 text-red-200 font-semibold"
             >
-              Удалить
+              {t.common.delete}
             </button>
             <button
               onClick={onClose}
               className="px-4 py-3 rounded-lg bg-white/5 hover:bg-white/10 font-semibold"
             >
-              Отмена
+              {t.common.cancel}
             </button>
           </div>
         </div>

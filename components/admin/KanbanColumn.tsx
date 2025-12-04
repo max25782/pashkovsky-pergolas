@@ -1,6 +1,7 @@
 import type { Deal } from './deal-types'
 import { DealCard } from './DealCard'
 import { formatCurrency, formatDate } from './deal-utils'
+import { useCRMTranslations } from './useCRMTranslations'
 
 interface KanbanColumnProps {
   stage: { id: string; label: string; color: string }
@@ -19,6 +20,7 @@ export function KanbanColumn({
   onDealDragStart,
   onDealClick
 }: KanbanColumnProps) {
+  const t = useCRMTranslations()
   return (
     <div
       className="flex-shrink-0 w-80 min-w-[320px]"
@@ -47,7 +49,7 @@ export function KanbanColumn({
           ))}
           {deals.length === 0 && (
             <div className="text-center text-white/30 py-8 text-sm">
-              Нет сделок
+              {t.status.noDeals}
             </div>
           )}
         </div>

@@ -130,3 +130,6 @@ Write-Host "   ✓ SUPABASE_SERVICE_ROLE_KEY (not anon key!)" -ForegroundColor G
 Write-Host "   ✓ ADMIN_TOKEN" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Cyan
 
+
+
+

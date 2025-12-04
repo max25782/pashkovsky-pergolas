@@ -9,6 +9,7 @@ import { Analytics } from "@vercel/analytics/react"
 import GA from '@/components/ga'
 import { Suspense } from 'react'
 import FloatingWhatsApp from '@/components/contact/FloatingWhatsApp'
+import { ChatWidget } from '@/components/ai-chat/ChatWidget'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://pashkovsky-group.com'),
@@ -80,6 +81,7 @@ export default function RootLayout({ children, params: { locale } }: { children:
           </Suspense>
           {children}
           <FloatingWhatsApp locale={locale} />
+          <ChatWidget />
         </Providers>
         <Analytics />
       </body>

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from 'react'
-import { Save, Trash2, Undo2, Square, Circle, Minus, Grid, CircleDot, Edit3 } from 'lucide-react'
+import { Save, Trash2, Undo2, Square, Circle, Minus, Grid, CircleDot, Edit3, Type } from 'lucide-react'
 
 interface SketchModalProps {
   dealId: string
@@ -12,7 +12,7 @@ interface SketchModalProps {
   adminToken: string
 }
 
-type DrawingTool = 'pencil' | 'dot' | 'rectangle' | 'circle' | 'line' | 'pergola-rect' | 'pergola-l' | 'pergola-custom'
+type DrawingTool = 'pencil' | 'dot' | 'rectangle' | 'circle' | 'line' | 'text' | 'pergola-rect' | 'pergola-l' | 'pergola-custom'
 
 export function SketchModal({ dealId, existingImageUrl, existingJson, onClose, onSave, adminToken }: SketchModalProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -22,9 +22,13 @@ export function SketchModal({ dealId, existingImageUrl, existingJson, onClose, o
   const historyIndexRef = useRef<number>(-1)
   
   const [currentTool, setCurrentTool] = useState<DrawingTool>('pencil')
+  const [brushSize, setBrushSize] = useState(3)
   const [historyLength, setHistoryLength] = useState(0)
   const [saving, setSaving] = useState(false)
   const [isReady, setIsReady] = useState(false)
+  const [showTextInput, setShowTextInput] = useState(false)
+  const [textInputValue, setTextInputValue] = useState('')
+  const [textPosition, setTextPosition] = useState<{ x: number; y: number } | null>(null)
 
   // Сохранение состояния в историю
   const saveHistory = () => {
@@ -67,9 +71,9 @@ export function SketchModal({ dealId, existingImageUrl, existingJson, onClose, o
       
       fabricRef.current = fabric
       
-      const isMobile = window.innerWidth < 768
-      const width = isMobile ? Math.min(window.innerWidth - 40, 800) : 800
-      const height = isMobile ? Math.min(window.innerHeight * 0.5, 500) : 500
+      // Полноэкранный canvas
+      const width = window.innerWidth - 48
+      const height = window.innerHeight - 180 // Место для header и toolbar
 
       console.log('[Sketch] Creating canvas', { width, height })
 
@@ -88,7 +92,7 @@ export function SketchModal({ dealId, existingImageUrl, existingJson, onClose, o
 
         // Настройка кисти
         if (canvas.freeDrawingBrush) {
-          canvas.freeDrawingBrush.width = 3
+          canvas.freeDrawingBrush.width = brushSize
           canvas.freeDrawingBrush.color = '#000000'
           console.log('[Sketch] Brush configured')
         } else {
@@ -151,6 +155,14 @@ export function SketchModal({ dealId, existingImageUrl, existingJson, onClose, o
     }
   }, [existingJson])
 
+  // Обновление размера кисти
+  useEffect(() => {
+    const canvas = fabricCanvasRef.current
+    if (canvas && canvas.freeDrawingBrush) {
+      canvas.freeDrawingBrush.width = brushSize
+    }
+  }, [brushSize])
+
   // Переключение инструментов
   useEffect(() => {
     const canvas = fabricCanvasRef.current
@@ -161,7 +173,7 @@ export function SketchModal({ dealId, existingImageUrl, existingJson, onClose, o
     canvas.isDrawingMode = isPencil
 
     if (isPencil && canvas.freeDrawingBrush) {
-      canvas.freeDrawingBrush.width = 3
+      canvas.freeDrawingBrush.width = brushSize
       canvas.freeDrawingBrush.color = '#000000'
     }
 
@@ -190,6 +202,13 @@ export function SketchModal({ dealId, existingImageUrl, existingJson, onClose, o
           canvas.add(dot)
           canvas.renderAll()
           saveHistory()
+          return
+        }
+        
+        if (currentTool === 'text') {
+          setTextPosition({ x: pointer.x, y: pointer.y })
+          setTextInputValue('')
+          setShowTextInput(true)
           return
         }
 
@@ -242,13 +261,71 @@ export function SketchModal({ dealId, existingImageUrl, existingJson, onClose, o
             )
             break
           case 'pergola-rect':
+            // Прямоугольная пергола с сеткой (ламели)
+            if (width > 10 && height > 10) {
+              const elements: any[] = []
+              
+              // Основной прямоугольник
+              elements.push(new fabric.Rect({
+                left: 0, top: 0, width, height,
+                fill: 'rgba(139, 90, 43, 0.15)',
+                stroke: '#8B4513',
+                strokeWidth: 3,
+              }))
+              
+              // Горизонтальные ламели
+              const lamellaSpacing = 25
+              for (let y = lamellaSpacing; y < height; y += lamellaSpacing) {
+                elements.push(new fabric.Line([0, y, width, y], {
+                  stroke: '#8B4513',
+                  strokeWidth: 1.5,
+                }))
+              }
+              
+              // Вертикальные опоры по краям
+              elements.push(new fabric.Rect({
+                left: 0, top: 0, width: 8, height,
+                fill: '#6B4423',
+                stroke: '#5D3A1A',
+                strokeWidth: 1,
+              }))
+              elements.push(new fabric.Rect({
+                left: width - 8, top: 0, width: 8, height,
+                fill: '#6B4423',
+                stroke: '#5D3A1A',
+                strokeWidth: 1,
+              }))
+              
+              tempObject = new fabric.Group(elements, {
+                left, top,
+                selectable: false,
+              })
+            }
+            break
+            
           case 'pergola-l':
+            // Г-образная пергола
+            if (width > 20 && height > 20) {
+              const legWidth = Math.min(width, height) * 0.4
+              const pathData = `M 0 0 L ${width} 0 L ${width} ${legWidth} L ${legWidth} ${legWidth} L ${legWidth} ${height} L 0 ${height} Z`
+              
+              tempObject = new fabric.Path(pathData, {
+                left, top,
+                fill: 'rgba(139, 90, 43, 0.15)',
+                stroke: '#8B4513',
+                strokeWidth: 3,
+                selectable: false,
+              })
+            }
+            break
+            
           case 'pergola-custom':
+            // Простая пергола (прямоугольник)
             tempObject = new fabric.Rect({
               left, top, width, height,
-              fill: 'rgba(139, 69, 19, 0.1)',
+              fill: 'rgba(139, 90, 43, 0.15)',
               stroke: '#8B4513',
-              strokeWidth: 2,
+              strokeWidth: 3,
               selectable: false,
             })
             break
@@ -328,12 +405,38 @@ export function SketchModal({ dealId, existingImageUrl, existingJson, onClose, o
     }
   }
 
+  const addTextToCanvas = () => {
+    const canvas = fabricCanvasRef.current
+    const fabric = fabricRef.current
+    if (!canvas || !fabric || !textPosition || !textInputValue.trim()) {
+      setShowTextInput(false)
+      return
+    }
+
+    const textObj = new fabric.Text(textInputValue.trim(), {
+      left: textPosition.x,
+      top: textPosition.y,
+      fontSize: 20,
+      fontFamily: 'Arial, sans-serif',
+      fill: '#000000',
+      fontWeight: 'bold',
+      selectable: false,
+      evented: false,
+    })
+    canvas.add(textObj)
+    canvas.renderAll()
+    saveHistory()
+    
+    setShowTextInput(false)
+    setTextInputValue('')
+    setTextPosition(null)
+  }
+
   const tools = [
     { id: 'pencil', icon: Edit3, label: 'Карандаш' },
-    { id: 'dot', icon: CircleDot, label: 'Точка' },
-    { id: 'rectangle', icon: Square, label: 'Прямоугольник' },
-    { id: 'circle', icon: Circle, label: 'Круг' },
     { id: 'line', icon: Minus, label: 'Линия' },
+    { id: 'rectangle', icon: Square, label: 'Прямоугольник' },
+    { id: 'text', icon: Type, label: 'Текст' },
   ]
 
   const pergolaTools = [
@@ -344,21 +447,17 @@ export function SketchModal({ dealId, existingImageUrl, existingJson, onClose, o
 
   return (
     <div 
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-      onClick={onClose}
+      className="fixed inset-0 bg-gray-900 z-50 flex flex-col"
+      onClick={(e) => e.stopPropagation()}
     >
-      <div 
-        className="bg-gray-900 border border-white/20 rounded-xl shadow-2xl max-w-5xl w-full max-h-[95vh] flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-          <h2 className="text-xl font-bold text-white">Эскиз проекта</h2>
-          <button onClick={onClose} className="text-white/60 hover:text-white text-2xl leading-none">×</button>
-        </div>
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-gray-800">
+        <h2 className="text-lg font-bold text-white">Эскиз проекта</h2>
+        <button onClick={onClose} className="text-white/60 hover:text-white text-2xl leading-none px-2">×</button>
+      </div>
 
         {/* Toolbar */}
-        <div className="flex items-center gap-2 p-3 border-b border-white/10 bg-gray-800/50 flex-wrap">
+        <div className="flex items-center gap-2 px-4 py-2 border-b border-white/10 bg-gray-800/50 flex-wrap">
           {tools.map(({ id, icon: Icon, label }) => (
             <button
               key={id}
@@ -393,6 +492,30 @@ export function SketchModal({ dealId, existingImageUrl, existingJson, onClose, o
           
           <div className="flex-1" />
           
+          {/* Brush Size Selector */}
+          {currentTool === 'pencil' && (
+            <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-lg">
+              <span className="text-white/60 text-sm hidden sm:inline">Толщина:</span>
+              {[2, 4, 8, 12].map((size) => (
+                <button
+                  key={size}
+                  onClick={() => setBrushSize(size)}
+                  className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${
+                    brushSize === size 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-white/10 text-white/60 hover:bg-white/20'
+                  }`}
+                  title={`${size}px`}
+                >
+                  <div 
+                    className="rounded-full bg-current" 
+                    style={{ width: Math.min(size, 10), height: Math.min(size, 10) }}
+                  />
+                </button>
+              ))}
+            </div>
+          )}
+          
           <button 
             onClick={handleUndo}
             disabled={historyIndexRef.current <= 0}
@@ -420,21 +543,55 @@ export function SketchModal({ dealId, existingImageUrl, existingJson, onClose, o
           </button>
         </div>
 
-        {/* Canvas */}
-        <div className="flex-1 overflow-auto p-4 bg-gray-800/30 flex items-center justify-center relative">
+        {/* Canvas - Full Screen */}
+        <div className="flex-1 overflow-hidden bg-gray-700 flex items-center justify-center p-2">
           {!isReady && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-900/50 z-10">
-              <div className="text-white">Загрузка...</div>
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-900/80 z-10">
+              <div className="text-white text-lg">Загрузка...</div>
             </div>
           )}
-          <div className="relative border-2 border-white/20 rounded-lg shadow-xl overflow-hidden">
+          <div className="relative rounded-lg overflow-hidden shadow-2xl">
             <canvas 
               ref={canvasRef}
               style={{ touchAction: 'none', display: 'block' }}
             />
           </div>
         </div>
-      </div>
+
+        {/* Text Input Modal */}
+        {showTextInput && (
+          <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-20">
+            <div className="bg-gray-800 rounded-xl p-6 shadow-2xl border border-white/20 w-80">
+              <h3 className="text-white text-lg font-bold mb-4 text-center">הכנס מידה / טקסט</h3>
+              <input
+                type="text"
+                value={textInputValue}
+                onChange={(e) => setTextInputValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') addTextToCanvas()
+                  if (e.key === 'Escape') setShowTextInput(false)
+                }}
+                placeholder="לדוגמה: 350 ס״מ"
+                className="w-full px-4 py-3 rounded-lg bg-gray-700 text-white text-lg border border-white/20 focus:border-blue-500 focus:outline-none mb-4"
+                autoFocus
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowTextInput(false)}
+                  className="flex-1 px-4 py-2 rounded-lg bg-gray-600 text-white hover:bg-gray-500"
+                >
+                  ביטול
+                </button>
+                <button
+                  onClick={addTextToCanvas}
+                  className="flex-1 px-4 py-2 rounded-lg bg-blue-600 text-white font-bold hover:bg-blue-500"
+                >
+                  הוסף
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
     </div>
   )
 }

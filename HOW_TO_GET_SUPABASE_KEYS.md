@@ -124,3 +124,6 @@ If you don't have a Supabase project:
 4. Wait for project to initialize (~2 minutes)
 5. Then follow steps above to get keys
 
+
+
+

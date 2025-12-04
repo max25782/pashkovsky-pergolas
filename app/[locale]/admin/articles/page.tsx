@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import type { Locale } from '@/lib/locales'
+import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
 
 interface Article {
   id: number
@@ -15,6 +16,7 @@ interface Article {
 }
 
 export default function AdminArticlesPage({ params }: { params: { locale: Locale } }) {
+  const t = useCRMTranslations()
   const [token, setToken] = useState<string | null>(null)
   const [articles, setArticles] = useState<Article[]>([])
   const [loading, setLoading] = useState(true)
@@ -61,18 +63,18 @@ export default function AdminArticlesPage({ params }: { params: { locale: Locale
         throw new Error('Failed to save article')
       }
 
-      alert('Статья сохранена! Обновите страницу.')
+      alert(t.articles.save === 'Save' ? 'Article saved! Refresh the page.' : t.articles.save === 'Сохранить' ? 'Статья сохранена! Обновите страницу.' : 'המאמר נשמר! רענן את הדף.')
       loadArticles()
       setShowForm(false)
       setEditingArticle(null)
     } catch (error) {
       console.error('Error saving article:', error)
-      alert('Ошибка сохранения')
+      alert(t.common.error)
     }
   }
 
   const handleDelete = async (slug: string) => {
-    if (!confirm('Удалить статью?') || !token) return
+    if (!confirm(t.articles.deleteConfirm) || !token) return
 
     try {
       const response = await fetch(`/api/admin/articles?slug=${slug}`, {
@@ -86,11 +88,11 @@ export default function AdminArticlesPage({ params }: { params: { locale: Locale
         throw new Error('Failed to delete article')
       }
 
-      alert('Статья удалена!')
+      alert(t.articles.deleteArticle === 'Delete' ? 'Article deleted!' : t.articles.deleteArticle === 'Удалить' ? 'Статья удалена!' : 'המאמר נמחק!')
       loadArticles()
     } catch (error) {
       console.error('Error deleting article:', error)
-      alert('Ошибка удаления')
+      alert(t.common.error)
     }
   }
 
@@ -117,25 +119,25 @@ export default function AdminArticlesPage({ params }: { params: { locale: Locale
     })
   }
 
-  if (loading) return <div className="p-8 text-white">Loading...</div>
+  if (loading) return <div className="p-8 text-white">{t.common.loading}</div>
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-neutral-950 to-neutral-900 text-white p-8">
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Управление статьями</h1>
+          <h1 className="text-3xl font-bold">{t.articles.title}</h1>
           <div className="flex gap-4">
             <button
               onClick={createNewArticle}
               className="px-6 py-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold"
             >
-              + Новая статья
+              + {t.articles.createArticle}
             </button>
             <button
               onClick={() => router.push(`/${params.locale}/admin/leads`)}
               className="px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold"
             >
-              К лидам
+              {t.nav.leads}
             </button>
           </div>
         </div>
@@ -158,13 +160,13 @@ export default function AdminArticlesPage({ params }: { params: { locale: Locale
                       }}
                       className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg"
                     >
-                      Редактировать
+                      {t.articles.editArticle}
                     </button>
                     <button
                       onClick={() => handleDelete(article.slug)}
                       className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg"
                     >
-                      Удалить
+                      {t.articles.deleteArticle}
                     </button>
                   </div>
                 </div>
@@ -174,13 +176,13 @@ export default function AdminArticlesPage({ params }: { params: { locale: Locale
         ) : (
           <div className="bg-white/5 rounded-lg p-8">
             <h2 className="text-2xl font-bold mb-6">
-              {editingArticle?.slug ? 'Редактировать статью' : 'Новая статья'}
+              {editingArticle?.slug ? t.articles.editArticle : t.articles.createArticle}
             </h2>
 
             <div className="space-y-6">
               {/* Slug */}
               <div>
-                <label className="block mb-2 font-semibold">Slug (URL)</label>
+                <label className="block mb-2 font-semibold">{t.articles.slugLabel}</label>
                 <input
                   type="text"
                   value={editingArticle?.slug || ''}
@@ -196,7 +198,7 @@ export default function AdminArticlesPage({ params }: { params: { locale: Locale
               {(['he', 'ru', 'en'] as const).map((lang) => (
                 <div key={`title-${lang}`}>
                   <label className="block mb-2 font-semibold">
-                    Заголовок ({lang.toUpperCase()})
+                    {t.articles.titleLabel} ({lang.toUpperCase()})
                   </label>
                   <input
                     type="text"
@@ -300,7 +302,7 @@ export default function AdminArticlesPage({ params }: { params: { locale: Locale
                   onClick={handleSave}
                   className="px-8 py-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold"
                 >
-                  Сохранить
+                  {t.articles.save}
                 </button>
                 <button
                   onClick={() => {
@@ -309,7 +311,7 @@ export default function AdminArticlesPage({ params }: { params: { locale: Locale
                   }}
                   className="px-8 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold"
                 >
-                  Отмена
+                  {t.articles.cancel}
                 </button>
               </div>
             </div>

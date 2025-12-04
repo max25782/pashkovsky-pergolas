@@ -1,4 +1,5 @@
-import { STAGES } from './deal-types'
+import { getStages } from './deal-types'
+import { useCRMTranslations } from './useCRMTranslations'
 
 interface DealsFiltersProps {
   stageFilter: string
@@ -13,6 +14,8 @@ export function DealsFilters({
   onStageFilterChange,
   onProjectTypeFilterChange
 }: DealsFiltersProps) {
+  const t = useCRMTranslations()
+  const stages = getStages(t.deals)
   return (
     <>
       <select
@@ -20,8 +23,8 @@ export function DealsFilters({
         onChange={(e) => onStageFilterChange(e.target.value)}
         className="px-4 py-2.5 rounded-lg border border-white/20 bg-white/5 focus:bg-white/10 focus:outline-none"
       >
-        <option value="">Все этапы</option>
-        {STAGES.map(s => (
+        <option value="">{t.deals.filters.allStages}</option>
+        {stages.map(s => (
           <option key={s.id} value={s.id}>{s.label}</option>
         ))}
       </select>
@@ -30,11 +33,11 @@ export function DealsFilters({
         onChange={(e) => onProjectTypeFilterChange(e.target.value)}
         className="px-4 py-2.5 rounded-lg border border-white/20 bg-white/5 focus:bg-white/10 focus:outline-none"
       >
-        <option value="">Все типы</option>
-        <option value="pergola">Пергола</option>
-        <option value="railing">Перила</option>
-        <option value="gates">Ворота</option>
-        <option value="windows">Окна</option>
+        <option value="">{t.deals.filters.allTypes}</option>
+        <option value="pergola">{t.deals.projectTypes.pergola}</option>
+        <option value="railing">{t.deals.projectTypes.railing}</option>
+        <option value="gates">{t.deals.projectTypes.gates}</option>
+        <option value="windows">{t.deals.projectTypes.windows}</option>
       </select>
     </>
   )

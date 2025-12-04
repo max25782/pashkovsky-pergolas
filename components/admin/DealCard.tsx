@@ -1,4 +1,5 @@
 import type { Deal } from './deal-types'
+import { useCRMTranslations } from './useCRMTranslations'
 
 interface DealCardProps {
   deal: Deal
@@ -15,6 +16,7 @@ export function DealCard({
   formatCurrency,
   formatDate
 }: DealCardProps) {
+  const t = useCRMTranslations()
   return (
     <div
       draggable
@@ -26,7 +28,7 @@ export function DealCard({
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <h4 className="font-semibold text-white mb-1">
-              {deal.customer_name || 'Без имени'}
+              {deal.customer_name || t.deals.withoutName}
             </h4>
             {deal.customer_city && (
               <p className="text-xs text-white/50">{deal.customer_city}</p>
@@ -34,7 +36,7 @@ export function DealCard({
           </div>
           {deal.project_type && (
             <span className="px-2 py-1 rounded bg-blue-500/20 text-blue-200 text-xs whitespace-nowrap">
-              {deal.project_type}
+              {t.deals.projectTypes[deal.project_type as keyof typeof t.deals.projectTypes] || deal.project_type}
             </span>
           )}
         </div>
@@ -53,7 +55,7 @@ export function DealCard({
         
         {(deal.width || deal.depth) && (
           <div className="text-xs text-white/60">
-            📐 {deal.width || '?'} × {deal.depth || '?'} см
+            📐 {deal.width || '?'} × {deal.depth || '?'} {t.deals.cm}
           </div>
         )}
         

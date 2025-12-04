@@ -88,3 +88,6 @@ Write-Host "3. Verify Supabase connection in Supabase dashboard" -ForegroundColo
 Write-Host "4. Try creating a test deal manually" -ForegroundColor White
 Write-Host "========================================" -ForegroundColor Cyan
 
+
+
+

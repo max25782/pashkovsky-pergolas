@@ -1,6 +1,7 @@
 import type { Deal } from './deal-types'
-import { STAGES } from './deal-types'
+import { getStages } from './deal-types'
 import { formatDate, formatCurrency, formatDimensions } from './deal-utils'
+import { useCRMTranslations } from './useCRMTranslations'
 
 interface DealsTableViewProps {
   deals: Deal[]
@@ -15,20 +16,22 @@ export function DealsTableView({
   onDealClick,
   onDealDelete
 }: DealsTableViewProps) {
+  const t = useCRMTranslations()
+  const stages = getStages(t.deals)
   return (
     <div className="overflow-x-auto rounded-lg border border-white/10 bg-white/5">
       <table className="min-w-full text-sm">
         <thead className="bg-white/5">
           <tr>
-            <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">Дата</th>
-            <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">Клиент</th>
-            <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">Телефон</th>
-            <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">Тип</th>
-            <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">Размеры</th>
-            <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">Цена</th>
-            <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">Этап</th>
-            <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">Менеджер</th>
-            <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">Действия</th>
+            <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">{t.deals.createdAt}</th>
+            <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">{t.deals.customerName}</th>
+            <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">{t.deals.customerPhone}</th>
+            <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">{t.deals.projectType}</th>
+            <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">{t.deals.width} / {t.deals.depth}</th>
+            <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">{t.deals.price}</th>
+            <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">{t.deals.stage}</th>
+            <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">{t.deals.manager}</th>
+            <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">{t.common.delete}</th>
           </tr>
         </thead>
         <tbody>
@@ -43,7 +46,7 @@ export function DealsTableView({
           {deals.length === 0 && !loading && (
             <tr>
               <td className="p-8 text-center text-white/40" colSpan={9}>
-                Нет сделок
+                {t.status.noDeals}
               </td>
             </tr>
           )}
@@ -62,6 +65,9 @@ function DealTableRow({
   onClick: () => void
   onDelete: () => void
 }) {
+  const t = useCRMTranslations()
+  const stages = getStages(t.deals)
+  const stage = stages.find(s => s.id === deal.stage)
   return (
     <tr 
       className="border-t border-white/5 hover:bg-white/5 transition-colors cursor-pointer"
@@ -77,7 +83,7 @@ function DealTableRow({
       <td className="p-3 text-white/70">{deal.customer_phone || '-'}</td>
       <td className="p-3">
         <span className="px-2 py-1 rounded bg-blue-500/20 text-blue-200 text-xs">
-          {deal.project_type || '-'}
+          {deal.project_type ? (t.deals.projectTypes[deal.project_type as keyof typeof t.deals.projectTypes] || deal.project_type) : '-'}
         </span>
       </td>
       <td className="p-3 text-white/70">
@@ -88,9 +94,9 @@ function DealTableRow({
       </td>
       <td className="p-3">
         <span className={`px-2 py-1 rounded text-xs font-medium ${
-          STAGES.find(s => s.id === deal.stage)?.color || 'bg-gray-500'
+          stage?.color || 'bg-gray-500'
         } text-white`}>
-          {STAGES.find(s => s.id === deal.stage)?.label || 'Новая'}
+          {stage?.label || t.deals.stages.new}
         </span>
       </td>
       <td className="p-3 text-white/70">{deal.manager || '-'}</td>
@@ -102,7 +108,7 @@ function DealTableRow({
           }}
           className="px-2 py-1 rounded bg-red-600/20 hover:bg-red-600/30 text-red-200 text-xs"
         >
-          Удалить
+          {t.common.delete}
         </button>
       </td>
     </tr>

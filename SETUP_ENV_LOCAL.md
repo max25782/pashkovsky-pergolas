@@ -74,3 +74,6 @@ After setting up `.env.local` and restarting:
 3. Check browser console (F12) - should see successful API calls
 4. Deals should appear!
 
+
+
+

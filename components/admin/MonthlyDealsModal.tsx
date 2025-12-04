@@ -2,7 +2,8 @@
 import { useMemo } from 'react'
 import type { Deal } from './deal-types'
 import { formatCurrency, formatDate } from './deal-utils'
-import { STAGES } from './deal-types'
+import { getStages } from './deal-types'
+import { useCRMTranslations } from './useCRMTranslations'
 
 interface MonthlyDealsModalProps {
   month: string
@@ -21,6 +22,9 @@ export function MonthlyDealsModal({
   onClose,
   onDealClick
 }: MonthlyDealsModalProps) {
+  const t = useCRMTranslations()
+  const stages = getStages(t.deals)
+  
   // Фильтруем сделки за выбранный месяц
   const monthlyDeals = useMemo(() => {
     return deals.filter(deal => {
@@ -59,12 +63,12 @@ export function MonthlyDealsModal({
   }, [monthlyDeals])
 
   const getStageLabel = (stage: string | null | undefined) => {
-    const stageObj = STAGES.find(s => s.id === stage)
+    const stageObj = stages.find(s => s.id === stage)
     return stageObj?.label || stage || '—'
   }
 
   const getStageColor = (stage: string | null | undefined) => {
-    const stageObj = STAGES.find(s => s.id === stage)
+    const stageObj = stages.find(s => s.id === stage)
     return stageObj?.color || 'bg-gray-500'
   }
 

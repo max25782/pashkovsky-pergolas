@@ -1,5 +1,8 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
   "/admin-api/deals/route": "app/admin-api/deals/route.js",
-  "/[locale]/admin/deals/page": "app/[locale]/admin/deals/page.js"
+  "/[locale]/page": "app/[locale]/page.js",
+  "/[locale]/admin/leads/page": "app/[locale]/admin/leads/page.js",
+  "/[locale]/admin/ai-chats/page": "app/[locale]/admin/ai-chats/page.js",
+  "/[locale]/admin/deals/page": "app/[locale]/admin/deals/page.js",
+  "/[locale]/admin/articles/page": "app/[locale]/admin/articles/page.js"
 }

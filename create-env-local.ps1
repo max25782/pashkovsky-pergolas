@@ -86,3 +86,6 @@ Write-Host "2. Restart your dev server: npm run dev" -ForegroundColor White
 Write-Host "3. Enter the same token when prompted on /admin/deals page" -ForegroundColor White
 Write-Host ""
 
+
+
+

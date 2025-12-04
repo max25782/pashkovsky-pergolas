@@ -106,3 +106,6 @@ If you can't find the service_role key:
 3. Try refreshing the page
 4. Check browser console for errors
 
+
+
+

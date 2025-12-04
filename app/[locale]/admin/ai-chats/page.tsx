@@ -1,10 +1,10 @@
 "use client"
 import { useEffect, useState } from 'react'
 import type { Locale } from '@/lib/locales'
-import { DealsTable } from '@/components/admin/DealsTable'
+import { AIChatsTable } from '@/components/admin/AIChatsTable'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
 
-export default function AdminDealsPage({ params: { locale } }: { params: { locale: Locale } }) {
+export default function AdminAIChatsPage({ params: { locale } }: { params: { locale: Locale } }) {
   const t = useCRMTranslations()
   const [token, setToken] = useState<string | null>(null)
   const [input, setInput] = useState('')
@@ -30,12 +30,13 @@ export default function AdminDealsPage({ params: { locale } }: { params: { local
   if (!token) {
     return (
       <main className="container py-16 text-white">
-        <h1 className="text-2xl font-bold mb-4">Admin • {t.deals.title}</h1>
+        <h1 className="text-2xl font-bold mb-4">Admin • {t.aiChats.title}</h1>
         <div className="max-w-md bg-white/5 border border-white/10 rounded-xl p-6">
           <label className="block text-sm mb-2">{t.auth.enterAdminToken}</label>
           <input
             value={input}
-            onChange={e => setInput(e.target.value)}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && save()}
             className="w-full px-3 py-2 rounded bg-black/40 border border-white/20"
             placeholder={t.auth.adminTokenPlaceholder}
           />
@@ -50,7 +51,7 @@ export default function AdminDealsPage({ params: { locale } }: { params: { local
   return (
     <main className="container py-8 text-white">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold">Admin • {t.deals.title}</h1>
+        <h1 className="text-2xl font-bold">Admin • {t.aiChats.title}</h1>
         <div className="flex gap-2">
           <a
             href={`/${locale}/admin/leads`}
@@ -59,10 +60,10 @@ export default function AdminDealsPage({ params: { locale } }: { params: { local
             {t.nav.leads}
           </a>
           <a
-            href={`/${locale}/admin/articles`}
-            className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 font-semibold"
+            href={`/${locale}/admin/deals`}
+            className="px-4 py-2 rounded bg-green-600 hover:bg-green-700 font-semibold"
           >
-            {t.nav.articles}
+            {t.nav.deals}
           </a>
           <a
             href={`/${locale}/admin/gallery`}
@@ -70,19 +71,14 @@ export default function AdminDealsPage({ params: { locale } }: { params: { local
           >
             {t.nav.gallery}
           </a>
-          <a
-            href={`/${locale}/admin/ai-chats`}
-            className="px-4 py-2 rounded bg-cyan-600 hover:bg-cyan-700 font-semibold"
-          >
-            {t.nav.aiChats}
-          </a>
           <button onClick={logout} className="px-3 py-2 rounded bg-white/10 hover:bg-white/20">
             {t.common.logout}
           </button>
         </div>
       </div>
-      <DealsTable adminToken={token} />
+      <AIChatsTable adminToken={token} />
     </main>
   )
 }
+
 

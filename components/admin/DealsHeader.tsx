@@ -1,6 +1,7 @@
 import { SearchBar } from './SearchBar'
 import { DealsFilters } from './DealsFilters'
 import { ViewToggle } from './ViewToggle'
+import { useCRMTranslations } from './useCRMTranslations'
 
 type ViewMode = 'kanban' | 'table'
 
@@ -29,6 +30,7 @@ export function DealsHeader({
   onAddNew,
   onShowStatistics
 }: DealsHeaderProps) {
+  const t = useCRMTranslations()
   return (
     <div className="mb-6 space-y-4">
       <div className="flex flex-wrap items-center gap-4 justify-between">
@@ -36,7 +38,7 @@ export function DealsHeader({
           <SearchBar
             value={searchQuery}
             onChange={onSearchChange}
-            placeholder="🔍 Поиск по имени, телефону, материалу, RAL..."
+            placeholder={t.deals.searchPlaceholder}
           />
           <DealsFilters
             stageFilter={stageFilter}
@@ -51,7 +53,7 @@ export function DealsHeader({
               onClick={onShowStatistics}
               className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-semibold transition-colors"
             >
-              📊 Статистика
+              📊 {t.deals.statistics}
             </button>
           )}
           {onAddNew && (
@@ -59,7 +61,7 @@ export function DealsHeader({
               onClick={onAddNew}
               className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold transition-colors"
             >
-              ➕ Новая сделка
+              ➕ {t.deals.newDeal}
             </button>
           )}
           <ViewToggle

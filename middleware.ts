@@ -4,8 +4,68 @@ import { defaultLocale, locales } from '@/lib/locales'
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+  const hostname = request.headers.get('host') || ''
+  const subdomain = hostname.split('.')[0]
   
-  // Check if pathname already has a locale
+  // Check if CRM is enabled (via environment variable)
+  // Set ENABLE_CRM_SUBDOMAIN=true in .env.local for development
+  // Leave it unset or false in production
+  const isCRMEnabled = process.env.ENABLE_CRM_SUBDOMAIN === 'true' || 
+                       process.env.NODE_ENV !== 'production'
+  
+  // CRM subdomain handling (only if enabled)
+  if (isCRMEnabled && (subdomain === 'crm' || subdomain === 'admin')) {
+    // If accessing root, redirect to admin/deals
+    if (pathname === '/') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/admin/deals'
+      return NextResponse.redirect(url)
+    }
+    
+    // If accessing admin routes without locale, rewrite to include default locale
+    if (pathname.startsWith('/admin')) {
+      const hasLocale = locales.some(
+        (locale) => pathname.startsWith(`/${locale}/admin`)
+      )
+      
+      if (!hasLocale) {
+        const url = request.nextUrl.clone()
+        url.pathname = `/${defaultLocale}${pathname}`
+        return NextResponse.rewrite(url)
+      }
+    }
+    
+    // Redirect non-admin routes to admin
+    if (!pathname.startsWith('/admin') && !pathname.startsWith('/api') && !pathname.startsWith('/_next')) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/admin/deals'
+      return NextResponse.redirect(url)
+    }
+    
+    return NextResponse.next()
+  }
+  
+  // Block admin routes on main domain - redirect to CRM subdomain (only if CRM enabled)
+  if (isCRMEnabled && pathname.startsWith('/admin')) {
+    const url = request.nextUrl.clone()
+    // Extract domain without subdomain (e.g., pashkovsky-group.com)
+    const domainParts = hostname.split('.')
+    const baseDomain = domainParts.length > 2 
+      ? domainParts.slice(1).join('.') 
+      : hostname
+    url.host = `crm.${baseDomain}`
+    url.pathname = pathname
+    return NextResponse.redirect(url)
+  }
+  
+  // If CRM is disabled and trying to access admin, return 404 or redirect to home
+  if (!isCRMEnabled && pathname.startsWith('/admin')) {
+    const url = request.nextUrl.clone()
+    url.pathname = `/${defaultLocale}`
+    return NextResponse.redirect(url)
+  }
+  
+  // Original locale handling for main domain
   const pathnameHasLocale = locales.some(
     (locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`
   )

@@ -1,6 +1,7 @@
 import type { Deal } from './deal-types'
-import { STAGES } from './deal-types'
+import { getStages } from './deal-types'
 import { KanbanColumn } from './KanbanColumn'
+import { useCRMTranslations } from './useCRMTranslations'
 
 interface KanbanBoardProps {
   deals: Deal[]
@@ -17,6 +18,9 @@ export function KanbanBoard({
   onDealDragStart,
   onDealClick
 }: KanbanBoardProps) {
+  const t = useCRMTranslations()
+  const stages = getStages(t.deals)
+  
   function getDealsByStage(stage: string) {
     return deals.filter(deal => {
       // Нормализуем stage: если null, undefined или пустая строка, используем 'new'
@@ -29,7 +33,7 @@ export function KanbanBoard({
   return (
     <div className="overflow-x-auto pb-4 -mx-4 px-4">
       <div className="flex gap-4 min-w-max">
-        {STAGES.map(stage => {
+        {stages.map(stage => {
           const stageDeals = getDealsByStage(stage.id)
           return (
             <KanbanColumn

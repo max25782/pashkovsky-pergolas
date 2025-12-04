@@ -28,11 +28,31 @@ export interface Deal {
   updated_at?: string | null
 }
 
+// Base stages with colors (labels will be translated)
+export const STAGES_BASE = [
+  { id: 'new', color: 'bg-gray-500' },
+  { id: 'measure', color: 'bg-purple-500' },
+  { id: 'offer', color: 'bg-yellow-500' },
+  { id: 'approved', color: 'bg-green-500' },
+  { id: 'production', color: 'bg-orange-500' },
+  { id: 'install', color: 'bg-indigo-500' },
+  { id: 'done', color: 'bg-emerald-600' },
+] as const
+
+// Helper function to get stages with translated labels
+export function getStages(translations: { stages: Record<string, string> }) {
+  return STAGES_BASE.map(stage => ({
+    ...stage,
+    label: translations.stages[stage.id] || stage.id,
+  }))
+}
+
+// Legacy export for backward compatibility (will use default Russian)
 export const STAGES = [
   { id: 'new', label: 'Новая', color: 'bg-gray-500' },
   { id: 'measure', label: 'Замер', color: 'bg-purple-500' },
   { id: 'offer', label: 'הוזמן', color: 'bg-yellow-500' },
-  { id: 'approved', label: 'Утверждено', color: 'bg-green-500' },
+  { id: 'approved', label: 'חומר שהגיע למפעל', color: 'bg-green-500' },
   { id: 'production', label: 'Производство', color: 'bg-orange-500' },
   { id: 'install', label: 'Установка', color: 'bg-indigo-500' },
   { id: 'done', label: 'Готово', color: 'bg-emerald-600' },

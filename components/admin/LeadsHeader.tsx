@@ -1,4 +1,5 @@
 import { SearchBar } from './SearchBar'
+import { useCRMTranslations } from './useCRMTranslations'
 
 interface LeadsHeaderProps {
   searchQuery: string
@@ -13,6 +14,7 @@ export function LeadsHeader({
   onPageChange,
   currentPage
 }: LeadsHeaderProps) {
+  const t = useCRMTranslations()
   return (
     <div className="mb-6 space-y-4">
       <div className="flex flex-wrap items-center gap-4 justify-between">
@@ -20,7 +22,7 @@ export function LeadsHeader({
           <SearchBar
             value={searchQuery}
             onChange={onSearchChange}
-            placeholder="🔍 Поиск по имени, телефону, заметкам..."
+            placeholder={t.leads.searchPlaceholder}
           />
         </div>
         <div className="flex items-center gap-2">
@@ -28,16 +30,16 @@ export function LeadsHeader({
             onClick={() => onPageChange(Math.max(0, currentPage - 1))}
             className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
           >
-            ← Назад
+            ← {t.common.back}
           </button>
           <span className="px-4 py-2 text-white/70 text-sm">
-            Страница {currentPage + 1}
+            {t.leads.page} {currentPage + 1}
           </span>
           <button
             onClick={() => onPageChange(currentPage + 1)}
             className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
           >
-            Вперед →
+            {t.common.next} →
           </button>
         </div>
       </div>

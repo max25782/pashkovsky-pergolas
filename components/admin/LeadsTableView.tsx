@@ -3,6 +3,7 @@ import { useState } from 'react'
 import type { Lead } from './lead-types'
 import { LEAD_STATUSES } from './lead-types'
 import { formatDate } from './deal-utils'
+import { useCRMTranslations } from './useCRMTranslations'
 
 interface LeadsTableViewProps {
   leads: Lead[]
@@ -21,19 +22,20 @@ export function LeadsTableView({
   onStatusChange,
   onNotesChange
 }: LeadsTableViewProps) {
+  const t = useCRMTranslations()
   return (
     <div className="overflow-x-auto rounded-lg border border-white/10 bg-white/5">
       <table className="min-w-full text-sm">
         <thead className="bg-white/5">
           <tr>
-            <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">Дата</th>
-            <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">Имя</th>
-            <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">Телефон</th>
-            <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">Email</th>
-            <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">Источник</th>
-            <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">Статус</th>
-            <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">Заметки</th>
-            <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">Действия</th>
+            <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">{t.leads.createdAt}</th>
+            <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">{t.leads.name}</th>
+            <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">{t.leads.phone}</th>
+            <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">{t.leads.email}</th>
+            <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">{t.leads.source}</th>
+            <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">{t.leads.status}</th>
+            <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">{t.leads.notes}</th>
+            <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">{t.common.delete}</th>
           </tr>
         </thead>
         <tbody>
@@ -50,7 +52,7 @@ export function LeadsTableView({
           {leads.length === 0 && !loading && (
             <tr>
               <td className="p-8 text-center text-white/40" colSpan={8}>
-                Нет лидов
+                {t.status.noLeads}
               </td>
             </tr>
           )}

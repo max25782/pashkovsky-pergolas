@@ -1,3 +1,5 @@
+import { useCRMTranslations } from './useCRMTranslations'
+
 type ViewMode = 'kanban' | 'table'
 
 interface ViewToggleProps {
@@ -6,6 +8,7 @@ interface ViewToggleProps {
 }
 
 export function ViewToggle({ viewMode, onViewModeChange }: ViewToggleProps) {
+  const t = useCRMTranslations()
   return (
     <div className="flex rounded-lg border border-white/20 bg-white/5 overflow-hidden">
       <button
@@ -16,7 +19,7 @@ export function ViewToggle({ viewMode, onViewModeChange }: ViewToggleProps) {
             : 'bg-transparent hover:bg-white/10'
         }`}
       >
-        📋 Канбан
+        📋 {t.deals.viewModes.kanban}
       </button>
       <button
         onClick={() => onViewModeChange('table')}
@@ -26,7 +29,7 @@ export function ViewToggle({ viewMode, onViewModeChange }: ViewToggleProps) {
             : 'bg-transparent hover:bg-white/10'
         }`}
       >
-        📊 Таблица
+        📊 {t.deals.viewModes.table}
       </button>
     </div>
   )

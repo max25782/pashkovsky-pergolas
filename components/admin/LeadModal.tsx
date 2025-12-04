@@ -3,6 +3,7 @@ import { useEffect, useState } from "react"
 import type { Lead } from './lead-types'
 import { LEAD_STATUSES } from './lead-types'
 import { formatDate } from './deal-utils'
+import { useCRMTranslations } from './useCRMTranslations'
 
 interface LeadModalProps {
   lead: Lead
@@ -17,6 +18,7 @@ export function LeadModal({
   onUpdate,
   onDelete
 }: LeadModalProps) {
+  const t = useCRMTranslations()
   const [localLead, setLocalLead] = useState(lead)
   const [saving, setSaving] = useState(false)
 
@@ -50,7 +52,7 @@ export function LeadModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 bg-gray-900/95 backdrop-blur border-b border-white/10 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-white">Лид: {lead.name}</h2>
+          <h2 className="text-2xl font-bold text-white">{t.leads.leadTitle}: {lead.name}</h2>
           <button
             onClick={onClose}
             className="text-white/60 hover:text-white text-2xl leading-none"
@@ -63,16 +65,16 @@ export function LeadModal({
           {/* Basic Info */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">Имя</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{t.leads.name}</label>
               <input
                 value={localLead.name || ''}
                 onChange={(e) => updateField('name', e.target.value)}
                 className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
-                placeholder="Имя"
+                placeholder={t.leads.name}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">Телефон</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{t.leads.phone}</label>
               <input
                 value={localLead.phone || ''}
                 onChange={(e) => updateField('phone', e.target.value)}
@@ -81,7 +83,7 @@ export function LeadModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">Email</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{t.leads.email}</label>
               <input
                 type="email"
                 value={localLead.email || ''}
@@ -91,25 +93,25 @@ export function LeadModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">Город</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{t.leads.city}</label>
               <input
                 value={localLead.city || ''}
                 onChange={(e) => updateField('city', e.target.value || null)}
                 className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
-                placeholder="Город"
+                placeholder={t.leads.city}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">Источник</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{t.leads.source}</label>
               <input
                 value={localLead.source || ''}
                 onChange={(e) => updateField('source', e.target.value || null)}
                 className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
-                placeholder="Источник"
+                placeholder={t.leads.source}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">Статус</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{t.leads.status}</label>
               <select
                 value={localLead.status || ''}
                 onChange={(e) => updateField('status', (e.target.value || null) as any)}
@@ -125,20 +127,20 @@ export function LeadModal({
 
           {/* Notes */}
           <div>
-            <label className="block text-sm font-medium text-white/70 mb-2">Заметки</label>
+            <label className="block text-sm font-medium text-white/70 mb-2">{t.leads.notes}</label>
             <textarea
               value={localLead.notes || ''}
               onChange={(e) => updateField('notes', e.target.value || null)}
               className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none min-h-[120px]"
-              placeholder="Заметки о лиде..."
+              placeholder={t.leads.notesPlaceholder}
             />
           </div>
 
           {/* Metadata */}
           <div className="pt-4 border-t border-white/10 text-sm text-white/50 space-y-1">
-            <div>Создано: {formatDate(lead.created_at)}</div>
+            <div>{t.leads.createdAt}: {formatDate(lead.created_at)}</div>
             {lead.last_message_at && (
-              <div>Последнее сообщение: {formatDate(lead.last_message_at)}</div>
+              <div>{t.leads.lastMessage}: {formatDate(lead.last_message_at)}</div>
             )}
           </div>
 
@@ -149,19 +151,19 @@ export function LeadModal({
               disabled={saving}
               className="flex-1 px-4 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {saving ? 'Сохранение...' : 'Сохранить'}
+              {saving ? t.common.saving : t.common.save}
             </button>
             <button
               onClick={onDelete}
               className="px-4 py-3 rounded-lg bg-red-600/20 hover:bg-red-600/30 text-red-200 font-semibold"
             >
-              Удалить
+              {t.common.delete}
             </button>
             <button
               onClick={onClose}
               className="px-4 py-3 rounded-lg bg-white/5 hover:bg-white/10 font-semibold"
             >
-              Отмена
+              {t.common.cancel}
             </button>
           </div>
         </div>

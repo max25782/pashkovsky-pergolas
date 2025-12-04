@@ -1,7 +1,8 @@
 "use client"
 import { useState } from "react"
 import type { Deal } from './deal-types'
-import { STAGES } from './deal-types'
+import { getStages } from './deal-types'
+import { useCRMTranslations } from './useCRMTranslations'
 
 interface CreateDealModalProps {
   onClose: () => void
@@ -12,6 +13,8 @@ export function CreateDealModal({
   onClose,
   onCreate
 }: CreateDealModalProps) {
+  const t = useCRMTranslations()
+  const stages = getStages(t.deals)
   const [dealData, setDealData] = useState<Partial<Deal>>({
     stage: 'new',
     project_type: null,
@@ -62,7 +65,7 @@ export function CreateDealModal({
 
   async function handleCreate() {
     if (!dealData.customer_name || !dealData.customer_phone) {
-      alert('Пожалуйста, заполните имя и телефон клиента')
+      alert(t.deals.customerName === 'Customer Name' ? 'Please fill in customer name and phone' : t.deals.customerName === 'Имя клиента' ? 'Пожалуйста, заполните имя и телефон клиента' : 'אנא מלא שם וטלפון של הלקוח')
       return
     }
 
@@ -95,7 +98,7 @@ export function CreateDealModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 bg-gray-900/95 backdrop-blur border-b border-white/10 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-white">Создать новую сделку</h2>
+          <h2 className="text-2xl font-bold text-white">{t.deals.dealTitleCreate}</h2>
           <button
             onClick={onClose}
             className="text-white/60 hover:text-white text-2xl leading-none"
@@ -107,23 +110,23 @@ export function CreateDealModal({
         <div className="p-6 space-y-6">
           {/* Customer Info */}
           <div>
-            <h3 className="text-lg font-semibold text-white mb-4">Информация о клиенте</h3>
+            <h3 className="text-lg font-semibold text-white mb-4">{t.deals.customerInfo}</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-white/70 mb-2">
-                  Имя клиента <span className="text-red-400">*</span>
+                  {t.deals.customerName} <span className="text-red-400">{t.deals.required}</span>
                 </label>
                 <input
                   value={dealData.customer_name || ''}
                   onChange={(e) => updateField('customer_name', e.target.value || null)}
                   className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
-                  placeholder="Имя"
+                  placeholder={t.deals.customerName}
                   required
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-white/70 mb-2">
-                  Телефон <span className="text-red-400">*</span>
+                  {t.deals.customerPhone} <span className="text-red-400">{t.deals.required}</span>
                 </label>
                 <input
                   value={dealData.customer_phone || ''}
@@ -134,7 +137,7 @@ export function CreateDealModal({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-white/70 mb-2">Email</label>
+                <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.customerEmail}</label>
                 <input
                   type="email"
                   value={dealData.customer_email || ''}
@@ -144,12 +147,12 @@ export function CreateDealModal({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-white/70 mb-2">Город</label>
+                <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.customerCity}</label>
                 <input
                   value={dealData.customer_city || ''}
                   onChange={(e) => updateField('customer_city', e.target.value || null)}
                   className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
-                  placeholder="Город"
+                  placeholder={t.deals.customerCity}
                 />
               </div>
             </div>
@@ -157,37 +160,37 @@ export function CreateDealModal({
 
           {/* Project Info */}
           <div>
-            <h3 className="text-lg font-semibold text-white mb-4">Информация о проекте</h3>
+            <h3 className="text-lg font-semibold text-white mb-4">{t.deals.projectInfo}</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-white/70 mb-2">Тип проекта</label>
+                <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.projectType}</label>
                 <select
                   value={dealData.project_type || ''}
                   onChange={(e) => updateField('project_type', (e.target.value || null) as any)}
                   className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
                 >
                   <option value="">-</option>
-                  <option value="pergola">Пергола</option>
-                  <option value="railing">Перила</option>
-                  <option value="gates">Ворота</option>
-                  <option value="windows">Окна</option>
+                  <option value="pergola">{t.deals.projectTypes.pergola}</option>
+                  <option value="railing">{t.deals.projectTypes.railing}</option>
+                  <option value="gates">{t.deals.projectTypes.gates}</option>
+                  <option value="windows">{t.deals.projectTypes.windows}</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-white/70 mb-2">Этап</label>
+                <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.stage}</label>
                 <select
                   value={dealData.stage || ''}
                   onChange={(e) => updateField('stage', (e.target.value || null) as any)}
                   className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
                 >
                   <option value="">-</option>
-                  {STAGES.map(s => (
+                  {stages.map(s => (
                     <option key={s.id} value={s.id}>{s.label}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-white/70 mb-2">Ширина (см)</label>
+                <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.width}</label>
                 <input
                   type="number"
                   value={dealData.width || ''}
@@ -197,7 +200,7 @@ export function CreateDealModal({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-white/70 mb-2">Глубина (см)</label>
+                <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.depth}</label>
                 <input
                   type="number"
                   value={dealData.depth || ''}
@@ -207,19 +210,19 @@ export function CreateDealModal({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-white/70 mb-2">Форма</label>
+                <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.shape}</label>
                 <select
                   value={dealData.shape || ''}
                   onChange={(e) => updateField('shape', (e.target.value || null) as any)}
                   className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
                 >
                   <option value="">-</option>
-                  <option value="прямоугольник">Прямоугольник</option>
-                  <option value="Г-образная">Г-образная</option>
+                  <option value="прямоугольник">{t.deals.rectangle}</option>
+                  <option value="Г-образная">{t.deals.lShape}</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-white/70 mb-2">Цена клиенту (₪)</label>
+                <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.price}</label>
                 <input
                   type="number"
                   value={dealData.price || ''}
@@ -229,7 +232,7 @@ export function CreateDealModal({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-white/70 mb-2">Моя стоимость (₪)</label>
+                <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.myCost}</label>
                 <input
                   type="number"
                   value={dealData.my_cost || ''}
@@ -239,7 +242,7 @@ export function CreateDealModal({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-white/70 mb-2">תאריך הזמנה (Дата заказа)</label>
+                <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.orderDate}</label>
                 <input
                   type="datetime-local"
                   value={dealData.order_date || ''}
@@ -248,7 +251,7 @@ export function CreateDealModal({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-white/70 mb-2">תאריך הזמנת חומר (Дата заказа материала)</label>
+                <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.materialOrderDate}</label>
                 <input
                   type="datetime-local"
                   value={dealData.material_order_date || ''}
@@ -257,7 +260,7 @@ export function CreateDealModal({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-white/70 mb-2">תאריך קבלת חומר (Дата получения материала)</label>
+                <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.materialReceivedDate}</label>
                 <input
                   type="datetime-local"
                   value={dealData.material_received_date || ''}
@@ -266,7 +269,7 @@ export function CreateDealModal({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-white/70 mb-2">תאריך התקנה (Дата установки)</label>
+                <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.installationDate}</label>
                 <input
                   type="datetime-local"
                   value={dealData.installation_date || ''}
@@ -275,39 +278,39 @@ export function CreateDealModal({
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-white/70 mb-2">תאורה (Освещение)</label>
+                <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.lighting}</label>
                 <input
                   value={dealData.lighting || ''}
                   onChange={(e) => updateField('lighting', e.target.value || null)}
                   className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
-                  placeholder="Описание освещения"
+                  placeholder={t.deals.lighting}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-white/70 mb-2">Материал</label>
+                <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.material}</label>
                 <input
                   value={dealData.material || ''}
                   onChange={(e) => updateField('material', e.target.value || null)}
                   className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
-                  placeholder="Материал"
+                  placeholder={t.deals.material}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-white/70 mb-2">RAL</label>
+                <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.colorRal}</label>
                 <input
                   value={dealData.color_ral || ''}
                   onChange={(e) => updateField('color_ral', e.target.value || null)}
                   className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
-                  placeholder="RAL код"
+                  placeholder={t.deals.colorRal}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-white/70 mb-2">Менеджер</label>
+                <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.manager}</label>
                 <input
                   value={dealData.manager || ''}
                   onChange={(e) => updateField('manager', e.target.value || null)}
                   className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
-                  placeholder="Менеджер"
+                  placeholder={t.deals.manager}
                 />
               </div>
             </div>
@@ -315,12 +318,12 @@ export function CreateDealModal({
 
           {/* Notes */}
           <div>
-            <label className="block text-sm font-medium text-white/70 mb-2">Заметки</label>
+            <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.notes}</label>
             <textarea
               value={dealData.notes || ''}
               onChange={(e) => updateField('notes', e.target.value || null)}
               className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none min-h-[120px]"
-              placeholder="Заметки о сделке..."
+              placeholder={t.deals.notes}
             />
           </div>
 
@@ -331,13 +334,13 @@ export function CreateDealModal({
               disabled={saving || !dealData.customer_name || !dealData.customer_phone}
               className="flex-1 px-4 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {saving ? 'Создание...' : 'Создать сделку'}
+              {saving ? t.common.saving : t.deals.createDeal}
             </button>
             <button
               onClick={onClose}
               className="px-4 py-3 rounded-lg bg-white/5 hover:bg-white/10 font-semibold"
             >
-              Отмена
+              {t.common.cancel}
             </button>
           </div>
         </div>
