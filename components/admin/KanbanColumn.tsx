@@ -23,7 +23,7 @@ export function KanbanColumn({
   const t = useCRMTranslations()
   return (
     <div
-      className="flex-shrink-0 w-80 min-w-[320px]"
+      className="flex-shrink-0 w-[92vw] min-w-[92vw] sm:w-80 sm:min-w-[320px]"
       onDragOver={onDragOver}
       onDrop={onDrop}
     >

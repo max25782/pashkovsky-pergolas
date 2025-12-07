@@ -18,6 +18,9 @@ export interface Deal {
   material_received_date?: string | null
   installation_date?: string | null
   lighting?: string | null
+  shading_ratio?: '40/20' | '50/20' | '70/20' | null
+  finish_type?: 'ral' | 'wood' | null
+  finish_value?: string | null
   stage?: 'new' | 'measure' | 'offer' | 'approved' | 'production' | 'install' | 'done' | null
   notes?: string | null
   files?: any

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { MessageCircle } from "lucide-react";
 import type { Locale } from "@/lib/locales";
+import { getImageUrl } from "@/lib/image-url";
 
 interface ServiceItem {
   title: { he: string; ru: string; en: string }
@@ -85,7 +86,7 @@ export function ServicesSection({ locale }: { locale: Locale }) {
             >
               <div className="relative w-full h-[300px] overflow-hidden bg-gray-800">
                 <Image
-                  src={service.img}
+                  src={getImageUrl(service.img)}
                   alt={service.title[locale]}
                   fill
                   sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"

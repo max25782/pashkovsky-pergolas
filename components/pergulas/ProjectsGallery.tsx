@@ -5,6 +5,10 @@ import { useCallback, useMemo, useEffect } from "react";
 import { observer } from "mobx-react-lite";
 import { uiStore } from "@/stores/ui-store";
 import projects from "@/data/gallery/pergulot.json";
+import { processImageArray } from "@/lib/image-url-array";
+import useSWR from "swr";
+
+const fetcher = (url: string) => fetch(url).then(res => res.json());
 
 type Locale = "he" | "en" | "ru";
 
@@ -16,34 +20,40 @@ interface ProjectNormalized {
 }
 
 function ProjectsGalleryImpl({ locale = "he" }: { locale?: Locale }) {
-  const raw = (projects as { projects: any[] }).projects;
+  const { data: apiData } = useSWR<{ projects: any[] }>('/api/pergola-projects', fetcher);
+  const rawApi = apiData?.projects ?? [];
+  const rawStatic = (projects as { projects: any[] }).projects;
+
+  const normalize = useCallback((p: any, idx: number): ProjectNormalized => {
+    const id: string = p.id ?? p.slug ?? String(idx);
+    const images: string[] = Array.isArray(p.images)
+      ? processImageArray(p.images)
+      : Array.isArray(p.media)
+        ? processImageArray(p.media.filter((m: any) => m.type === "image").map((m: any) => m.src))
+        : [];
+    const titleValue = typeof p.title === 'string' ? p.title : (p.title?.he ?? id);
+    const descValue = typeof p.desc === 'string' ? p.desc : (p.desc?.he ?? '');
+    return {
+      id,
+      title: {
+        he: p.title?.he ?? titleValue,
+        en: p.title?.en ?? titleValue,
+        ru: p.title?.ru ?? titleValue,
+      },
+      desc: {
+        he: p.desc?.he ?? descValue,
+        en: p.desc?.en ?? descValue,
+        ru: p.desc?.ru ?? descValue,
+      },
+      images,
+    };
+  }, []);
 
   const data: ProjectNormalized[] = useMemo(() => {
-    return raw.map((p: any, idx: number) => {
-      const id: string = p.id ?? p.slug ?? String(idx);
-      const images: string[] = Array.isArray(p.images)
-        ? p.images
-        : Array.isArray(p.media)
-          ? p.media.filter((m: any) => m.type === "image").map((m: any) => m.src)
-          : [];
-      const titleValue = typeof p.title === 'string' ? p.title : (p.title?.he ?? id);
-      const descValue = typeof p.desc === 'string' ? p.desc : (p.desc?.he ?? '');
-      return {
-        id,
-        title: {
-          he: p.title?.he ?? titleValue,
-          en: p.title?.en ?? titleValue,
-          ru: p.title?.ru ?? titleValue,
-        },
-        desc: {
-          he: p.desc?.he ?? descValue,
-          en: p.desc?.en ?? descValue,
-          ru: p.desc?.ru ?? descValue,
-        },
-        images,
-      } as ProjectNormalized;
-    });
-  }, [raw]);
+    const apiProjects = rawApi.map((p, idx) => normalize(p, idx));
+    const staticProjects = rawStatic.map((p, idx) => normalize(p, idx + 10000));
+    return [...apiProjects, ...staticProjects];
+  }, [rawApi, rawStatic, normalize]);
 
   const currentProject = useMemo(() => {
     return data.find(p => p.id === uiStore.projects.projectId) || null;

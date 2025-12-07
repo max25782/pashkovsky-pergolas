@@ -59,7 +59,7 @@ const features = [
   {
     icon: Wrench,
     title: {
-      he: 'מחזור מלא',
+      he: 'מעטפת מלא',
       ru: 'Полный цикл',
       en: 'Full Cycle'
     },

@@ -3,6 +3,7 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { PlayButton, GradientOverlay } from "@/components/ui/play-overlay";
+import { getImageUrl } from "@/lib/image-url-client";
 
 export interface MediaItem { src: string; type: "image" | "video" }
 
@@ -12,8 +13,8 @@ interface MediaGalleryProps {
 }
 
 export function MediaGallery({ title, items }: MediaGalleryProps){
-  const videos = items.filter(i => i.type === 'video')
-  const images = items.filter(i => i.type === 'image').map(i => i.src)
+  const videos = items.filter(i => i.type === 'video').map(v => ({ ...v, src: getImageUrl(v.src) }))
+  const images = items.filter(i => i.type === 'image').map(i => getImageUrl(i.src))
 
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [startIndex, setStartIndex] = useState(0)
@@ -108,7 +109,7 @@ function CustomLightbox({ images, startIndex }: { images: string[]; startIndex: 
 
 function VideoReel({ src, poster, onOpen }: { src: string; poster?: string; onOpen?: (src:string)=>void }){
   function handleOpen(){ onOpen?.(src) }
-  const posterSrc = poster || src.replace(/\.(mp4|webm)$/i, '.webp')
+  const posterSrc = getImageUrl(poster || src.replace(/\.(mp4|webm)$/i, '.webp'))
   return (
     <div className="absolute inset-0 cursor-pointer" onClick={handleOpen} role="button" aria-label="Open video">
       <Image

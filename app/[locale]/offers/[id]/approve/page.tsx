@@ -1,0 +1,310 @@
+"use client"
+
+import { useState, useEffect, useRef } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import SignatureCanvas from 'react-signature-canvas'
+import { formatPrice } from '@/lib/offer-calculator'
+import type { Offer } from '@/types/offer'
+import { Check, Loader2 } from 'lucide-react'
+
+export default function OfferApprovePage() {
+  const params = useParams()
+  const router = useRouter()
+  const signaturePadRef = useRef<SignatureCanvas>(null)
+  
+  const [offer, setOffer] = useState<Offer | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  
+  const [customerName, setCustomerName] = useState('')
+  const [customerPhone, setCustomerPhone] = useState('')
+
+  useEffect(() => {
+    fetchOffer()
+  }, [])
+
+  async function fetchOffer() {
+    try {
+      const response = await fetch(`/api/offers/${params.id}`)
+      if (!response.ok) {
+        throw new Error('Offer not found')
+      }
+      const data = await response.json()
+      setOffer(data)
+      setCustomerName(data.customerName || '')
+      setCustomerPhone(data.customerPhone || '')
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function clearSignature() {
+    signaturePadRef.current?.clear()
+  }
+
+  async function handleApprove() {
+    if (!signaturePadRef.current || signaturePadRef.current.isEmpty()) {
+      alert('אנא חתמו על ההצעה')
+      return
+    }
+
+    if (!customerName.trim()) {
+      alert('אנא הזינו את שמכם')
+      return
+    }
+
+    setSubmitting(true)
+    setError(null)
+
+    try {
+      const signatureImage = signaturePadRef.current.toDataURL()
+
+      const response = await fetch(`/api/offers/${params.id}/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          signatureImage,
+          customerName,
+          customerPhone,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to approve offer')
+      }
+
+      // Redirect to success page
+      router.push(`/${params.locale}/offers/${params.id}/success`)
+    } catch (err: any) {
+      console.error('Error approving offer:', err)
+      setError(err.message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    )
+  }
+
+  if (error || !offer) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full text-center">
+          <div className="text-red-500 text-5xl mb-4">⚠️</div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">שגיאה</h1>
+          <p className="text-gray-600">{error || 'הצעה לא נמצאה'}</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (offer.approval.approved) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100 p-4">
+        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full text-center">
+          <Check className="w-16 h-16 text-green-500 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">ההצעה כבר אושרה</h1>
+          <p className="text-gray-600 mb-4">
+            ההצעה אושרה בתאריך {new Date(offer.approval.approvedAt!).toLocaleDateString('he-IL')}
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4">
+      <div className="max-w-3xl mx-auto">
+        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-8">
+            <h1 className="text-3xl font-bold text-center">הצעת מחיר</h1>
+            <p className="text-center text-blue-100 mt-2">Pashkovsky Group</p>
+          </div>
+
+          {/* Content */}
+          <div className="p-8 space-y-6">
+            {/* Client Info */}
+            <div className="bg-gray-50 rounded-lg p-4">
+              <h2 className="text-lg font-semibold mb-3 text-gray-900">פרטי לקוח</h2>
+              <div className="space-y-2 text-sm text-gray-700">
+                <div><span className="font-medium">שם:</span> {offer.customerName}</div>
+                {offer.customerPhone && <div><span className="font-medium">טלפון:</span> {offer.customerPhone}</div>}
+                {offer.customerCity && <div><span className="font-medium">עיר:</span> {offer.customerCity}</div>}
+              </div>
+            </div>
+
+            {/* Pergola Details */}
+            <div className="bg-gray-50 rounded-lg p-4">
+              <h2 className="text-lg font-semibold mb-3 text-gray-900">פרטי פרגולה</h2>
+              <div className="grid grid-cols-2 gap-3 text-sm text-gray-700">
+                <div><span className="font-medium">רוחב:</span> {offer.pergola.width} מ׳</div>
+                <div><span className="font-medium">אורך:</span> {offer.pergola.length} מ׳</div>
+                {offer.pergola.height && <div><span className="font-medium">גובה:</span> {offer.pergola.height} מ׳</div>}
+                {offer.pergola.location && <div><span className="font-medium">מקום:</span> {offer.pergola.location}</div>}
+                {offer.shadingRatio && <div><span className="font-medium">הצללה:</span> {offer.shadingRatio}</div>}
+                {(offer.finishType || offer.finishValue) && (
+                  <div className="col-span-2">
+                    <span className="font-medium">גמר:</span>{' '}
+                    {offer.finishType === 'ral' ? 'RAL ' : 'דמוי עץ '}
+                    {offer.finishValue || ''}
+                  </div>
+                )}
+                <div className="col-span-2 pt-2 border-t border-gray-200">
+                  <span className="font-medium">שטח כולל:</span> {offer.area} מ״ר
+                </div>
+              </div>
+            </div>
+
+            {/* Pricing - detailed breakdown */}
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-6 border-2 border-blue-200">
+              <h2 className="text-lg font-semibold mb-4 text-gray-900">תמחור</h2>
+              <div className="space-y-2 text-sm text-gray-700">
+                <div className="flex justify-between">
+                  <span>פרגולה:</span>
+                  <span className="font-semibold text-gray-900">{formatPrice(offer.pergolaTotal)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>סנטף BH:</span>
+                  <span className="font-semibold text-gray-900">{formatPrice(offer.santafTotal)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>מסך ZIP:</span>
+                  <span className="font-semibold text-gray-900">{formatPrice(offer.zipScreenTotal)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>תאורה:</span>
+                  <span className="font-semibold text-gray-900">{formatPrice(offer.lightingTotal)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>ניקוז:</span>
+                  <span className="font-semibold text-gray-900">{formatPrice(offer.drainageTotal)}</span>
+                </div>
+
+                <div className="flex justify-between text-base font-bold text-gray-800 pt-2 border-t border-blue-200">
+                  <span>לפני מע״מ:</span>
+                  <span className="text-blue-600">{formatPrice(offer.totalBeforeVat)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>מע״מ (18%):</span>
+                  <span className="font-semibold">+{formatPrice(offer.vatAmount)}</span>
+                </div>
+                <div className="flex justify-between text-base font-bold text-gray-800 pt-1 border-t border-blue-200">
+                  <span>אחרי מע״מ:</span>
+                  <span className="text-green-600">{formatPrice(offer.priceWithVat)}</span>
+                </div>
+
+                <div className="flex justify-between text-red-600 pt-2">
+                  <span>הנחה ({offer.discountPercent}%):</span>
+                  <span className="font-semibold">
+                    {offer.discountPercent > 0 ? `-${formatPrice(offer.discountAmount)}` : formatPrice(0)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between text-2xl font-bold text-green-700 pt-3 border-t-2 border-blue-300">
+                  <span>מחיר סופי:</span>
+                  <span>{formatPrice(offer.finalPrice)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Payment Terms */}
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <h2 className="text-sm font-semibold mb-2 text-gray-900">תנאי תשלום:</h2>
+              <p className="text-sm text-gray-700">{offer.paymentTerms.text}</p>
+            </div>
+
+            {/* Warranty */}
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <h2 className="text-sm font-semibold mb-2 text-gray-900">אחריות:</h2>
+              <p className="text-sm text-gray-700">
+                {offer.warranty.years} שנים על {offer.warranty.covers.join(', ')}
+              </p>
+            </div>
+
+            {/* Customer Input */}
+            <div className="space-y-4 pt-6 border-t-2 border-gray-200">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">שם מלא *</label>
+                <input
+                  type="text"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="הזן את שמך המלא"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">טלפון</label>
+                <input
+                  type="tel"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="מספר טלפון"
+                />
+              </div>
+            </div>
+
+            {/* Signature */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">חתימה *</label>
+              <div className="border-2 border-gray-300 rounded-lg overflow-hidden bg-white">
+                <SignatureCanvas
+                  ref={signaturePadRef}
+                  canvasProps={{
+                    width: 600,
+                    height: 200,
+                    className: 'signature-canvas w-full'
+                  }}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={clearSignature}
+                className="mt-2 text-sm text-blue-600 hover:text-blue-700 underline"
+              >
+                נקה חתימה
+              </button>
+            </div>
+
+            {/* Error */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">
+                {error}
+              </div>
+            )}
+
+            {/* Submit Button */}
+            <button
+              onClick={handleApprove}
+              disabled={submitting}
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-4 rounded-lg shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>שומר...</span>
+                </>
+              ) : (
+                <>
+                  <Check className="w-5 h-5" />
+                  <span>מאשר את ההצעה</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+

@@ -8,16 +8,17 @@ import fences from "@/data/gallery/fancy.json";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { PlayButton, GradientOverlay } from "@/components/ui/play-overlay";
 import ContactSection from "../contact-section";
+import { getImageUrl } from "@/lib/image-url-client";
 
 function FencesGalleryImpl() {
   const [open, setOpen] = useState(false);
   const [startIndex, setStartIndex] = useState(0);
   const [videoModal, setVideoModal] = useState<{ open: boolean; index: number | null }>({ open: false, index: null });
   const items = (fences as { items: { src: string; type: string }[] }).items;
-  const videos = items.filter(i => i.type === 'video');
+  const videos = items.filter(i => i.type === 'video').map(v => ({ ...v, src: getImageUrl(v.src) }));
   const images = items
     .filter(i => i.type === "image" && i.src.toLowerCase().endsWith(".webp"))
-    .map(i => i.src);
+    .map(i => getImageUrl(i.src));
 
   return (
     <section className="py-24 bg-gradient-to-b from-[#0f172a] to-[#1e293b] text-white">
@@ -128,6 +129,7 @@ function VideoReel({ src, poster, onOpen }: { src: string; poster?: string; onOp
   const ref = useRef<HTMLVideoElement | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [videoSrc, setVideoSrc] = useState<string | null>(null)
+  const posterSrc = poster ? getImageUrl(poster) : undefined
 
   useEffect(() => {
     const el = ref.current
@@ -173,7 +175,7 @@ function VideoReel({ src, poster, onOpen }: { src: string; poster?: string; onOp
         ref={ref}
         src={videoSrc ?? undefined}
         preload="none"
-        poster={poster}
+        poster={posterSrc}
         className="w-full h-full object-cover"
         disablePictureInPicture
         controls={false}

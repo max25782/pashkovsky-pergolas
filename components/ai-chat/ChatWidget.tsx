@@ -1,11 +1,13 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { MessageCircle, X, Send, Loader2, Bot, User, AlertCircle, Plus } from 'lucide-react'
+import { MessageCircle, X, Send, Loader2, Bot, User, AlertCircle, Plus, Image as ImageIcon, XCircle } from 'lucide-react'
 
 interface Message {
   role: 'user' | 'assistant'
   content: string
+  imageUrl?: string // For user messages
+  imageUrls?: string[] // For assistant messages (multiple images)
   created_at?: string
 }
 
@@ -18,9 +20,12 @@ export function ChatWidget() {
   const [error, setError] = useState<string | null>(null)
   const [remaining, setRemaining] = useState<number | null>(null)
   const [isInitialized, setIsInitialized] = useState(false)
+  const [selectedImage, setSelectedImage] = useState<string | null>(null)
+  const [imageFile, setImageFile] = useState<File | null>(null)
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   
   // Scroll to bottom
   const scrollToBottom = useCallback(() => {
@@ -70,22 +75,66 @@ export function ChatWidget() {
     }
   }
   
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    
+    if (!file.type.startsWith('image/')) {
+      alert('אנא בחר קובץ תמונה')
+      return
+    }
+    
+    if (file.size > 10 * 1024 * 1024) {
+      alert('הקובץ גדול מדי. מקסימום 10MB')
+      return
+    }
+    
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      setSelectedImage(e.target?.result as string)
+      setImageFile(file)
+    }
+    reader.readAsDataURL(file)
+  }
+  
+  const removeImage = () => {
+    setSelectedImage(null)
+    setImageFile(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+  
   const sendMessage = async () => {
-    if (!input.trim() || isLoading || isStreaming) return
+    if ((!input.trim() && !selectedImage) || isLoading || isStreaming) return
     
     const userMessage = input.trim()
+    const imageData = selectedImage
     setInput('')
     setError(null)
     setIsLoading(true)
     
     // Add user message immediately
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }])
+    setMessages(prev => [...prev, { 
+      role: 'user', 
+      content: userMessage || (imageData ? 'תמונה' : ''),
+      imageUrl: imageData || undefined
+    }])
+    
+    // Clear image after adding to messages
+    const imageToSend = imageData
+    removeImage()
     
     try {
+      const formData = new FormData()
+      formData.append('message', userMessage || '')
+      if (imageFile && imageToSend) {
+        formData.append('image', imageFile)
+      }
+      
       const res = await fetch('/api/ai-chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userMessage }),
+        body: formData,
       })
       
       if (res.status === 429) {
@@ -160,7 +209,27 @@ export function ChatWidget() {
                     const newMessages = [...prev]
                     const lastMessage = newMessages[newMessages.length - 1]
                     if (lastMessage && lastMessage.role === 'assistant') {
-                      lastMessage.content += data.text
+                      // Check if this chunk contains image URLs
+                      const imageMatch = data.text.match(/\[IMAGES:([^\]]+)\]/)
+                      if (imageMatch) {
+                        const imageUrls = imageMatch[1].split(',').map((url: string) => url.trim()).filter(Boolean)
+                        lastMessage.imageUrls = imageUrls
+                        // Remove image tag from text
+                        lastMessage.content += data.text.replace(/\[IMAGES:[^\]]+\]/g, '').trim()
+                      } else {
+                        lastMessage.content += data.text
+                      }
+                    }
+                    return newMessages
+                  })
+                }
+                
+                if (data.images && Array.isArray(data.images)) {
+                  setMessages(prev => {
+                    const newMessages = [...prev]
+                    const lastMessage = newMessages[newMessages.length - 1]
+                    if (lastMessage && lastMessage.role === 'assistant') {
+                      lastMessage.imageUrls = data.images
                     }
                     return newMessages
                   })
@@ -295,7 +364,34 @@ export function ChatWidget() {
                   ? 'bg-blue-600 text-white rounded-tr-sm'
                   : 'bg-gray-700 text-gray-100 rounded-tl-sm'
               }`}>
-                <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                {/* User image */}
+                {msg.imageUrl && (
+                  <div className="mb-2 rounded-lg overflow-hidden">
+                    <img 
+                      src={msg.imageUrl} 
+                      alt="Uploaded" 
+                      className="max-w-full h-auto max-h-64 object-contain rounded"
+                    />
+                  </div>
+                )}
+                {/* Assistant images */}
+                {msg.imageUrls && msg.imageUrls.length > 0 && (
+                  <div className="mb-2 grid grid-cols-1 gap-2">
+                    {msg.imageUrls.map((url, idx) => (
+                      <div key={idx} className="rounded-lg overflow-hidden">
+                        <img 
+                          src={url} 
+                          alt={`Pergola example ${idx + 1}`}
+                          className="max-w-full h-auto max-h-64 object-contain rounded"
+                          loading="lazy"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {msg.content && (
+                  <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                )}
               </div>
             </div>
           ))}
@@ -334,7 +430,41 @@ export function ChatWidget() {
         
         {/* Input */}
         <div className="p-4 bg-gray-900 border-t border-gray-700">
+          {selectedImage && (
+            <div className="mb-2 relative inline-block">
+              <div className="relative">
+                <img 
+                  src={selectedImage} 
+                  alt="Preview" 
+                  className="max-w-[200px] max-h-[150px] object-contain rounded-lg border border-gray-600"
+                />
+                <button
+                  onClick={removeImage}
+                  className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center text-white transition-colors"
+                  aria-label="הסר תמונה"
+                >
+                  <XCircle className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
           <div className="flex items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageSelect}
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isLoading || isStreaming}
+              className="w-12 h-12 rounded-full bg-gray-800 border border-gray-700 text-gray-400 hover:text-white hover:border-gray-600 flex items-center justify-center transition-colors disabled:opacity-50"
+              aria-label="הוסף תמונה"
+              title="הוסף תמונה"
+            >
+              <ImageIcon className="w-5 h-5" />
+            </button>
             <input
               ref={inputRef}
               type="text"
@@ -348,7 +478,7 @@ export function ChatWidget() {
             />
             <button
               onClick={sendMessage}
-              disabled={!input.trim() || isLoading || isStreaming}
+              disabled={(!input.trim() && !selectedImage) || isLoading || isStreaming}
               className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 text-white flex items-center justify-center hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label="שלח"
             >

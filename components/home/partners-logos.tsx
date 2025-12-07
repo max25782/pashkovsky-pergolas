@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import { Locale } from '@/lib/locales'
+import { getImageUrl } from '@/lib/image-url'
 
 interface PartnersLogosProps {
   locale?: Locale
@@ -35,7 +36,7 @@ export function PartnersLogos({ locale = 'he' }: PartnersLogosProps) {
                 className="relative shrink-0 px-16 w-40 sm:w-56 lg:w-64 h-24 sm:h-36 lg:h-40 flex items-center justify-center"
               >
                 <Image
-                  src={logo.src}
+                  src={getImageUrl(logo.src)}
                   alt={logo.alt}
                   fill
                   sizes="(min-width: 1024px) 16rem, (min-width: 640px) 14rem, 10rem"
@@ -52,7 +53,7 @@ export function PartnersLogos({ locale = 'he' }: PartnersLogosProps) {
                 className="relative shrink-0 px-16 w-40 sm:w-56 lg:w-64 h-24 sm:h-36 lg:h-40 flex items-center justify-center"
               >
                 <Image
-                  src={logo.src}
+                  src={getImageUrl(logo.src)}
                   alt={logo.alt}
                   fill
                   sizes="(min-width: 1024px) 16rem, (min-width: 640px) 14rem, 10rem"

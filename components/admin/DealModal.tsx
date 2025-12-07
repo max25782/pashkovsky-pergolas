@@ -3,8 +3,10 @@ import { useEffect, useState } from "react"
 import type { Deal } from './deal-types'
 import { getStages } from './deal-types'
 import { SketchModal } from './SketchModal'
-import { FileImage } from 'lucide-react'
+import { FileImage, FileText } from 'lucide-react'
 import { useCRMTranslations } from './useCRMTranslations'
+import { CreateOfferModal } from '../offers/CreateOfferModal'
+import { OffersList } from '../offers/OffersList'
 
 interface DealModalProps {
   deal: Deal
@@ -30,6 +32,8 @@ export function DealModal({
   const [localDeal, setLocalDeal] = useState(deal)
   const [saving, setSaving] = useState(false)
   const [showSketchModal, setShowSketchModal] = useState(false)
+  const [showOfferModal, setShowOfferModal] = useState(false)
+  const [offersRefreshTrigger, setOffersRefreshTrigger] = useState(0)
 
   useEffect(() => {
     setLocalDeal(deal)
@@ -158,11 +162,11 @@ export function DealModal({
 
   return (
     <div 
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start sm:items-center justify-center p-2 sm:p-4"
       onClick={onClose}
     >
       <div 
-        className="bg-gray-900 border border-white/20 rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+        className="bg-gray-900 border border-white/20 shadow-2xl w-full h-full max-h-full rounded-none sm:rounded-xl sm:max-w-4xl sm:h-auto sm:max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 bg-gray-900/95 backdrop-blur border-b border-white/10 px-6 py-4 flex items-center justify-between">
@@ -370,6 +374,43 @@ export function DealModal({
               />
             </div>
             <div>
+              <label className="block text-sm font-medium text-white/70 mb-2">הצללה</label>
+              <select
+                value={localDeal.shading_ratio || ''}
+                onChange={(e) => {
+                  const value = (e.target.value as '40/20' | '50/20' | '70/20' | '') || null
+                  updateField('shading_ratio', value)
+                }}
+                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
+              >
+                <option value="">בחר</option>
+                <option value="40/20">40/20</option>
+                <option value="50/20">50/20</option>
+                <option value="70/20">70/20</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-white/70 mb-2">גמר (RAL / דמוי עץ)</label>
+              <select
+                value={localDeal.finish_type || ''}
+                onChange={(e) => {
+                  const value = (e.target.value as 'ral' | 'wood' | '') || null
+                  updateField('finish_type', value)
+                }}
+                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
+              >
+                <option value="">בחר</option>
+                <option value="ral">RAL</option>
+                <option value="wood">דמוי עץ</option>
+              </select>
+              <input
+                value={localDeal.finish_value || ''}
+                onChange={(e) => updateField('finish_value', e.target.value || null)}
+                className="mt-2 w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
+                placeholder="קוד RAL או שם העץ"
+              />
+            </div>
+            <div>
               <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.manager}</label>
               <input
                 value={localDeal.manager || ''}
@@ -391,16 +432,31 @@ export function DealModal({
             />
           </div>
 
-          {/* Sketch Button */}
-          <div className="pt-4 border-t border-white/10">
+          {/* Sketch & Offers Buttons */}
+          <div className="pt-4 border-t border-white/10 grid grid-cols-2 gap-3">
             <button
               onClick={() => setShowSketchModal(true)}
-              className="w-full px-4 py-2 rounded-lg bg-amber-600/20 hover:bg-amber-600/30 text-amber-200 font-medium flex items-center justify-center gap-2"
+              className="px-4 py-2 rounded-lg bg-amber-600/20 hover:bg-amber-600/30 text-amber-200 font-medium flex items-center justify-center gap-2"
             >
               <FileImage className="w-4 h-4" />
               {t.deals.openSketch}
             </button>
+            <button
+              onClick={() => setShowOfferModal(true)}
+              className="px-4 py-2 rounded-lg bg-green-600/20 hover:bg-green-600/30 text-green-200 font-medium flex items-center justify-center gap-2"
+            >
+              <FileText className="w-4 h-4" />
+              יצירת הצעת מחיר
+            </button>
           </div>
+
+          {/* Offers List */}
+          {deal.customer_name && (
+            <div className="pt-4 border-t border-white/10">
+              <h3 className="text-lg font-semibold mb-3">הצעות מחיר</h3>
+              <OffersList dealId={deal.id} refreshTrigger={offersRefreshTrigger} />
+            </div>
+          )}
 
           {/* Metadata */}
           <div className="pt-4 border-t border-white/10 text-sm text-white/50 space-y-1">
@@ -473,6 +529,23 @@ export function DealModal({
             })
           }}
           adminToken={adminToken}
+        />
+      )}
+
+      {/* Offer Modal */}
+      {showOfferModal && localDeal.customer_name && (
+        <CreateOfferModal
+          dealId={deal.id}
+          customerName={localDeal.customer_name}
+          customerPhone={localDeal.customer_phone || undefined}
+          customerCity={localDeal.customer_city || undefined}
+          isOpen={showOfferModal}
+          onClose={() => setShowOfferModal(false)}
+          onCreated={(offer) => {
+            console.log('Offer created:', offer)
+            setOffersRefreshTrigger(prev => prev + 1)
+            setShowOfferModal(false)
+          }}
         />
       )}
     </div>

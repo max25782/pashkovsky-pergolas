@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 interface Article {
   slug: string;
@@ -42,6 +42,7 @@ export default function ArticleModal({ articleSlug, lang = "he" }: { articleSlug
       <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto bg-white text-gray-900">
         <DialogHeader>
           <DialogTitle className="text-3xl font-bold mb-4">{article.title[lang]}</DialogTitle>
+          <DialogDescription className="sr-only">{article.summary[lang]}</DialogDescription>
         </DialogHeader>
         <div className="space-y-6">
           <p className="text-lg text-gray-700 leading-relaxed">{article.summary[lang]}</p>

@@ -152,10 +152,22 @@ async function saveMessage(sessionId: string, role: 'user' | 'assistant', conten
   })
 }
 
+// Convert image file to base64
+async function imageToBase64(file: File): Promise<{ mimeType: string; data: string }> {
+  const arrayBuffer = await file.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+  const base64 = buffer.toString('base64')
+  return {
+    mimeType: file.type || 'image/jpeg',
+    data: base64,
+  }
+}
+
 // Call Gemini API (non-streaming under the hood, streamed to client)
 async function* streamGeminiResponse(
   messages: Array<{ role: string; content: string }>,
-  userMessage: string
+  userMessage: string,
+  imageData?: { mimeType: string; data: string }
 ): AsyncGenerator<string> {
   if (!GEMINI_API_KEY) throw new Error('Gemini API key not configured')
 
@@ -177,10 +189,23 @@ async function* streamGeminiResponse(
     })
   })
 
-  // Current user message
+  // Current user message with optional image
+  const userParts: any[] = []
+  if (userMessage) {
+    userParts.push({ text: userMessage })
+  }
+  if (imageData) {
+    userParts.push({
+      inlineData: {
+        mimeType: imageData.mimeType,
+        data: imageData.data,
+      },
+    })
+  }
+  
   geminiContents.push({
     role: 'user',
-    parts: [{ text: userMessage }],
+    parts: userParts,
   })
 
   const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${AI_CONFIG.model}:generateContent?key=${GEMINI_API_KEY}`
@@ -261,11 +286,52 @@ async function* streamGeminiResponse(
     throw new Error('No chunks received from Gemini API. Check API key and model availability.')
   }
 
-  // Stream out in small chunks so фронтенд продолжает работать как с streaming
+  // Check if AI wants to send images (format: [IMAGE:url1,url2,url3])
+  const imageMatch = fullText.match(/\[IMAGE:([^\]]+)\]/)
+  let imageUrls: string[] = []
+  let textWithoutImageTag = fullText
+  
+  if (imageMatch) {
+    // Extract image URLs
+    imageUrls = imageMatch[1].split(',').map((url: string) => url.trim()).filter(Boolean)
+    // Remove image tag from text
+    textWithoutImageTag = fullText.replace(/\[IMAGE:[^\]]+\]/g, '').trim()
+    
+    // If AI requested images but didn't provide URLs, fetch from gallery
+    if (imageUrls.length === 0 || imageUrls[0].startsWith('placeholder')) {
+      try {
+        // Get base URL from request headers or use default
+        const host = process.env.VERCEL_URL 
+          ? `https://${process.env.VERCEL_URL}`
+          : process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+        
+        const galleryUrl = `${host}/api/gallery/images?category_key=pergulot&limit=3&random=true`
+        console.log('[AI Chat] Fetching gallery images from:', galleryUrl.replace(/https?:\/\/[^\/]+/, '***'))
+        
+        const galleryRes = await fetch(galleryUrl)
+        if (galleryRes.ok) {
+          const galleryData = await galleryRes.json()
+          imageUrls = galleryData.images || []
+          console.log(`[AI Chat] Fetched ${imageUrls.length} images from gallery`)
+        } else {
+          console.error('[AI Chat] Gallery API returned error:', galleryRes.status, galleryRes.statusText)
+        }
+      } catch (error) {
+        console.error('[AI Chat] Failed to fetch gallery images:', error)
+      }
+    }
+  }
+
+  // Stream out text in small chunks
   const chunkSize = 120
-  for (let i = 0; i < fullText.length; i += chunkSize) {
-    const chunk = fullText.slice(i, i + chunkSize)
+  for (let i = 0; i < textWithoutImageTag.length; i += chunkSize) {
+    const chunk = textWithoutImageTag.slice(i, i + chunkSize)
     yield chunk
+  }
+  
+  // After text is streamed, yield image URLs if any
+  if (imageUrls.length > 0) {
+    yield `\n\n[IMAGES:${imageUrls.join(',')}]`
   }
 }
 
@@ -292,19 +358,52 @@ export async function POST(req: NextRequest) {
       console.warn('[AI Chat] API key format looks suspicious, length:', GEMINI_API_KEY.length)
     }
     
-    const body = await req.json()
-    const rawMessage = body.message
+    // Parse request - can be JSON or FormData
+    let rawMessage: string = ''
+    let imageFile: File | null = null
+    let imageData: { mimeType: string; data: string } | undefined = undefined
     
-    if (!rawMessage || typeof rawMessage !== 'string') {
-      return new Response(JSON.stringify({ error: 'Message is required' }), { 
+    const contentType = req.headers.get('content-type') || ''
+    
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await req.formData()
+      rawMessage = (formData.get('message') as string) || ''
+      imageFile = formData.get('image') as File | null
+      
+      if (imageFile && imageFile.size > 0) {
+        // Validate image
+        if (!imageFile.type.startsWith('image/')) {
+          return new Response(JSON.stringify({ error: 'Invalid file type. Only images are allowed.' }), { 
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+          })
+        }
+        
+        if (imageFile.size > 10 * 1024 * 1024) {
+          return new Response(JSON.stringify({ error: 'Image too large. Maximum 10MB.' }), { 
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+          })
+        }
+        
+        imageData = await imageToBase64(imageFile)
+      }
+    } else {
+      const body = await req.json()
+      rawMessage = body.message || ''
+    }
+    
+    // At least message or image must be provided
+    if (!rawMessage.trim() && !imageData) {
+      return new Response(JSON.stringify({ error: 'Message or image is required' }), { 
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       })
     }
     
-    // Sanitize input
-    const message = sanitizeInput(rawMessage)
-    if (!message) {
+    // Sanitize text input (if provided)
+    const message = rawMessage.trim() ? sanitizeInput(rawMessage.trim()) : ''
+    if (rawMessage.trim() && !message) {
       return new Response(JSON.stringify({ error: 'Invalid message' }), { 
         status: 400,
         headers: { 'Content-Type': 'application/json' }
@@ -367,9 +466,10 @@ export async function POST(req: NextRequest) {
       history = []
     }
     
-    // Save user message
+    // Save user message (with image indicator if image was sent)
     try {
-      await saveMessage(sessionId, 'user', message)
+      const messageToSave = message || (imageData ? 'תמונה' : '')
+      await saveMessage(sessionId, 'user', messageToSave)
     } catch (error) {
       console.error('[AI Chat] Failed to save user message:', error)
       // Continue anyway
@@ -387,11 +487,26 @@ export async function POST(req: NextRequest) {
           console.log('[AI Chat] Model:', AI_CONFIG.model)
           
           let chunkCount = 0
+          let detectedImageUrls: string[] = []
           try {
-            for await (const chunk of streamGeminiResponse(history, message)) {
+            for await (const chunk of streamGeminiResponse(history, message, imageData)) {
               chunkCount++
-              fullResponse += chunk
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: chunk })}\n\n`))
+              
+              // Check if chunk contains image URLs
+              const imageMatch = chunk.match(/\[IMAGES:([^\]]+)\]/)
+              if (imageMatch) {
+                detectedImageUrls = imageMatch[1].split(',').map(url => url.trim()).filter(Boolean)
+                // Send images as separate data
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ images: detectedImageUrls })}\n\n`))
+                // Don't add image tag to fullResponse
+                const textChunk = chunk.replace(/\[IMAGES:[^\]]+\]/g, '').trim()
+                if (textChunk) {
+                  fullResponse += textChunk
+                }
+              } else {
+                fullResponse += chunk
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: chunk })}\n\n`))
+              }
               
               if (chunkCount === 1) {
                 console.log('[AI Chat] First chunk received, length:', chunk.length)

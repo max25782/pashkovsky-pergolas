@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import sharp from 'sharp'
+import { uploadToS3, isS3Configured } from '@/lib/s3-upload'
 
 function env(name: string): string {
   const v = process.env[name]
@@ -37,6 +38,10 @@ export async function POST(req: NextRequest) {
     console.error('Missing Supabase env')
     return new Response('Missing Supabase env', { status: 500 })
   }
+  if (!isS3Configured()) {
+    console.error('S3 not configured')
+    return new Response('S3 not configured', { status: 500 })
+  }
   
   try {
     console.log('Parsing form data...')
@@ -58,40 +63,6 @@ export async function POST(req: NextRequest) {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       })
-    }
-    
-    // Проверяем и создаем bucket если его нет
-    console.log('Checking bucket gallery-images...')
-    const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets()
-    
-    if (bucketsError) {
-      console.error('Error listing buckets:', bucketsError)
-    } else {
-      const bucketExists = buckets?.some(b => b.name === 'gallery-images')
-      
-      if (!bucketExists) {
-        console.log('Bucket not found, creating gallery-images bucket...')
-        const { data: newBucket, error: createError } = await supabase.storage.createBucket('gallery-images', {
-          public: true,
-          fileSizeLimit: 10485760, // 10MB
-          allowedMimeTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif']
-        })
-        
-        if (createError) {
-          console.error('Error creating bucket:', createError)
-          return new Response(JSON.stringify({ 
-            error: 'Failed to create storage bucket', 
-            details: createError.message 
-          }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' }
-          })
-        }
-        
-        console.log('Bucket created successfully:', newBucket)
-      } else {
-        console.log('Bucket exists')
-      }
     }
     
     // Проверяем существование категории
@@ -160,38 +131,13 @@ export async function POST(req: NextRequest) {
         const originalName = file.name.replace(/\.[^/.]+$/, '')
         const sanitizedName = originalName.replace(/[^a-zA-Z0-9-_]/g, '_')
         const filename = `${sanitizedName}_${timestamp}_${random}.webp`
-        const storagePath = `${categoryKey}/${filename}`
+        const storagePath = `images/${categoryKey}/${filename}`
         console.log(`Generated filename: ${filename}, storage path: ${storagePath}`)
         
-        // Загружаем в Supabase Storage
-        console.log(`Uploading to Supabase Storage...`)
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('gallery-images')
-          .upload(storagePath, optimizedBuffer, {
-            contentType: 'image/webp',
-            upsert: false
-          })
-        
-        if (uploadError) {
-          console.error(`Upload error for ${file.name}:`, uploadError)
-          return new Response(JSON.stringify({ 
-            error: `Upload failed for ${file.name}`, 
-            details: uploadError.message || String(uploadError)
-          }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' }
-          })
-        }
-        
-        console.log(`File uploaded successfully:`, uploadData)
-        
-        // Получаем публичный URL
-        const { data: urlData } = supabase.storage
-          .from('gallery-images')
-          .getPublicUrl(storagePath)
-        
-        const publicUrl = urlData.publicUrl
-        console.log(`Public URL: ${publicUrl}`)
+        // Загружаем в S3
+        console.log(`Uploading to S3...`)
+        const publicUrl = await uploadToS3(optimizedBuffer, storagePath, 'image/webp')
+        console.log(`Uploaded to S3: ${publicUrl}`)
         
         // Сохраняем метаданные в базу данных
         console.log(`Saving to database...`)
@@ -212,8 +158,6 @@ export async function POST(req: NextRequest) {
         
         if (dbError) {
           console.error(`Database error for ${file.name}:`, dbError)
-          // Удаляем загруженный файл из storage если не удалось сохранить в БД
-          await supabase.storage.from('gallery-images').remove([storagePath])
           return new Response(JSON.stringify({ 
             error: `Database error for ${file.name}`, 
             details: dbError.message 

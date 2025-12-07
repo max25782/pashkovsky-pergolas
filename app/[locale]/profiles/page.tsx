@@ -3,6 +3,7 @@ import Image from 'next/image'
 import fs from 'fs'
 import path from 'path'
 import ContactSection from '@/components/contact-section'
+import { getImageUrl } from '@/lib/image-url'
 
 export default function ProfilesPage({ params }: { params: { locale: Locale } }) {
   const locale = params.locale || 'he'
@@ -34,7 +35,7 @@ export default function ProfilesPage({ params }: { params: { locale: Locale } })
     const fallbackName = file.replace(/\.[^.]+$/, '')
     return {
       id: meta?.id || fallbackName,
-      image: `/images/profiles/${file}`,
+      image: getImageUrl(`/images/profiles/${file}`),
       name: meta?.name || { he: fallbackName, ru: fallbackName, en: fallbackName },
       dimensions: meta?.dimensions || '',
       description:

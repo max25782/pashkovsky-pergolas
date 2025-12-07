@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import projects from '@/data/gallery/pergulot.json'
 import Image from 'next/image'
+import { getImageUrl } from '@/lib/image-url'
 
 type Locale = 'he' | 'ru' | 'en'
 
@@ -30,7 +31,7 @@ export async function generateMetadata({ params }: { params: { id: string; local
   const pergola = getProjectById(params.id)
   const titleHe = pergola?.title.he ?? params.id
   const descHe = pergola?.desc.he ?? ''
-  const cover = pergola?.images?.[0]
+  const cover = pergola?.images?.[0] ? getImageUrl(pergola.images[0]) : undefined
   const canonical = `https://pashkovsky-group.com/${params.locale}/pergulas/${params.id}`
 
   return {
@@ -62,7 +63,7 @@ export default function PergulaProjectPage({ params }: { params: { id: string; l
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {project.images.map((src) => (
             <div key={src} className="relative w-full aspect-[4/3] rounded-xl overflow-hidden">
-              <Image src={src} alt={title} fill className="object-cover" sizes="(max-width:640px) 100vw, (max-width:1024px) 50vw, 33vw" />
+              <Image src={getImageUrl(src)} alt={title} fill className="object-cover" sizes="(max-width:640px) 100vw, (max-width:1024px) 50vw, 33vw" />
             </div>
           ))}
         </div>
