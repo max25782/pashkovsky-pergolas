@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import { formatPrice } from '@/lib/offer-calculator'
 import type { Offer } from '@/types/offer'
 import { FileText, Check, Clock, Download, FileDown, MessageCircle, Mail, Trash2 } from 'lucide-react'
+import { getOfferPublicUrl } from '@/lib/offer-sharing'
 import type { Locale } from '@/lib/locales'
 
 interface OffersListProps {
@@ -45,8 +46,7 @@ export function OffersList({ dealId, refreshTrigger }: OffersListProps) {
 
   const handleSendWhatsApp = useCallback((offer: Offer) => {
     try {
-      const baseUrl = window.location.origin
-      const offerUrl = `${baseUrl}/${locale}/offers/${offer.id}/approve`
+      const offerUrl = getOfferPublicUrl(offer.id, locale)
 
       // Normalize phone to international format for wa.me
       const raw = offer.customerPhone?.replace(/\D/g, '') || '972524494848' // fallback to main number
@@ -72,8 +72,7 @@ export function OffersList({ dealId, refreshTrigger }: OffersListProps) {
     if (!email) return
 
     try {
-      const baseUrl = window.location.origin
-      const offerUrl = `${baseUrl}/${locale}/offers/${offer.id}/approve`
+      const offerUrl = getOfferPublicUrl(offer.id, locale)
       
       const response = await fetch(`/api/offers/${offer.id}/send-email`, {
         method: 'POST',
@@ -115,7 +114,8 @@ export function OffersList({ dealId, refreshTrigger }: OffersListProps) {
   }, [fetchOffers])
 
   const handleViewOffer = useCallback((offerId: string) => {
-    window.open(`/${locale}/offers/${offerId}/approve`, '_blank')
+    const url = getOfferPublicUrl(offerId, locale)
+    window.open(url, '_blank')
   }, [locale])
 
   if (loading) {
