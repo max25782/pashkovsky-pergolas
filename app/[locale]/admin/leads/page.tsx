@@ -1,5 +1,6 @@
 "use client"
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import type { Locale } from '@/lib/locales'
 import { LeadsTable } from '@/components/admin/LeadsTable'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
@@ -35,30 +36,30 @@ export default function AdminLeadsPage({ params: { locale } }: { params: { local
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold">Admin • {t.leads.title}</h1>
         <div className="flex gap-2">
-          <a 
+          <Link 
             href={`/${locale}/admin/deals`}
             className="px-4 py-2 rounded bg-green-600 hover:bg-green-700 font-semibold"
           >
             {t.nav.deals}
-          </a>
-          <a 
+          </Link>
+          <Link 
             href={`/${locale}/admin/articles`}
             className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 font-semibold"
           >
             {t.nav.articles}
-          </a>
-          <a
+          </Link>
+          <Link
             href={`/${locale}/admin/gallery`}
             className="px-4 py-2 rounded bg-purple-600 hover:bg-purple-700 font-semibold"
           >
             {t.nav.gallery}
-          </a>
-          <a
+          </Link>
+          <Link
             href={`/${locale}/admin/ai-chats`}
             className="px-4 py-2 rounded bg-cyan-600 hover:bg-cyan-700 font-semibold"
           >
             {t.nav.aiChats}
-          </a>
+          </Link>
           <button onClick={logout} className="px-3 py-2 rounded bg-white/10 hover:bg-white/20">{t.common.logout}</button>
         </div>
       </div>

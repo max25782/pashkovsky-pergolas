@@ -20,32 +20,32 @@ export function middleware(request: NextRequest) {
   
   // Handle CRM subdomain - always work on subdomain, regardless of environment
   if (isCRMSubdomain) {
-    // If accessing root, redirect to admin/deals
+    // If accessing root, redirect to default-locale admin/deals
     if (pathname === '/') {
       const url = request.nextUrl.clone()
-      url.pathname = '/admin/deals'
+      url.pathname = `/${defaultLocale}/admin/deals`
       return NextResponse.redirect(url)
     }
     
+    // Allow locale-prefixed admin routes (e.g. /he/admin/leads)
+    const hasLocaleAdmin = locales.some(
+      (locale) => pathname.startsWith(`/${locale}/admin`)
+    )
+    if (hasLocaleAdmin) {
+      return NextResponse.next()
+    }
+
     // If accessing admin routes without locale, rewrite to include default locale
     if (pathname.startsWith('/admin')) {
-      const hasLocale = locales.some(
-        (locale) => pathname.startsWith(`/${locale}/admin`)
-      )
-      
-      if (!hasLocale) {
-        const url = request.nextUrl.clone()
-        url.pathname = `/${defaultLocale}${pathname}`
-        return NextResponse.rewrite(url)
-      }
-      // If admin route already has locale, allow it
-      return NextResponse.next()
+      const url = request.nextUrl.clone()
+      url.pathname = `/${defaultLocale}${pathname}`
+      return NextResponse.rewrite(url)
     }
     
     // Redirect ALL non-admin routes to admin/deals (including locale-only paths like /he, /ru, /en)
     if (!pathname.startsWith('/admin') && !pathname.startsWith('/api') && !pathname.startsWith('/_next')) {
       const url = request.nextUrl.clone()
-      url.pathname = '/admin/deals'
+      url.pathname = `/${defaultLocale}/admin/deals`
       return NextResponse.redirect(url)
     }
     

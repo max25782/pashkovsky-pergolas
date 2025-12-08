@@ -1,5 +1,6 @@
 "use client"
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import type { Locale } from '@/lib/locales'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
 
@@ -164,24 +165,24 @@ export default function GalleryAdminPage({ params: { locale } }: { params: { loc
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold">Admin • {t.gallery.title}</h1>
         <div className="flex gap-2">
-          <a
+          <Link
             href={`/${locale}/admin/deals`}
             className="px-4 py-2 rounded bg-green-600 hover:bg-green-700 font-semibold"
           >
             {t.nav.deals}
-          </a>
-          <a
+          </Link>
+          <Link
             href={`/${locale}/admin/leads`}
             className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 font-semibold"
           >
             {t.nav.leads}
-          </a>
-          <a
+          </Link>
+          <Link
             href={`/${locale}/admin/articles`}
             className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 font-semibold"
           >
             {t.nav.articles}
-          </a>
+          </Link>
           <button onClick={logout} className="px-3 py-2 rounded bg-white/10 hover:bg-white/20">
             {t.common.logout}
           </button>
