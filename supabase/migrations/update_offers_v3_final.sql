@@ -158,3 +158,4 @@ CREATE TRIGGER update_offers_updated_at_trigger
 COMMENT ON TABLE public.offers IS 'Complete offers with pergola, santaf, ZIP, lighting (200₪/m), drainage (500₪/m), pricing (discount after VAT 18%)';
 
 
+

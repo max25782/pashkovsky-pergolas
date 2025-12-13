@@ -7,3 +7,4 @@ ALTER TABLE public.deals
 -- No RLS changes (table already under existing policies)
 
 
+

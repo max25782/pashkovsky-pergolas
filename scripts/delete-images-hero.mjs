@@ -92,3 +92,4 @@ async function deleteFolders() {
 
 deleteFolders().catch(console.error)
 
+

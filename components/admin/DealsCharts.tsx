@@ -13,7 +13,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts'
-import type { Deal } from '@/types/deal'
+import type { Deal } from './deal-types'
 
 interface DealsChartsProps {
   deals: Deal[]
@@ -30,8 +30,8 @@ export function DealsCharts({ deals }: DealsChartsProps) {
   // Calculate totals
   const totals = deals.reduce(
     (acc, deal) => {
-      const revenue = deal.revenue_final || 0
-      const expenses = deal.labor_cost || 0
+      const revenue = deal.price || 0
+      const expenses = deal.my_cost || 0
       const profit = revenue - expenses
 
       return {
@@ -46,16 +46,19 @@ export function DealsCharts({ deals }: DealsChartsProps) {
 
   // Prepare data for charts
   const chartData = deals
-    .filter(deal => (deal.revenue_final || 0) > 0 || (deal.labor_cost || 0) > 0)
-    .map((deal) => ({
-      name: deal.client_name?.length > 15 
-        ? deal.client_name.substring(0, 15) + '...' 
-        : deal.client_name || 'ללא שם',
-      fullName: deal.client_name || 'ללא שם',
-      revenue: deal.revenue_final || 0,
-      expenses: deal.labor_cost || 0,
-      profit: (deal.revenue_final || 0) - (deal.labor_cost || 0),
-    }))
+    .filter(deal => (deal.price || 0) > 0 || (deal.my_cost || 0) > 0)
+    .map((deal) => {
+      const customerName = deal.customer_name || 'ללא שם'
+      return {
+        name: customerName.length > 15 
+          ? customerName.substring(0, 15) + '...' 
+          : customerName,
+        fullName: customerName,
+        revenue: deal.price || 0,
+        expenses: deal.my_cost || 0,
+        profit: (deal.price || 0) - (deal.my_cost || 0),
+      }
+    })
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 10) // Top 10 deals
 
@@ -155,7 +158,7 @@ export function DealsCharts({ deals }: DealsChartsProps) {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
+                  label={({ name, percent }) => `${name}: ${((percent ?? 0) * 100).toFixed(1)}%`}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"

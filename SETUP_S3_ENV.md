@@ -55,3 +55,4 @@ NEXT_PUBLIC_AWS_S3_REGION=eu-north-1
 - ✅ Hero видео будет работать
 - ✅ Ошибки 400 исчезнут
 
+
