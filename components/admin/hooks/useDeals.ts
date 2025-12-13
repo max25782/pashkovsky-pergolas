@@ -24,6 +24,11 @@ export function useDeals({
   const [error, setError] = useState<string | null>(null)
 
   async function load() {
+    // Don't load if adminToken is not provided
+    if (!adminToken) {
+      return
+    }
+    
     setLoading(true)
     setError(null)
     try {
@@ -47,7 +52,10 @@ export function useDeals({
   }
 
   useEffect(() => {
-    load()
+    // Only load if adminToken is provided
+    if (adminToken) {
+      load()
+    }
   }, [adminToken, searchQuery, stageFilter, projectTypeFilter, page, limit])
 
   return {
