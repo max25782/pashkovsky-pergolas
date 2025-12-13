@@ -48,21 +48,23 @@ export default function GA() {
 
   return (
     <>
-      {/* Google tag (gtag.js) */}
+      {/* Google tag (gtag.js) - Load in head */}
       <Script
+        id="google-analytics-gtag"
         strategy="afterInteractive"
         src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
-        async
       />
       <Script
-        id="google-analytics"
+        id="google-analytics-init"
         strategy="afterInteractive"
         dangerouslySetInnerHTML={{
           __html: `
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
-            gtag('config', '${gaId}');
+            gtag('config', '${gaId}', {
+              page_path: window.location.pathname,
+            });
           `,
         }}
       />

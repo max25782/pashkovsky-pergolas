@@ -7,6 +7,7 @@ import { formatCurrencyILS } from '@/lib/workers/calculations'
 import type { MonthlyReport } from '@/types/workers'
 import type { Locale } from '@/lib/locales'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
+import { MonthlyReportCharts } from '@/components/admin/MonthlyReportCharts'
 
 export default function MonthlyReportPage({ params }: { params: { locale: Locale } }) {
   const t = useCRMTranslations()
@@ -210,6 +211,11 @@ export default function MonthlyReportPage({ params }: { params: { locale: Locale
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Charts */}
+            <div className="mb-8">
+              <MonthlyReportCharts report={report} />
             </div>
 
             {/* Projects Table */}

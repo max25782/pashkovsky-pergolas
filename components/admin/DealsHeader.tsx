@@ -2,6 +2,8 @@ import { SearchBar } from './SearchBar'
 import { DealsFilters } from './DealsFilters'
 import { ViewToggle } from './ViewToggle'
 import { useCRMTranslations } from './useCRMTranslations'
+import Link from 'next/link'
+import { useParams } from 'next/navigation'
 
 type ViewMode = 'kanban' | 'table'
 
@@ -31,6 +33,9 @@ export function DealsHeader({
   onShowStatistics
 }: DealsHeaderProps) {
   const t = useCRMTranslations()
+  const params = useParams()
+  const locale = params?.locale as string || 'he'
+  
   return (
     <div className="mb-6 space-y-4">
       <div className="flex flex-wrap items-center gap-4 justify-between">
@@ -49,12 +54,12 @@ export function DealsHeader({
         </div>
         <div className="flex items-center gap-2">
           {onShowStatistics && (
-            <button
-              onClick={onShowStatistics}
+            <Link
+              href={`/${locale}/admin/statistics`}
               className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-semibold transition-colors"
             >
               📊 {t.deals.statistics}
-            </button>
+            </Link>
           )}
           {onAddNew && (
             <button

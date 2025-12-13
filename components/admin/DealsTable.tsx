@@ -5,7 +5,6 @@ import { DealModal } from './DealModal'
 import { CreateDealModal } from './CreateDealModal'
 import { DealsHeader } from './DealsHeader'
 import { DealsStatus } from './DealsStatus'
-import { DealsStatistics } from './DealsStatistics'
 import { KanbanBoard } from './KanbanBoard'
 import { DealsTableView } from './DealsTableView'
 import { formatCurrency, formatDate } from './deal-utils'
@@ -28,7 +27,6 @@ export function DealsTable({ adminToken }: Props) {
   const [page, setPage] = useState(0)
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [showStatistics, setShowStatistics] = useState(false)
 
   const { deals, loading, error, reload } = useDeals({
     adminToken,
@@ -104,20 +102,10 @@ export function DealsTable({ adminToken }: Props) {
         onProjectTypeFilterChange={handleProjectTypeFilterChange}
         onViewModeChange={setViewMode}
         onAddNew={() => setShowCreateModal(true)}
-        onShowStatistics={() => setShowStatistics(!showStatistics)}
+        onShowStatistics={() => {}}
       />
       
       <DealsStatus loading={loading || updating || creating || deleting} error={error} />
-
-      {showStatistics && (
-        <div className="mb-6">
-          <DealsStatistics 
-            deals={deals} 
-            key={deals.length}
-            onDealClick={setSelectedDeal}
-          />
-        </div>
-      )}
 
       {viewMode === 'kanban' && (
         <KanbanBoard

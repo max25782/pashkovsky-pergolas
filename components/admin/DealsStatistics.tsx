@@ -3,6 +3,8 @@ import { useState, useMemo } from 'react'
 import type { Deal } from './deal-types'
 import { formatCurrency } from './deal-utils'
 import { MonthlyDealsModal } from './MonthlyDealsModal'
+import { DealsCharts } from './DealsCharts'
+import { MonthlyStatsChart } from './MonthlyStatsChart'
 
 interface DealsStatisticsProps {
   deals: Deal[]
@@ -25,18 +27,22 @@ export function DealsStatistics({ deals, onDealClick }: DealsStatisticsProps) {
   const [selectedMonthLabel, setSelectedMonthLabel] = useState<string>('')
   const [statisticType, setStatisticType] = useState<StatisticType>('money')
   
-  const monthlyStats = useMemo(() => {
-    const statsMap = new Map<string, MonthlyStats>()
-
-    // Фильтруем сделки в зависимости от выбранного типа статистики
-    let validDeals = deals.filter(deal => deal && deal.id)
+  // Filter deals based on statistic type
+  const validDeals = useMemo(() => {
+    let filtered = deals.filter(deal => deal && deal.id)
     
     // Если выбран тип 'money', показываем только завершенные сделки (done)
     if (statisticType === 'money') {
-      validDeals = validDeals.filter(deal => {
+      filtered = filtered.filter(deal => {
         return deal.stage === 'done'
       })
     }
+    
+    return filtered
+  }, [deals, statisticType])
+  
+  const monthlyStats = useMemo(() => {
+    const statsMap = new Map<string, MonthlyStats>()
     
     validDeals.forEach(deal => {
       // Используем дату установки (installation_date) в приоритете
@@ -80,7 +86,7 @@ export function DealsStatistics({ deals, onDealClick }: DealsStatisticsProps) {
     return Array.from(statsMap.values())
       .sort((a, b) => a.month.localeCompare(b.month))
       .reverse()
-  }, [deals, statisticType])
+  }, [validDeals])
 
   const totals = useMemo(() => {
     return monthlyStats.reduce(
@@ -234,6 +240,12 @@ export function DealsStatistics({ deals, onDealClick }: DealsStatisticsProps) {
               </div>
             </div>
           </div>
+
+          {/* Monthly Stats Charts */}
+          <MonthlyStatsChart monthlyStats={monthlyStats} />
+
+          {/* Charts */}
+          <DealsCharts deals={validDeals} />
         </>
       )}
 

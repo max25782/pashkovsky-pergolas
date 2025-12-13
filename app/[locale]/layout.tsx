@@ -6,6 +6,7 @@ import UTMTracker from '@/components/utm-tracker'
 import { Locale, isRTL } from '@/lib/locales'
 import clsx from 'clsx'
 import { Analytics } from "@vercel/analytics/react"
+import { GoogleAnalytics } from '@/components/google-analytics'
 import GA from '@/components/ga'
 import { Suspense } from 'react'
 import FloatingWhatsApp from '@/components/contact/FloatingWhatsApp'
@@ -64,6 +65,7 @@ export default function RootLayout({ children, params: { locale } }: { children:
     <html lang={locale} dir={dir} suppressHydrationWarning>
       <head>
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+        <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
         {/* Preload removed to avoid warnings on non-home pages; hero uses priority/fetchPriority */}
       </head>
       <body className={clsx(
@@ -71,6 +73,7 @@ export default function RootLayout({ children, params: { locale } }: { children:
         'bg-white text-black dark:bg-neutral-950 dark:text-white',
         dir==='rtl'?'rtl':'ltr'
       )}>
+        <GoogleAnalytics />
         <Providers>
           <UTMTracker />
           <Suspense fallback={null}>

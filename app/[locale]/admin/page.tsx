@@ -71,7 +71,7 @@ export default function AdminPage({ params }: { params: { locale: Locale } }) {
       id: 'statistic',
       title: t.nav.statistic,
       description: 'סטטיסטיקה וניתוח נתונים',
-      href: `/${params.locale}/admin/deals`,
+      href: `/${params.locale}/admin/statistics`,
       icon: BarChart3,
       color: 'bg-emerald-600 hover:bg-emerald-700',
     },
