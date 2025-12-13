@@ -20,10 +20,10 @@ export function middleware(request: NextRequest) {
   
   // Handle CRM subdomain - always work on subdomain, regardless of environment
   if (isCRMSubdomain) {
-    // If accessing root, redirect to default-locale admin/deals
+    // If accessing root, redirect to default-locale admin dashboard
     if (pathname === '/') {
       const url = request.nextUrl.clone()
-      url.pathname = `/${defaultLocale}/admin/deals`
+      url.pathname = `/${defaultLocale}/admin`
       return NextResponse.redirect(url)
     }
     
@@ -42,10 +42,10 @@ export function middleware(request: NextRequest) {
       return NextResponse.rewrite(url)
     }
     
-    // Redirect ALL non-admin routes to admin/deals (including locale-only paths like /he, /ru, /en)
+    // Redirect ALL non-admin routes to admin dashboard (including locale-only paths like /he, /ru, /en)
     if (!pathname.startsWith('/admin') && !pathname.startsWith('/api') && !pathname.startsWith('/_next')) {
       const url = request.nextUrl.clone()
-      url.pathname = `/${defaultLocale}/admin/deals`
+      url.pathname = `/${defaultLocale}/admin`
       return NextResponse.redirect(url)
     }
     
