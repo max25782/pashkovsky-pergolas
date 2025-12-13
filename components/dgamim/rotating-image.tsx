@@ -1,6 +1,7 @@
 'use client'
 import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
+import { isS3Url } from '@/lib/image-props'
 
 interface RotatingImageProps {
   sources: string[]
@@ -46,6 +47,7 @@ export function RotatingImage({ sources, intervalMs = 2000, alt = 'Degem', prior
           loading={priority ? "eager" : "lazy"}
           placeholder="blur"
           blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYGD4DwABBAEAW9JTEQAAAABJRU5ErkJggg=="
+          unoptimized={isS3Url(src)}
         />
       )}
     </div>

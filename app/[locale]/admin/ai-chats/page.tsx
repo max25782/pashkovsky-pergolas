@@ -53,13 +53,7 @@ export default function AdminAIChatsPage({ params: { locale } }: { params: { loc
     <main className="container py-8 text-white">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold">Admin • {t.aiChats.title}</h1>
-        <div className="flex gap-2">
-          <Link
-            href={`/${locale}/admin/leads`}
-            className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 font-semibold"
-          >
-            {t.nav.leads}
-          </Link>
+        <div className="flex gap-2 flex-wrap">
           <Link
             href={`/${locale}/admin/deals`}
             className="px-4 py-2 rounded bg-green-600 hover:bg-green-700 font-semibold"
@@ -67,10 +61,34 @@ export default function AdminAIChatsPage({ params: { locale } }: { params: { loc
             {t.nav.deals}
           </Link>
           <Link
+            href={`/${locale}/admin/deals`}
+            className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-700 font-semibold"
+          >
+            {t.nav.statistic}
+          </Link>
+          <Link
+            href={`/${locale}/admin/leads`}
+            className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 font-semibold"
+          >
+            {t.nav.leads}
+          </Link>
+          <Link
             href={`/${locale}/admin/gallery`}
             className="px-4 py-2 rounded bg-purple-600 hover:bg-purple-700 font-semibold"
           >
             {t.nav.gallery}
+          </Link>
+          <Link
+            href={`/${locale}/admin/articles`}
+            className="px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-700 font-semibold"
+          >
+            {t.nav.articles}
+          </Link>
+          <Link
+            href={`/${locale}/admin/workers`}
+            className="px-4 py-2 rounded bg-yellow-600 hover:bg-yellow-700 font-semibold"
+          >
+            {t.nav.workers}
           </Link>
           <button onClick={logout} className="px-3 py-2 rounded bg-white/10 hover:bg-white/20">
             {t.common.logout}

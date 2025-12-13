@@ -212,3 +212,4 @@ migratePublicImages()
     process.exit(1)
   })
 
+

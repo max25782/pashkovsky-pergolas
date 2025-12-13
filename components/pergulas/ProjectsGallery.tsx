@@ -5,7 +5,8 @@ import { useCallback, useMemo, useEffect } from "react";
 import { observer } from "mobx-react-lite";
 import { uiStore } from "@/stores/ui-store";
 import projects from "@/data/gallery/pergulot.json";
-import { processImageArray } from "@/lib/image-url-array";
+import { processImageArray } from "@/lib/image-url-array-client";
+import { isS3Url } from "@/lib/image-props";
 import useSWR from "swr";
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
@@ -147,6 +148,7 @@ function ProjectsGalleryImpl({ locale = "he" }: { locale?: Locale }) {
                       className="object-cover transition-transform duration-500 group-hover:scale-110"
                       quality={80}
                       priority={idx < 3}
+                      unoptimized={isS3Url(cover)}
                       loading={idx < 3 ? 'eager' : 'lazy'}
                       placeholder="blur"
                       blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYGD4DwABBAEAW9JTEQAAAABJRU5ErkJggg=="

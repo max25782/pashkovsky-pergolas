@@ -126,3 +126,4 @@ export function generateOfferEmailHTML(offerUrl: string, customerName: string) {
   `
 }
 
+

@@ -3,10 +3,11 @@
  * Use this helper to switch between S3 and local images
  */
 
-const USE_S3 = process.env.AWS_S3_BUCKET_NAME && process.env.AWS_ACCESS_KEY_ID
-const S3_BUCKET = process.env.AWS_S3_BUCKET_NAME
-const S3_REGION = process.env.AWS_S3_REGION || 'us-east-1'
-const S3_BASE_URL = USE_S3 ? `https://${S3_BUCKET}.s3.${S3_REGION}.amazonaws.com` : ''
+// Check both server and client variables for server-side rendering
+const USE_S3 = !!(process.env.AWS_S3_BUCKET_NAME || process.env.NEXT_PUBLIC_AWS_S3_BUCKET_NAME)
+const S3_BUCKET = process.env.AWS_S3_BUCKET_NAME || process.env.NEXT_PUBLIC_AWS_S3_BUCKET_NAME || ''
+const S3_REGION = process.env.AWS_S3_REGION || process.env.NEXT_PUBLIC_AWS_S3_REGION || 'us-east-1'
+const S3_BASE_URL = USE_S3 && S3_BUCKET ? `https://${S3_BUCKET}.s3.${S3_REGION}.amazonaws.com` : ''
 
 /**
  * Get image URL - returns S3 URL if configured, otherwise local URL

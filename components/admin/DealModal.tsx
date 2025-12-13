@@ -7,6 +7,9 @@ import { FileImage, FileText } from 'lucide-react'
 import { useCRMTranslations } from './useCRMTranslations'
 import { CreateOfferModal } from '../offers/CreateOfferModal'
 import { OffersList } from '../offers/OffersList'
+import { WorkLogSection } from '../workers/WorkLogSection'
+import { ProfitWidget } from '../workers/ProfitWidget'
+import { useProjectRevenue } from '@/hooks/useProjectRevenue'
 
 interface DealModalProps {
   deal: Deal
@@ -34,6 +37,9 @@ export function DealModal({
   const [showSketchModal, setShowSketchModal] = useState(false)
   const [showOfferModal, setShowOfferModal] = useState(false)
   const [offersRefreshTrigger, setOffersRefreshTrigger] = useState(0)
+  
+  // Get revenue from offers
+  const revenue = useProjectRevenue(deal.id)
 
   useEffect(() => {
     setLocalDeal(deal)
@@ -161,15 +167,15 @@ export function DealModal({
   }
 
   return (
-    <div 
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start sm:items-center justify-center p-2 sm:p-4"
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start sm:items-center justify-center p-0 sm:p-4"
       onClick={onClose}
     >
-      <div 
-        className="bg-gray-900 border border-white/20 shadow-2xl w-full h-full max-h-full rounded-none sm:rounded-xl sm:max-w-4xl sm:h-auto sm:max-h-[90vh] overflow-y-auto"
+      <div
+        className="bg-gray-900 border border-white/10 shadow-2xl w-full h-full max-h-full rounded-none sm:rounded-xl sm:max-w-5xl sm:h-auto sm:max-h-[90vh] overflow-y-auto flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="sticky top-0 bg-gray-900/95 backdrop-blur border-b border-white/10 px-6 py-4 flex items-center justify-between">
+        <div className="sticky top-0 bg-gray-900/95 backdrop-blur border-b border-white/10 px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
           <h2 className="text-2xl font-bold text-white">{t.deals.dealTitle}: {deal.customer_name || t.deals.withoutName}</h2>
           <button
             onClick={onClose}
@@ -179,9 +185,9 @@ export function DealModal({
           </button>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="flex-1 p-3 sm:p-6 space-y-6">
           {/* Customer Info */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.customerName}</label>
               <input
@@ -222,7 +228,7 @@ export function DealModal({
           </div>
 
           {/* Project Info */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.projectType}</label>
               <select
@@ -433,7 +439,7 @@ export function DealModal({
           </div>
 
           {/* Sketch & Offers Buttons */}
-          <div className="pt-4 border-t border-white/10 grid grid-cols-2 gap-3">
+          <div className="pt-4 border-t border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button
               onClick={() => setShowSketchModal(true)}
               className="px-4 py-2 rounded-lg bg-amber-600/20 hover:bg-amber-600/30 text-amber-200 font-medium flex items-center justify-center gap-2"
@@ -457,6 +463,16 @@ export function DealModal({
               <OffersList dealId={deal.id} refreshTrigger={offersRefreshTrigger} />
             </div>
           )}
+
+          {/* Profit Widget */}
+          <div className="pt-4 border-t border-white/10">
+            <ProfitWidget projectId={deal.id} revenue={revenue} />
+          </div>
+
+          {/* Work Log Section */}
+          <div className="pt-4 border-t border-white/10">
+            <WorkLogSection projectId={deal.id} />
+          </div>
 
           {/* Metadata */}
           <div className="pt-4 border-t border-white/10 text-sm text-white/50 space-y-1">

@@ -118,7 +118,7 @@ export function getOfferEmailBody(offer: Offer): string {
       <p>לשאלות נוספות או לתיאום פגישה, צור קשר:</p>
       <ul>
         <li>📞 טלפון: 050-123-4567</li>
-        <li>📧 אימייל: info@pashkovsky-group.com</li>
+        <li>📧 אימייל: office@pashkovsky-group.com</li>
         <li>🌐 אתר: www.pashkovsky-group.com</li>
       </ul>
       
@@ -128,7 +128,7 @@ export function getOfferEmailBody(offer: Offer): string {
     </div>
     
     <div class="footer">
-      <p>Pashkovsky Group | רחוב הרצל 10, תל אביב</p>
+      <p>Pashkovsky Group | אזור תעשיה עמנואל</p>
       <p>טלפון: 050-123-4567 | www.pashkovsky-group.com</p>
     </div>
   </div>

@@ -1,0 +1,388 @@
+import type { Offer } from '@/types/offer'
+import { getHebrewFontsCss, getLogoDataUri } from './font-loader'
+
+/**
+ * Render HTML template for offer (הצעת מחיר) with RTL Hebrew support
+ * Uses embedded Noto Sans Hebrew fonts from public/fonts/
+ * @param offer - The offer object
+ * @returns Self-contained HTML string with embedded fonts
+ */
+export function renderOfferHtml(offer: Offer): string {
+  const formatPrice = (price: number) => {
+    return `₪${price.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`
+  }
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr)
+    return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`
+  }
+
+  // Get embedded fonts CSS
+  const fontsCss = getHebrewFontsCss()
+  
+  // Get logo as base64 data URI
+  const logoDataUri = getLogoDataUri('public/logo-transparent.png')
+
+  return `
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>הצעת מחיר - ${offer.customerName}</title>
+  
+  <style>
+    ${fontsCss}
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      direction: rtl;
+      text-align: right;
+      padding: 40px;
+      line-height: 1.6;
+      color: #1e293b;
+    }
+    
+    .header {
+      border-bottom: 3px solid #2563eb;
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    
+    .logo-container {
+      flex-shrink: 0;
+    }
+    
+    .logo {
+      max-width: 120px;
+      max-height: 80px;
+      object-fit: contain;
+    }
+    
+    .header-content {
+      flex: 1;
+    }
+    
+    .company-name {
+      font-size: 28px;
+      font-weight: 700;
+      color: #2563eb;
+      margin-bottom: 5px;
+    }
+    
+    .company-info {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 3px;
+    }
+    
+    .title {
+      font-size: 24px;
+      font-weight: 700;
+      text-align: center;
+      margin: 30px 0;
+      color: #1e293b;
+    }
+    
+    .section {
+      margin-bottom: 25px;
+      padding: 15px;
+      background: #f8fafc;
+      border-radius: 8px;
+    }
+    
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: #1e293b;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 8px;
+    }
+    
+    .info-row {
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    
+    .label {
+      font-weight: 700;
+      color: #475569;
+      display: inline-block;
+      min-width: 120px;
+    }
+    
+    .value {
+      color: #1e293b;
+    }
+    
+    .pricing-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    
+    .pricing-table th,
+    .pricing-table td {
+      padding: 12px;
+      text-align: right;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    
+    .pricing-table th {
+      background: #eff6ff;
+      font-weight: 700;
+      color: #1e293b;
+      border-bottom: 2px solid #2563eb;
+    }
+    
+    .pricing-table tr:last-child td {
+      border-bottom: none;
+    }
+    
+    .price-label {
+      font-weight: 600;
+    }
+    
+    .price-value {
+      font-weight: 700;
+      color: #1e293b;
+    }
+    
+    .subtotal-row {
+      background: #f1f5f9;
+    }
+    
+    .total-row {
+      background: #dbeafe;
+      font-size: 16px;
+    }
+    
+    .final-price-row {
+      background: #dcfce7;
+      font-size: 18px;
+    }
+    
+    .final-price-row td {
+      font-weight: 700;
+      color: #16a34a;
+      padding: 16px 12px;
+    }
+    
+    .terms-section {
+      background: #fef3c7;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 20px;
+    }
+    
+    .terms-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #92400e;
+      margin-bottom: 8px;
+    }
+    
+    .terms-text {
+      font-size: 13px;
+      color: #78350f;
+      margin-bottom: 5px;
+    }
+    
+    .warranty-section {
+      background: #fef3c7;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 15px;
+    }
+    
+    .footer {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 2px solid #e2e8f0;
+      text-align: center;
+      font-size: 11px;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    ${logoDataUri ? `
+    <div class="logo-container">
+      <img src="${logoDataUri}" alt="Pashkovsky Group Logo" class="logo" />
+    </div>
+    ` : ''}
+    <div class="header-content">
+      <div class="company-name">Pashkovsky Group</div>
+      <div class="company-info">פתרונות אלומיניום מתקדמים</div>
+      <div class="company-info">טלפון: 0524494848 | אימייל: office@pashkovsky-group.com</div>
+      <div class="company-info">כתובת: אזור תעשיה עמנואל</div>
+    </div>
+  </div>
+
+  <h1 class="title">הצעת מחיר</h1>
+
+  <div class="section">
+    <div class="section-title">פרטי לקוח</div>
+    <div class="info-row">
+      <span class="label">שם:</span>
+      <span class="value">${offer.customerName}</span>
+    </div>
+    ${offer.customerPhone ? `
+    <div class="info-row">
+      <span class="label">טלפון:</span>
+      <span class="value">${offer.customerPhone}</span>
+    </div>
+    ` : ''}
+    ${offer.customerCity ? `
+    <div class="info-row">
+      <span class="label">עיר:</span>
+      <span class="value">${offer.customerCity}</span>
+    </div>
+    ` : ''}
+    <div class="info-row">
+      <span class="label">תאריך הצעה:</span>
+      <span class="value">${formatDate(offer.createdAt)}</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">פרטי פרגולה</div>
+    <div class="info-row">
+      <span class="label">רוחב:</span>
+      <span class="value">${offer.pergola.width} מטר</span>
+    </div>
+    <div class="info-row">
+      <span class="label">אורך:</span>
+      <span class="value">${offer.pergola.length} מטר</span>
+    </div>
+    ${offer.pergola.height ? `
+    <div class="info-row">
+      <span class="label">גובה:</span>
+      <span class="value">${offer.pergola.height} מטר</span>
+    </div>
+    ` : ''}
+    ${offer.pergola.location ? `
+    <div class="info-row">
+      <span class="label">מקום:</span>
+      <span class="value">${offer.pergola.location}</span>
+    </div>
+    ` : ''}
+    <div class="info-row">
+      <span class="label">שטח כולל:</span>
+      <span class="value">${offer.area.toFixed(2)} מ״ר</span>
+    </div>
+    <div class="info-row">
+      <span class="label">חומר:</span>
+      <span class="value">אלומיניום פרימיום</span>
+    </div>
+  </div>
+
+  ${offer.santaf?.enabled ? `
+  <div class="section">
+    <div class="section-title">סנטף BH</div>
+    <div class="info-row">
+      <span class="label">סוג:</span>
+      <span class="value">${offer.santaf.withStructure ? 'סנטף BH + קונסטרוקציה' : 'סנטף BH בסיסי'}</span>
+    </div>
+  </div>
+  ` : ''}
+
+  <div class="section">
+    <div class="section-title">פירוט מחירים</div>
+    <table class="pricing-table">
+      <thead>
+        <tr>
+          <th>פריט</th>
+          <th>מחיר</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="price-label">פרגולה (${offer.area.toFixed(2)} מ״ר)</td>
+          <td class="price-value">${formatPrice(offer.pergolaTotal)}</td>
+        </tr>
+        ${offer.santaf?.enabled ? `
+        <tr>
+          <td class="price-label">סנטף BH</td>
+          <td class="price-value">${formatPrice(offer.santafTotal)}</td>
+        </tr>
+        ` : ''}
+        ${offer.zipScreenTotal > 0 ? `
+        <tr>
+          <td class="price-label">ZIP Screen</td>
+          <td class="price-value">${formatPrice(offer.zipScreenTotal)}</td>
+        </tr>
+        ` : ''}
+        ${offer.lightingTotal > 0 ? `
+        <tr>
+          <td class="price-label">תאורה</td>
+          <td class="price-value">${formatPrice(offer.lightingTotal)}</td>
+        </tr>
+        ` : ''}
+        ${offer.drainageTotal > 0 ? `
+        <tr>
+          <td class="price-label">ניקוז</td>
+          <td class="price-value">${formatPrice(offer.drainageTotal)}</td>
+        </tr>
+        ` : ''}
+        <tr class="subtotal-row">
+          <td class="price-label">לפני מע״מ</td>
+          <td class="price-value">${formatPrice(offer.totalBeforeVat)}</td>
+        </tr>
+        <tr>
+          <td class="price-label">מע״מ (18%)</td>
+          <td class="price-value">+${formatPrice(offer.vatAmount)}</td>
+        </tr>
+        <tr class="total-row">
+          <td class="price-label">אחרי מע״מ</td>
+          <td class="price-value">${formatPrice(offer.priceWithVat)}</td>
+        </tr>
+        ${offer.discountPercent > 0 ? `
+        <tr>
+          <td class="price-label">הנחה (${offer.discountPercent}%)</td>
+          <td class="price-value">-${formatPrice(offer.discountAmount)}</td>
+        </tr>
+        ` : ''}
+        <tr class="final-price-row">
+          <td>מחיר סופי לתשלום</td>
+          <td>${formatPrice(offer.finalPrice)}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="terms-section">
+    <div class="terms-title">תנאי תשלום</div>
+    <div class="terms-text">• 10% מקדמה וכל השאר בסיום התקנה בהעברה בנקאית</div>
+    <div class="terms-text">• תוקף ההצעה: 30 יום מתאריך ההצעה</div>
+  </div>
+
+  <div class="warranty-section">
+    <div class="terms-title">אחריות</div>
+    <div class="terms-text">• 7 שנים על צבע, קונסטרוקציה וסנטף</div>
+    <div class="terms-text">• שירות לקוחות זמין 24/7</div>
+  </div>
+
+  <div class="footer">
+      <p>Pashkovsky Group | אזור תעשיה עמנואל | טלפון: 0524494848 | www.pashkovsky-group.com</p>
+      <p>ח.פ: 320807068 | אישור עוסק מורשה</p>
+  </div>
+</body>
+</html>
+  `.trim()
+}
+

@@ -4,7 +4,7 @@ import { RotatingImage } from './rotating-image'
 import { ModelLightbox } from '@/components/dgamim/model-lightbox'
 import dgamim from '@/data/gallery/dgamim.json'
 import { dgamimInfo } from '@/data/dgamim-info'
-import { processImageArray } from '@/lib/image-url-array'
+import { processImageArray } from '@/lib/image-url-array-client'
 
 interface DgamimItem { type: string; degem: string; images: string[] }
 

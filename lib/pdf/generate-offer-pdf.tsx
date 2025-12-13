@@ -1,22 +1,38 @@
-import React from 'react'
-import { renderToBuffer } from '@react-pdf/renderer'
-import { OfferPdfTemplate } from './offer-pdf-template'
 import type { Offer } from '@/types/offer'
+import { renderOfferHtml } from './offer-html-template'
+import { renderHtmlToPdfBuffer } from './render-html-to-pdf'
 
 /**
- * Generate PDF buffer from offer data
- * @param offer - The offer object
- * @returns Promise<Buffer> - PDF file as buffer
+ * Generates a PDF buffer for the given offer using Puppeteer + Chromium
+ * with proper Hebrew RTL support
+ * @param offer - The offer to generate PDF for
+ * @returns PDF as Buffer
  */
 export async function generateOfferPdf(offer: Offer): Promise<Buffer> {
   try {
-    // Render React PDF component to buffer
-    const pdfBuffer = await renderToBuffer(<OfferPdfTemplate offer={offer} />)
+    console.log('[PDF Generator] ==========================================')
+    console.log('[PDF Generator] Starting PDF generation for offer:', offer.id)
+    console.log('[PDF Generator] Customer:', offer.customerName)
     
-    return Buffer.from(pdfBuffer)
-  } catch (error) {
-    console.error('Error generating PDF:', error)
-    throw new Error('Failed to generate PDF')
+    // Render HTML template
+    console.log('[PDF Generator] Step 1: Rendering HTML template...')
+    const html = renderOfferHtml(offer)
+    console.log('[PDF Generator] ✅ HTML template rendered, length:', html.length)
+    
+    // Convert HTML to PDF
+    console.log('[PDF Generator] Step 2: Converting HTML to PDF...')
+    const pdfBuffer = await renderHtmlToPdfBuffer(html)
+    console.log('[PDF Generator] ✅ PDF generated successfully, size:', pdfBuffer.length, 'bytes')
+    console.log('[PDF Generator] ==========================================')
+    
+    return pdfBuffer
+  } catch (error: any) {
+    console.error('[PDF Generator] ==========================================')
+    console.error('[PDF Generator] ❌ ERROR generating PDF:')
+    console.error('[PDF Generator] Message:', error?.message)
+    console.error('[PDF Generator] Stack:', error?.stack)
+    console.error('[PDF Generator] ==========================================')
+    throw new Error(`Failed to generate PDF: ${error.message || 'Unknown error'}`)
   }
 }
 
@@ -30,4 +46,3 @@ export function generateOfferPdfFilename(offer: Offer): string {
   const customerName = offer.customerName.replace(/[^a-zA-Z0-9א-ת]/g, '_')
   return `offer_${offer.id}_${customerName}_${date}.pdf`
 }
-

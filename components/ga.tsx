@@ -2,20 +2,72 @@
 
 import { useEffect } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
+import Script from 'next/script'
+
+declare global {
+  interface Window {
+    gtag: (...args: any[]) => void
+    dataLayer: any[]
+  }
+}
 
 export default function GA() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const gaId = process.env.NEXT_PUBLIC_GA_ID
+
   useEffect(() => {
-    const id = process.env.NEXT_PUBLIC_GA_ID
-    if (!id) return
-    // send page_view on route change
-    if (typeof window !== 'undefined' && 'gtag' in window) {
-      // @ts-ignore
-      window.gtag('config', id, { page_path: pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : '') })
+    if (!gaId || typeof window === 'undefined') return
+    
+    // Initialize dataLayer if it doesn't exist
+    if (!window.dataLayer) {
+      window.dataLayer = []
     }
-  }, [pathname, searchParams])
-  return null
+    
+    // Define gtag function if it doesn't exist
+    if (!window.gtag) {
+      window.gtag = function() {
+        window.dataLayer.push(arguments)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!gaId || typeof window === 'undefined' || !window.gtag) return
+    
+    // Send page_view on route change
+    const pagePath = pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : '')
+    window.gtag('config', gaId, {
+      page_path: pagePath,
+    })
+  }, [pathname, searchParams, gaId])
+
+  if (!gaId) {
+    return null
+  }
+
+  return (
+    <>
+      {/* Google tag (gtag.js) */}
+      <Script
+        strategy="afterInteractive"
+        src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
+        async
+      />
+      <Script
+        id="google-analytics"
+        strategy="afterInteractive"
+        dangerouslySetInnerHTML={{
+          __html: `
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${gaId}');
+          `,
+        }}
+      />
+    </>
+  )
 }
 
 

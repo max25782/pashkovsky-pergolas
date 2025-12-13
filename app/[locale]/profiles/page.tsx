@@ -8,7 +8,7 @@ import { getImageUrl } from '@/lib/image-url'
 export default function ProfilesPage({ params }: { params: { locale: Locale } }) {
   const locale = params.locale || 'he'
   
-  // Читаем метаданные (если есть)
+  // Читаем метаданные из JSON (изображения теперь в S3)
   const profilesJsonPath = path.join(process.cwd(), 'public', 'data', 'profiles.json')
   let profilesMeta: Array<any> = []
   try {
@@ -16,32 +16,17 @@ export default function ProfilesPage({ params }: { params: { locale: Locale } })
     profilesMeta = Array.isArray(profilesData?.profiles) ? profilesData.profiles : []
   } catch {}
 
-  // Сканы папки с изображениями, чтобы показать ВСЕ картинки
-  const dir = path.join(process.cwd(), 'public', 'images', 'profiles')
-  const files = fs
-    .readdirSync(dir)
-    .filter((f) => /\.(png|jpg|jpeg|webp)$/i.test(f))
-    .sort()
-
-  // Индексация метаданных по имени файла (basename)
-  const metaByBasename = new Map<string, any>()
-  for (const m of profilesMeta) {
-    const base = m?.image ? path.basename(m.image) : undefined
-    if (base) metaByBasename.set(base, m)
-  }
-
-  const items = files.map((file) => {
-    const meta = metaByBasename.get(file)
-    const fallbackName = file.replace(/\.[^.]+$/, '')
+  // Используем только данные из JSON (изображения уже в S3)
+  const items = profilesMeta.map((meta: any) => {
+    const imagePath = meta?.image || ''
     return {
-      id: meta?.id || fallbackName,
-      image: getImageUrl(`/images/profiles/${file}`),
-      name: meta?.name || { he: fallbackName, ru: fallbackName, en: fallbackName },
+      id: meta?.id || path.basename(imagePath, path.extname(imagePath)),
+      image: imagePath ? getImageUrl(imagePath) : '',
+      name: meta?.name || { he: '', ru: '', en: '' },
       dimensions: meta?.dimensions || '',
-      description:
-        meta?.description || { he: '', ru: '', en: '' },
+      description: meta?.description || { he: '', ru: '', en: '' },
     }
-  })
+  }).filter((item: any) => item.image) // Фильтруем только те, у которых есть изображение
 
   const t = (he: string, ru: string, en: string) => {
     if (locale === 'ru') return ru

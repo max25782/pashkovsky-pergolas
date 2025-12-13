@@ -6,3 +6,4 @@ ALTER TABLE public.offers
 
 -- RLS unchanged (table already secured)
 
+

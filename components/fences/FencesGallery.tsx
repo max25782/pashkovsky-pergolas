@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/compone
 import { PlayButton, GradientOverlay } from "@/components/ui/play-overlay";
 import ContactSection from "../contact-section";
 import { getImageUrl } from "@/lib/image-url-client";
+import { isS3Url } from "@/lib/image-props";
 
 function FencesGalleryImpl() {
   const [open, setOpen] = useState(false);
@@ -57,6 +58,7 @@ function FencesGalleryImpl() {
                 fill
                 className="object-cover"
                 quality={80}
+                unoptimized={isS3Url(src)}
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 priority={idx < 3}
                 placeholder="blur"

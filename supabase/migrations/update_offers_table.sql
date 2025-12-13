@@ -128,3 +128,4 @@ CREATE TRIGGER update_offers_updated_at_trigger
 -- Comment
 COMMENT ON TABLE public.offers IS 'Complete offers (הצעות מחיר) structure with pergola, colors, roof, winter closure, pricing, and approval';
 
+

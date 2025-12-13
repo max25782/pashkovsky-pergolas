@@ -1,15 +1,27 @@
 "use client";
 import ContactCtaButton from '@/components/contact/ContactCtaButton'
+import { getImageUrl } from '@/lib/image-url-client'
+import { useEffect, useState } from 'react'
 
 export function HeroSection() {
   const lang = typeof document !== 'undefined' ? document.documentElement.lang : 'he'
+  
+  // Always start with S3 URL if configured, otherwise local
+  const initialVideoUrl = getImageUrl('/hero/photo_2025-10-03_22-07-08_merged.mp4')
+  const [videoSrc, setVideoSrc] = useState(initialVideoUrl)
+
+  // Ensure we have the correct S3 URL on mount
+  useEffect(() => {
+    const s3Url = getImageUrl('/hero/photo_2025-10-03_22-07-08_merged.mp4')
+    setVideoSrc(s3Url)
+  }, [])
 
   return (
     <section className="relative h-[100vh] min-h-[600px] bg-black text-white overflow-hidden">
       {/* Background video only (no poster) */}
       <video
         className="absolute inset-0 w-full h-full object-cover"
-        src="/hero/photo_2025-10-03_22-07-08_merged.mp4"
+        src={videoSrc}
         autoPlay
         muted
         loop

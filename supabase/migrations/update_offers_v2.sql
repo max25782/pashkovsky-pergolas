@@ -147,3 +147,4 @@ CREATE TRIGGER update_offers_updated_at_trigger
 -- Comment
 COMMENT ON TABLE public.offers IS 'Complete offers (הצעות מחיר) with pergola, santaf, ZIP screen, pricing (discount after VAT)';
 
+

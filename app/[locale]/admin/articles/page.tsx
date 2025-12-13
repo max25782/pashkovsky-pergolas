@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import type { Locale } from '@/lib/locales'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
 
@@ -23,6 +24,11 @@ export default function AdminArticlesPage({ params }: { params: { locale: Locale
   const [editingArticle, setEditingArticle] = useState<Article | null>(null)
   const [showForm, setShowForm] = useState(false)
   const router = useRouter()
+
+  function logout() {
+    localStorage.removeItem('admin_token')
+    router.push(`/${params.locale}/admin/leads`)
+  }
 
   useEffect(() => {
     const adminToken = localStorage.getItem('admin_token')
@@ -125,19 +131,52 @@ export default function AdminArticlesPage({ params }: { params: { locale: Locale
     <div className="min-h-screen bg-gradient-to-b from-neutral-950 to-neutral-900 text-white p-8">
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">{t.articles.title}</h1>
-          <div className="flex gap-4">
+          <h1 className="text-3xl font-bold">Admin • {t.articles.title}</h1>
+          <div className="flex gap-2 flex-wrap">
+            <Link
+              href={`/${params.locale}/admin/deals`}
+              className="px-4 py-2 rounded bg-green-600 hover:bg-green-700 font-semibold"
+            >
+              {t.nav.deals}
+            </Link>
+            <Link
+              href={`/${params.locale}/admin/deals`}
+              className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-700 font-semibold"
+            >
+              {t.nav.statistic}
+            </Link>
+            <Link
+              href={`/${params.locale}/admin/leads`}
+              className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 font-semibold"
+            >
+              {t.nav.leads}
+            </Link>
+            <Link
+              href={`/${params.locale}/admin/gallery`}
+              className="px-4 py-2 rounded bg-purple-600 hover:bg-purple-700 font-semibold"
+            >
+              {t.nav.gallery}
+            </Link>
+            <Link
+              href={`/${params.locale}/admin/ai-chats`}
+              className="px-4 py-2 rounded bg-cyan-600 hover:bg-cyan-700 font-semibold"
+            >
+              {t.nav.aiChats}
+            </Link>
+            <Link
+              href={`/${params.locale}/admin/workers`}
+              className="px-4 py-2 rounded bg-yellow-600 hover:bg-yellow-700 font-semibold"
+            >
+              {t.nav.workers}
+            </Link>
             <button
               onClick={createNewArticle}
-              className="px-6 py-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold"
+              className="px-4 py-2 rounded bg-green-600 hover:bg-green-700 font-semibold"
             >
               + {t.articles.createArticle}
             </button>
-            <button
-              onClick={() => router.push(`/${params.locale}/admin/leads`)}
-              className="px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-semibold"
-            >
-              {t.nav.leads}
+            <button onClick={logout} className="px-3 py-2 rounded bg-white/10 hover:bg-white/20">
+              {t.common.logout}
             </button>
           </div>
         </div>

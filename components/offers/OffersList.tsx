@@ -113,6 +113,24 @@ export function OffersList({ dealId, refreshTrigger }: OffersListProps) {
     }
   }, [fetchOffers])
 
+  const handleGeneratePdf = useCallback(async (offer: Offer) => {
+    try {
+      const res = await fetch(`/api/offers/${offer.id}/pdf`, { method: 'POST' })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || err.details || 'Failed to generate PDF')
+      }
+      const data = await res.json()
+      if (data?.pdfUrl) {
+        window.open(data.pdfUrl, '_blank')
+      } else {
+        alert('PDF נוצר אך לא הוחזר קישור')
+      }
+    } catch (err: any) {
+      alert('❌ שגיאה ביצירת PDF: ' + err.message)
+    }
+  }, [])
+
   const handleViewOffer = useCallback((offerId: string) => {
     const url = getOfferPublicUrl(offerId, locale)
     window.open(url, '_blank')
@@ -242,22 +260,32 @@ export function OffersList({ dealId, refreshTrigger }: OffersListProps) {
           </div>
 
           {/* Actions */}
-          <div className="mt-3 flex gap-2 border-t border-white/10 pt-3">
+          <div className="mt-3 border-t border-white/10 pt-3 grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
             {/* View Offer */}
             <button
               onClick={() => handleViewOffer(offer.id)}
-              className="flex-1 flex items-center justify-center gap-1 px-2 py-2 rounded bg-blue-600/20 hover:bg-blue-600/30 text-blue-200 text-xs font-medium transition-colors"
+              className="w-full sm:flex-1 flex items-center justify-center gap-1 px-2 py-2 rounded bg-blue-600/20 hover:bg-blue-600/30 text-blue-200 text-xs font-medium transition-colors"
               title="צפה בהצעה"
             >
               <FileText className="w-4 h-4" />
               צפה
             </button>
 
+            {/* PDF */}
+            <button
+              onClick={() => handleGeneratePdf(offer)}
+              className="w-full sm:flex-1 flex items-center justify-center gap-1 px-2 py-2 rounded bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-200 text-xs font-medium transition-colors"
+              title="PDF"
+            >
+              <FileDown className="w-4 h-4" />
+              PDF
+            </button>
+
             {/* WhatsApp */}
             {offer.customerPhone && (
               <button
                 onClick={() => handleSendWhatsApp(offer)}
-                className="flex-1 flex items-center justify-center gap-1 px-2 py-2 rounded bg-green-600/20 hover:bg-green-600/30 text-green-200 text-xs font-medium transition-colors"
+                className="w-full sm:flex-1 flex items-center justify-center gap-1 px-2 py-2 rounded bg-green-600/20 hover:bg-green-600/30 text-green-200 text-xs font-medium transition-colors"
                 title="שלח WhatsApp"
               >
                 <MessageCircle className="w-4 h-4" />
@@ -268,7 +296,7 @@ export function OffersList({ dealId, refreshTrigger }: OffersListProps) {
             {/* Email */}
             <button
               onClick={() => handleSendEmail(offer)}
-              className="flex-1 flex items-center justify-center gap-1 px-2 py-2 rounded bg-purple-600/20 hover:bg-purple-600/30 text-purple-200 text-xs font-medium transition-colors"
+              className="w-full sm:flex-1 flex items-center justify-center gap-1 px-2 py-2 rounded bg-purple-600/20 hover:bg-purple-600/30 text-purple-200 text-xs font-medium transition-colors"
               title="שלח אימייל"
             >
               <Mail className="w-4 h-4" />
@@ -278,7 +306,7 @@ export function OffersList({ dealId, refreshTrigger }: OffersListProps) {
             {/* Delete */}
             <button
               onClick={() => handleDelete(offer.id)}
-              className="flex-1 flex items-center justify-center gap-1 px-2 py-2 rounded bg-red-600/20 hover:bg-red-600/30 text-red-200 text-xs font-medium transition-colors"
+              className="w-full sm:flex-1 flex items-center justify-center gap-1 px-2 py-2 rounded bg-red-600/20 hover:bg-red-600/30 text-red-200 text-xs font-medium transition-colors"
               title="מחק הצעה"
             >
               <Trash2 className="w-4 h-4" />

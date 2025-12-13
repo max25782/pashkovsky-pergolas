@@ -32,10 +32,13 @@ export interface CRMTranslations {
   // Navigation
   nav: {
     deals: string
+    statistic: string
     leads: string
     articles: string
     gallery: string
     aiChats: string
+    workers: string
+    reports: string
   }
 
   // Deals
@@ -201,10 +204,13 @@ export function getCRMTranslations(locale: Locale): CRMTranslations {
       },
       nav: {
         deals: 'Сделки',
+        statistic: 'Статистика',
         leads: 'Лиды',
         articles: 'Статьи',
         gallery: 'Галерея',
         aiChats: 'AI Чаты',
+        workers: 'Рабочие',
+        reports: 'Отчёты',
       },
       deals: {
         title: 'Сделки',
@@ -358,10 +364,13 @@ export function getCRMTranslations(locale: Locale): CRMTranslations {
       },
       nav: {
         deals: 'Deals',
+        statistic: 'Statistics',
         leads: 'Leads',
         articles: 'Articles',
         gallery: 'Gallery',
         aiChats: 'AI Chats',
+        workers: 'Workers',
+        reports: 'Reports',
       },
       deals: {
         title: 'Deals',
@@ -515,10 +524,13 @@ export function getCRMTranslations(locale: Locale): CRMTranslations {
     },
     nav: {
       deals: 'עסקאות',
+      statistic: 'סטטיסטיקה',
       leads: 'לידים',
       articles: 'מאמרים',
       gallery: 'גלריה',
       aiChats: 'צ\'אטים AI',
+      workers: 'עובדים',
+      reports: 'דוחות',
     },
     deals: {
       title: 'עסקאות',
@@ -643,5 +655,6 @@ export function getCRMTranslations(locale: Locale): CRMTranslations {
     },
   }
 }
+
 
 

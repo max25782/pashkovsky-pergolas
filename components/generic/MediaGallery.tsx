@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { PlayButton, GradientOverlay } from "@/components/ui/play-overlay";
 import { getImageUrl } from "@/lib/image-url-client";
+import { isS3Url } from "@/lib/image-props";
 
 export interface MediaItem { src: string; type: "image" | "video" }
 
@@ -48,6 +49,7 @@ export function MediaGallery({ title, items }: MediaGalleryProps){
                 placeholder="blur"
                 blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYGD4DwABBAEAW9JTEQAAAABJRU5ErkJggg=="
                 loading="lazy"
+                unoptimized={isS3Url(src)}
               />
             </div>
           ))}
@@ -122,6 +124,7 @@ function VideoReel({ src, poster, onOpen }: { src: string; poster?: string; onOp
         loading="lazy"
         placeholder="blur"
         blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYGD4DwABBAEAW9JTEQAAAABJRU5ErkJggg=="
+        unoptimized={isS3Url(posterSrc)}
       />
       <GradientOverlay />
       <div className="absolute inset-0 flex items-center justify-center">

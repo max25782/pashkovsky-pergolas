@@ -27,3 +27,4 @@ create policy "Service role can do everything on pergola_projects"
   to service_role
   using (true) with check (true);
 
+
