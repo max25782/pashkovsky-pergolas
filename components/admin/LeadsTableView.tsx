@@ -4,6 +4,7 @@ import type { Lead } from './lead-types'
 import { LEAD_STATUSES } from './lead-types'
 import { formatDate } from './deal-utils'
 import { useCRMTranslations } from './useCRMTranslations'
+import { getScoreCategory } from '@/lib/leads/scoring'
 
 interface LeadsTableViewProps {
   leads: Lead[]
@@ -34,6 +35,7 @@ export function LeadsTableView({
             <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">{t.leads.email}</th>
             <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">{t.leads.source}</th>
             <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">{t.leads.status}</th>
+            <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">Score</th>
             <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">{t.leads.notes}</th>
             <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">{t.common.delete}</th>
           </tr>
@@ -51,7 +53,7 @@ export function LeadsTableView({
           ))}
           {leads.length === 0 && !loading && (
             <tr>
-              <td className="p-8 text-center text-white/40" colSpan={8}>
+              <td className="p-8 text-center text-white/40" colSpan={9}>
                 {t.status.noLeads}
               </td>
             </tr>
@@ -109,6 +111,15 @@ function LeadTableRow({
             <option key={s.id} value={s.id}>{s.label}</option>
           ))}
         </select>
+      </td>
+      <td className="p-3 text-white/70 cursor-pointer" onClick={onClick}>
+        {lead.score !== null && lead.score !== undefined ? (
+          <span>
+            {lead.score} ({getScoreCategory(lead.score)})
+          </span>
+        ) : (
+          <span className="text-white/40">-</span>
+        )}
       </td>
       <td className="p-3 min-w-[220px]">
         <input

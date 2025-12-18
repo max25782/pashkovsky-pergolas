@@ -10,6 +10,8 @@ import { OffersList } from '../offers/OffersList'
 import { WorkLogSection } from '../workers/WorkLogSection'
 import { ProfitWidget } from '../workers/ProfitWidget'
 import { useProjectRevenue } from '@/hooks/useProjectRevenue'
+import { LaundryClosetModal } from './LaundryClosetModal'
+import { MaterialOrdersList } from './MaterialOrdersList'
 
 interface DealModalProps {
   deal: Deal
@@ -36,6 +38,7 @@ export function DealModal({
   const [saving, setSaving] = useState(false)
   const [showSketchModal, setShowSketchModal] = useState(false)
   const [showOfferModal, setShowOfferModal] = useState(false)
+  const [showLaundryClosetModal, setShowLaundryClosetModal] = useState(false)
   const [offersRefreshTrigger, setOffersRefreshTrigger] = useState(0)
   
   // Get revenue from offers
@@ -93,6 +96,9 @@ export function DealModal({
       if (localDeal.stage !== deal.stage) updates.stage = localDeal.stage
       if (localDeal.notes !== deal.notes) updates.notes = localDeal.notes
       if (localDeal.manager !== deal.manager) updates.manager = localDeal.manager
+      if (localDeal.laundry_model !== deal.laundry_model) updates.laundry_model = localDeal.laundry_model
+      if (localDeal.laundry_distance !== deal.laundry_distance) updates.laundry_distance = localDeal.laundry_distance
+      if (localDeal.laundry_lighting !== deal.laundry_lighting) updates.laundry_lighting = localDeal.laundry_lighting
       
       // Проверяем, что есть хотя бы одно поле для обновления
       if (Object.keys(updates).length === 0) {
@@ -241,7 +247,17 @@ export function DealModal({
                 <option value="railing">{t.deals.projectTypes.railing}</option>
                 <option value="gates">{t.deals.projectTypes.gates}</option>
                 <option value="windows">{t.deals.projectTypes.windows}</option>
+                <option value="laundry_closet">{t.deals.projectTypes.laundry_closet}</option>
               </select>
+              {localDeal.project_type === 'laundry_closet' && (
+                <button
+                  type="button"
+                  onClick={() => setShowLaundryClosetModal(true)}
+                  className="mt-2 px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 text-sm text-white"
+                >
+                  פתח פרטי מסתור כביסה
+                </button>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.stage}</label>
@@ -352,15 +368,53 @@ export function DealModal({
                 className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.lighting}</label>
-              <input
-                value={localDeal.lighting || ''}
-                onChange={(e) => updateField('lighting', e.target.value || null)}
-                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
-                placeholder={t.deals.lighting}
-              />
-            </div>
+            {localDeal.project_type !== 'laundry_closet' && (
+              <div>
+                <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.lighting}</label>
+                <input
+                  value={localDeal.lighting || ''}
+                  onChange={(e) => updateField('lighting', e.target.value || null)}
+                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
+                  placeholder={t.deals.lighting}
+                />
+              </div>
+            )}
+            
+            {/* Laundry Closet Info Display */}
+            {localDeal.project_type === 'laundry_closet' && (
+              <>
+                {localDeal.laundry_model && (
+                  <div>
+                    <label className="block text-sm font-medium text-white/70 mb-2">דגם מסתור</label>
+                    <div className="px-3 py-2 rounded-lg bg-white/5 border border-white/20 text-white">
+                      {localDeal.laundry_model}
+                    </div>
+                  </div>
+                )}
+                {localDeal.laundry_distance && (
+                  <div>
+                    <label className="block text-sm font-medium text-white/70 mb-2">מרחק (ס"מ)</label>
+                    <div className="px-3 py-2 rounded-lg bg-white/5 border border-white/20 text-white">
+                      {localDeal.laundry_distance}
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <label className="block text-sm font-medium text-white/70 mb-2">אור</label>
+                  <div className="px-3 py-2 rounded-lg bg-white/5 border border-white/20 text-white">
+                    {localDeal.laundry_lighting ? 'כן' : 'לא'}
+                  </div>
+                </div>
+                {localDeal.shape && ['ר', 'ח', 'מקיר לקיר'].includes(localDeal.shape) && (
+                  <div>
+                    <label className="block text-sm font-medium text-white/70 mb-2">צורה</label>
+                    <div className="px-3 py-2 rounded-lg bg-white/5 border border-white/20 text-white">
+                      {localDeal.shape}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
             <div>
               <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.material}</label>
               <input
@@ -464,6 +518,13 @@ export function DealModal({
             </div>
           )}
 
+          {/* Material Orders List */}
+          {(localDeal.stage === 'material_ordered' || localDeal.stage === 'approved' || localDeal.stage === 'production' || localDeal.stage === 'install' || localDeal.stage === 'done') && (
+            <div className="pt-4 border-t border-white/10">
+              <MaterialOrdersList dealId={deal.id} adminToken={adminToken} />
+            </div>
+          )}
+
           {/* Profit Widget */}
           <div className="pt-4 border-t border-white/10">
             <ProfitWidget projectId={deal.id} revenue={revenue} />
@@ -561,6 +622,23 @@ export function DealModal({
             console.log('Offer created:', offer)
             setOffersRefreshTrigger(prev => prev + 1)
             setShowOfferModal(false)
+          }}
+        />
+      )}
+
+      {/* Laundry Closet Modal */}
+      {showLaundryClosetModal && (
+        <LaundryClosetModal
+          deal={localDeal}
+          onClose={() => setShowLaundryClosetModal(false)}
+          onSave={(data) => {
+            updateField('laundry_model', data.laundry_model)
+            updateField('laundry_distance', data.laundry_distance)
+            updateField('laundry_lighting', data.laundry_lighting)
+            updateField('shape', data.shape)
+            if (data.width !== undefined) updateField('width', data.width)
+            if (data.depth !== undefined) updateField('depth', data.depth)
+            setShowLaundryClosetModal(false)
           }}
         />
       )}

@@ -89,11 +89,14 @@ export interface CRMTranslations {
       railing: string
       gates: string
       windows: string
+      laundry_closet: string
     }
     stages: {
       new: string
       measure: string
       offer: string
+      offer_approved: string
+      material_ordered: string
       approved: string
       production: string
       install: string
@@ -259,11 +262,14 @@ export function getCRMTranslations(locale: Locale): CRMTranslations {
           railing: 'Перила',
           gates: 'Ворота',
           windows: 'Окна',
+          laundry_closet: 'מסתור כביסה',
         },
         stages: {
           new: 'Новая',
           measure: 'Замер',
-          offer: 'הוזמן',
+          offer: 'הצעת מחיר',
+          offer_approved: 'הצעת מחיר מאושרת',
+          material_ordered: 'חומר הוזמן',
           approved: 'חומר שהגיע למפעל',
           production: 'Производство',
           install: 'Установка',
@@ -423,8 +429,10 @@ export function getCRMTranslations(locale: Locale): CRMTranslations {
         stages: {
           new: 'New',
           measure: 'Measure',
-          offer: 'הוזמן',
-          approved: 'חומר שהגיע למפעל',
+          offer: 'Offer',
+          offer_approved: 'Offer Approved',
+          material_ordered: 'Material Ordered',
+          approved: 'Material Received',
           production: 'Production',
           install: 'Installation',
           done: 'Done',
@@ -579,11 +587,14 @@ export function getCRMTranslations(locale: Locale): CRMTranslations {
         railing: 'מעקה',
         gates: 'שערים',
         windows: 'חלונות',
+        laundry_closet: 'מסתור כביסה',
       },
       stages: {
         new: 'חדש',
         measure: 'מדידה',
-        offer: 'הוזמן',
+        offer: 'הצעת מחיר',
+        offer_approved: 'הצעת מחיר מאושרת',
+        material_ordered: 'חומר הוזמן',
         approved: 'חומר שהגיע למפעל',
         production: 'ייצור',
         install: 'התקנה',

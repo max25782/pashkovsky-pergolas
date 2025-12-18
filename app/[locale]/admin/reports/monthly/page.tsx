@@ -51,13 +51,23 @@ export default function MonthlyReportPage({ params }: { params: { locale: Locale
       setLoading(true)
       setError(null)
       const response = await fetch(`/api/reports/monthly?month=${month}`)
+      
       if (!response.ok) {
-        throw new Error('Failed to fetch report')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `HTTP ${response.status}: Failed to fetch report`)
       }
-      const { report: reportData } = await response.json()
-      setReport(reportData)
+      
+      const data = await response.json()
+      
+      if (!data.report) {
+        throw new Error('Invalid response format')
+      }
+      
+      setReport(data.report)
     } catch (err: any) {
+      console.error('[Monthly Report] Fetch error:', err)
       setError(err.message || 'Failed to load report')
+      setReport(null)
     } finally {
       setLoading(false)
     }

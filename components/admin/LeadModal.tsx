@@ -4,19 +4,22 @@ import type { Lead } from './lead-types'
 import { LEAD_STATUSES } from './lead-types'
 import { formatDate } from './deal-utils'
 import { useCRMTranslations } from './useCRMTranslations'
+import { LeadScore } from './LeadScore'
 
 interface LeadModalProps {
   lead: Lead
   onClose: () => void
-  onUpdate: (updates: Partial<Lead>) => Promise<any>
+  onUpdate: (updates: Partial<Lead>) => Promise<Lead>
   onDelete: () => void
+  adminToken: string
 }
 
 export function LeadModal({
   lead,
   onClose,
   onUpdate,
-  onDelete
+  onDelete,
+  adminToken
 }: LeadModalProps) {
   const t = useCRMTranslations()
   const [localLead, setLocalLead] = useState(lead)
@@ -124,6 +127,15 @@ export function LeadModal({
               </select>
             </div>
           </div>
+
+          {/* AI Score */}
+          <LeadScore
+            lead={localLead}
+            adminToken={adminToken}
+            onScoreUpdated={(updatedLead) => {
+              setLocalLead(updatedLead)
+            }}
+          />
 
           {/* Notes */}
           <div>

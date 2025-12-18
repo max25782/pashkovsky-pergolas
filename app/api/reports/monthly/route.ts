@@ -34,24 +34,19 @@ export async function GET(req: NextRequest) {
     const startDate = `${year}-${String(monthNum).padStart(2, '0')}-01`
     const endDate = new Date(year, monthNum, 0).toISOString().split('T')[0] // Last day of month
 
-    // Get all deals with offers in this month
+    // Get all deals created in this month
     const { data: dealsData, error: dealsError } = await supabase
       .from('deals')
-      .select(`
-        id,
-        customer_name,
-        offers (
-          id,
-          final_price,
-          created_at
-        )
-      `)
+      .select('id, customer_name, created_at, price, final_amount, total_amount')
       .gte('created_at', `${startDate}T00:00:00.000Z`)
       .lte('created_at', `${endDate}T23:59:59.999Z`)
 
     if (dealsError) {
       console.error('Error fetching deals:', dealsError)
-      return NextResponse.json({ error: 'Failed to fetch deals' }, { status: 500 })
+      return NextResponse.json({ 
+        error: 'Failed to fetch deals', 
+        details: dealsError.message 
+      }, { status: 500 })
     }
 
     // Get all work shifts for these projects in this month
@@ -68,10 +63,34 @@ export async function GET(req: NextRequest) {
 
       if (shiftsError) {
         console.error('Error fetching work shifts:', shiftsError)
-        return NextResponse.json({ error: 'Failed to fetch work shifts' }, { status: 500 })
+        return NextResponse.json({ 
+          error: 'Failed to fetch work shifts',
+          details: shiftsError.message 
+        }, { status: 500 })
       }
 
       workShiftsData = shiftsData || []
+    }
+
+    // Get offers for these deals (deal_id is TEXT, so we need to convert deal.id to string)
+    const dealIdStrings = dealIds.map(id => String(id))
+    let offersData: any[] = []
+    
+    if (dealIdStrings.length > 0) {
+      const { data: offers, error: offersError } = await supabase
+        .from('offers')
+        .select('deal_id, final_price, created_at')
+        .in('deal_id', dealIdStrings)
+        .gte('created_at', `${startDate}T00:00:00.000Z`)
+        .lte('created_at', `${endDate}T23:59:59.999Z`)
+
+      if (offersError) {
+        console.error('Error fetching offers:', offersError)
+        // Don't fail - just log and continue without offers
+        console.warn('Continuing without offers data')
+      } else {
+        offersData = offers || []
+      }
     }
 
     // Calculate totals per project
@@ -80,14 +99,33 @@ export async function GET(req: NextRequest) {
     // Process deals and offers
     for (const deal of dealsData || []) {
       const dealId = deal.id
-      const offers = deal.offers || []
+      const dealIdString = String(dealId)
       
-      // Get final price from latest approved offer or highest final_price
+      // Find offers for this deal
+      const dealOffers = offersData.filter((o: any) => String(o.deal_id) === dealIdString)
+      
+      // Get final price from latest offer or highest final_price
       let revenue = 0
-      if (offers.length > 0) {
-        const approvedOffers = offers.filter((o: any) => o.final_price)
-        if (approvedOffers.length > 0) {
-          revenue = Math.max(...approvedOffers.map((o: any) => parseFloat(o.final_price) || 0))
+      if (dealOffers.length > 0) {
+        const validOffers = dealOffers.filter((o: any) => o.final_price != null && o.final_price !== '')
+        if (validOffers.length > 0) {
+          revenue = Math.max(...validOffers.map((o: any) => parseFloat(String(o.final_price)) || 0))
+        }
+      }
+      
+      // Also check deal.price if no offers
+      if (revenue === 0) {
+        // Try deal.price field
+        if ((deal as any).price) {
+          revenue = parseFloat(String((deal as any).price)) || 0
+        }
+        // Try deal.final_amount
+        if (revenue === 0 && (deal as any).final_amount) {
+          revenue = parseFloat(String((deal as any).final_amount)) || 0
+        }
+        // Try deal.total_amount
+        if (revenue === 0 && (deal as any).total_amount) {
+          revenue = parseFloat(String((deal as any).total_amount)) || 0
         }
       }
 
@@ -123,11 +161,22 @@ export async function GET(req: NextRequest) {
       projects: projects.sort((a, b) => b.revenue - a.revenue), // Sort by revenue descending
     }
 
+    // Log summary for debugging
+    console.log(`[Monthly Report] Month: ${month}, Deals: ${dealsData?.length || 0}, Offers: ${offersData.length}, Projects: ${projectMap.size}`)
+
     return NextResponse.json({ report })
   } catch (error: any) {
-    console.error('Error in GET /api/reports/monthly:', error)
+    console.error('Error in GET /api/reports/monthly:', {
+      error: error.message,
+      stack: error.stack?.substring(0, 500),
+      month,
+    })
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      { 
+        error: 'Internal server error', 
+        details: error.message,
+        month,
+      },
       { status: 500 }
     )
   }

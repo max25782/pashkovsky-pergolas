@@ -1,6 +1,10 @@
 {
+  "/admin-api/gallery/categories/route": "app/admin-api/gallery/categories/route.js",
+  "/api/workers/route": "app/api/workers/route.js",
   "/admin-api/deals/route": "app/admin-api/deals/route.js",
-  "/[locale]/admin/page": "app/[locale]/admin/page.js",
-  "/[locale]/page": "app/[locale]/page.js",
-  "/[locale]/admin/statistics/page": "app/[locale]/admin/statistics/page.js"
+  "/[locale]/admin/deals/page": "app/[locale]/admin/deals/page.js",
+  "/[locale]/admin/statistics/page": "app/[locale]/admin/statistics/page.js",
+  "/[locale]/admin/workers/page": "app/[locale]/admin/workers/page.js",
+  "/[locale]/admin/leads/page": "app/[locale]/admin/leads/page.js",
+  "/[locale]/admin/gallery/page": "app/[locale]/admin/gallery/page.js"
 }

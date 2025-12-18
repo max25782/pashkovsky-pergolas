@@ -21,7 +21,8 @@
     "check:delete-images": "node scripts/check-safe-to-delete-images.mjs",
     "check:hero-migration": "node scripts/check-hero-migration.mjs",
     "delete:public-images": "node scripts/delete-public-images.mjs",
-    "delete:images-hero": "node scripts/delete-images-hero.mjs"
+    "delete:images-hero": "node scripts/delete-images-hero.mjs",
+    "test:analytics": "tsx lib/analytics/__tests__/test-calculations.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.943.0",

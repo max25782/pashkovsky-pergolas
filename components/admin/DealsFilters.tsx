@@ -38,6 +38,7 @@ export function DealsFilters({
         <option value="railing">{t.deals.projectTypes.railing}</option>
         <option value="gates">{t.deals.projectTypes.gates}</option>
         <option value="windows">{t.deals.projectTypes.windows}</option>
+        <option value="laundry_closet">{t.deals.projectTypes.laundry_closet}</option>
       </select>
     </>
   )

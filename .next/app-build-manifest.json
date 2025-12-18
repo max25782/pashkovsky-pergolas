@@ -1,9 +1,9 @@
 {
   "pages": {
-    "/[locale]/page": [
+    "/[locale]/admin/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/[locale]/page.js"
+      "static/chunks/app/[locale]/admin/page.js"
     ],
     "/[locale]/layout": [
       "static/chunks/webpack.js",
@@ -11,15 +11,45 @@
       "static/css/app/[locale]/layout.css",
       "static/chunks/app/[locale]/layout.js"
     ],
-    "/[locale]/admin/page": [
+    "/[locale]/admin/deals/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/[locale]/admin/page.js"
+      "static/chunks/app/[locale]/admin/deals/page.js"
+    ],
+    "/[locale]/admin/ai-chats/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/[locale]/admin/ai-chats/page.js"
+    ],
+    "/[locale]/admin/leads/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/[locale]/admin/leads/page.js"
+    ],
+    "/[locale]/admin/gallery/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/[locale]/admin/gallery/page.js"
     ],
     "/[locale]/admin/statistics/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/[locale]/admin/statistics/page.js"
+    ],
+    "/[locale]/admin/reports/weekly/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/[locale]/admin/reports/weekly/page.js"
+    ],
+    "/[locale]/admin/reports/monthly/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/[locale]/admin/reports/monthly/page.js"
+    ],
+    "/[locale]/admin/workers/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/[locale]/admin/workers/page.js"
     ]
   }
 }

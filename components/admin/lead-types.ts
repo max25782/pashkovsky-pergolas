@@ -10,6 +10,15 @@ export interface Lead {
   last_message?: string | null
   last_message_at?: string | null
   created_at?: string | null
+  score?: number | null
+  score_updated_at?: string | null
+  score_breakdown_json?: {
+    ruleScore?: number
+    aiDelta?: number
+    reasons?: string[]
+    aiReasons?: string[]
+    suggestedNextAction?: string
+  } | null
 }
 
 export const LEAD_STATUSES = [

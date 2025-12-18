@@ -87,6 +87,7 @@ export function LeadsTable({ adminToken }: Props) {
             handleLeadDelete(selectedLead)
             setSelectedLead(null)
           }}
+          adminToken={adminToken}
         />
       )}
     </section>
