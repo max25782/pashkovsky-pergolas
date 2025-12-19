@@ -1,5 +1,5 @@
 "use client"
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { RotatingImage } from './rotating-image'
 import { ModelLightbox } from '@/components/dgamim/model-lightbox'
 import dgamim from '@/data/gallery/dgamim.json'
@@ -9,13 +9,48 @@ import { processImageArray } from '@/lib/image-url-array-client'
 interface DgamimItem { type: string; degem: string; images: string[] }
 
 export function DgamimCarousel(){
-  const items = (dgamim as { items: DgamimItem[] }).items
-  if (!items?.length) return null
-
+  const staticItems = (dgamim as { items: DgamimItem[] }).items
+  const [dynamicItems, setDynamicItems] = useState<DgamimItem[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  
+  // All hooks must be declared at the top, before any conditional returns
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const dragState = useRef<{ startX:number; scrollLeft:number }|null>(null)
   const [lightbox, setLightbox] = useState<{ open:boolean; images:string[]; start:number }>({ open:false, images:[], start:0 })
+  
+  // Fetch models from API on mount
+  useEffect(() => {
+    async function fetchModels() {
+      try {
+        const res = await fetch('/api/gallery/models')
+        if (res.ok) {
+          const data = await res.json()
+          if (data.items && data.items.length > 0) {
+            setDynamicItems(data.items)
+          }
+        }
+      } catch (error) {
+        console.warn('[DgamimCarousel] Failed to fetch models from API:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchModels()
+  }, [])
+  
+  // Use dynamic items if available, otherwise fallback to static
+  const items = dynamicItems.length > 0 ? dynamicItems : staticItems
+  
+  if (isLoading) {
+    return (
+      <div className="w-full py-12 text-center text-white/50">
+        <div className="animate-pulse">טוען דגמים...</div>
+      </div>
+    )
+  }
+  
+  if (!items?.length) return null
 
   return (
     <div className="w-full">

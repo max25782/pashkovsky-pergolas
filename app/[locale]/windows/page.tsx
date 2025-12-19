@@ -14,8 +14,8 @@ async function fetchGallery(category: string, limit = 30) {
     })
     if (!res.ok) throw new Error(`status ${res.status}`)
     const data = await res.json()
-    const urls: string[] = data.images || []
-    return urls.map((src) => ({ src, type: 'image' as const }))
+    // Use new format with type information if available
+    return data.items || (data.images || []).map((src: string) => ({ src, type: 'image' as const }))
   } catch (e) {
     console.warn('[windows page] fallback to static images, fetch error:', e)
     return []

@@ -60,7 +60,39 @@ export async function GET(req: NextRequest) {
     
     console.log(`[Gallery API] Returning ${images.length} images for category ${categoryKey}`)
     
-    return new Response(JSON.stringify({ images: images.map(img => img.url) }), { 
+    // Ensure all URLs are full S3 URLs (if S3 is configured)
+    // URLs from database should already be S3 URLs, but we ensure they're valid
+    // Also detect video files and return them with proper type
+    const mediaItems = images.map(img => {
+      const url = img.url
+      let fullUrl = url
+      
+      // If URL is not a full URL, construct it
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        const S3_BUCKET = process.env.AWS_S3_BUCKET_NAME
+        const S3_REGION = process.env.AWS_S3_REGION || 'us-east-1'
+        if (S3_BUCKET) {
+          const cleanPath = url.startsWith('/') ? url.slice(1) : url
+          fullUrl = `https://${S3_BUCKET}.s3.${S3_REGION}.amazonaws.com/${cleanPath}`
+        }
+      }
+      
+      // Detect if it's a video file
+      const isVideo = /\.(mp4|webm|mov|avi)$/i.test(fullUrl)
+      
+      return {
+        src: fullUrl,
+        type: isVideo ? 'video' : 'image'
+      }
+    })
+    
+    // For backward compatibility, also include a simple array of URLs
+    const imageUrls = mediaItems.map(item => item.src)
+    
+    return new Response(JSON.stringify({ 
+      images: imageUrls,
+      items: mediaItems // New format with type information
+    }), { 
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     })

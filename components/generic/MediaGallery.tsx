@@ -15,7 +15,11 @@ interface MediaGalleryProps {
 
 export function MediaGallery({ title, items }: MediaGalleryProps){
   const videos = items.filter(i => i.type === 'video').map(v => ({ ...v, src: getImageUrl(v.src) }))
-  const images = items.filter(i => i.type === 'image').map(i => getImageUrl(i.src))
+  const images = items.filter(i => i.type === 'image').map(i => {
+    const url = getImageUrl(i.src)
+    // Ensure S3 URLs are properly formatted
+    return url
+  })
 
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [startIndex, setStartIndex] = useState(0)
@@ -49,7 +53,7 @@ export function MediaGallery({ title, items }: MediaGalleryProps){
                 placeholder="blur"
                 blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYGD4DwABBAEAW9JTEQAAAABJRU5ErkJggg=="
                 loading="lazy"
-                unoptimized={isS3Url(src)}
+                unoptimized={isS3Url(src) || src.startsWith('https://')}
               />
             </div>
           ))}
@@ -114,18 +118,18 @@ function VideoReel({ src, poster, onOpen }: { src: string; poster?: string; onOp
   const posterSrc = getImageUrl(poster || src.replace(/\.(mp4|webm)$/i, '.webp'))
   return (
     <div className="absolute inset-0 cursor-pointer" onClick={handleOpen} role="button" aria-label="Open video">
-      <Image
-        src={posterSrc}
-        alt="Video preview"
-        fill
-        className="object-cover"
-        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-        quality={60}
-        loading="lazy"
-        placeholder="blur"
-        blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYGD4DwABBAEAW9JTEQAAAABJRU5ErkJggg=="
-        unoptimized={isS3Url(posterSrc)}
-      />
+              <Image
+                src={posterSrc}
+                alt="Video preview"
+                fill
+                className="object-cover"
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                quality={60}
+                loading="lazy"
+                placeholder="blur"
+                blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYGD4DwABBAEAW9JTEQAAAABJRU5ErkJggg=="
+                unoptimized={isS3Url(posterSrc) || posterSrc.startsWith('https://')}
+              />
       <GradientOverlay />
       <div className="absolute inset-0 flex items-center justify-center">
         <PlayButton onClick={handleOpen} />
@@ -136,10 +140,28 @@ function VideoReel({ src, poster, onOpen }: { src: string; poster?: string; onOp
 
 function ModalImage({ src, alt, eager = false }: { src: string; alt: string; eager?: boolean }){
   const [loaded, setLoaded] = useState(false)
+  const [error, setError] = useState(false)
+  
   return (
     <div className="relative w-full h-full flex items-center justify-center p-4 bg-black/20">
-      {!loaded && (<div className="absolute inset-4 z-0 rounded-xl bg-gradient-to-br from-white/5 to-white/10 animate-pulse backdrop-blur-md" />)}
-      <img src={src} alt={alt} loading={eager ? 'eager' : 'lazy'} onLoad={() => setLoaded(true)} onError={() => setLoaded(true)} className="relative z-10 transition-opacity duration-300" style={{ maxWidth:'100%', maxHeight:'76vh', width:'auto', height:'auto', opacity: loaded ? 1 : 0, objectFit:'contain' }} />
+      {!loaded && !error && (<div className="absolute inset-4 z-0 rounded-xl bg-gradient-to-br from-white/5 to-white/10 animate-pulse backdrop-blur-md" />)}
+      {error && (
+        <div className="text-white/50 text-sm">Failed to load image</div>
+      )}
+      <img 
+        src={src} 
+        alt={alt} 
+        loading={eager ? 'eager' : 'lazy'} 
+        onLoad={() => { setLoaded(true); setError(false) }} 
+        onError={(e) => { 
+          console.error('[ModalImage] Failed to load:', src, e)
+          setLoaded(true)
+          setError(true)
+        }} 
+        className="relative z-10 transition-opacity duration-300" 
+        style={{ maxWidth:'100%', maxHeight:'76vh', width:'auto', height:'auto', opacity: loaded && !error ? 1 : 0, objectFit:'contain' }} 
+        crossOrigin="anonymous"
+      />
     </div>
   )
 }

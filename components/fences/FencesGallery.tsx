@@ -15,10 +15,35 @@ function FencesGalleryImpl() {
   const [open, setOpen] = useState(false);
   const [startIndex, setStartIndex] = useState(0);
   const [videoModal, setVideoModal] = useState<{ open: boolean; index: number | null }>({ open: false, index: null });
-  const items = (fences as { items: { src: string; type: string }[] }).items;
+  const [dynamicImages, setDynamicImages] = useState<string[]>([]);
+  const staticItems = (fences as { items: { src: string; type: string }[] }).items;
+  
+  // Fetch images from API on mount
+  useEffect(() => {
+    async function fetchImages() {
+      try {
+        const res = await fetch('/api/gallery/images?category_key=fancy&limit=100');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.images && data.images.length > 0) {
+            setDynamicImages(data.images);
+          }
+        }
+      } catch (error) {
+        console.warn('[FencesGallery] Failed to fetch images from API:', error);
+      }
+    }
+    fetchImages();
+  }, []);
+  
+  // Combine dynamic and static items
+  const items = dynamicImages.length > 0 
+    ? [...dynamicImages.map(src => ({ src, type: 'image' })), ...staticItems]
+    : staticItems;
+    
   const videos = items.filter(i => i.type === 'video').map(v => ({ ...v, src: getImageUrl(v.src) }));
   const images = items
-    .filter(i => i.type === "image" && i.src.toLowerCase().endsWith(".webp"))
+    .filter(i => i.type === "image" && (i.src.toLowerCase().endsWith(".webp") || i.src.toLowerCase().endsWith(".jpg")))
     .map(i => getImageUrl(i.src));
 
   return (
@@ -212,6 +237,7 @@ function ModalImage({ src, alt, eager = false }: { src: string; alt: string; eag
         loading={eager ? 'eager' : 'lazy'}
         onLoad={() => setLoaded(true)}
         onError={() => setLoaded(true)}
+        crossOrigin="anonymous"
         className="relative z-10 transition-opacity duration-300"
         style={{
           maxWidth: '100%',

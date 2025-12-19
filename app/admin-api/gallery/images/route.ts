@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { deleteFromS3, isS3Configured } from '@/lib/s3-upload'
 
 function env(name: string): string {
   const v = process.env[name]
@@ -64,7 +65,7 @@ export async function DELETE(req: NextRequest) {
   // Получаем информацию об изображении перед удалением
   const { data: image, error: fetchError } = await supabase
     .from('gallery_images')
-    .select('storage_path')
+    .select('storage_path, url')
     .eq('id', id)
     .single()
   
@@ -86,14 +87,17 @@ export async function DELETE(req: NextRequest) {
     return new Response(JSON.stringify(dbError), { status: 400, headers: { 'Content-Type': 'application/json' } })
   }
   
-  // Удаляем файл из Storage
-  const { error: storageError } = await supabase.storage
-    .from('gallery-images')
-    .remove([image.storage_path])
-  
-  if (storageError) {
-    console.error('DELETE: Storage error', storageError)
-    // Не возвращаем ошибку, так как запись из БД уже удалена
+  // Удаляем файл из S3 (если настроен)
+  if (isS3Configured() && image.storage_path) {
+    try {
+      await deleteFromS3(image.storage_path)
+      console.log(`[DELETE] Successfully deleted from S3: ${image.storage_path}`)
+    } catch (s3Error: any) {
+      console.error('[DELETE] S3 deletion error:', s3Error)
+      // Не возвращаем ошибку, так как запись из БД уже удалена
+    }
+  } else if (!isS3Configured()) {
+    console.warn('[DELETE] S3 not configured, skipping file deletion')
   }
   
   return new Response('OK', { status: 200 })
