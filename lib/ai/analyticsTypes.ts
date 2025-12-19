@@ -43,6 +43,8 @@ export interface LeadsAnalyticsSummary {
   // Totals
   totalLeads: number
   newLeads: number
+  qualifiedLeads: number
+  duplicateLeads: number
   convertedLeads: number
   
   // Status breakdown
@@ -61,6 +63,7 @@ export interface LeadsAnalyticsSummary {
   // Conversion metrics
   conversionRate: number // percentage (0-100)
   averageDaysToConvert: number | null // days, null if no conversions
+  avgResponseTimeMinutes: number | null // average response time in minutes, null if not available
   
   // Top sources
   topSources: Array<{
@@ -115,6 +118,8 @@ export interface DealsAnalyticsSummary {
   totalProfit: number // ILS
   averageDealValue: number // ILS
   averageProfitMargin: number // percentage (0-100)
+  winRate: number // percentage (0-100)
+  avgDaysToClose: number | null // average days to close deal, null if no closed deals
   
   // Deal flow metrics
   averageDaysInStage: Record<string, number> // stage -> average days

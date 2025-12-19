@@ -425,6 +425,7 @@ export function getCRMTranslations(locale: Locale): CRMTranslations {
           railing: 'Railing',
           gates: 'Gates',
           windows: 'Windows',
+          laundry_closet: 'Laundry Closet',
         },
         stages: {
           new: 'New',

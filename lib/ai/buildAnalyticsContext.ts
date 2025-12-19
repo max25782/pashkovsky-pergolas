@@ -98,6 +98,8 @@ export async function buildAnalyticsContext({
           period: normalizedPeriod,
           totalLeads: leadsData.totalLeads,
           newLeads: leadsData.newLeads,
+          qualifiedLeads: leadsData.qualifiedLeads,
+          duplicateLeads: leadsData.duplicateLeads,
           convertedLeads: leadsData.conversionToDeal > 0 
             ? Math.round((leadsData.conversionToDeal / 100) * leadsData.totalLeads)
             : 0,
@@ -105,6 +107,7 @@ export async function buildAnalyticsContext({
           bySource: leadsData.sourceBreakdown,
           conversionRate: leadsData.conversionToDeal,
           averageDaysToConvert: null, // Not calculated in aggregator
+          avgResponseTimeMinutes: leadsData.avgResponseTimeMinutes,
           topSources: Object.entries(leadsData.sourceBreakdown)
             .map(([source, count]) => ({
               source,
@@ -156,6 +159,8 @@ export async function buildAnalyticsContext({
           totalProfit: 0,
           averageDealValue: dealsData.avgDealValue,
           averageProfitMargin: 0, // Will be calculated from finance if available
+          winRate: dealsData.winRate,
+          avgDaysToClose: dealsData.avgDaysToClose,
           averageDaysInStage: {}, // Would need additional calculation
           dealsStuckInStage: dealsData.topIssues
             .filter(issue => issue.includes('stalled'))

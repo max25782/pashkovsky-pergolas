@@ -110,9 +110,9 @@ export function LeadScore({ lead, adminToken, onScoreUpdated }: LeadScoreProps) 
         </div>
         {breakdown && (
           <div className="text-xs text-white/60 mt-1">
-            Правила: {breakdown.ruleScore} {breakdown.aiDelta !== 0 && (
-              <span className={breakdown.aiDelta > 0 ? 'text-green-400' : 'text-red-400'}>
-                {breakdown.aiDelta > 0 ? '+' : ''}{breakdown.aiDelta} AI
+            Правила: {breakdown.ruleScore} {breakdown.aiDelta !== undefined && breakdown.aiDelta !== 0 && (
+              <span className={(breakdown.aiDelta ?? 0) > 0 ? 'text-green-400' : 'text-red-400'}>
+                {(breakdown.aiDelta ?? 0) > 0 ? '+' : ''}{breakdown.aiDelta} AI
               </span>
             )}
           </div>

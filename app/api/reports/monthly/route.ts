@@ -19,9 +19,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
   }
 
+  const { searchParams } = new URL(req.url)
+  const month = searchParams.get('month') // YYYY-MM
+
   try {
-    const { searchParams } = new URL(req.url)
-    const month = searchParams.get('month') // YYYY-MM
 
     if (!month || !/^\d{4}-\d{2}$/.test(month)) {
       return NextResponse.json(
