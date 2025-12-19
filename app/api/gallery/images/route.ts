@@ -8,6 +8,10 @@ const supabase = SUPABASE_URL && SERVICE_KEY
   ? createClient(SUPABASE_URL, SERVICE_KEY, { db: { schema: 'public' } })
   : undefined
 
+// Disable caching for this route - we want fresh images every time
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // GET - Get random images from a category (public, no auth required)
 export async function GET(req: NextRequest) {
   if (!supabase) {
@@ -23,11 +27,12 @@ export async function GET(req: NextRequest) {
   const random = searchParams.get('random') === 'true'
   
   try {
-    // First, get all images from the category
+    // First, get all images from the category, sorted by newest first
     const { data: allImages, error: countError } = await supabase
       .from('gallery_images')
       .select('url, filename, category_key')
       .eq('category_key', categoryKey)
+      .order('created_at', { ascending: false })
     
     if (countError) {
       console.error('[Gallery API] Error fetching images:', countError)
@@ -94,7 +99,10 @@ export async function GET(req: NextRequest) {
       items: mediaItems // New format with type information
     }), { 
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0'
+      }
     })
   } catch (error) {
     console.error('[Gallery API] Unexpected error:', error)
