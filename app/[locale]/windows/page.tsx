@@ -1,32 +1,16 @@
 import type { Locale } from '@/lib/locales'
 import { MediaGallery } from '@/components/generic/MediaGallery'
+import { getGalleryImages } from '@/lib/gallery/get-gallery-images'
 import windows from '@/data/gallery/windows.json'
 import ArticleModal from '@/components/articleModal'
 
-async function fetchGallery(category: string, limit = 30) {
-  const base =
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
-
-  try {
-    const res = await fetch(`${base}/api/gallery/images?category_key=${category}&limit=${limit}&random=true`, {
-      cache: 'no-store',
-    })
-    if (!res.ok) throw new Error(`status ${res.status}`)
-    const data = await res.json()
-    // Use new format with type information if available
-    return data.items || (data.images || []).map((src: string) => ({ src, type: 'image' as const }))
-  } catch (e) {
-    console.warn('[windows page] fallback to static images, fetch error:', e)
-    return []
-  }
-}
-
 export default async function Page({ params: { locale } }: { params: { locale: Locale } }) {
   const t = (he: string, ru: string, en: string) => (locale === 'he' ? he : locale === 'ru' ? ru : en)
+  
+  // Fetch directly from database (more reliable in production)
+  const dbItems = await getGalleryImages('windows', { limit: 50, random: true })
   const staticItems = (windows as { items: { src: string; type: 'image' | 'video' }[] }).items
-  const dynamicImages = await fetchGallery('windows', 50)
-  const items = [...dynamicImages, ...staticItems] // новые загрузки впереди, затем старые медиа
+  const items = [...dbItems, ...staticItems] // новые загрузки впереди, затем старые медиа
 
   const titleHe = 'חלונות וויטרינות בהתאמה אישית'
   const descHe = 'יצור והתקנה של חלונות וויטרינות מאלומיניום לפי מידה ועיצוב אישי – פתרון אידיאלי למי שמחפש איכות בלתי מתפשרת, בידוד מושלם ומראה מודרני לאורך שנים.'
