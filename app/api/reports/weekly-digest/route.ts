@@ -8,6 +8,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getWeeklyDigests, getWeeklyDigest } from '@/lib/analytics/weeklyDigest'
 
+// Force dynamic rendering since we use request.headers
+export const dynamic = 'force-dynamic'
+
 function auth(req: NextRequest): boolean {
   const token = req.headers.get('x-admin-token') || req.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
   const expected = process.env.ADMIN_TOKEN

@@ -53,15 +53,49 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
     setError(null)
 
     try {
+      const requestBody = { ...draft, ...calculation }
+      console.log('Submitting offer:', requestBody)
+      console.log('Pergola shape:', requestBody.pergola?.shape)
+      
+      // Get authentication token from localStorage
+      const token = localStorage.getItem('token') || localStorage.getItem('admin_token')
+      if (!token) {
+        throw new Error('No authentication token found. Please log in.')
+      }
+      
+      // Determine if it's a JWT token
+      const isJWT = !!localStorage.getItem('token')
+      
+      // Prepare headers with authentication
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        ...(isJWT ? { 'Authorization': `Bearer ${token}` } : { 'x-admin-token': token })
+      }
+      
       const response = await fetch('/api/offers', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...draft, ...calculation }),
+        headers,
+        body: JSON.stringify(requestBody),
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to create offer')
+        let errorMessage = 'Failed to create offer'
+        try {
+          const errorData = await response.json()
+          console.log('API Error:', errorData)
+          errorMessage = errorData.error || errorData.details || errorMessage
+          if (errorData.details) {
+            console.error('Error details:', errorData.details)
+          }
+          if (errorData.code) {
+            console.error('Error code:', errorData.code)
+          }
+        } catch (e) {
+          const text = await response.text()
+          errorMessage = `Server error (${response.status}): ${text.substring(0, 200)}`
+          console.error('Response text:', text)
+        }
+        throw new Error(errorMessage)
       }
 
       const newOffer = await response.json()
@@ -69,7 +103,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
       onClose()
     } catch (err: any) {
       console.error('Error creating offer:', err)
-      setError(err.message)
+      setError(err.message || 'Failed to create offer. Please check console for details.')
     } finally {
       setIsSubmitting(false)
     }
