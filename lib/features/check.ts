@@ -83,7 +83,10 @@ export async function can_use_feature(
     }
 
     // Get plan features
-    const plan = subscription.plan
+    const plan = Array.isArray(subscription.plan)
+      ? subscription.plan[0]
+      : subscription.plan
+    
     if (!plan || !plan.features) {
       return false
     }
@@ -116,7 +119,7 @@ export async function get_company_limits(
       .from('companies')
       .select(`
         subscription:subscriptions(
-          plan:plans(max_users, max_deals, max_storage_gb)
+          plan:plans(*)
         )
       `)
       .eq('id', companyId)
@@ -130,7 +133,9 @@ export async function get_company_limits(
       ? company.subscription[0] 
       : company.subscription
 
-    const plan = subscription?.plan
+    const plan = Array.isArray(subscription?.plan)
+      ? subscription.plan[0]
+      : subscription?.plan
 
     return {
       max_users: plan?.max_users ?? defaults.max_users,
@@ -231,7 +236,11 @@ export async function get_company_features(
       ? company.subscription[0] 
       : company.subscription
 
-    const features = subscription?.plan?.features
+    const plan = Array.isArray(subscription?.plan)
+      ? subscription.plan[0]
+      : subscription?.plan
+
+    const features = plan?.features
 
     return features ? { ...defaults, ...features } : defaults
   } catch (error) {
