@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import type { PergolaShape } from '@/types/offer'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -94,11 +95,21 @@ function transformOfferFromDB(data: any) {
     customerCity: data.customer_city,
     
     pergola: {
-      width: data.pergola_width,
-      length: data.pergola_length,
+      // New shape-based structure
+      shape: data.pergola_shape_data 
+        ? (data.pergola_shape_data as PergolaShape)
+        : {
+            // Fallback to legacy format if shape_data is missing
+            type: 'rectangle' as const,
+            width: data.pergola_width || 0,
+            length: data.pergola_length || 0,
+          },
       height: data.pergola_height,
       location: data.pergola_location,
       pricePerSqm: data.pergola_price_per_sqm,
+      // Legacy fields for backward compatibility
+      width: data.pergola_width,
+      length: data.pergola_length,
     },
     
     color: {

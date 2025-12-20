@@ -10,7 +10,8 @@ interface FetchDealsParams {
 
 export async function fetchDeals(
   params: FetchDealsParams,
-  adminToken: string
+  adminToken: string,
+  isJWT: boolean = false
 ): Promise<{ data: Deal[]; count?: number }> {
   const urlParams = new URLSearchParams()
   if (params.q) urlParams.append('q', params.q)
@@ -20,7 +21,11 @@ export async function fetchDeals(
   if (params.offset) urlParams.append('offset', params.offset.toString())
 
   const url = `/admin-api/deals?${urlParams.toString()}`
-  const r = await fetch(url, { headers: { 'x-admin-token': adminToken } })
+  const headers: HeadersInit = isJWT 
+    ? { 'Authorization': `Bearer ${adminToken}` }
+    : { 'x-admin-token': adminToken }
+  
+  const r = await fetch(url, { headers })
   const text = await r.text()
   
   if (!r.ok) {
@@ -34,14 +39,17 @@ export async function fetchDeals(
 export async function updateDeal(
   id: string,
   updates: Partial<Deal>,
-  adminToken: string
+  adminToken: string,
+  isJWT: boolean = false
 ): Promise<Deal> {
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...(isJWT ? { 'Authorization': `Bearer ${adminToken}` } : { 'x-admin-token': adminToken })
+  }
+  
   const r = await fetch('/admin-api/deals', {
     method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-admin-token': adminToken
-    },
+    headers,
     body: JSON.stringify({ id, ...updates })
   })
 
@@ -66,14 +74,17 @@ export async function updateDeal(
 
 export async function createDeal(
   dealData: Partial<Deal>,
-  adminToken: string
+  adminToken: string,
+  isJWT: boolean = false
 ): Promise<Deal> {
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...(isJWT ? { 'Authorization': `Bearer ${adminToken}` } : { 'x-admin-token': adminToken })
+  }
+  
   const r = await fetch('/admin-api/deals', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-admin-token': adminToken
-    },
+    headers,
     body: JSON.stringify(dealData)
   })
 
@@ -98,11 +109,16 @@ export async function createDeal(
 
 export async function deleteDeal(
   id: string,
-  adminToken: string
+  adminToken: string,
+  isJWT: boolean = false
 ): Promise<void> {
+  const headers: HeadersInit = isJWT 
+    ? { 'Authorization': `Bearer ${adminToken}` }
+    : { 'x-admin-token': adminToken }
+  
   const r = await fetch(`/admin-api/deals?id=${encodeURIComponent(id)}`, {
     method: 'DELETE',
-    headers: { 'x-admin-token': adminToken }
+    headers
   })
   const body = await r.text()
   

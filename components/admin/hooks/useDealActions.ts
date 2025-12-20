@@ -4,6 +4,7 @@ import { createDeal, updateDeal, deleteDeal } from '../deal-api'
 
 interface UseDealActionsParams {
   adminToken: string
+  isJWT?: boolean
   onUpdate?: (deal: Deal) => void
   onDelete?: (id: string) => void
   onError?: (error: Error) => void
@@ -11,6 +12,7 @@ interface UseDealActionsParams {
 
 export function useDealActions({
   adminToken,
+  isJWT = false,
   onUpdate,
   onDelete,
   onError
@@ -23,7 +25,7 @@ export function useDealActions({
     setUpdating(true)
     try {
       console.log('useDealActions patch called with updates:', updates)
-      const updatedDeal = await updateDeal(id, updates, adminToken)
+      const updatedDeal = await updateDeal(id, updates, adminToken, isJWT)
       console.log('useDealActions patch result:', updatedDeal)
       onUpdate?.(updatedDeal)
       return updatedDeal
@@ -43,7 +45,7 @@ export function useDealActions({
     
     setDeleting(true)
     try {
-      await deleteDeal(id, adminToken)
+      await deleteDeal(id, adminToken, isJWT)
       onDelete?.(id)
       // Возвращаем успешное удаление для перезагрузки данных
       return true
@@ -61,7 +63,7 @@ export function useDealActions({
   async function create(dealData: Partial<Deal>) {
     setCreating(true)
     try {
-      const newDeal = await createDeal(dealData, adminToken)
+      const newDeal = await createDeal(dealData, adminToken, isJWT)
       onUpdate?.(newDeal)
       return newDeal
     } catch (e: any) {

@@ -4,6 +4,7 @@ import { fetchDeals } from '../deal-api'
 
 interface UseDealsParams {
   adminToken: string
+  isJWT?: boolean
   searchQuery?: string
   stageFilter?: string
   projectTypeFilter?: string
@@ -13,6 +14,7 @@ interface UseDealsParams {
 
 export function useDeals({
   adminToken,
+  isJWT = false,
   searchQuery = '',
   stageFilter = '',
   projectTypeFilter = '',
@@ -24,8 +26,8 @@ export function useDeals({
   const [error, setError] = useState<string | null>(null)
 
   async function load() {
-    // Don't load if adminToken is not provided
-    if (!adminToken) {
+    // Don't load if adminToken is not provided or is empty
+    if (!adminToken || adminToken.trim() === '') {
       return
     }
     
@@ -40,7 +42,8 @@ export function useDeals({
           limit,
           offset: page * limit
         },
-        adminToken
+        adminToken,
+        isJWT
       )
       setDeals(result.data)
     } catch (e: any) {
@@ -52,11 +55,11 @@ export function useDeals({
   }
 
   useEffect(() => {
-    // Only load if adminToken is provided
-    if (adminToken) {
+    // Only load if adminToken is provided and not empty
+    if (adminToken && adminToken.trim() !== '') {
       load()
     }
-  }, [adminToken, searchQuery, stageFilter, projectTypeFilter, page, limit])
+  }, [adminToken, isJWT, searchQuery, stageFilter, projectTypeFilter, page, limit])
 
   return {
     deals,

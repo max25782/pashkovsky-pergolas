@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useLocale } from 'next-intl'
+import type { Locale } from '@/lib/locales'
 
 interface User {
   id: string
@@ -13,8 +13,7 @@ interface User {
   joinedAt: string
 }
 
-export default function AdminUsersPage() {
-  const locale = useLocale()
+export default function AdminUsersPage({ params }: { params: { locale: Locale } }) {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [inviteEmail, setInviteEmail] = useState('')

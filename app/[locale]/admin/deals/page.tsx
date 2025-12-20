@@ -9,23 +9,40 @@ export default function AdminDealsPage({ params: { locale } }: { params: { local
   const t = useCRMTranslations()
   const [token, setToken] = useState<string | null>(null)
   const [input, setInput] = useState('')
+  const [isJWT, setIsJWT] = useState(false)
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('admin_token')
-    if (storedToken) setToken(storedToken)
+    // Check for JWT token first (from login/register)
+    const jwtToken = localStorage.getItem('token')
+    if (jwtToken) {
+      setToken(jwtToken)
+      setIsJWT(true)
+      return
+    }
+
+    // Fallback to admin token (legacy)
+    const adminToken = localStorage.getItem('admin_token')
+    if (adminToken) {
+      setToken(adminToken)
+      setIsJWT(false)
+    }
   }, [])
 
   function save() {
     if (input.trim()) {
       localStorage.setItem('admin_token', input.trim())
       setToken(input.trim())
+      setIsJWT(false)
     }
   }
 
   function logout() {
     localStorage.removeItem('admin_token')
+    localStorage.removeItem('token')
+    localStorage.removeItem('refreshToken')
     setToken(null)
     setInput('')
+    setIsJWT(false)
   }
 
   if (!token) {
@@ -100,7 +117,7 @@ export default function AdminDealsPage({ params: { locale } }: { params: { local
           </button>
         </div>
       </div>
-      <DealsTable adminToken={token} />
+      <DealsTable adminToken={token || ''} isJWT={isJWT} />
     </main>
   )
 }

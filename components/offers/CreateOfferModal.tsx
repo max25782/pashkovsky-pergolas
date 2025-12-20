@@ -8,7 +8,7 @@ import type { OfferDraft, Offer } from '@/types/offer'
 import { DEFAULT_OFFER_VALUES } from '@/types/offer'
 import { calculateOffer, formatPrice } from '@/lib/offer-calculator'
 import { PergolaShapeSelector } from './PergolaShapeSelector'
-import { calculatePergolaArea } from '@/lib/calculations/pergola-area'
+import { calculatePergolaArea, validatePergolaShape } from '@/lib/calculations/pergola-area'
 
 interface CreateOfferModalProps {
   dealId: string
@@ -531,7 +531,14 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
           {/* Action Buttons */}
           <div className="flex gap-3 justify-end pt-4 border-t border-white/10">
             <Button type="button" variant="default" onClick={(e) => { e.stopPropagation(); onClose() }} disabled={isSubmitting} data-dialog-close className="bg-white/10 hover:bg-white/20 text-white border-white/20">ביטול</Button>
-            <Button type="button" onClick={(e) => { e.stopPropagation(); handleSubmit() }} disabled={isSubmitting || draft.pergola.width <= 0 || draft.pergola.length <= 0} className="bg-blue-600 hover:bg-blue-700 text-white">{isSubmitting ? 'שומר...' : 'שמור הצעת מחיר'}</Button>
+            <Button 
+              type="button" 
+              onClick={(e) => { e.stopPropagation(); handleSubmit() }} 
+              disabled={isSubmitting || !validatePergolaShape(draft.pergola.shape).valid || calculatePergolaArea(draft.pergola.shape) <= 0} 
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {isSubmitting ? 'שומר...' : 'שמור הצעת מחיר'}
+            </Button>
           </div>
         </div>
       </DialogContent>

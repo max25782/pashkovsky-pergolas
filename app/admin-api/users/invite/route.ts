@@ -71,6 +71,11 @@ export async function POST(req: NextRequest) {
       user = newUser
     }
 
+    // At this point, user must be defined
+    if (!user || !user.id) {
+      return NextResponse.json({ error: 'Failed to get or create user' }, { status: 500 })
+    }
+
     // Check if user is already a member
     const { data: existingMember } = await supabase
       .from('company_members')

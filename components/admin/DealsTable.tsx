@@ -15,11 +15,12 @@ import { useDealDragDrop } from './hooks/useDealDragDrop'
 
 interface Props {
   adminToken: string
+  isJWT?: boolean
 }
 
 type ViewMode = 'kanban' | 'table'
 
-export function DealsTable({ adminToken }: Props) {
+export function DealsTable({ adminToken, isJWT = false }: Props) {
   const [q, setQ] = useState("")
   const [stageFilter, setStageFilter] = useState("")
   const [projectTypeFilter, setProjectTypeFilter] = useState("")
@@ -30,6 +31,7 @@ export function DealsTable({ adminToken }: Props) {
 
   const { deals, loading, error, reload } = useDeals({
     adminToken,
+    isJWT,
     searchQuery: q,
     stageFilter,
     projectTypeFilter,
@@ -39,6 +41,7 @@ export function DealsTable({ adminToken }: Props) {
 
   const { create, patch, del, creating, updating, deleting } = useDealActions({
     adminToken,
+    isJWT,
     onUpdate: async (updatedDeal) => {
       if (selectedDeal?.id === updatedDeal.id) {
         setSelectedDeal(updatedDeal)
