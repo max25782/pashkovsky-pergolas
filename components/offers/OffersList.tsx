@@ -11,14 +11,27 @@ import type { Locale } from '@/lib/locales'
 interface OffersListProps {
   dealId: string
   refreshTrigger?: number
+  adminToken?: string
 }
 
-export function OffersList({ dealId, refreshTrigger }: OffersListProps) {
+export function OffersList({ dealId, refreshTrigger, adminToken }: OffersListProps) {
   const params = useParams()
   const locale = (params?.locale as Locale) || 'he'
   const [offers, setOffers] = useState<Offer[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Helper to get auth headers
+  const getAuthHeaders = useCallback((): HeadersInit => {
+    const token = adminToken || localStorage.getItem('token') || localStorage.getItem('admin_token')
+    if (!token) return {}
+    
+    const isJWT = !!localStorage.getItem('token') || (adminToken && adminToken.length > 100)
+    if (isJWT) {
+      return { 'Authorization': `Bearer ${token}` }
+    }
+    return { 'x-admin-token': token }
+  }, [adminToken])
 
   const fetchOffers = useCallback(async () => {
     setLoading(true)
@@ -100,7 +113,8 @@ export function OffersList({ dealId, refreshTrigger }: OffersListProps) {
     if (!confirm('למחוק את ההצעה הזו?')) return
     try {
       const response = await fetch(`/api/offers/${offerId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: getAuthHeaders()
       })
       if (!response.ok) {
         const err = await response.json()
@@ -111,11 +125,15 @@ export function OffersList({ dealId, refreshTrigger }: OffersListProps) {
     } catch (err: any) {
       alert('❌ שגיאה במחיקה: ' + err.message)
     }
-  }, [fetchOffers])
+  }, [fetchOffers, getAuthHeaders])
 
-  const handleGeneratePdf = useCallback(async (offer: Offer) => {
+  const handleGeneratePdf = useCallback(async (offer: Offer, forceRegenerate = false) => {
     try {
-      const res = await fetch(`/api/offers/${offer.id}/pdf`, { method: 'POST' })
+      const url = `/api/offers/${offer.id}/pdf${forceRegenerate ? '?force=true' : ''}`
+      const res = await fetch(url, { 
+        method: 'POST',
+        headers: getAuthHeaders()
+      })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
         throw new Error(err.error || err.details || 'Failed to generate PDF')
@@ -123,13 +141,20 @@ export function OffersList({ dealId, refreshTrigger }: OffersListProps) {
       const data = await res.json()
       if (data?.pdfUrl) {
         window.open(data.pdfUrl, '_blank')
+        // If it was cached, ask if user wants to regenerate
+        if (data.cached && !forceRegenerate) {
+          const shouldRegenerate = confirm('PDF כבר קיים. האם לייצר מחדש?')
+          if (shouldRegenerate) {
+            handleGeneratePdf(offer, true)
+          }
+        }
       } else {
         alert('PDF נוצר אך לא הוחזר קישור')
       }
     } catch (err: any) {
       alert('❌ שגיאה ביצירת PDF: ' + err.message)
     }
-  }, [])
+  }, [getAuthHeaders])
 
   const handleViewOffer = useCallback((offerId: string) => {
     const url = getOfferPublicUrl(offerId, locale)

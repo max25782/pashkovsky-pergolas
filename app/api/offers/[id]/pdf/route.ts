@@ -26,6 +26,10 @@ async function fetchOffer(id: string): Promise<Offer | null> {
     return null
   }
 
+  // Log raw shape data for debugging
+  console.log('[PDF] Raw pergola_shape_data from DB:', JSON.stringify(data.pergola_shape_data))
+  console.log('[PDF] Legacy fields - width:', data.pergola_width, 'length:', data.pergola_length)
+
   return {
     id: data.id,
     dealId: data.deal_id,

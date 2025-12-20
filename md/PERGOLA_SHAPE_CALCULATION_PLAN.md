@@ -405,3 +405,4 @@ export function PergolaShapeSelector({ value, onChange }: Props) {
 **Готов начать реализацию?** 🚀
 
 
+

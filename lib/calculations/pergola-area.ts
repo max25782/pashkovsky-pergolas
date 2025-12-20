@@ -188,3 +188,4 @@ export function validatePergolaShape(shape: PergolaShape): { valid: boolean; err
 }
 
 
+

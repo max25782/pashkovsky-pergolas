@@ -191,3 +191,4 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 **Готово! Google OAuth настроен и готов к использованию!** 🎉
 
 
+

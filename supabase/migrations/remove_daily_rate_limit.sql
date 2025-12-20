@@ -10,3 +10,4 @@ ADD CONSTRAINT workers_daily_rate_check CHECK (daily_rate > 0);
 
 
 
+

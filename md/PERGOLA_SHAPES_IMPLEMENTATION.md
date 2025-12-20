@@ -155,3 +155,4 @@ area = base.area + leftLeg.area + rightLeg.area - overlaps
 **Готово к использованию!** 🎉
 
 
+

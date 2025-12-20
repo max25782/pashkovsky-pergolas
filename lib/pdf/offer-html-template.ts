@@ -1,5 +1,6 @@
 import type { Offer } from '@/types/offer'
 import { getHebrewFontsCss, getLogoDataUri } from './font-loader'
+import { calculatePergolaArea } from '@/lib/calculations/pergola-area'
 
 /**
  * Render HTML template for offer (הצעת מחיר) with RTL Hebrew support
@@ -15,6 +16,107 @@ export function renderOfferHtml(offer: Offer): string {
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)
     return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`
+  }
+
+  // Helper to format pergola shape dimensions
+  const formatPergolaDimensions = () => {
+    const shape = offer.pergola.shape
+    if (!shape) {
+      // Fallback to legacy format
+      return `
+        <div class="info-row">
+          <span class="label">רוחב:</span>
+          <span class="value">${offer.pergola.width || 0} מטר</span>
+        </div>
+        <div class="info-row">
+          <span class="label">אורך:</span>
+          <span class="value">${offer.pergola.length || 0} מטר</span>
+        </div>
+      `
+    }
+
+    switch (shape.type) {
+      case 'rectangle':
+        return `
+          <div class="info-row">
+            <span class="label">רוחב:</span>
+            <span class="value">${shape.width} מטר</span>
+          </div>
+          <div class="info-row">
+            <span class="label">אורך:</span>
+            <span class="value">${shape.length} מטר</span>
+          </div>
+        `
+      case 'L':
+        return `
+          <div class="info-row">
+            <span class="label">צורה:</span>
+            <span class="value">L</span>
+          </div>
+          <div class="info-row">
+            <span class="label">רוחב רגל 1:</span>
+            <span class="value">${shape.leg1.width} מטר</span>
+          </div>
+          <div class="info-row">
+            <span class="label">אורך רגל 1:</span>
+            <span class="value">${shape.leg1.length} מטר</span>
+          </div>
+          <div class="info-row">
+            <span class="label">רוחב רגל 2:</span>
+            <span class="value">${shape.leg2.width} מטר</span>
+          </div>
+          <div class="info-row">
+            <span class="label">אורך רגל 2:</span>
+            <span class="value">${shape.leg2.length} מטר</span>
+          </div>
+        `
+      case 'X':
+        return `
+          <div class="info-row">
+            <span class="label">צורה:</span>
+            <span class="value">X</span>
+          </div>
+          <div class="info-row">
+            <span class="label">רוחב מרכז:</span>
+            <span class="value">${shape.center.width} מטר</span>
+          </div>
+          <div class="info-row">
+            <span class="label">אורך מרכז:</span>
+            <span class="value">${shape.center.length} מטר</span>
+          </div>
+          ${shape.arms.map((arm, i) => `
+            <div class="info-row">
+              <span class="label">זרוע ${i + 1} (${arm.direction}):</span>
+              <span class="value">${arm.width} × ${arm.length} מטר</span>
+            </div>
+          `).join('')}
+        `
+      case 'U':
+        return `
+          <div class="info-row">
+            <span class="label">צורה:</span>
+            <span class="value">U</span>
+          </div>
+          <div class="info-row">
+            <span class="label">רוחב בסיס:</span>
+            <span class="value">${shape.base.width} מטר</span>
+          </div>
+          <div class="info-row">
+            <span class="label">אורך בסיס:</span>
+            <span class="value">${shape.base.length} מטר</span>
+          </div>
+          <div class="info-row">
+            <span class="label">רגל שמאל:</span>
+            <span class="value">${shape.leftLeg.width} × ${shape.leftLeg.length} מטר</span>
+          </div>
+          <div class="info-row">
+            <span class="label">רגל ימין:</span>
+            <span class="value">${shape.rightLeg.width} × ${shape.rightLeg.length} מטר</span>
+          </div>
+        `
+      default:
+        return ''
+    }
   }
 
   // Get embedded fonts CSS
@@ -261,14 +363,7 @@ export function renderOfferHtml(offer: Offer): string {
 
   <div class="section">
     <div class="section-title">פרטי פרגולה</div>
-    <div class="info-row">
-      <span class="label">רוחב:</span>
-      <span class="value">${offer.pergola.width} מטר</span>
-    </div>
-    <div class="info-row">
-      <span class="label">אורך:</span>
-      <span class="value">${offer.pergola.length} מטר</span>
-    </div>
+    ${formatPergolaDimensions()}
     ${offer.pergola.height ? `
     <div class="info-row">
       <span class="label">גובה:</span>

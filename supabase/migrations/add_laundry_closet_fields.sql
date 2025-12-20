@@ -13,3 +13,4 @@ CREATE INDEX IF NOT EXISTS idx_deals_laundry_closet ON public.deals(project_type
 
 
 
+

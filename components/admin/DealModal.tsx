@@ -514,7 +514,11 @@ export function DealModal({
           {deal.customer_name && (
             <div className="pt-4 border-t border-white/10">
               <h3 className="text-lg font-semibold mb-3">הצעות מחיר</h3>
-              <OffersList dealId={deal.id} refreshTrigger={offersRefreshTrigger} />
+              <OffersList 
+                dealId={deal.id} 
+                refreshTrigger={offersRefreshTrigger} 
+                adminToken={adminToken}
+              />
             </div>
           )}
 

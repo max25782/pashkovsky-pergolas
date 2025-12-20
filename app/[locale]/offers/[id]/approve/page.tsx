@@ -4,8 +4,56 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import SignatureCanvas from 'react-signature-canvas'
 import { formatPrice } from '@/lib/offer-calculator'
-import type { Offer } from '@/types/offer'
+import type { Offer, PergolaShape } from '@/types/offer'
 import { Check, Loader2 } from 'lucide-react'
+
+// Helper to render pergola dimensions based on shape
+function renderPergolaDimensions(shape: PergolaShape) {
+  switch (shape.type) {
+    case 'rectangle':
+      return (
+        <>
+          <div><span className="font-medium">רוחב:</span> {shape.width} מ׳</div>
+          <div><span className="font-medium">אורך:</span> {shape.length} מ׳</div>
+        </>
+      )
+    case 'L':
+      return (
+        <>
+          <div className="col-span-2"><span className="font-medium">צורה:</span> L</div>
+          <div><span className="font-medium">רגל 1 - רוחב:</span> {shape.leg1.width} מ׳</div>
+          <div><span className="font-medium">רגל 1 - אורך:</span> {shape.leg1.length} מ׳</div>
+          <div><span className="font-medium">רגל 2 - רוחב:</span> {shape.leg2.width} מ׳</div>
+          <div><span className="font-medium">רגל 2 - אורך:</span> {shape.leg2.length} מ׳</div>
+        </>
+      )
+    case 'X':
+      return (
+        <>
+          <div className="col-span-2"><span className="font-medium">צורה:</span> X</div>
+          <div><span className="font-medium">מרכז - רוחב:</span> {shape.center.width} מ׳</div>
+          <div><span className="font-medium">מרכז - אורך:</span> {shape.center.length} מ׳</div>
+          {shape.arms.map((arm, i) => (
+            <div key={i} className="col-span-2">
+              <span className="font-medium">זרוע {i + 1} ({arm.direction}):</span> {arm.width} × {arm.length} מ׳
+            </div>
+          ))}
+        </>
+      )
+    case 'U':
+      return (
+        <>
+          <div className="col-span-2"><span className="font-medium">צורה:</span> U</div>
+          <div><span className="font-medium">בסיס - רוחב:</span> {shape.base.width} מ׳</div>
+          <div><span className="font-medium">בסיס - אורך:</span> {shape.base.length} מ׳</div>
+          <div><span className="font-medium">רגל שמאל:</span> {shape.leftLeg.width} × {shape.leftLeg.length} מ׳</div>
+          <div><span className="font-medium">רגל ימין:</span> {shape.rightLeg.width} × {shape.rightLeg.length} מ׳</div>
+        </>
+      )
+    default:
+      return null
+  }
+}
 
 export default function OfferApprovePage() {
   const params = useParams()
@@ -146,8 +194,7 @@ export default function OfferApprovePage() {
             <div className="bg-gray-50 rounded-lg p-4">
               <h2 className="text-lg font-semibold mb-3 text-gray-900">פרטי פרגולה</h2>
               <div className="grid grid-cols-2 gap-3 text-sm text-gray-700">
-                <div><span className="font-medium">רוחב:</span> {offer.pergola.width} מ׳</div>
-                <div><span className="font-medium">אורך:</span> {offer.pergola.length} מ׳</div>
+                {renderPergolaDimensions(offer.pergola.shape)}
                 {offer.pergola.height && <div><span className="font-medium">גובה:</span> {offer.pergola.height} מ׳</div>}
                 {offer.pergola.location && <div><span className="font-medium">מקום:</span> {offer.pergola.location}</div>}
                 {offer.shadingRatio && <div><span className="font-medium">הצללה:</span> {offer.shadingRatio}</div>}
