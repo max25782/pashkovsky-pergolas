@@ -143,3 +143,4 @@ Upload a test image:
 - CORS is configured for public access
 - All images are publicly accessible via S3 URL
 
+

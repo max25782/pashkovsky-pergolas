@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getCompanyId } from '@/lib/middleware/company-context'
 
 function env(name: string): string {
   const v = process.env[name]
@@ -23,6 +24,11 @@ const supabase = SUPABASE_URL && SERVICE_KEY
 export async function GET(req: NextRequest) {
   if (!auth(req)) return new Response('Unauthorized', { status: 401 })
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
+  
+  // Multi-tenant: Get company_id from request
+  const companyId = getCompanyId(req)
+  if (!companyId) return new Response('Unauthorized: No company context', { status: 401 })
+  
   const { searchParams } = new URL(req.url)
   const q = searchParams.get('q')?.trim() || ''
   const source = searchParams.get('source')?.trim() || '' // Filter by source/campaign
@@ -32,7 +38,10 @@ export async function GET(req: NextRequest) {
   const limit = Number(searchParams.get('limit') || 20)
   const offset = Number(searchParams.get('offset') || 0)
 
-  let query = supabase.from('leads').select('*', { count: 'exact' }).order('created_at', { ascending: false }).range(offset, offset + limit - 1)
+  let query = supabase.from('leads').select('*', { count: 'exact' })
+    .eq('company_id', companyId) // Multi-tenant filter
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1)
   
   // Filter by source (campaign)
   if (source) {
@@ -67,6 +76,11 @@ export async function GET(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   if (!auth(req)) return new Response('Unauthorized', { status: 401 })
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
+  
+  // Multi-tenant: Get company_id from request
+  const companyId = getCompanyId(req)
+  if (!companyId) return new Response('Unauthorized: No company context', { status: 401 })
+  
   let body: any
   try { 
     body = await req.json() 
@@ -101,6 +115,7 @@ export async function PATCH(req: NextRequest) {
     .from('leads')
     .update(updates)
     .eq('id', id)
+    .eq('company_id', companyId) // Multi-tenant: ensure same company
     .select()
     .single()
   
@@ -157,10 +172,21 @@ export async function PATCH(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   if (!auth(req)) return new Response('Unauthorized', { status: 401 })
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
+  
+  // Multi-tenant: Get company_id from request
+  const companyId = getCompanyId(req)
+  if (!companyId) return new Response('Unauthorized: No company context', { status: 401 })
+  
   const { searchParams } = new URL(req.url)
   const id = searchParams.get('id')
   if (!id) return new Response('Missing id', { status: 400 })
-  const { error } = await supabase.from('leads').delete().eq('id', id)
+  
+  const { error } = await supabase
+    .from('leads')
+    .delete()
+    .eq('id', id)
+    .eq('company_id', companyId) // Multi-tenant: ensure same company
+  
   if (error) return new Response(JSON.stringify(error), { status: 400 })
   return new Response('OK')
 }

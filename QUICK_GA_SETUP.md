@@ -45,3 +45,4 @@ npm run dev
 После добавления `NEXT_PUBLIC_GA_ID=G-TB94JE4K8G` в `.env.local` и перезапуска dev server, Google Analytics начнет работать автоматически.
 
 
+

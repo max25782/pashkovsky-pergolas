@@ -61,3 +61,4 @@ ALTER PUBLICATION supabase_realtime ADD TABLE ai_sessions;
 
 
 
+

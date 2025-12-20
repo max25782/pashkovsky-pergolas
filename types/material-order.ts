@@ -67,3 +67,4 @@ export interface MaterialOrderCreate {
   internal_notes?: string | null
 }
 
+

@@ -1,3 +1,10 @@
 {
-  "/api/gallery/images/route": "app/api/gallery/images/route.js"
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/pergola-projects/route": "app/api/pergola-projects/route.js",
+  "/api/gallery/models/route": "app/api/gallery/models/route.js",
+  "/[locale]/page": "app/[locale]/page.js",
+  "/[locale]/railings/page": "app/[locale]/railings/page.js",
+  "/[locale]/admin/leads/page": "app/[locale]/admin/leads/page.js",
+  "/[locale]/admin/gallery/page": "app/[locale]/admin/gallery/page.js",
+  "/[locale]/pergulas/page": "app/[locale]/pergulas/page.js"
 }

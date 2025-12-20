@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
     return new Response(JSON.stringify(error), { status: 400, headers: { 'Content-Type': 'application/json' } })
   }
   
-  return new Response(JSON.stringify({ data: data ?? [] }), { 
+  return new Response(JSON.stringify({ images: data ?? [] }), { 
     status: 200, 
     headers: { 'Content-Type': 'application/json' } 
   })

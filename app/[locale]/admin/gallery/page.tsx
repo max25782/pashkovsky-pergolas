@@ -1,8 +1,18 @@
 "use client"
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import type { Locale } from '@/lib/locales'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
+import { Trash2, RefreshCw, Eye } from 'lucide-react'
+
+interface GalleryImage {
+  id: string
+  url: string
+  filename: string
+  category_key: string
+  created_at: string
+}
 
 export default function GalleryAdminPage({ params: { locale } }: { params: { locale: Locale } }) {
   const t = useCRMTranslations()
@@ -19,6 +29,12 @@ export default function GalleryAdminPage({ params: { locale } }: { params: { loc
   const [projDesc, setProjDesc] = useState('')
   const [projImages, setProjImages] = useState('')
   const [creatingProject, setCreatingProject] = useState(false)
+  
+  // Gallery management state
+  const [images, setImages] = useState<GalleryImage[]>([])
+  const [loadingImages, setLoadingImages] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<'upload' | 'manage'>('upload')
 
   useEffect(() => {
     const storedToken = localStorage.getItem('admin_token')
@@ -47,9 +63,12 @@ export default function GalleryAdminPage({ params: { locale } }: { params: { loc
         })
         if (!res.ok) throw new Error('Failed to fetch categories')
         const data = await res.json()
+        console.log('📦 Categories loaded:', data.data)
         setCategories(data.data || [])
         if ((data.data || []).length > 0) {
-          setSelectedCategory(data.data[0].key)
+          const firstKey = data.data[0].key
+          console.log('🎯 Auto-selected category:', firstKey)
+          setSelectedCategory(firstKey)
         }
       } catch (e: any) {
         console.error(e)
@@ -58,6 +77,63 @@ export default function GalleryAdminPage({ params: { locale } }: { params: { loc
     }
     loadCategories()
   }, [token])
+
+  // Load images when category changes or after upload
+  useEffect(() => {
+    if (viewMode === 'manage' && selectedCategory && token) {
+      loadImages()
+    }
+  }, [selectedCategory, token, viewMode])
+
+  const loadImages = async () => {
+    if (!selectedCategory || !token) return
+    setLoadingImages(true)
+    setError(null)
+    try {
+      const res = await fetch(`/admin-api/gallery/images?category_key=${selectedCategory}`, {
+        headers: { 'x-admin-token': token }
+      })
+      if (!res.ok) throw new Error('Failed to fetch images')
+      const data = await res.json()
+      setImages(data.images || [])
+    } catch (e: any) {
+      console.error(e)
+      setError(e.message)
+    } finally {
+      setLoadingImages(false)
+    }
+  }
+
+  const handleDeleteImage = async (imageId: string, filename: string) => {
+    if (!confirm(`Delete "${filename}"?\n\nThis will remove the image from both S3 and database.`)) {
+      return
+    }
+    
+    setDeletingId(imageId)
+    setError(null)
+    setMessage(null)
+    
+    try {
+      const res = await fetch(`/admin-api/gallery/images?id=${imageId}`, {
+        method: 'DELETE',
+        headers: { 'x-admin-token': token || '' }
+      })
+      
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to delete image')
+      }
+      
+      setMessage(`נמחק: ${filename}`)
+      // Refresh the images list
+      await loadImages()
+    } catch (e: any) {
+      console.error(e)
+      setError(e.message)
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return
@@ -73,6 +149,9 @@ export default function GalleryAdminPage({ params: { locale } }: { params: { loc
       setError('בחר קבצים')
       return
     }
+    
+    console.log('🚀 Upload started:', { selectedCategory, filesCount: files.length })
+    
     setError(null)
     setMessage(null)
     setUploading(true)
@@ -81,20 +160,30 @@ export default function GalleryAdminPage({ params: { locale } }: { params: { loc
       const form = new FormData()
       form.append('category_key', selectedCategory)
       files.forEach(f => form.append('files', f))
+      
+      console.log('📤 Sending to API:', { category_key: selectedCategory })
+      
       const res = await fetch('/admin-api/gallery/upload', {
         method: 'POST',
         headers: { 'x-admin-token': token || '' },
         body: form,
       })
       const data = await res.json()
+      
+      console.log('📥 API Response:', data)
+      
       if (!res.ok) {
         throw new Error(data.error || 'Upload failed')
       }
       setUploaded(data.uploaded || 0)
       setMessage(`הועלו ${data.uploaded || 0} קבצים בהצלחה`)
       setFiles([])
+      // Refresh images if in manage mode
+      if (viewMode === 'manage') {
+        setTimeout(() => loadImages(), 1000)
+      }
     } catch (e: any) {
-      console.error(e)
+      console.error('❌ Upload error:', e)
       setError(e.message)
     } finally {
       setUploading(false)
@@ -206,7 +295,34 @@ export default function GalleryAdminPage({ params: { locale } }: { params: { loc
           </button>
         </div>
       </div>
-      <div className="bg-white/5 rounded-lg border border-white/10 p-6 space-y-4">
+
+      {/* View Mode Tabs */}
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => setViewMode('upload')}
+          className={`px-4 py-2 rounded font-semibold transition-colors ${
+            viewMode === 'upload' 
+              ? 'bg-blue-600 text-white' 
+              : 'bg-white/10 text-white/70 hover:bg-white/20'
+          }`}
+        >
+          📤 העלאת תמונות
+        </button>
+        <button
+          onClick={() => setViewMode('manage')}
+          className={`px-4 py-2 rounded font-semibold transition-colors ${
+            viewMode === 'manage' 
+              ? 'bg-red-600 text-white' 
+              : 'bg-white/10 text-white/70 hover:bg-white/20'
+          }`}
+        >
+          🗑️ ניהול תמונות
+        </button>
+      </div>
+
+      {/* Upload Section */}
+      {viewMode === 'upload' && (
+        <div className="bg-white/5 rounded-lg border border-white/10 p-6 space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <label className="text-sm text-white/70">קטגוריה</label>
@@ -297,7 +413,135 @@ export default function GalleryAdminPage({ params: { locale } }: { params: { loc
           </div>
           <p className="text-xs text-white/50 mt-2">הפרויקט נשמר בטבלה pergola_projects ונשלף אוטומטית ל-Our Projects.</p>
         </div>
-      </div>
+        </div>
+      )}
+
+      {/* Manage Images Section */}
+      {viewMode === 'manage' && (
+        <div className="bg-white/5 rounded-lg border border-white/10 p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold">ניהול תמונות</h2>
+              <p className="text-sm text-white/60">צפה ומחק תמונות לפי קטגוריה</p>
+            </div>
+            <button
+              onClick={loadImages}
+              disabled={loadingImages}
+              className="flex items-center gap-2 px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${loadingImages ? 'animate-spin' : ''}`} />
+              רענן
+            </button>
+          </div>
+
+          {/* Category Selector */}
+          <div className="space-y-2">
+            <label className="text-sm text-white/70">בחר קטגוריה</label>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="w-full max-w-md bg-black/30 border border-white/20 rounded px-3 py-2 text-white"
+            >
+              {categories.map((c: any) => (
+                <option key={c.id} value={c.key}>
+                  {c.name_he || c.key} ({c.image_count || 0} תמונות)
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Messages */}
+          {message && (
+            <div className="bg-green-500/20 border border-green-500/50 rounded p-3 text-green-300">
+              {message}
+            </div>
+          )}
+          {error && (
+            <div className="bg-red-500/20 border border-red-500/50 rounded p-3 text-red-300">
+              {error}
+            </div>
+          )}
+
+          {/* Loading State */}
+          {loadingImages && (
+            <div className="text-center py-8 text-white/60">
+              <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2" />
+              <p>טוען תמונות...</p>
+            </div>
+          )}
+
+          {/* Images Grid */}
+          {!loadingImages && images.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-white/70">
+                  {images.length} תמונות בקטגוריה <span className="font-bold">{selectedCategory}</span>
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {images.map((img) => (
+                  <div
+                    key={img.id}
+                    className="group relative bg-black/30 rounded-lg border border-white/10 overflow-hidden hover:border-white/30 transition-all"
+                  >
+                    {/* Image */}
+                    <div className="aspect-square relative">
+                      <Image
+                        src={img.url}
+                        alt={img.filename}
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
+                      {/* Overlay on Hover */}
+                      <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        <a
+                          href={img.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2 bg-blue-600 hover:bg-blue-700 rounded-full"
+                          title="צפה בתמונה"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </a>
+                        <button
+                          onClick={() => handleDeleteImage(img.id, img.filename)}
+                          disabled={deletingId === img.id}
+                          className="p-2 bg-red-600 hover:bg-red-700 rounded-full disabled:opacity-50"
+                          title="מחק תמונה"
+                        >
+                          {deletingId === img.id ? (
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                    {/* Filename */}
+                    <div className="p-2 text-xs text-white/70 truncate" title={img.filename}>
+                      {img.filename}
+                    </div>
+                    {/* Date */}
+                    <div className="px-2 pb-2 text-xs text-white/50">
+                      {new Date(img.created_at).toLocaleDateString('he-IL')}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Empty State */}
+          {!loadingImages && images.length === 0 && (
+            <div className="text-center py-12 text-white/60">
+              <p className="text-lg mb-2">אין תמונות בקטגוריה זו</p>
+              <p className="text-sm">העלה תמונות דרך הכרטיסייה "העלאת תמונות"</p>
+            </div>
+          )}
+        </div>
+      )}
     </main>
   )
 }

@@ -147,3 +147,4 @@ npm run dev
 **Дата исправления:** 19.12.2025  
 **Commit:** `21c0ea3 - fix: disable API cache and sort images by date`
 
+

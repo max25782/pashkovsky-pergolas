@@ -119,3 +119,4 @@ console.log('   - If database shows records but S3 is empty: DB insert succeeded
 console.log('   - If both are empty: check browser console for errors during upload')
 console.log()
 
+

@@ -124,3 +124,4 @@ curl "http://localhost:3000/api/gallery/images?category_key=fancy&limit=3"
 - ✅ **קטגוריות פעילות:** 6 (rails, mestor, windows, fromShetah, fancy, dgamim)
 - 📊 **סה"כ תמונות ב-S3:** 773
 
+

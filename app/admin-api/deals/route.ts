@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getCompanyId } from '@/lib/middleware/company-context'
 
 function env(name: string): string {
   const v = process.env[name]
@@ -25,6 +26,10 @@ export async function GET(req: NextRequest) {
   if (!auth(req)) return new Response('Unauthorized', { status: 401 })
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
   
+  // Multi-tenant: Get company_id from request
+  const companyId = getCompanyId(req)
+  if (!companyId) return new Response('Unauthorized: No company context', { status: 401 })
+  
   const { searchParams } = new URL(req.url)
   const q = searchParams.get('q')?.trim() || ''
   const stage = searchParams.get('stage')?.trim() || ''
@@ -37,6 +42,7 @@ export async function GET(req: NextRequest) {
   let query = supabase
     .from('deals')
     .select('*', { count: 'exact' })
+    .eq('company_id', companyId) // Multi-tenant filter
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1)
   
@@ -82,6 +88,10 @@ export async function POST(req: NextRequest) {
   if (!auth(req)) return new Response('Unauthorized', { status: 401 })
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
   
+  // Multi-tenant: Get company_id from request
+  const companyId = getCompanyId(req)
+  if (!companyId) return new Response('Unauthorized: No company context', { status: 401 })
+  
   let body: any
   try {
     body = await req.json()
@@ -125,9 +135,15 @@ export async function POST(req: NextRequest) {
   if (!dealData.deal_status) dealData.deal_status = 'in_progress'
   if (!dealData.currency) dealData.currency = 'ILS'
   
+  // Add company_id to deal data
+  const dealDataWithCompany = {
+    ...dealData,
+    company_id: companyId
+  }
+  
   const { data, error } = await supabase
     .from('deals')
-    .insert(dealData)
+    .insert(dealDataWithCompany)
     .select()
     .single()
   
@@ -149,6 +165,10 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   if (!auth(req)) return new Response('Unauthorized', { status: 401 })
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
+  
+  // Multi-tenant: Get company_id from request
+  const companyId = getCompanyId(req)
+  if (!companyId) return new Response('Unauthorized: No company context', { status: 401 })
   
   let body: any
   try {
@@ -212,6 +232,7 @@ export async function PATCH(req: NextRequest) {
     .from('deals')
     .update(updates)
     .eq('id', id)
+    .eq('company_id', companyId) // Multi-tenant: ensure same company
     .select()
     .single()
   
@@ -257,6 +278,10 @@ export async function DELETE(req: NextRequest) {
   if (!auth(req)) return new Response('Unauthorized', { status: 401 })
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
   
+  // Multi-tenant: Get company_id from request
+  const companyId = getCompanyId(req)
+  if (!companyId) return new Response('Unauthorized: No company context', { status: 401 })
+  
   const { searchParams } = new URL(req.url)
   const id = searchParams.get('id')
   
@@ -268,6 +293,7 @@ export async function DELETE(req: NextRequest) {
     .from('deals')
     .delete()
     .eq('id', id)
+    .eq('company_id', companyId) // Multi-tenant: ensure same company
   
   if (error) {
     console.error('DELETE: Supabase error', error)

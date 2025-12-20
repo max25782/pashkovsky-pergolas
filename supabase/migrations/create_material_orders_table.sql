@@ -92,3 +92,4 @@ CREATE POLICY "Authenticated users can update material_orders"
 -- Comment
 COMMENT ON TABLE public.material_orders IS 'Material orders (חומר הוזמן) - tracks when materials are ordered for deals';
 
+
