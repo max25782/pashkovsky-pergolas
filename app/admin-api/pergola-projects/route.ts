@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { requireAuth } from '@/lib/middleware/auth'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -8,15 +9,11 @@ const supabase = SUPABASE_URL && SERVICE_KEY
   ? createClient(SUPABASE_URL, SERVICE_KEY, { db: { schema: 'public' } })
   : undefined
 
-function auth(req: NextRequest) {
-  const token = req.headers.get('x-admin-token') || req.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
-  const expected = process.env.ADMIN_TOKEN
-  return !!expected && token === expected
-}
-
 // GET (admin) - list all projects
 export async function GET(req: NextRequest) {
-  if (!auth(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const authCheck = requireAuth(req)
+  if (!authCheck.authorized) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  
   if (!supabase) return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
 
   const { data, error } = await supabase
@@ -34,7 +31,9 @@ export async function GET(req: NextRequest) {
 
 // POST (admin) - create project
 export async function POST(req: NextRequest) {
-  if (!auth(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const authCheck = requireAuth(req)
+  if (!authCheck.authorized) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  
   if (!supabase) return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
 
   try {
@@ -83,7 +82,9 @@ export async function POST(req: NextRequest) {
 
 // DELETE (admin) - delete by id
 export async function DELETE(req: NextRequest) {
-  if (!auth(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const authCheck = requireAuth(req)
+  if (!authCheck.authorized) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  
   if (!supabase) return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
 
   const { searchParams } = new URL(req.url)

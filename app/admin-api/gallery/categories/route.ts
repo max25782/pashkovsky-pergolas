@@ -1,16 +1,11 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { requireAuth } from '@/lib/middleware/auth'
 
 function env(name: string): string {
   const v = process.env[name]
   if (!v) throw new Error(`Missing env ${name}`)
   return v
-}
-
-function auth(req: NextRequest) {
-  const token = req.headers.get('x-admin-token') || req.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
-  const expected = process.env.ADMIN_TOKEN
-  return !!expected && token === expected
 }
 
 const SUPABASE_URL = process.env.SUPABASE_URL
@@ -22,7 +17,8 @@ const supabase = SUPABASE_URL && SERVICE_KEY
 
 // GET - List all categories
 export async function GET(req: NextRequest) {
-  if (!auth(req)) return new Response('Unauthorized', { status: 401 })
+  const authCheck = requireAuth(req)
+  if (!authCheck.authorized) return authCheck.error
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
   
   const { data, error } = await supabase
@@ -43,7 +39,8 @@ export async function GET(req: NextRequest) {
 
 // POST - Create a new category
 export async function POST(req: NextRequest) {
-  if (!auth(req)) return new Response('Unauthorized', { status: 401 })
+  const authCheck = requireAuth(req)
+  if (!authCheck.authorized) return authCheck.error
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
   
   let body: any
@@ -90,7 +87,8 @@ export async function POST(req: NextRequest) {
 
 // PATCH - Update a category
 export async function PATCH(req: NextRequest) {
-  if (!auth(req)) return new Response('Unauthorized', { status: 401 })
+  const authCheck = requireAuth(req)
+  if (!authCheck.authorized) return authCheck.error
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
   
   let body: any
@@ -134,7 +132,8 @@ export async function PATCH(req: NextRequest) {
 
 // DELETE - Delete a category
 export async function DELETE(req: NextRequest) {
-  if (!auth(req)) return new Response('Unauthorized', { status: 401 })
+  const authCheck = requireAuth(req)
+  if (!authCheck.authorized) return authCheck.error
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
   
   const { searchParams } = new URL(req.url)

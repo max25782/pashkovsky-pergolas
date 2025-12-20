@@ -2,17 +2,12 @@ import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import sharp from 'sharp'
 import { uploadToS3, isS3Configured } from '@/lib/s3-upload'
+import { requireAuth } from '@/lib/middleware/auth'
 
 function env(name: string): string {
   const v = process.env[name]
   if (!v) throw new Error(`Missing env ${name}`)
   return v
-}
-
-function auth(req: NextRequest) {
-  const token = req.headers.get('x-admin-token') || req.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
-  const expected = process.env.ADMIN_TOKEN
-  return !!expected && token === expected
 }
 
 const SUPABASE_URL = process.env.SUPABASE_URL
@@ -29,7 +24,8 @@ const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'
 export async function POST(req: NextRequest) {
   console.log('POST /admin-api/gallery/upload called')
   
-  if (!auth(req)) {
+  const authCheck = requireAuth(req)
+  if (!authCheck.authorized) {
     console.error('Unauthorized request')
     return new Response('Unauthorized', { status: 401 })
   }

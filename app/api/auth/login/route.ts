@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { verifyPassword } from '@/lib/auth/password'
+import { signToken } from '@/lib/auth/jwt'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 const supabase = SUPABASE_URL && SERVICE_KEY
@@ -11,10 +12,10 @@ const supabase = SUPABASE_URL && SERVICE_KEY
 
 /**
  * POST /api/auth/login
- * Login user and return user data with company info
+ * Login user and return JWT token with company info
  */
 export async function POST(req: NextRequest) {
-  if (!supabase || !SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  if (!supabase || !SUPABASE_URL) {
     return NextResponse.json(
       { error: 'Server configuration error' },
       { status: 500 }
@@ -33,42 +34,28 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Step 1: Authenticate with Supabase Auth
-    const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-    const { data: authData, error: authError } = await authClient.auth.signInWithPassword({
-      email,
-      password,
-    })
+    // Step 1: Get user by email
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .single()
 
-    if (authError) {
-      console.error('[Login] Auth error:', authError)
+    if (userError || !user) {
+      console.error('[Login] User not found:', email)
       return NextResponse.json(
         { error: 'Invalid email or password' },
         { status: 401 }
       )
     }
 
-    if (!authData.user) {
+    // Step 2: Verify password
+    const isPasswordValid = await verifyPassword(password, user.password_hash)
+    if (!isPasswordValid) {
+      console.error('[Login] Invalid password for:', email)
       return NextResponse.json(
-        { error: 'Authentication failed' },
+        { error: 'Invalid email or password' },
         { status: 401 }
-      )
-    }
-
-    const userId = authData.user.id
-
-    // Step 2: Get user data from public.users
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single()
-
-    if (userError || !user) {
-      console.error('[Login] User fetch error:', userError)
-      return NextResponse.json(
-        { error: 'User data not found' },
-        { status: 500 }
       )
     }
 
@@ -79,8 +66,7 @@ export async function POST(req: NextRequest) {
         *,
         company:companies(*)
       `)
-      .eq('user_id', userId)
-      .eq('status', 'active')
+      .eq('user_id', user.id)
 
     if (memberError) {
       console.error('[Login] Membership fetch error:', memberError)
@@ -92,39 +78,52 @@ export async function POST(req: NextRequest) {
 
     if (!memberships || memberships.length === 0) {
       return NextResponse.json(
-        { error: 'No active company membership found' },
+        { error: 'No company membership found. Please contact support.' },
         { status: 403 }
       )
     }
 
-    // Step 4: Update last_seen_at
+    // Get the default company (first one or owner role)
+    const defaultMembership = memberships.find(m => m.role === 'owner') || memberships[0]
+
+    // Step 4: Generate JWT token
+    const token = signToken({
+      userId: user.id,
+      email: user.email,
+      companyId: defaultMembership.company_id,
+      role: defaultMembership.role,
+    })
+
+    // Step 5: Update last_login_at
     await supabase
       .from('users')
-      .update({ last_seen_at: new Date().toISOString() })
-      .eq('id', userId)
+      .update({ last_login_at: new Date().toISOString() })
+      .eq('id', user.id)
 
-    // Return user data with companies
+    // Return user data with JWT token
     return NextResponse.json({
       success: true,
+      token,
       user: {
         id: user.id,
         email: user.email,
         full_name: user.full_name,
         avatar_url: user.avatar_url,
-        locale: user.locale,
-      },
-      session: {
-        access_token: authData.session?.access_token,
-        refresh_token: authData.session?.refresh_token,
-        expires_at: authData.session?.expires_at,
       },
       companies: memberships.map(m => ({
-        membership_id: m.id,
+        id: m.company.id,
+        name: m.company.name,
+        slug: m.company.slug,
         role: m.role,
-        joined_at: m.joined_at,
-        company: m.company,
+        status: m.company.status,
+        plan: m.company.plan,
       })),
-      default_company: memberships[0].company, // First company as default
+      default_company: {
+        id: defaultMembership.company.id,
+        name: defaultMembership.company.name,
+        slug: defaultMembership.company.slug,
+        role: defaultMembership.role,
+      },
     }, { status: 200 })
 
   } catch (error: any) {

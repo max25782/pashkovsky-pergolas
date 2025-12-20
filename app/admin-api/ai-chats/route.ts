@@ -1,11 +1,6 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-
-function auth(req: NextRequest) {
-  const token = req.headers.get('x-admin-token') || req.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
-  const expected = process.env.ADMIN_TOKEN
-  return !!expected && token === expected
-}
+import { requireAuth } from '@/lib/middleware/auth'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -16,7 +11,9 @@ const supabase = SUPABASE_URL && SERVICE_KEY
 
 // GET - List all AI chat sessions with messages
 export async function GET(req: NextRequest) {
-  if (!auth(req)) return new Response('Unauthorized', { status: 401 })
+  const authCheck = requireAuth(req)
+  if (!authCheck.authorized) return authCheck.error
+  
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
   
   const { searchParams } = new URL(req.url)
@@ -104,7 +101,9 @@ export async function GET(req: NextRequest) {
 
 // DELETE - Delete a session and its messages
 export async function DELETE(req: NextRequest) {
-  if (!auth(req)) return new Response('Unauthorized', { status: 401 })
+  const authCheck = requireAuth(req)
+  if (!authCheck.authorized) return authCheck.error
+  
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
   
   const { searchParams } = new URL(req.url)
