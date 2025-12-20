@@ -182,3 +182,4 @@ SELECT * FROM gallery_categories WHERE key = 'rails';
 Если категории нет, создайте её через миграцию или админку.
 
 
+

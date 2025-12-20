@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getCompanyId } from '@/lib/middleware/company-context'
 import { requireAuth } from '@/lib/middleware/auth'
+import { logDealEvent } from '@/lib/audit/logger'
 
 function env(name: string): string {
   const v = process.env[name]
@@ -150,11 +151,15 @@ export async function POST(req: NextRequest) {
   
   if (error) {
     console.error('POST: Supabase error', error)
+    await logDealEvent(req, 'create', undefined, dealData, 'error')
     return new Response(JSON.stringify({ error: error.message, code: error.code, details: error }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' }
     })
   }
+  
+  // Log successful creation
+  await logDealEvent(req, 'create', data.id, dealData, 'success')
   
   return new Response(JSON.stringify(data), {
     status: 201,
@@ -242,6 +247,7 @@ export async function PATCH(req: NextRequest) {
   
   if (error) {
     console.error('PATCH: Supabase error', error)
+    await logDealEvent(req, 'update', id, updates, 'error')
     return new Response(JSON.stringify({ error: error.message, code: error.code, details: error }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' }
@@ -271,6 +277,10 @@ export async function PATCH(req: NextRequest) {
   }
   
   console.log('PATCH: Success, returning data:', data)
+  
+  // Log successful update
+  await logDealEvent(req, 'update', data.id, updates, 'success')
+  
   return new Response(JSON.stringify(data), {
     status: 200,
     headers: { 'Content-Type': 'application/json' }
@@ -304,8 +314,12 @@ export async function DELETE(req: NextRequest) {
   
   if (error) {
     console.error('DELETE: Supabase error', error)
+    await logDealEvent(req, 'delete', id, undefined, 'error')
     return new Response(JSON.stringify(error), { status: 400, headers: { 'Content-Type': 'application/json' } })
   }
+  
+  // Log successful deletion
+  await logDealEvent(req, 'delete', id, undefined, 'success')
   
   return new Response('OK', { status: 200 })
 }

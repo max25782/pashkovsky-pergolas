@@ -53,3 +53,4 @@ BEGIN
   RAISE NOTICE '✅ Companies table created successfully';
 END $$;
 
+

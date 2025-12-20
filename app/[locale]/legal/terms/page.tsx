@@ -162,3 +162,4 @@ export default function TermsPage({ params }: { params: { locale: Locale } }) {
   )
 }
 
+

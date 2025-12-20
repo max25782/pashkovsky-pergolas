@@ -7,6 +7,8 @@ import { X } from 'lucide-react'
 import type { OfferDraft, Offer } from '@/types/offer'
 import { DEFAULT_OFFER_VALUES } from '@/types/offer'
 import { calculateOffer, formatPrice } from '@/lib/offer-calculator'
+import { PergolaShapeSelector } from './PergolaShapeSelector'
+import { calculatePergolaArea } from '@/lib/calculations/pergola-area'
 
 interface CreateOfferModalProps {
   dealId: string
@@ -75,6 +77,10 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
 
   const updatePergola = useCallback((updates: Partial<typeof draft.pergola>) => {
     setDraft(prev => ({ ...prev, pergola: { ...prev.pergola, ...updates } }))
+  }, [])
+
+  const updatePergolaShape = useCallback((shape: typeof draft.pergola.shape) => {
+    setDraft(prev => ({ ...prev, pergola: { ...prev.pergola, shape } }))
   }, [])
 
   const updateColor = useCallback((updates: Partial<typeof draft.color>) => {
@@ -148,15 +154,17 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
           {/* Pergola Dimensions & Price */}
           <div className="bg-white/5 rounded-lg p-4 border border-white/10">
             <h3 className="text-lg font-semibold mb-3">פרגולה</h3>
+            
+            {/* Shape Selector */}
+            <div className="mb-4">
+              <PergolaShapeSelector
+                value={draft.pergola.shape}
+                onChange={updatePergolaShape}
+              />
+            </div>
+
+            {/* Height, Location, Price */}
             <div className="grid grid-cols-4 gap-4 mb-4">
-              <div>
-                <label className="block text-sm text-white/80 mb-1">רוחב (מ׳)</label>
-                <input type="number" step="0.1" min="0" value={draft.pergola.width} onChange={(e) => updatePergola({ width: parseFloat(e.target.value) || 0 })} className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400" />
-              </div>
-              <div>
-                <label className="block text-sm text-white/80 mb-1">אורך (מ׳)</label>
-                <input type="number" step="0.1" min="0" value={draft.pergola.length} onChange={(e) => updatePergola({ length: parseFloat(e.target.value) || 0 })} className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400" />
-              </div>
               <div>
                 <label className="block text-sm text-white/80 mb-1">גובה (אופציונלי)</label>
                 <input type="number" step="0.1" min="0" value={draft.pergola.height || ''} onChange={(e) => updatePergola({ height: e.target.value ? parseFloat(e.target.value) : undefined })} className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400" placeholder="לא חובה" />
@@ -165,15 +173,13 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
                 <label className="block text-sm text-white/80 mb-1">מקום בבית</label>
                 <input type="text" value={draft.pergola.location || ''} onChange={(e) => updatePergola({ location: e.target.value || undefined })} className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400" placeholder="גינה..." />
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm text-white/80 mb-1">מחיר למ״ר (₪)</label>
                 <input type="number" step="10" min="0" value={draft.pergola.pricePerSqm} onChange={(e) => updatePergola({ pricePerSqm: parseFloat(e.target.value) || 750 })} className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400" />
               </div>
               <div className="flex items-end">
-                <div className="text-sm">
-                  <div className="text-white/60">שטח: <span className="font-bold text-blue-400">{calculation.area} מ״ר</span></div>
+                <div className="text-sm w-full">
+                  <div className="text-white/60">שטח מחושב: <span className="font-bold text-blue-400">{calculation.area.toFixed(2)} מ״ר</span></div>
                   <div className="text-white/60">סה״כ פרגולה: <span className="font-bold text-green-400">{formatPrice(calculation.pergolaTotal)}</span></div>
                 </div>
               </div>

@@ -169,3 +169,4 @@ export default function PrivacyPage({ params }: { params: { locale: Locale } }) 
   )
 }
 
+

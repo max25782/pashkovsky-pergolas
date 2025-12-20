@@ -85,3 +85,4 @@ console.log('   - Public Access Block should be disabled OR allow GetObject')
 console.log('   - CORS configuration should allow your domain')
 
 
+

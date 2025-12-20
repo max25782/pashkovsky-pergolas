@@ -131,3 +131,4 @@ COMMENT ON TABLE public.offers IS 'Complete offers (הצעות מחיר) structu
 
 
 
+

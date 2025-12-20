@@ -150,3 +150,4 @@ COMMENT ON TABLE public.offers IS 'Complete offers (הצעות מחיר) with pe
 
 
 
+

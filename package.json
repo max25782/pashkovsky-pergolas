@@ -47,6 +47,7 @@
     "dotenv": "^17.2.3",
     "fabric": "^4.6.0",
     "framer-motion": "^12.23.24",
+    "google-auth-library": "^10.5.0",
     "heic-convert": "^2.1.0",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^0.544.0",

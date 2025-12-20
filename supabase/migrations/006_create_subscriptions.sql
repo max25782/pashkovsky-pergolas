@@ -160,3 +160,4 @@ BEGIN
   RAISE NOTICE '✅ Automatic logging enabled for subscription changes';
 END $$;
 
+

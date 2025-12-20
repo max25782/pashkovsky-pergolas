@@ -12,3 +12,4 @@ ADD COLUMN IF NOT EXISTS laundry_lighting BOOLEAN;
 CREATE INDEX IF NOT EXISTS idx_deals_laundry_closet ON public.deals(project_type) WHERE project_type = 'laundry_closet';
 
 
+

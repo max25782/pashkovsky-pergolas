@@ -1,8 +1,9 @@
 import type { OfferDraft, OfferCalculation } from '@/types/offer'
+import { calculatePergolaArea } from '@/lib/calculations/pergola-area'
 
 export function calculateOffer(draft: OfferDraft): OfferCalculation {
-  // 1. Calculate area
-  const area = draft.pergola.width * draft.pergola.length
+  // 1. Calculate area from shape
+  const area = calculatePergolaArea(draft.pergola.shape)
   
   // 2. Calculate pergola price
   const pergolaTotal = area * draft.pergola.pricePerSqm

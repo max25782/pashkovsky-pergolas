@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { DEFAULT_OFFER_VALUES } from '@/types/offer'
+import { DEFAULT_OFFER_VALUES, PergolaShape } from '@/types/offer'
+import { calculatePergolaArea, validatePergolaShape } from '@/lib/calculations/pergola-area'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -51,12 +52,27 @@ export async function POST(req: NextRequest) {
       finalPrice,
     } = body
 
-    if (!dealId || !customerName || !pergola || pergola.width <= 0 || pergola.length <= 0) {
+    if (!dealId || !customerName || !pergola || !pergola.shape) {
       return NextResponse.json(
-        { error: 'Invalid offer data' },
+        { error: 'Invalid offer data: pergola shape is required' },
         { status: 400 }
       )
     }
+
+    // Validate pergola shape
+    const shapeValidation = validatePergolaShape(pergola.shape)
+    if (!shapeValidation.valid) {
+      return NextResponse.json(
+        { error: `Invalid pergola shape: ${shapeValidation.error}` },
+        { status: 400 }
+      )
+    }
+
+    // Calculate area from shape
+    const calculatedArea = calculatePergolaArea(pergola.shape)
+    
+    // Use provided area or calculated area
+    const finalArea = area || calculatedArea
 
     // Insert offer into database
     const { data, error } = await supabase
@@ -67,12 +83,16 @@ export async function POST(req: NextRequest) {
         customer_phone: body.customerPhone || null,
         customer_city: body.customerCity || null,
         
-        // Pergola
-        pergola_width: pergola.width,
-        pergola_length: pergola.length,
+        // Pergola - new shape-based structure
+        pergola_shape_type: pergola.shape.type,
+        pergola_shape_data: pergola.shape as any, // JSONB will store the shape object
         pergola_height: pergola.height || null,
         pergola_location: pergola.location || null,
         pergola_price_per_sqm: pergola.pricePerSqm,
+        
+        // Legacy fields for backward compatibility (extract from shape if rectangle)
+        pergola_width: pergola.shape.type === 'rectangle' ? pergola.shape.width : null,
+        pergola_length: pergola.shape.type === 'rectangle' ? pergola.shape.length : null,
         
         // Color
         color_type: color.type,
@@ -118,7 +138,7 @@ export async function POST(req: NextRequest) {
         options_notes: options.notes || null,
         
         // Calculated values
-        area,
+        area: finalArea,
         pergola_total: pergolaTotal,
         santaf_total: santafTotal,
         zip_screen_total: zipScreenTotal,
@@ -225,11 +245,21 @@ function transformOfferFromDB(data: any) {
     customerCity: data.customer_city,
     
     pergola: {
-      width: data.pergola_width,
-      length: data.pergola_length,
+      // New shape-based structure
+      shape: data.pergola_shape_data 
+        ? (data.pergola_shape_data as PergolaShape)
+        : {
+            // Fallback to legacy format if shape_data is missing
+            type: 'rectangle' as const,
+            width: data.pergola_width || 0,
+            length: data.pergola_length || 0,
+          },
       height: data.pergola_height,
       location: data.pergola_location,
       pricePerSqm: data.pergola_price_per_sqm,
+      // Legacy fields for backward compatibility
+      width: data.pergola_width,
+      length: data.pergola_length,
     },
     
     color: {

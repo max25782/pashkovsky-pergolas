@@ -1,11 +1,51 @@
 // Offer Types - Updated Structure for הצעת מחיר
 
-export interface Pergola {
+// Pergola Shape Types
+export type PergolaShapeType = 'rectangle' | 'L' | 'X' | 'U'
+
+export interface RectangleShape {
+  type: 'rectangle'
   width: number
   length: number
+}
+
+export interface LShape {
+  type: 'L'
+  leg1: { width: number; length: number }
+  leg2: { width: number; length: number }
+  overlap?: { width: number; length: number } // Опционально, для точности расчета пересечения
+}
+
+export interface XShape {
+  type: 'X'
+  center: { width: number; length: number }
+  arms: Array<{
+    direction: 'north' | 'south' | 'east' | 'west'
+    width: number
+    length: number
+  }>
+}
+
+export interface UShape {
+  type: 'U'
+  base: { width: number; length: number }
+  leftLeg: { width: number; length: number }
+  rightLeg: { width: number; length: number }
+}
+
+export type PergolaShape = RectangleShape | LShape | XShape | UShape
+
+export interface Pergola {
+  shape: PergolaShape // Новая структура с поддержкой сложных форм
   height?: number
   location?: string // מקום בבית
   pricePerSqm: number // Editable, default 750
+  
+  // Legacy fields для обратной совместимости (deprecated)
+  /** @deprecated Use shape instead */
+  width?: number
+  /** @deprecated Use shape instead */
+  length?: number
 }
 
 export interface Color {
@@ -155,8 +195,11 @@ export interface Offer extends OfferDraft, OfferCalculation {
 
 export const DEFAULT_OFFER_VALUES = {
   pergola: {
-    width: 4,
-    length: 6,
+    shape: {
+      type: 'rectangle' as const,
+      width: 4,
+      length: 6,
+    },
     height: undefined,
     location: undefined,
     pricePerSqm: 750, // Default price

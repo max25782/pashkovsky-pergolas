@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { hashPassword, validatePasswordStrength } from '@/lib/auth/password'
 import { signToken } from '@/lib/auth/jwt'
+import { generateToken, hashToken, getExpirationTime } from '@/lib/auth/tokens'
+import { sendEmail } from '@/lib/email'
+import { rateLimiters } from '@/lib/middleware/rate-limit'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -24,6 +27,23 @@ function generateSlug(name: string): string {
  * Register a new company with owner user
  */
 export async function POST(req: NextRequest) {
+  // Rate limiting
+  const rateLimitResult = rateLimiters.auth.register(req as any)
+  if (!rateLimitResult.allowed) {
+    return NextResponse.json(
+      { 
+        error: 'Too many registration attempts. Please try again later.',
+        retryAfter: rateLimitResult.retryAfter 
+      },
+      { 
+        status: 429,
+        headers: {
+          'Retry-After': String(rateLimitResult.retryAfter || 3600),
+        }
+      }
+    )
+  }
+
   if (!supabase || !SUPABASE_URL) {
     return NextResponse.json(
       { error: 'Server configuration error' },
@@ -78,14 +98,14 @@ export async function POST(req: NextRequest) {
     // Hash password
     const passwordHash = await hashPassword(password)
 
-    // Step 1: Create user record
+    // Step 1: Create user record (email not verified yet)
     const { data: user, error: userError } = await supabase
       .from('users')
       .insert({
         email,
         password_hash: passwordHash,
         full_name,
-        email_verified_at: new Date().toISOString(), // Auto-verify for now
+        // email_verified_at will be set after email verification
       })
       .select()
       .single()
@@ -165,7 +185,41 @@ export async function POST(req: NextRequest) {
         })
     }
 
-    // Step 5: Generate JWT token
+    // Step 5: Create email verification token
+    const verificationToken = generateToken()
+    const verificationTokenHash = hashToken(verificationToken)
+    const expiresAt = getExpirationTime(24) // 24 hours
+
+    await supabase
+      .from('email_verification_tokens')
+      .insert({
+        user_id: user.id,
+        token: verificationTokenHash,
+        expires_at: expiresAt,
+      })
+
+    // Step 6: Send verification email (don't fail if email fails)
+    const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const verificationUrl = `${APP_URL}/auth/verify-email?token=${verificationToken}&email=${encodeURIComponent(email)}`
+
+    try {
+      await sendEmail({
+        to: email,
+        subject: 'Подтвердите ваш email',
+        html: `
+          <h2>Добро пожаловать!</h2>
+          <p>Спасибо за регистрацию. Пожалуйста, подтвердите ваш email, нажав на ссылку ниже:</p>
+          <p><a href="${verificationUrl}">${verificationUrl}</a></p>
+          <p>Ссылка действительна в течение 24 часов.</p>
+        `,
+        text: `Подтвердите ваш email: ${verificationUrl}`,
+      })
+    } catch (emailError) {
+      console.error('[Register] Email sending error:', emailError)
+      // Continue anyway - user can request verification email later
+    }
+
+    // Step 7: Generate JWT token
     const token = signToken({
       userId: user.id,
       email: user.email,
@@ -176,7 +230,7 @@ export async function POST(req: NextRequest) {
     // Success!
     return NextResponse.json({
       success: true,
-      message: 'Registration successful!',
+      message: 'Registration successful! Please check your email to verify your account.',
       token,
       user: {
         id: user.id,

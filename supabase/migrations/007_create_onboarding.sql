@@ -85,3 +85,4 @@ BEGIN
   RAISE NOTICE '✅ Default tasks: welcome, company_info, create_first_deal, invite_team, configure_settings, explore_features';
 END $$;
 
+

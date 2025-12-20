@@ -133,3 +133,4 @@ BEGIN
   RAISE NOTICE '✅ Default plans: Trial, Basic, Pro, Enterprise';
 END $$;
 
+

@@ -152,3 +152,4 @@ NEXT_PUBLIC_AWS_S3_REGION=eu-north-1
 **זה אמור לפתור את הבעיה בפרודקשן!** ✅
 
 
+
