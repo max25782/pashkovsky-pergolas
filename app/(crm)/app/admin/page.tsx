@@ -54,7 +54,7 @@ export default function AdminPage() {
     setToken(null)
     setInput('')
     setIsJWT(false)
-    router.push(`/${params.locale}/auth/login`)
+    router.push(`//login`)
   }
 
   if (!token) {
@@ -111,7 +111,7 @@ export default function AdminPage() {
       id: 'deals',
       title: t.nav.deals,
       description: 'ניהול עסקאות ופרויקטים',
-      href: `/${params.locale}/admin/deals`,
+      href: `/app/admin/deals`,
       icon: Briefcase,
       color: 'bg-green-600 hover:bg-green-700',
     },
@@ -119,7 +119,7 @@ export default function AdminPage() {
       id: 'statistic',
       title: t.nav.statistic,
       description: 'סטטיסטיקה וניתוח נתונים',
-      href: `/${params.locale}/admin/statistics`,
+      href: `/app/admin/statistics`,
       icon: BarChart3,
       color: 'bg-emerald-600 hover:bg-emerald-700',
     },
@@ -127,7 +127,7 @@ export default function AdminPage() {
       id: 'leads',
       title: t.nav.leads,
       description: 'ניהול לידים ופניות',
-      href: `/${params.locale}/admin/leads`,
+      href: `/app/admin/leads`,
       icon: TrendingUp,
       color: 'bg-blue-600 hover:bg-blue-700',
     },
@@ -135,7 +135,7 @@ export default function AdminPage() {
       id: 'gallery',
       title: t.nav.gallery,
       description: 'ניהול גלריה ותמונות',
-      href: `/${params.locale}/admin/gallery`,
+      href: `/app/admin/gallery`,
       icon: ImageIcon,
       color: 'bg-purple-600 hover:bg-purple-700',
     },
@@ -143,7 +143,7 @@ export default function AdminPage() {
       id: 'ai-chats',
       title: t.nav.aiChats,
       description: 'ניהול צ\'אטים AI',
-      href: `/${params.locale}/admin/ai-chats`,
+      href: `/app/admin/ai-chats`,
       icon: MessageSquare,
       color: 'bg-cyan-600 hover:bg-cyan-700',
     },
@@ -151,7 +151,7 @@ export default function AdminPage() {
       id: 'articles',
       title: t.nav.articles,
       description: 'ניהול מאמרים',
-      href: `/${params.locale}/admin/articles`,
+      href: `/app/admin/articles`,
       icon: FileText,
       color: 'bg-indigo-600 hover:bg-indigo-700',
     },
@@ -159,7 +159,7 @@ export default function AdminPage() {
       id: 'workers',
       title: t.nav.workers,
       description: 'ניהול עובדים ומשמרות',
-      href: `/${params.locale}/admin/workers`,
+      href: `/app/admin/workers`,
       icon: UserCog,
       color: 'bg-yellow-600 hover:bg-yellow-700',
     },
