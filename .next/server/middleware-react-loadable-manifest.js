@@ -1,1 +1,1 @@
-self.__REACT_LOADABLE_MANIFEST="{}"
+self.__REACT_LOADABLE_MANIFEST="{\"components\\\\admin\\\\SketchModal.tsx -> fabric\":{\"id\":\"components\\\\admin\\\\SketchModal.tsx -> fabric\",\"files\":[\"static/chunks/_app-pages-browser_node_modules_fabric_dist_fabric_js.js\"]}}"

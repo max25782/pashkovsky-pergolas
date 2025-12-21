@@ -10,6 +10,33 @@
       "static/chunks/main-app.js",
       "static/css/app/(crm)/app/layout.css",
       "static/chunks/app/(crm)/app/layout.js"
+    ],
+    "/(public)/[locale]/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(public)/[locale]/page.js"
+    ],
+    "/(public)/[locale]/layout": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/(public)/[locale]/layout.css",
+      "static/chunks/app/(public)/[locale]/layout.js"
+    ],
+    "/(auth)/login/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(auth)/login/page.js"
+    ],
+    "/(auth)/layout": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/(auth)/layout.css",
+      "static/chunks/app/(auth)/layout.js"
+    ],
+    "/(crm)/app/admin/deals/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(crm)/app/admin/deals/page.js"
     ]
   }
 }
