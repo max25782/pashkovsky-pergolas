@@ -55,11 +55,20 @@ export default function LoginPage() {
       return
     }
     
-    // Save admin token
-    localStorage.setItem('admin_token', adminToken.trim())
-    
-    // Redirect to CRM
-    router.push('/app/admin')
+    try {
+      // Save admin token
+      localStorage.setItem('admin_token', adminToken.trim())
+      console.log('Admin token saved:', adminToken.substring(0, 10) + '...')
+      
+      // Clear any errors
+      setError(null)
+      
+      // Redirect to CRM using window.location (more reliable than router.push)
+      window.location.href = '/app/admin'
+    } catch (err: any) {
+      console.error('Admin token login error:', err)
+      setError('Failed to save token. Please try again.')
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
