@@ -66,13 +66,13 @@ export default function AdminPage() {
           {/* Login/Register Links */}
           <div className="mb-6 space-y-3">
             <Link
-              href={`/${params.locale}/auth/login`}
+              href="/login"
               className="block w-full px-4 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-center font-semibold transition"
             >
               Sign In with Email
             </Link>
             <Link
-              href={`/${params.locale}/auth/register`}
+              href="/register"
               className="block w-full px-4 py-3 rounded-lg bg-white/10 hover:bg-white/20 text-center transition"
             >
               Create New Account
