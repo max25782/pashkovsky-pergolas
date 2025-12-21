@@ -62,7 +62,7 @@ export default function PublicLayout({
   const dir = isRTL(locale) ? 'rtl' : 'ltr'
 
   return (
-    <html lang={locale} dir={dir} className={clsx('scroll-smooth')}>
+    <html lang={locale} dir={dir} className={clsx('scroll-smooth')} suppressHydrationWarning>
       <head>
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />
       </head>
