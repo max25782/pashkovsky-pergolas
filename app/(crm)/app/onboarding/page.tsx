@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -63,7 +63,7 @@ export default function OnboardingPage() {
   }
 
   function skipOnboarding() {
-    router.push(`/${params.locale}/admin`)
+    router.push(`/${'he'}/admin`)
   }
 
   if (loading) {
@@ -83,10 +83,10 @@ export default function OnboardingPage() {
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4">
-            {params.locale === 'he' ? 'ברוך הבא' : 'Добро пожаловать'}
+            {'he' === 'he' ? 'ברוך הבא' : 'Добро пожаловать'}
           </h1>
           <p className="text-xl text-white/70">
-            {params.locale === 'he' 
+            {'he' === 'he' 
               ? 'בואו נתחיל - כמה צעדים פשוטים' 
               : 'Давайте начнем - несколько простых шагов'}
           </p>
@@ -96,7 +96,7 @@ export default function OnboardingPage() {
         <div className="mb-12">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm text-white/70">
-              {completedCount} / {steps.length} {params.locale === 'he' ? 'הושלמו' : 'завершено'}
+              {completedCount} / {steps.length} {'he' === 'he' ? 'הושלמו' : 'завершено'}
             </span>
             <span className="text-sm text-white/70">{Math.round(progress)}%</span>
           </div>
@@ -142,7 +142,7 @@ export default function OnboardingPage() {
                     <h3 className="text-lg font-semibold">{step.title}</h3>
                     {step.isRequired && (
                       <span className="text-xs px-2 py-1 bg-red-500/20 text-red-300 rounded">
-                        {params.locale === 'he' ? 'חובה' : 'Обязательно'}
+                        {'he' === 'he' ? 'חובה' : 'Обязательно'}
                       </span>
                     )}
                   </div>
@@ -153,7 +153,7 @@ export default function OnboardingPage() {
                       onClick={() => completeStep(step.id)}
                       className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
                     >
-                      <span>{params.locale === 'he' ? 'סיים שלב זה' : 'Завершить этап'}</span>
+                      <span>{'he' === 'he' ? 'סיים שלב זה' : 'Завершить этап'}</span>
                       <ChevronRight className="w-4 h-4" />
                     </button>
                   )}
@@ -169,15 +169,15 @@ export default function OnboardingPage() {
             onClick={skipOnboarding}
             className="px-6 py-3 text-white/70 hover:text-white transition-colors"
           >
-            {params.locale === 'he' ? 'דלג' : 'Пропустить'}
+            {'he' === 'he' ? 'דלג' : 'Пропустить'}
           </button>
 
           {completedCount === steps.length && (
             <button
-              onClick={() => router.push(`/${params.locale}/admin`)}
+              onClick={() => router.push(`/${'he'}/admin`)}
               className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-lg font-semibold transition-all"
             >
-              {params.locale === 'he' ? 'התחל להשתמש' : 'Начать работу'} →
+              {'he' === 'he' ? 'התחל להשתמש' : 'Начать работу'} →
             </button>
           )}
         </div>

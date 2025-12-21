@@ -45,7 +45,7 @@ export default function StatisticsPage(()) {
 
   function handleDealClick(deal: Deal) {
     // Redirect to deals page - the deal will be opened there
-    router.push(`/${params.locale}/admin/deals`)
+    router.push(`//app/admin/deals`)
   }
 
   if (!token) {
@@ -74,55 +74,55 @@ export default function StatisticsPage(()) {
         <h1 className="text-3xl font-bold">Admin • {t.nav.statistic}</h1>
         <div className="flex gap-2 flex-wrap">
           <Link
-            href={`/${params.locale}/admin/deals`}
+            href={`//app/admin/deals`}
             className="px-4 py-2 rounded bg-green-600 hover:bg-green-700 font-semibold"
           >
             {t.nav.deals}
           </Link>
           <Link
-            href={`/${params.locale}/admin/statistics`}
+            href={`//app/admin/statistics`}
             className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-700 font-semibold"
           >
             {t.nav.statistic}
           </Link>
           <Link
-            href={`/${params.locale}/admin/leads`}
+            href={`//app/admin/leads`}
             className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 font-semibold"
           >
             {t.nav.leads}
           </Link>
           <Link
-            href={`/${params.locale}/admin/gallery`}
+            href={`//app/admin/gallery`}
             className="px-4 py-2 rounded bg-purple-600 hover:bg-purple-700 font-semibold"
           >
             {t.nav.gallery}
           </Link>
           <Link
-            href={`/${params.locale}/admin/ai-chats`}
+            href={`//app/admin/ai-chats`}
             className="px-4 py-2 rounded bg-cyan-600 hover:bg-cyan-700 font-semibold"
           >
             {t.nav.aiChats}
           </Link>
           <Link
-            href={`/${params.locale}/admin/articles`}
+            href={`//app/admin/articles`}
             className="px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-700 font-semibold"
           >
             {t.nav.articles}
           </Link>
           <Link
-            href={`/${params.locale}/admin/workers`}
+            href={`//app/admin/workers`}
             className="px-4 py-2 rounded bg-yellow-600 hover:bg-yellow-700 font-semibold"
           >
             {t.nav.workers}
           </Link>
           <Link
-            href={`/${params.locale}/admin/reports/monthly`}
+            href={`//app/admin/reports/monthly`}
             className="px-4 py-2 rounded bg-orange-600 hover:bg-orange-700 font-semibold"
           >
             {t.nav.reports}
           </Link>
           <Link
-            href={`/${params.locale}/admin/reports/weekly`}
+            href={`//app/admin/reports/weekly`}
             className="px-4 py-2 rounded bg-purple-600 hover:bg-purple-700 font-semibold"
           >
             Weekly Digests

@@ -27,18 +27,18 @@ export default function AdminArticlesPage(()) {
 
   function logout() {
     localStorage.removeItem('admin_token')
-    router.push(`/${params.locale}/admin/leads`)
+    router.push(`//app/admin/leads`)
   }
 
   useEffect(() => {
     const adminToken = localStorage.getItem('admin_token')
     if (!adminToken) {
-      router.push(`/${params.locale}/admin/leads`)
+      router.push(`//app/admin/leads`)
       return
     }
     setToken(adminToken)
     loadArticles()
-  }, [params.locale, router])
+  }, ['he', router])
 
   const loadArticles = async () => {
     try {
@@ -134,37 +134,37 @@ export default function AdminArticlesPage(()) {
           <h1 className="text-3xl font-bold">Admin • {t.articles.title}</h1>
           <div className="flex gap-2 flex-wrap">
             <Link
-              href={`/${params.locale}/admin/deals`}
+              href={`//app/admin/deals`}
               className="px-4 py-2 rounded bg-green-600 hover:bg-green-700 font-semibold"
             >
               {t.nav.deals}
             </Link>
             <Link
-              href={`/${params.locale}/admin/deals`}
+              href={`//app/admin/deals`}
               className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-700 font-semibold"
             >
               {t.nav.statistic}
             </Link>
             <Link
-              href={`/${params.locale}/admin/leads`}
+              href={`//app/admin/leads`}
               className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 font-semibold"
             >
               {t.nav.leads}
             </Link>
             <Link
-              href={`/${params.locale}/admin/gallery`}
+              href={`//app/admin/gallery`}
               className="px-4 py-2 rounded bg-purple-600 hover:bg-purple-700 font-semibold"
             >
               {t.nav.gallery}
             </Link>
             <Link
-              href={`/${params.locale}/admin/ai-chats`}
+              href={`//app/admin/ai-chats`}
               className="px-4 py-2 rounded bg-cyan-600 hover:bg-cyan-700 font-semibold"
             >
               {t.nav.aiChats}
             </Link>
             <Link
-              href={`/${params.locale}/admin/workers`}
+              href={`//app/admin/workers`}
               className="px-4 py-2 rounded bg-yellow-600 hover:bg-yellow-700 font-semibold"
             >
               {t.nav.workers}

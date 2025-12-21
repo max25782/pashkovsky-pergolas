@@ -191,13 +191,13 @@ export default function WeeklyDigestsPage(()) {
         <h1 className="text-3xl font-bold">Weekly Digests</h1>
         <div className="flex gap-2 flex-wrap">
           <Link
-            href={`/${params.locale}/admin/deals`}
+            href={`//app/admin/deals`}
             className="px-4 py-2 rounded bg-green-600 hover:bg-green-700 font-semibold"
           >
             {t.nav.deals}
           </Link>
           <Link
-            href={`/${params.locale}/admin/statistics`}
+            href={`//app/admin/statistics`}
             className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-700 font-semibold"
           >
             {t.nav.statistic}
