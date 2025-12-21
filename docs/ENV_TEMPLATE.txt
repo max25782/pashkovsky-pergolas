@@ -1,0 +1,32 @@
+# Environment Variables Template
+# Copy values to Vercel Dashboard or create .env.local for local dev
+
+## SHARED (Both Site + CRM)
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+
+## SITE ONLY
+NEXT_PUBLIC_SITE_URL=https://pashkovsky-group.com
+NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX
+NEXT_PUBLIC_ENABLE_CRM_LINK=false
+
+## CRM ONLY
+NEXT_PUBLIC_CRM_URL=https://crm.pashkovsky-group.com
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+JWT_SECRET=your-super-secret-jwt-key
+ENABLE_CRM_SUBDOMAIN=true
+
+AWS_ACCESS_KEY_ID=your-aws-key
+AWS_SECRET_ACCESS_KEY=your-aws-secret
+AWS_REGION=us-east-1
+AWS_S3_BUCKET=pashkovsky-gallery
+
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+
+## OPTIONAL
+WHATSAPP_API_KEY=your-whatsapp-api-key
+WHATSAPP_PHONE=+972XXXXXXXXX
+
