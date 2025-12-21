@@ -43,19 +43,11 @@ export function middleware(request: NextRequest) {
   }
   
   // Protection: Block /app routes on main domain (CRM only)
-  // Require authentication for CRM routes
+  // Note: Admin token is checked on page level (localStorage), not in middleware
+  // JWT token can be checked here for future proper auth
   if (pathname.startsWith('/app')) {
-    // Check for auth token (simplified - in production use proper auth)
-    const token = request.cookies.get('token') || request.headers.get('authorization')
-    
-    if (!token) {
-      // Redirect to login
-      const url = request.nextUrl.clone()
-      url.pathname = `/login`
-      url.searchParams.set('redirect', pathname)
-      return NextResponse.redirect(url)
-    }
-    
+    // Allow access - pages will handle auth check
+    // (Admin token is in localStorage, middleware can't access it)
     return NextResponse.next()
   }
   
