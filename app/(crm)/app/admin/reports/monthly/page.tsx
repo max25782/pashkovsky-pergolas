@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -9,7 +9,7 @@ import type { Locale } from '@/lib/locales'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
 import { MonthlyReportCharts } from '@/components/admin/MonthlyReportCharts'
 
-export default function MonthlyReportPage({ params }: { params: { locale: Locale } }) {
+export default function MonthlyReportPage({ params }()) {
   const t = useCRMTranslations()
   const router = useRouter()
   const [token, setToken] = useState<string | null>(null)

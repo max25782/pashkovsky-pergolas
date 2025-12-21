@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -9,7 +9,7 @@ import { useDeals } from '@/components/admin/hooks/useDeals'
 import { DealsStatistics } from '@/components/admin/DealsStatistics'
 import type { Deal } from '@/components/admin/deal-types'
 
-export default function StatisticsPage({ params }: { params: { locale: Locale } }) {
+export default function StatisticsPage({ params }()) {
   const t = useCRMTranslations()
   const router = useRouter()
   const [token, setToken] = useState<string | null>(null)

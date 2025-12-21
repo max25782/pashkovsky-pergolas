@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
 import { Plus, Edit2, Trash2, X, Save } from 'lucide-react'
@@ -7,7 +7,7 @@ import type { Worker } from '@/types/workers'
 import type { Locale } from '@/lib/locales'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
 
-export default function WorkersAdminPage({ params }: { params: { locale: Locale } }) {
+export default function WorkersAdminPage({ params }()) {
   const t = useCRMTranslations()
   const [token, setToken] = useState<string | null>(null)
   const [input, setInput] = useState('')

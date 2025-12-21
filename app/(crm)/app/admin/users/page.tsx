@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
 import type { Locale } from '@/lib/locales'
@@ -13,7 +13,7 @@ interface User {
   joinedAt: string
 }
 
-export default function AdminUsersPage({ params }: { params: { locale: Locale } }) {
+export default function AdminUsersPage({ params }()) {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [inviteEmail, setInviteEmail] = useState('')

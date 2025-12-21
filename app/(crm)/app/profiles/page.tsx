@@ -1,12 +1,11 @@
-import type { Locale } from '@/lib/locales'
 import Image from 'next/image'
 import fs from 'fs'
 import path from 'path'
 import ContactSection from '@/components/contact-section'
 import { getImageUrl } from '@/lib/image-url'
 
-export default function ProfilesPage({ params }: { params: { locale: Locale } }) {
-  const locale = params.locale || 'he'
+export default function ProfilesPage() {
+  const locale = 'he' // Default locale for CRM
   
   // Читаем метаданные из JSON (изображения теперь в S3)
   const profilesJsonPath = path.join(process.cwd(), 'public', 'data', 'profiles.json')

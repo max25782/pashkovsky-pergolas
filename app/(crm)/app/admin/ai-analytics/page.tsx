@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
@@ -108,7 +108,7 @@ function extractKeyNumbers(context: AnalyticsContext): string[] {
   return numbers
 }
 
-export default function AIAnalyticsPage({ params }: { params: { locale: Locale } }) {
+export default function AIAnalyticsPage({ params }()) {
   const t = useCRMTranslations()
   const [token, setToken] = useState<string | null>(null)
   const [input, setInput] = useState('')

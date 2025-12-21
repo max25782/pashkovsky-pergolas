@@ -1,64 +1,26 @@
 {
   "pages": {
-    "/[locale]/admin/page": [
+    "/(public)/[locale]/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/[locale]/admin/page.js"
+      "static/chunks/app/(public)/[locale]/page.js"
     ],
-    "/[locale]/admin/deals/page": [
+    "/(public)/[locale]/layout": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/[locale]/admin/deals/page.js"
+      "static/css/app/(public)/[locale]/layout.css",
+      "static/chunks/app/(public)/[locale]/layout.js"
     ],
-    "/[locale]/offers/[id]/approve/page": [
+    "/(auth)/login/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/[locale]/offers/[id]/approve/page.js"
+      "static/chunks/app/(auth)/login/page.js"
     ],
-    "/[locale]/admin/ai-chats/page": [
+    "/(auth)/layout": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/[locale]/admin/ai-chats/page.js"
-    ],
-    "/[locale]/admin/gallery/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/[locale]/admin/gallery/page.js"
-    ],
-    "/[locale]/admin/leads/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/[locale]/admin/leads/page.js"
-    ],
-    "/[locale]/admin/statistics/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/[locale]/admin/statistics/page.js"
-    ],
-    "/[locale]/auth/register/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/[locale]/auth/register/page.js"
-    ],
-    "/[locale]/auth/login/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/[locale]/auth/login/page.js"
-    ],
-    "/[locale]/auth/reset-password/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/[locale]/auth/reset-password/page.js"
-    ],
-    "/[locale]/admin/articles/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/[locale]/admin/articles/page.js"
-    ],
-    "/[locale]/layout": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/[locale]/layout.js"
+      "static/css/app/(auth)/layout.css",
+      "static/chunks/app/(auth)/layout.js"
     ]
   }
 }

@@ -1,11 +1,11 @@
-"use client"
+﻿"use client"
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import type { Locale } from '@/lib/locales'
 import { AIChatsTable } from '@/components/admin/AIChatsTable'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
 
-export default function AdminAIChatsPage({ params: { locale } }: { params: { locale: Locale } }) {
+export default function AdminAIChatsPage({ params }()) {
   const t = useCRMTranslations()
   const [token, setToken] = useState<string | null>(null)
   const [input, setInput] = useState('')
@@ -55,37 +55,37 @@ export default function AdminAIChatsPage({ params: { locale } }: { params: { loc
         <h1 className="text-2xl font-bold">Admin • {t.aiChats.title}</h1>
         <div className="flex gap-2 flex-wrap">
           <Link
-            href={`/${locale}/admin/deals`}
+            href={`//app/admin/deals`}
             className="px-4 py-2 rounded bg-green-600 hover:bg-green-700 font-semibold"
           >
             {t.nav.deals}
           </Link>
           <Link
-            href={`/${locale}/admin/deals`}
+            href={`//app/admin/deals`}
             className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-700 font-semibold"
           >
             {t.nav.statistic}
           </Link>
           <Link
-            href={`/${locale}/admin/leads`}
+            href={`//app/admin/leads`}
             className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 font-semibold"
           >
             {t.nav.leads}
           </Link>
           <Link
-            href={`/${locale}/admin/gallery`}
+            href={`//app/admin/gallery`}
             className="px-4 py-2 rounded bg-purple-600 hover:bg-purple-700 font-semibold"
           >
             {t.nav.gallery}
           </Link>
           <Link
-            href={`/${locale}/admin/articles`}
+            href={`//app/admin/articles`}
             className="px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-700 font-semibold"
           >
             {t.nav.articles}
           </Link>
           <Link
-            href={`/${locale}/admin/workers`}
+            href={`//app/admin/workers`}
             className="px-4 py-2 rounded bg-yellow-600 hover:bg-yellow-700 font-semibold"
           >
             {t.nav.workers}

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
@@ -43,7 +43,7 @@ function extractKeyMetrics(context: AnalyticsContext): string[] {
   return metrics
 }
 
-export default function WeeklyDigestsPage({ params }: { params: { locale: Locale } }) {
+export default function WeeklyDigestsPage({ params }()) {
   const t = useCRMTranslations()
   const [token, setToken] = useState<string | null>(null)
   const [input, setInput] = useState('')

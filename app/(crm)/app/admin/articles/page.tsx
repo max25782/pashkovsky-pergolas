@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -16,7 +16,7 @@ interface Article {
   }>
 }
 
-export default function AdminArticlesPage({ params }: { params: { locale: Locale } }) {
+export default function AdminArticlesPage({ params }()) {
   const t = useCRMTranslations()
   const [token, setToken] = useState<string | null>(null)
   const [articles, setArticles] = useState<Article[]>([])

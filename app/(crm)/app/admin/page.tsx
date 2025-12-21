@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -16,7 +16,7 @@ import {
   TrendingUp
 } from 'lucide-react'
 
-export default function AdminPage({ params }: { params: { locale: Locale } }) {
+export default function AdminPage({ params }()) {
   const t = useCRMTranslations()
   const router = useRouter()
   const [token, setToken] = useState<string | null>(null)

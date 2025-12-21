@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import type { Locale } from '@/lib/locales'
 import { Check, ChevronRight, Loader2 } from 'lucide-react'
 
 interface OnboardingStep {
@@ -13,7 +12,7 @@ interface OnboardingStep {
   isRequired: boolean
 }
 
-export default function OnboardingPage({ params }: { params: { locale: Locale } }) {
+export default function OnboardingPage() {
   const router = useRouter()
   const [steps, setSteps] = useState<OnboardingStep[]>([])
   const [loading, setLoading] = useState(true)
