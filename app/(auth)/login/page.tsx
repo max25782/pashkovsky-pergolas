@@ -3,13 +3,14 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import type { Locale } from '@/lib/locales'
 
-export default function LoginPage({ params }: { params: { locale: Locale } }) {
+export default function LoginPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showAdminToken, setShowAdminToken] = useState(false)
+  const [adminToken, setAdminToken] = useState('')
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -20,7 +21,7 @@ export default function LoginPage({ params }: { params: { locale: Locale } }) {
     const token = searchParams.get('token')
     const refreshToken = searchParams.get('refreshToken')
     const oauthError = searchParams.get('error')
-    const redirectUrl = searchParams.get('redirect') || `/${params.locale}/admin`
+    const redirectUrl = searchParams.get('redirect') || '/app/admin'
 
     if (oauthError) {
       setError(`OAuth error: ${oauthError}`)
@@ -40,12 +41,25 @@ export default function LoginPage({ params }: { params: { locale: Locale } }) {
         router.push(redirectUrl)
       }, 100)
     }
-  }, [searchParams, router, params.locale])
+  }, [searchParams, router])
 
   function handleGoogleLogin() {
-    const redirectUrl = `/${params.locale}/admin`
+    const redirectUrl = '/app/admin'
     const oauthUrl = `/api/auth/oauth/google?redirect=${encodeURIComponent(redirectUrl)}`
     window.location.href = oauthUrl
+  }
+
+  function handleAdminTokenLogin() {
+    if (!adminToken.trim()) {
+      setError('Please enter admin token')
+      return
+    }
+    
+    // Save admin token
+    localStorage.setItem('admin_token', adminToken.trim())
+    
+    // Redirect to CRM
+    router.push('/app/admin')
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -80,7 +94,7 @@ export default function LoginPage({ params }: { params: { locale: Locale } }) {
       }
 
       // Redirect to admin panel
-      router.push(`/${params.locale}/admin`)
+      router.push('/app/admin')
     } catch (err: any) {
       setError(err.message || 'Login failed. Please check your credentials.')
     } finally {
@@ -130,7 +144,7 @@ export default function LoginPage({ params }: { params: { locale: Locale } }) {
 
             <div className="flex items-center justify-between">
               <Link
-                href={`/${params.locale}/auth/reset-password`}
+                href="/reset-password"
                 className="text-sm text-blue-400 hover:text-blue-300"
               >
                 Forgot password?
@@ -182,10 +196,64 @@ export default function LoginPage({ params }: { params: { locale: Locale } }) {
             </button>
           </div>
 
+          {/* Admin Token Section */}
+          <div className="mt-4">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-white/20"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-gray-900 text-white/60">Quick Access</span>
+              </div>
+            </div>
+
+            {!showAdminToken ? (
+              <button
+                type="button"
+                onClick={() => setShowAdminToken(true)}
+                className="mt-4 w-full px-6 py-3 rounded-lg bg-yellow-600/10 hover:bg-yellow-600/20 border border-yellow-500/30 text-yellow-400 font-semibold transition"
+              >
+                🔑 Sign in with Admin Token
+              </button>
+            ) : (
+              <div className="mt-4 space-y-3">
+                <input
+                  type="text"
+                  value={adminToken}
+                  onChange={(e) => setAdminToken(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAdminTokenLogin()}
+                  className="w-full px-4 py-2 rounded-lg bg-black/40 border border-yellow-500/30 focus:border-yellow-500 focus:outline-none placeholder:text-white/40"
+                  placeholder="Paste your admin token here..."
+                  autoFocus
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleAdminTokenLogin}
+                    className="flex-1 px-4 py-2 rounded-lg bg-yellow-600 hover:bg-yellow-700 font-semibold transition"
+                  >
+                    Continue
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAdminToken(false)
+                      setAdminToken('')
+                      setError(null)
+                    }}
+                    className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/20 text-sm"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="mt-6 text-center">
             <p className="text-white/60">
               Don't have an account?{' '}
-              <Link href={`/${params.locale}/auth/register`} className="text-blue-400 hover:text-blue-300">
+              <Link href="/register" className="text-blue-400 hover:text-blue-300">
                 Sign up
               </Link>
             </p>
