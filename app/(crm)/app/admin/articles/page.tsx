@@ -16,7 +16,7 @@ interface Article {
   }>
 }
 
-export default function AdminArticlesPage({ params }()) {
+export default function AdminArticlesPage(()) {
   const t = useCRMTranslations()
   const [token, setToken] = useState<string | null>(null)
   const [articles, setArticles] = useState<Article[]>([])

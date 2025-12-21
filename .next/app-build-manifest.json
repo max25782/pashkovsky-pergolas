@@ -21,6 +21,27 @@
       "static/chunks/main-app.js",
       "static/css/app/(auth)/layout.css",
       "static/chunks/app/(auth)/layout.js"
+    ],
+    "/(crm)/app/admin/deals/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(crm)/app/admin/deals/page.js"
+    ],
+    "/(crm)/app/layout": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/(crm)/app/layout.css",
+      "static/chunks/app/(crm)/app/layout.js"
+    ],
+    "/(crm)/app/admin/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(crm)/app/admin/page.js"
+    ],
+    "/_not-found/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/_not-found/page.js"
     ]
   }
 }

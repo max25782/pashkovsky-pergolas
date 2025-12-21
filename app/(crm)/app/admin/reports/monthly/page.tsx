@@ -9,7 +9,7 @@ import type { Locale } from '@/lib/locales'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
 import { MonthlyReportCharts } from '@/components/admin/MonthlyReportCharts'
 
-export default function MonthlyReportPage({ params }()) {
+export default function MonthlyReportPage(()) {
   const t = useCRMTranslations()
   const router = useRouter()
   const [token, setToken] = useState<string | null>(null)

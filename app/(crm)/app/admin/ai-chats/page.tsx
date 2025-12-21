@@ -5,7 +5,7 @@ import type { Locale } from '@/lib/locales'
 import { AIChatsTable } from '@/components/admin/AIChatsTable'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
 
-export default function AdminAIChatsPage({ params }()) {
+export default function AdminAIChatsPage(()) {
   const t = useCRMTranslations()
   const [token, setToken] = useState<string | null>(null)
   const [input, setInput] = useState('')

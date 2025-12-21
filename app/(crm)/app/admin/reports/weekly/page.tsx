@@ -43,7 +43,7 @@ function extractKeyMetrics(context: AnalyticsContext): string[] {
   return metrics
 }
 
-export default function WeeklyDigestsPage({ params }()) {
+export default function WeeklyDigestsPage(()) {
   const t = useCRMTranslations()
   const [token, setToken] = useState<string | null>(null)
   const [input, setInput] = useState('')

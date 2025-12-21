@@ -14,7 +14,7 @@ interface GalleryImage {
   created_at: string
 }
 
-export default function GalleryAdminPage({ params }()) {
+export default function GalleryAdminPage(()) {
   const t = useCRMTranslations()
   const [token, setToken] = useState<string | null>(null)
   const [input, setInput] = useState('')

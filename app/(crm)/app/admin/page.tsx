@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import type { Locale } from '@/lib/locales'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
 import { 
   Briefcase, 
@@ -16,7 +15,7 @@ import {
   TrendingUp
 } from 'lucide-react'
 
-export default function AdminPage({ params }()) {
+export default function AdminPage() {
   const t = useCRMTranslations()
   const router = useRouter()
   const [token, setToken] = useState<string | null>(null)

@@ -1,4 +1,7 @@
 {
+  "/_not-found/page": "app/_not-found/page.js",
+  "/(public)/[locale]/page": "app/(public)/[locale]/page.js",
   "/(auth)/login/page": "app/(auth)/login/page.js",
-  "/(public)/[locale]/page": "app/(public)/[locale]/page.js"
+  "/(crm)/app/admin/deals/page": "app/(crm)/app/admin/deals/page.js",
+  "/(crm)/app/admin/page": "app/(crm)/app/admin/page.js"
 }
