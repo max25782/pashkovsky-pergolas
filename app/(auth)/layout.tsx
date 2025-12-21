@@ -1,16 +1,16 @@
-import type { Metadata } from 'next'
-import { Noto_Sans_Hebrew } from 'next/font/google'
 import '../globals.css'
-
-const notoSansHebrew = Noto_Sans_Hebrew({
-  subsets: ['hebrew'],
-  weight: ['400', '500', '600', '700'],
-  display: 'swap',
-})
+import type { Metadata } from 'next'
+import { Providers } from '@/components/providers'
 
 export const metadata: Metadata = {
-  title: 'Authentication - Pashkovsky Group',
-  description: 'Login to Pashkovsky CRM',
+  title: {
+    default: 'התחברות | Pashkovsky Group',
+    template: '%s | Pashkovsky Group',
+  },
+  robots: {
+    index: false, // Don't index auth pages
+    follow: false,
+  },
 }
 
 export default function AuthLayout({
@@ -20,12 +20,16 @@ export default function AuthLayout({
 }) {
   return (
     <html lang="he" dir="rtl">
-      <body className={notoSansHebrew.className}>
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-          {children}
-        </div>
+      <head>
+        <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+      </head>
+      <body className="antialiased bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-neutral-900 dark:to-neutral-800">
+        <Providers>
+          <div className="flex min-h-screen items-center justify-center p-4">
+            {children}
+          </div>
+        </Providers>
       </body>
     </html>
   )
 }
-

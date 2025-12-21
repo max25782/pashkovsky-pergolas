@@ -1,16 +1,5 @@
 {
   "pages": {
-    "/[locale]/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/[locale]/page.js"
-    ],
-    "/[locale]/layout": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/css/app/[locale]/layout.css",
-      "static/chunks/app/[locale]/layout.js"
-    ],
     "/[locale]/admin/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
@@ -25,6 +14,51 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/[locale]/offers/[id]/approve/page.js"
+    ],
+    "/[locale]/admin/ai-chats/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/[locale]/admin/ai-chats/page.js"
+    ],
+    "/[locale]/admin/gallery/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/[locale]/admin/gallery/page.js"
+    ],
+    "/[locale]/admin/leads/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/[locale]/admin/leads/page.js"
+    ],
+    "/[locale]/admin/statistics/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/[locale]/admin/statistics/page.js"
+    ],
+    "/[locale]/auth/register/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/[locale]/auth/register/page.js"
+    ],
+    "/[locale]/auth/login/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/[locale]/auth/login/page.js"
+    ],
+    "/[locale]/auth/reset-password/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/[locale]/auth/reset-password/page.js"
+    ],
+    "/[locale]/admin/articles/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/[locale]/admin/articles/page.js"
+    ],
+    "/[locale]/layout": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/[locale]/layout.js"
     ]
   }
 }

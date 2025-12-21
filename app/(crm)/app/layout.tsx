@@ -1,16 +1,18 @@
-import type { Metadata } from 'next'
-import { Noto_Sans_Hebrew } from 'next/font/google'
 import '../../globals.css'
-
-const notoSansHebrew = Noto_Sans_Hebrew({
-  subsets: ['hebrew'],
-  weight: ['400', '500', '600', '700'],
-  display: 'swap',
-})
+import type { Metadata } from 'next'
+import { Providers } from '@/components/providers'
+import CRMSidebar from '@/components/crm/CRMSidebar'
+import { Suspense } from 'react'
 
 export const metadata: Metadata = {
-  title: 'CRM - Pashkovsky Group',
-  description: 'CRM System for Pashkovsky Group',
+  title: {
+    default: 'CRM | Pashkovsky Group',
+    template: '%s | CRM',
+  },
+  robots: {
+    index: false, // Don't index CRM pages
+    follow: false,
+  },
 }
 
 export default function CRMLayout({
@@ -20,37 +22,24 @@ export default function CRMLayout({
 }) {
   return (
     <html lang="he" dir="rtl">
-      <body className={notoSansHebrew.className}>
-        <div className="flex h-screen bg-gray-100">
-          {/* CRM Sidebar will be added here */}
-          <aside className="w-64 bg-white shadow-md">
-            <div className="p-4">
-              <h1 className="text-xl font-bold">CRM System</h1>
-            </div>
-            <nav className="mt-4">
-              {/* Navigation items */}
-              <a href="/app" className="block px-4 py-2 hover:bg-gray-100">
-                Dashboard
-              </a>
-              <a href="/app/leads" className="block px-4 py-2 hover:bg-gray-100">
-                Leads
-              </a>
-              <a href="/app/deals" className="block px-4 py-2 hover:bg-gray-100">
-                Deals
-              </a>
-              <a href="/app/users" className="block px-4 py-2 hover:bg-gray-100">
-                Users
-              </a>
-            </nav>
-          </aside>
-          
-          {/* Main content */}
-          <main className="flex-1 overflow-auto p-6">
-            {children}
-          </main>
-        </div>
+      <head>
+        <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+      </head>
+      <body className="antialiased bg-neutral-50 dark:bg-neutral-900">
+        <Providers>
+          <div className="flex min-h-screen">
+            {/* CRM Sidebar */}
+            <Suspense fallback={<div className="w-64 bg-white dark:bg-neutral-800" />}>
+              <CRMSidebar />
+            </Suspense>
+            
+            {/* Main Content */}
+            <main className="flex-1 overflow-y-auto">
+              {children}
+            </main>
+          </div>
+        </Providers>
       </body>
     </html>
   )
 }
-
