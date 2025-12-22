@@ -21,6 +21,7 @@ export default function AdminPage() {
   const [token, setToken] = useState<string | null>(null)
   const [input, setInput] = useState('')
   const [isJWT, setIsJWT] = useState(false)
+  const [isChecking, setIsChecking] = useState(true)
 
   useEffect(() => {
     // Check for JWT token first (from login/register)
@@ -28,6 +29,7 @@ export default function AdminPage() {
     if (jwtToken) {
       setToken(jwtToken)
       setIsJWT(true)
+      setIsChecking(false)
       return
     }
 
@@ -36,7 +38,13 @@ export default function AdminPage() {
     if (adminToken) {
       setToken(adminToken)
       setIsJWT(false)
+      setIsChecking(false)
+      return
     }
+
+    // No token found - redirect to login
+    console.log('[AdminPage] No token found, redirecting to /login')
+    window.location.href = '/login'
   }, [])
 
   function save() {
@@ -55,6 +63,18 @@ export default function AdminPage() {
     setInput('')
     setIsJWT(false)
     router.push(`//login`)
+  }
+
+  // Show loading while checking auth
+  if (isChecking) {
+    return (
+      <main className="container py-16 text-white">
+        <div className="max-w-md mx-auto text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p className="text-white/60">Checking authentication...</p>
+        </div>
+      </main>
+    )
   }
 
   if (!token) {

@@ -31,7 +31,7 @@ const isPublicRoute = (pathname: string) => {
 // Verify JWT token and extract company_id
 async function verifyAuth(request: NextRequest) {
   try {
-    // Try to get token from cookie or Authorization header
+    // Try to get JWT token from cookie or Authorization header
     const tokenFromCookie = request.cookies.get('token')?.value
     const authHeader = request.headers.get('authorization')
     const tokenFromHeader = authHeader?.startsWith('Bearer ') 
@@ -95,47 +95,10 @@ export async function middleware(request: NextRequest) {
   
   // ===== PROTECT ALL /app/** ROUTES =====
   if (pathname.startsWith('/app')) {
-    // Allow /app/select-company without company check
-    if (pathname === '/app/select-company' || pathname.startsWith('/app/select-company/')) {
-      const auth = await verifyAuth(request)
-      
-      if (!auth.authenticated) {
-        const url = request.nextUrl.clone()
-        url.pathname = '/login'
-        url.searchParams.set('redirect', pathname)
-        return NextResponse.redirect(url)
-      }
-      
-      // Allow access to select-company page
-      return NextResponse.next()
-    }
-    
-    // Check authentication
-    const auth = await verifyAuth(request)
-    
-    if (!auth.authenticated) {
-      // No valid session - redirect to login
-      const url = request.nextUrl.clone()
-      url.pathname = '/login'
-      url.searchParams.set('redirect', pathname)
-      return NextResponse.redirect(url)
-    }
-    
-    // Check if user has selected a company
-    if (!auth.companyId) {
-      // No company selected - redirect to select-company page
-      const url = request.nextUrl.clone()
-      url.pathname = '/app/select-company'
-      url.searchParams.set('redirect', pathname)
-      return NextResponse.redirect(url)
-    }
-    
-    // User is authenticated and has company - allow access
-    // Add company_id to request headers for API routes to use
-    const response = NextResponse.next()
-    response.headers.set('x-company-id', auth.companyId)
-    response.headers.set('x-user-id', auth.userId as string)
-    return response
+    // SKIP middleware auth check for /app routes
+    // Admin token is stored in localStorage (not accessible in middleware)
+    // Client-side pages will handle auth check and redirect if needed
+    return NextResponse.next()
   }
   
   // ===== AUTH ROUTES (public) =====
