@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import type { Worker } from '@/types/workers'
+import { requireAuth, verifyResourceOwnership } from '@/lib/auth'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -34,6 +35,15 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   const params = await context.params
+
+  // 🔒 Security: Require authentication
+  const auth = await requireAuth(req)
+  if (!auth.authorized) return auth.error
+
+  // 🔒 Security: Verify worker belongs to user's company
+  const ownership = await verifyResourceOwnership(req, 'workers', params.id)
+  if (!ownership.authorized) return ownership.error
+
   if (!supabase) {
     return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
   }
@@ -61,6 +71,7 @@ export async function PATCH(
       .from('workers')
       .update(updates)
       .eq('id', params.id)
+      .eq('company_id', auth.user.companyId) // Extra safety
       .select()
       .single()
 
@@ -85,6 +96,15 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   const params = await context.params
+
+  // 🔒 Security: Require authentication
+  const auth = await requireAuth(req)
+  if (!auth.authorized) return auth.error
+
+  // 🔒 Security: Verify worker belongs to user's company
+  const ownership = await verifyResourceOwnership(req, 'workers', params.id)
+  if (!ownership.authorized) return ownership.error
+
   if (!supabase) {
     return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
   }
@@ -94,6 +114,7 @@ export async function DELETE(
       .from('workers')
       .delete()
       .eq('id', params.id)
+      .eq('company_id', auth.user.companyId) // Extra safety
 
     if (error) {
       console.error('Error deleting worker:', error)

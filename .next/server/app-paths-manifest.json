@@ -1,9 +1,13 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
+  "/admin-api/users/route": "app/admin-api/users/route.js",
   "/icon.svg/route": "app/icon.svg/route.js",
   "/admin-api/deals/route": "app/admin-api/deals/route.js",
+  "/admin-api/leads/route": "app/admin-api/leads/route.js",
   "/(public)/[locale]/page": "app/(public)/[locale]/page.js",
-  "/(crm)/app/admin/page": "app/(crm)/app/admin/page.js",
+  "/(crm)/app/admin/deals/page": "app/(crm)/app/admin/deals/page.js",
   "/(auth)/login/page": "app/(auth)/login/page.js",
-  "/(crm)/app/admin/deals/page": "app/(crm)/app/admin/deals/page.js"
+  "/(crm)/app/admin/users/page": "app/(crm)/app/admin/users/page.js",
+  "/(crm)/app/admin/statistics/page": "app/(crm)/app/admin/statistics/page.js",
+  "/(crm)/app/admin/leads/page": "app/(crm)/app/admin/leads/page.js",
+  "/(crm)/app/admin/page": "app/(crm)/app/admin/page.js"
 }

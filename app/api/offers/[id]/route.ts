@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import type { PergolaShape } from '@/types/offer'
+import { requireAuth, requireCompanyAccess } from '@/lib/auth'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -14,6 +15,10 @@ export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  // 🔒 Security: Require authentication
+  const auth = await requireAuth(req)
+  if (!auth.authorized) return auth.error
+
   if (!supabase) {
     return NextResponse.json(
       { error: 'Server not configured' },
@@ -22,6 +27,7 @@ export async function GET(
   }
 
   try {
+    // Fetch offer
     const { data, error } = await supabase
       .from('offers')
       .select('*')
@@ -35,6 +41,10 @@ export async function GET(
         { status: 404 }
       )
     }
+
+    // 🔒 Security: Verify company access
+    const access = await requireCompanyAccess(req, data.company_id)
+    if (!access.authorized) return access.error
 
     // Transform to camelCase
     const offer = transformOfferFromDB(data)
@@ -54,6 +64,10 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  // 🔒 Security: Require authentication
+  const auth = await requireAuth(req)
+  if (!auth.authorized) return auth.error
+
   if (!supabase) {
     return NextResponse.json(
       { error: 'Server not configured' },
@@ -62,6 +76,26 @@ export async function DELETE(
   }
 
   try {
+    // 🔒 Security: Fetch offer first to verify ownership
+    const { data: offer, error: fetchError } = await supabase
+      .from('offers')
+      .select('company_id')
+      .eq('id', params.id)
+      .single()
+
+    if (fetchError || !offer) {
+      console.error('Error fetching offer for deletion:', fetchError)
+      return NextResponse.json(
+        { error: 'Offer not found' },
+        { status: 404 }
+      )
+    }
+
+    // 🔒 Security: Verify company access
+    const access = await requireCompanyAccess(req, offer.company_id)
+    if (!access.authorized) return access.error
+
+    // Now safe to delete
     const { error } = await supabase
       .from('offers')
       .delete()

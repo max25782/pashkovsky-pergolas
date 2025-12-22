@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import type { Worker } from '@/types/workers'
+import { requireAuth } from '@/lib/auth'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -30,6 +31,10 @@ function transformWorkerFromDB(row: any): Worker {
 
 // GET - List all workers (active by default)
 export async function GET(req: NextRequest) {
+  // 🔒 Security: Require authentication
+  const auth = await requireAuth(req)
+  if (!auth.authorized) return auth.error
+
   if (!supabase) {
     return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
   }
@@ -38,9 +43,11 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const includeInactive = searchParams.get('includeInactive') === 'true'
 
+    // 🔒 Security: Filter by company_id
     let query = supabase
       .from('workers')
       .select('*')
+      .eq('company_id', auth.user.companyId) // Multi-tenant filter
       .order('first_name', { ascending: true })
 
     if (!includeInactive) {
@@ -67,6 +74,10 @@ export async function GET(req: NextRequest) {
 
 // POST - Create new worker
 export async function POST(req: NextRequest) {
+  // 🔒 Security: Require authentication
+  const auth = await requireAuth(req)
+  if (!auth.authorized) return auth.error
+
   if (!supabase) {
     return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
   }
@@ -89,9 +100,11 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // 🔒 Security: Assign to user's company
     const { data, error } = await supabase
       .from('workers')
       .insert({
+        company_id: auth.user.companyId, // Multi-tenant assignment
         first_name: firstName,
         last_name: lastName,
         phone: phone || null,
