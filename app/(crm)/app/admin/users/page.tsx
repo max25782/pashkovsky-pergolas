@@ -13,7 +13,7 @@ interface User {
   joinedAt: string
 }
 
-export default function AdminUsersPage(()) {
+export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [inviteEmail, setInviteEmail] = useState('')

@@ -108,7 +108,7 @@ function extractKeyNumbers(context: AnalyticsContext): string[] {
   return numbers
 }
 
-export default function AIAnalyticsPage(()) {
+export default function AIAnalyticsPage() {
   const t = useCRMTranslations()
   const [token, setToken] = useState<string | null>(null)
   const [input, setInput] = useState('')

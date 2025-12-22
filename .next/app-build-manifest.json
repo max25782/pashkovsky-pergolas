@@ -38,6 +38,11 @@
       "static/chunks/main-app.js",
       "static/chunks/app/(crm)/app/admin/deals/page.js"
     ],
+    "/(crm)/app/admin/users/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(crm)/app/admin/users/page.js"
+    ],
     "/_not-found/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",

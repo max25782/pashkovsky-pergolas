@@ -1,8 +1,9 @@
 {
   "/_not-found/page": "app/_not-found/page.js",
+  "/icon.svg/route": "app/icon.svg/route.js",
   "/admin-api/deals/route": "app/admin-api/deals/route.js",
+  "/(public)/[locale]/page": "app/(public)/[locale]/page.js",
   "/(crm)/app/admin/page": "app/(crm)/app/admin/page.js",
   "/(auth)/login/page": "app/(auth)/login/page.js",
-  "/(public)/[locale]/page": "app/(public)/[locale]/page.js",
   "/(crm)/app/admin/deals/page": "app/(crm)/app/admin/deals/page.js"
 }

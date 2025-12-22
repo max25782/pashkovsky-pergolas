@@ -7,7 +7,7 @@ import type { Worker } from '@/types/workers'
 import type { Locale } from '@/lib/locales'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
 
-export default function WorkersAdminPage(()) {
+export default function WorkersAdminPage() {
   const t = useCRMTranslations()
   const [token, setToken] = useState<string | null>(null)
   const [input, setInput] = useState('')

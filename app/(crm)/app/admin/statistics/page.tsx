@@ -9,7 +9,7 @@ import { useDeals } from '@/components/admin/hooks/useDeals'
 import { DealsStatistics } from '@/components/admin/DealsStatistics'
 import type { Deal } from '@/components/admin/deal-types'
 
-export default function StatisticsPage(()) {
+export default function StatisticsPage() {
   const t = useCRMTranslations()
   const router = useRouter()
   const [token, setToken] = useState<string | null>(null)
