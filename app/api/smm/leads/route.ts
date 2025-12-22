@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getCurrentCompanyId } from '@/lib/auth'
 
 function auth(req: NextRequest) {
   const token = req.headers.get('x-smm-token') || req.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
@@ -19,6 +20,15 @@ export async function GET(req: NextRequest) {
   if (!auth(req)) return new Response('Unauthorized', { status: 401 })
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
   
+  // 🔒 Security: Get company_id from request
+  const companyId = await getCurrentCompanyId(req)
+  if (!companyId) {
+    return new Response(
+      JSON.stringify({ error: 'Missing company context' }), 
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    )
+  }
+  
   const { searchParams } = new URL(req.url)
   const source = searchParams.get('source')?.trim() || '' // Filter by source/campaign
   const status = searchParams.get('status')?.trim() || '' // Filter by status
@@ -28,9 +38,11 @@ export async function GET(req: NextRequest) {
   const limit = Number(searchParams.get('limit') || 100) // Default 100 for SMM
   const offset = Number(searchParams.get('offset') || 0)
 
+  // 🔒 Security: Filter by company_id
   let query = supabase
     .from('leads')
     .select('id, name, phone, source, status, notes, created_at', { count: 'exact' }) // Only selected fields
+    .eq('company_id', companyId) // Multi-tenant filter
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1)
   

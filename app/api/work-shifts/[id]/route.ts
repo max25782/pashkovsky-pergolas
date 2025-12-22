@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import type { WorkShift } from '@/types/workers'
+import { requireAuth, requireCompanyAccess } from '@/lib/auth'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -45,11 +46,50 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   const params = await context.params
+
+  // 🔒 Security: Require authentication
+  const auth = await requireAuth(req)
+  if (!auth.authorized) return auth.error
+
   if (!supabase) {
     return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
   }
 
   try {
+    // 🔒 Security: Fetch shift and verify project ownership
+    const { data: shift, error: shiftError } = await supabase
+      .from('work_shifts')
+      .select('project_id')
+      .eq('id', params.id)
+      .single()
+
+    if (shiftError || !shift) {
+      console.error('Error fetching shift:', shiftError)
+      return NextResponse.json(
+        { error: 'Work shift not found' },
+        { status: 404 }
+      )
+    }
+
+    // Verify project belongs to user's company
+    const { data: project, error: projectError } = await supabase
+      .from('pergola_projects')
+      .select('company_id')
+      .eq('id', shift.project_id)
+      .single()
+
+    if (projectError || !project) {
+      console.error('Error fetching project:', projectError)
+      return NextResponse.json(
+        { error: 'Project not found or access denied' },
+        { status: 404 }
+      )
+    }
+
+    const access = await requireCompanyAccess(req, project.company_id)
+    if (!access.authorized) return access.error
+
+    // Now safe to update
     const body = await req.json()
     const updates: any = {}
 
@@ -104,11 +144,50 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   const params = await context.params
+
+  // 🔒 Security: Require authentication
+  const auth = await requireAuth(req)
+  if (!auth.authorized) return auth.error
+
   if (!supabase) {
     return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
   }
 
   try {
+    // 🔒 Security: Fetch shift and verify project ownership
+    const { data: shift, error: shiftError } = await supabase
+      .from('work_shifts')
+      .select('project_id')
+      .eq('id', params.id)
+      .single()
+
+    if (shiftError || !shift) {
+      console.error('Error fetching shift:', shiftError)
+      return NextResponse.json(
+        { error: 'Work shift not found' },
+        { status: 404 }
+      )
+    }
+
+    // Verify project belongs to user's company
+    const { data: project, error: projectError } = await supabase
+      .from('pergola_projects')
+      .select('company_id')
+      .eq('id', shift.project_id)
+      .single()
+
+    if (projectError || !project) {
+      console.error('Error fetching project:', projectError)
+      return NextResponse.json(
+        { error: 'Project not found or access denied' },
+        { status: 404 }
+      )
+    }
+
+    const access = await requireCompanyAccess(req, project.company_id)
+    if (!access.authorized) return access.error
+
+    // Now safe to delete
     const { error } = await supabase
       .from('work_shifts')
       .delete()

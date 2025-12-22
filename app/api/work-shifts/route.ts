@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import type { WorkShift } from '@/types/workers'
+import { requireAuth, requireCompanyAccess } from '@/lib/auth'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -41,6 +42,10 @@ function transformWorkShiftFromDB(row: any): WorkShift {
 
 // GET - List work shifts for a project
 export async function GET(req: NextRequest) {
+  // 🔒 Security: Require authentication
+  const auth = await requireAuth(req)
+  if (!auth.authorized) return auth.error
+
   if (!supabase) {
     return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
   }
@@ -53,6 +58,26 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'projectId is required' }, { status: 400 })
     }
 
+    // 🔒 Security: Verify project belongs to user's company
+    const { data: project, error: projectError } = await supabase
+      .from('pergola_projects')
+      .select('company_id')
+      .eq('id', projectId)
+      .single()
+
+    if (projectError || !project) {
+      console.error('Error fetching project:', projectError)
+      return NextResponse.json(
+        { error: 'Project not found or access denied' },
+        { status: 404 }
+      )
+    }
+
+    // Verify company access
+    const access = await requireCompanyAccess(req, project.company_id)
+    if (!access.authorized) return access.error
+
+    // Now safe to fetch work shifts
     const { data, error } = await supabase
       .from('work_shifts')
       .select(`
@@ -81,6 +106,10 @@ export async function GET(req: NextRequest) {
 
 // POST - Create new work shift
 export async function POST(req: NextRequest) {
+  // 🔒 Security: Require authentication
+  const auth = await requireAuth(req)
+  if (!auth.authorized) return auth.error
+
   if (!supabase) {
     return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
   }
@@ -103,6 +132,42 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       )
     }
+
+    // 🔒 Security: Verify project belongs to user's company
+    const { data: project, error: projectError } = await supabase
+      .from('pergola_projects')
+      .select('company_id')
+      .eq('id', projectId)
+      .single()
+
+    if (projectError || !project) {
+      console.error('Error fetching project:', projectError)
+      return NextResponse.json(
+        { error: 'Project not found or access denied' },
+        { status: 404 }
+      )
+    }
+
+    const access = await requireCompanyAccess(req, project.company_id)
+    if (!access.authorized) return access.error
+
+    // 🔒 Security: Verify worker belongs to user's company
+    const { data: worker, error: workerError } = await supabase
+      .from('workers')
+      .select('company_id')
+      .eq('id', workerId)
+      .single()
+
+    if (workerError || !worker) {
+      console.error('Error fetching worker:', workerError)
+      return NextResponse.json(
+        { error: 'Worker not found or access denied' },
+        { status: 404 }
+      )
+    }
+
+    const workerAccess = await requireCompanyAccess(req, worker.company_id)
+    if (!workerAccess.authorized) return workerAccess.error
 
     // Check if shift already exists for this worker/date/project
     const { data: existing } = await supabase

@@ -96,10 +96,15 @@ export interface LeadsSummary {
 
 export async function getLeadsSummary(
   period: AnalyticsPeriod,
-  companyId?: string
+  companyId: string // 🔒 Security: Make companyId REQUIRED
 ): Promise<LeadsSummary> {
   if (!supabase) {
     throw new Error('Supabase client not initialized')
+  }
+
+  // 🔒 Security: Enforce company_id requirement
+  if (!companyId) {
+    throw new Error('companyId is required for analytics')
   }
 
   const { from, to } = getDateRange(period)
@@ -108,13 +113,9 @@ export async function getLeadsSummary(
   let query = supabase
     .from('leads')
     .select('id, name, phone, source, status, created_at, last_message_at')
+    .eq('company_id', companyId) // 🔒 Security: Multi-tenant filter
     .gte('created_at', from)
     .lte('created_at', to)
-
-  // Apply company filter if needed (assuming company_id field exists)
-  // if (companyId) {
-  //   query = query.eq('company_id', companyId)
-  // }
 
   const { data: leads, error } = await query
 
@@ -235,10 +236,15 @@ export interface DealsSummary {
 
 export async function getDealsSummary(
   period: AnalyticsPeriod,
-  companyId?: string
+  companyId: string // 🔒 Security: Make companyId REQUIRED
 ): Promise<DealsSummary> {
   if (!supabase) {
     throw new Error('Supabase client not initialized')
+  }
+
+  // 🔒 Security: Enforce company_id requirement
+  if (!companyId) {
+    throw new Error('companyId is required for analytics')
   }
 
   const { from, to } = getDateRange(period)
@@ -247,6 +253,7 @@ export async function getDealsSummary(
   let query = supabase
     .from('deals')
     .select('id, stage, price, created_at, updated_at')
+    .eq('company_id', companyId) // 🔒 Security: Multi-tenant filter
     .gte('created_at', from)
     .lte('created_at', to)
 

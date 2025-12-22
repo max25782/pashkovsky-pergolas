@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import type { MaterialOrder, MaterialOrderCreate } from '@/types/material-order'
+import { requireAuth, requireCompanyAccess } from '@/lib/auth'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -13,20 +14,14 @@ const supabase = SUPABASE_URL && SERVICE_KEY
   ? createClient(SUPABASE_URL, SERVICE_KEY, { db: { schema: 'public' } })
   : undefined
 
-function auth(req: NextRequest): boolean {
-  const token = req.headers.get('x-admin-token')
-  const expected = process.env.ADMIN_TOKEN
-  return !!expected && token === expected
-}
-
 // GET - List material orders
 export async function GET(req: NextRequest) {
+  // 🔒 Security: Require authentication
+  const auth = await requireAuth(req)
+  if (!auth.authorized) return auth.error
+
   if (!supabase) {
     return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
-  }
-
-  if (!auth(req)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
@@ -37,6 +32,25 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'dealId is required' }, { status: 400 })
     }
 
+    // 🔒 Security: Verify deal belongs to user's company
+    const { data: deal, error: dealError } = await supabase
+      .from('deals')
+      .select('company_id')
+      .eq('id', dealId)
+      .single()
+
+    if (dealError || !deal) {
+      console.error('Error fetching deal:', dealError)
+      return NextResponse.json(
+        { error: 'Deal not found or access denied' },
+        { status: 404 }
+      )
+    }
+
+    const access = await requireCompanyAccess(req, deal.company_id)
+    if (!access.authorized) return access.error
+
+    // Now safe to fetch material orders
     const { data, error } = await supabase
       .from('material_orders')
       .select('*')
@@ -60,12 +74,12 @@ export async function GET(req: NextRequest) {
 
 // POST - Create material order
 export async function POST(req: NextRequest) {
+  // 🔒 Security: Require authentication
+  const auth = await requireAuth(req)
+  if (!auth.authorized) return auth.error
+
   if (!supabase) {
     return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
-  }
-
-  if (!auth(req)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
@@ -78,6 +92,25 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // 🔒 Security: Verify deal belongs to user's company
+    const { data: deal, error: dealError } = await supabase
+      .from('deals')
+      .select('company_id')
+      .eq('id', body.deal_id)
+      .single()
+
+    if (dealError || !deal) {
+      console.error('Error fetching deal:', dealError)
+      return NextResponse.json(
+        { error: 'Deal not found or access denied' },
+        { status: 404 }
+      )
+    }
+
+    const access = await requireCompanyAccess(req, deal.company_id)
+    if (!access.authorized) return access.error
+
+    // Now safe to create material order
     const { data, error } = await supabase
       .from('material_orders')
       .insert({

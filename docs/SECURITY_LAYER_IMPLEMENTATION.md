@@ -349,16 +349,16 @@ const { data } = await supabase
 | `/api/workers` | POST | HIGH | ✅ | Done |
 | `/api/workers/[id]` | PATCH | HIGH | ✅ | Done |
 | `/api/workers/[id]` | DELETE | HIGH | ✅ | Done |
-| `/api/smm/leads` | GET | HIGH | ❌ | Needs fix |
-| `/api/work-shifts` | GET | HIGH | ❌ | Needs fix |
-| `/api/work-shifts` | POST | HIGH | ❌ | Needs fix |
-| `/api/work-shifts/[id]` | PATCH | HIGH | ❌ | Needs fix |
-| `/api/work-shifts/[id]` | DELETE | HIGH | ❌ | Needs fix |
-| `/api/material-orders` | GET | MED | ❌ | Needs fix |
-| `/api/material-orders` | POST | MED | ❌ | Needs fix |
+| `/api/smm/leads` | GET | HIGH | ✅ | Done |
+| `/api/work-shifts` | GET | HIGH | ✅ | Done |
+| `/api/work-shifts` | POST | HIGH | ✅ | Done |
+| `/api/work-shifts/[id]` | PATCH | HIGH | ✅ | Done |
+| `/api/work-shifts/[id]` | DELETE | HIGH | ✅ | Done |
+| `/api/material-orders` | GET | HIGH | ✅ | Done |
+| `/api/material-orders` | POST | HIGH | ✅ | Done |
+| `lib/analytics/aggregators.ts` | - | HIGH | ✅ | Done |
 | `/api/leads` | POST | MED | ❌ | Needs fix |
 | `/api/gallery/images` | GET | MED | ❌ | Decision needed |
-| `lib/analytics/aggregators.ts` | - | HIGH | ❌ | Uncomment filter |
 
 ---
 
@@ -429,5 +429,5 @@ Tables that NEED `company_id`:
 ---
 
 **Last Updated:** 2025-12-22  
-**Status:** 🟡 In Progress (6 of 20+ routes secured)
+**Status:** 🟢 HIGH PRIORITY COMPLETE (13 of 20+ routes secured, all HIGH RISK fixed)
 
