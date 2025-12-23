@@ -396,6 +396,34 @@ export function renderOfferHtml(offer: Offer): string {
   </div>
   ` : ''}
 
+  ${offer.winterClosure?.enabled && offer.winterClosure.items && offer.winterClosure.items.length > 0 ? `
+  <div class="section">
+    <div class="section-title">סגירת חורף (זכוכית)</div>
+    ${offer.winterClosure.glassType ? `
+    <div class="info-row">
+      <span class="label">סוג זכוכית:</span>
+      <span class="value">${offer.winterClosure.glassType === 'tempered' ? 'מחוסם' : offer.winterClosure.glassType === 'triplex' ? 'טריפלקס' : offer.winterClosure.glassType === 'insulated' ? 'בידודית' : offer.winterClosure.glassType}</span>
+    </div>
+    ` : ''}
+    ${offer.winterClosure.items.map((item, index) => {
+      const typeNames: Record<string, string> = {
+        fixedGlass: 'זכוכית קבועה',
+        windows7000: 'חלונות 7000',
+        windows9000: 'חלונות 9000',
+        slidingShowcase7000: 'ויטרינה הזזה דגם 7000',
+        slidingShowcase9000: 'ויטרינה הזזה דגם 9000',
+        foldingGlass: 'זכוכית מתקפלת'
+      };
+      const typeName = typeNames[item.type] || item.type;
+      return `
+    <div class="info-row">
+      <span class="label">${typeName}${item.notes ? ` (${item.notes})` : ''}:</span>
+      <span class="value">${item.area.toFixed(2)} מ״ר × ${item.pricePerSqm.toLocaleString('he-IL')} ₪</span>
+    </div>`;
+    }).join('')}
+  </div>
+  ` : ''}
+
   <div class="section">
     <div class="section-title">פירוט מחירים</div>
     <table class="pricing-table">
@@ -433,6 +461,32 @@ export function renderOfferHtml(offer: Offer): string {
           <td class="price-label">ניקוז</td>
           <td class="price-value">${formatPrice(offer.drainageTotal)}</td>
         </tr>
+        ` : ''}
+        ${offer.winterClosure?.enabled && offer.winterClosure.items && offer.winterClosure.items.length > 0 ? `
+        ${offer.winterClosure.items.map((item, index) => {
+          const typeNames: Record<string, string> = {
+            fixedGlass: 'זכוכית קבועה',
+            windows7000: 'חלונות 7000',
+            windows9000: 'חלונות 9000',
+            slidingShowcase7000: 'ויטרינה הזזה 7000',
+            slidingShowcase9000: 'ויטרינה הזזה 9000',
+            foldingGlass: 'זכוכית מתקפלת'
+          };
+          const typeName = typeNames[item.type] || item.type;
+          const itemTotal = item.area * item.pricePerSqm;
+          const notes = item.notes ? ` - ${item.notes}` : '';
+          return `
+        <tr>
+          <td class="price-label">${typeName} (${item.area.toFixed(2)} מ״ר × ${item.pricePerSqm} ₪)${notes}</td>
+          <td class="price-value">${formatPrice(itemTotal)}</td>
+        </tr>`;
+        }).join('')}
+        ${offer.winterClosure.items.length > 1 ? `
+        <tr>
+          <td class="price-label" style="padding-right: 20px; font-weight: 600;">סה״כ סגירת חורף (זכוכית)</td>
+          <td class="price-value" style="font-weight: 600;">${formatPrice(offer.winterClosureTotal)}</td>
+        </tr>
+        ` : ''}
         ` : ''}
         <tr class="subtotal-row">
           <td class="price-label">לפני מע״מ</td>

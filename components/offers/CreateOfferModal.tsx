@@ -636,6 +636,34 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
                   <span>{formatPrice(calculation.drainageTotal)}</span>
                 </div>
               )}
+              {draft.winterClosure.enabled && draft.winterClosure.items.length > 0 && (
+                <>
+                  {draft.winterClosure.items.map((item, index) => {
+                    const typeNames: Record<string, string> = {
+                      fixedGlass: 'זכוכית קבועה',
+                      windows7000: 'חלונות 7000',
+                      windows9000: 'חלונות 9000',
+                      slidingShowcase7000: 'ויטרינה הזזה 7000',
+                      slidingShowcase9000: 'ויטרינה הזזה 9000',
+                      foldingGlass: 'זכוכית מתקפלת'
+                    };
+                    const typeName = typeNames[item.type] || item.type;
+                    const itemTotal = item.area * item.pricePerSqm;
+                    return (
+                      <div key={index} className="flex justify-between text-white/70 text-xs">
+                        <span className="truncate">{typeName} ({item.area.toFixed(2)} מ״ר){item.notes && ` - ${item.notes}`}</span>
+                        <span>{formatPrice(itemTotal)}</span>
+                      </div>
+                    );
+                  })}
+                  {draft.winterClosure.items.length > 1 && (
+                    <div className="flex justify-between text-white/80 font-semibold">
+                      <span>סה״כ סגירת חורף:</span>
+                      <span>{formatPrice(calculation.winterClosureTotal)}</span>
+                    </div>
+                  )}
+                </>
+              )}
               
               {/* 1. Price before VAT */}
               <div className="flex justify-between text-base font-bold border-t border-white/20 pt-2 mt-2">
