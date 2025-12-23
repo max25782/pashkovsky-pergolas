@@ -110,6 +110,7 @@ export interface Pricing {
   zipScreenTotal: number            // ZIP-экран
   lightingTotal: number             // תאורה
   drainageTotal: number             // ניקוז
+  winterClosureTotal: number        // סגירת חורף (זכוכית)
   
   // Base totals
   totalBeforeVat: number            // sum of all before VAT
