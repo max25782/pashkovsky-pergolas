@@ -90,6 +90,11 @@ export async function buildAnalyticsContext({
 
   // Fetch data based on mode
   try {
+    // Check if companyId is provided (required for multi-tenant queries)
+    if (!companyId) {
+      throw new Error('companyId is required for analytics context')
+    }
+
     // Always fetch leads summary for "leads" and "manager" modes
     if (mode === 'leads' || mode === 'manager') {
       try {
