@@ -74,7 +74,8 @@ export default function OfferApprovePage() {
 
   async function fetchOffer() {
     try {
-      const response = await fetch(`/api/offers/${params.id}`)
+      // Use public endpoint (no authentication required)
+      const response = await fetch(`/api/public/offers/${params.id}`)
       if (!response.ok) {
         throw new Error('Offer not found')
       }
