@@ -1,0 +1,100 @@
+# 📋 Vercel Environment Variables - Copy & Paste
+# Добавьте эти переменные в Vercel Dashboard → Settings → Environment Variables
+
+# ============================================
+# 🔵 ОБЯЗАТЕЛЬНЫЕ (для работы приложения)
+# ============================================
+
+# Supabase - Public
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+
+# Supabase - Service Role (только для CRM, НЕ для Site!)
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
+
+# JWT Authentication
+JWT_SECRET=your-super-secret-jwt-key-minimum-32-characters-long
+
+# Multi-tenant - Default Company
+DEFAULT_COMPANY_ID=your-default-company-uuid-here
+
+# Public Lead API Token
+CRM_SITE_TOKEN=generate-random-32-char-token-here
+
+# ============================================
+# 🟢 ОПЦИОНАЛЬНЫЕ (для полной функциональности)
+# ============================================
+
+# URLs
+NEXT_PUBLIC_SITE_URL=https://pashkovsky-group.com
+NEXT_PUBLIC_CRM_URL=https://crm.pashkovsky-group.com
+
+# AWS S3 (для загрузки PDF и изображений)
+AWS_ACCESS_KEY_ID=your-aws-access-key-id
+AWS_SECRET_ACCESS_KEY=your-aws-secret-access-key
+AWS_REGION=us-east-1
+AWS_S3_BUCKET=pashkovsky-gallery
+
+# Email SMTP (для отправки email)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-app-specific-password
+
+# WhatsApp (опционально)
+WHATSAPP_API_KEY=your-whatsapp-api-key
+WHATSAPP_PHONE=+972XXXXXXXXX
+
+# Google Analytics (опционально)
+NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX
+
+# ============================================
+# 📝 ИНСТРУКЦИИ:
+# ============================================
+#
+# 1. Откройте Vercel Dashboard: https://vercel.com/dashboard
+# 2. Выберите проект → Settings → Environment Variables
+# 3. Добавьте каждую переменную:
+#    - Name: имя переменной (например, JWT_SECRET)
+#    - Value: значение переменной
+#    - Environment: выберите Production, Preview, Development
+# 4. Нажмите "Save"
+# 5. Redeploy проект (Dashboard → Deployments → Redeploy)
+#
+# ============================================
+# 🔐 ГДЕ ВЗЯТЬ ЗНАЧЕНИЯ:
+# ============================================
+#
+# Supabase:
+#   - Откройте https://supabase.com/dashboard
+#   - Settings → API
+#   - Скопируйте Project URL и ключи
+#
+# JWT_SECRET:
+#   - Сгенерируйте: openssl rand -base64 32
+#   - Или: node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+#
+# CRM_SITE_TOKEN:
+#   - Сгенерируйте: openssl rand -base64 32
+#   - Должен быть одинаковым для Site и CRM проектов
+#
+# DEFAULT_COMPANY_ID:
+#   - Откройте Supabase SQL Editor
+#   - Выполните: SELECT id FROM companies LIMIT 1;
+#   - Скопируйте UUID
+#
+# AWS S3:
+#   - Откройте AWS Console → IAM → Users
+#   - Создайте пользователя с правами S3
+#   - Скопируйте Access Key ID и Secret Access Key
+#
+# ============================================
+# ⚠️ ВАЖНО:
+# ============================================
+#
+# - НЕ коммитьте .env файлы в Git
+# - Используйте разные ключи для Production и Development
+# - Регулярно ротируйте секретные ключи
+# - SUPABASE_SERVICE_ROLE_KEY только для CRM проекта!
+# - JWT_SECRET должен быть одинаковым на всех окружениях одного проекта
+
