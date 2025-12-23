@@ -45,8 +45,10 @@ export function calculateOffer(draft: OfferDraft): OfferCalculation {
   
   // 7. Calculate winter closure price (if enabled)
   let winterClosureTotal = 0
-  if (draft.winterClosure.enabled && draft.winterClosure.pricePerSqm && draft.winterClosure.area) {
-    winterClosureTotal = draft.winterClosure.pricePerSqm * draft.winterClosure.area
+  if (draft.winterClosure.enabled && draft.winterClosure.items.length > 0) {
+    winterClosureTotal = draft.winterClosure.items.reduce((sum, item) => {
+      return sum + (item.area * item.pricePerSqm)
+    }, 0)
   }
   
   // 8. Calculate total before VAT

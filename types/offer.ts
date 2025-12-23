@@ -74,12 +74,17 @@ export interface ZipScreen {
   runningMeters?: number // מטר רץ - для расчета (если нужно отдельно от area)
 }
 
+export interface WinterClosureItem {
+  type: 'foldingGlass' | 'windows7000' | 'windows9000' | 'fixedGlass' | 'slidingShowcase7000' | 'slidingShowcase9000'
+  area: number // שטח למ"ר
+  pricePerSqm: number // מחיר למ"ר
+  notes?: string // הערות (לאיזה צד, למשל)
+}
+
 export interface WinterClosure {
   enabled: boolean
-  type?: 'foldingGlass' | 'windows7000' | 'windows9000' | 'fixedGlass' | 'slidingShowcase7000' | 'slidingShowcase9000'
-  glassType?: 'tempered' | 'triplex' | 'insulated'
-  pricePerSqm?: number // מחיר למ"ר - מחושב אוטומטית לפי הסוג
-  area?: number // שטח למ"ר
+  items: WinterClosureItem[] // רשימה של סוגי סגירה
+  glassType?: 'tempered' | 'triplex' | 'insulated' // סוג זכוכית כללי לכולם
 }
 
 export interface Lighting {
@@ -246,10 +251,8 @@ export const DEFAULT_OFFER_VALUES = {
   },
   winterClosure: {
     enabled: false,
-    type: undefined,
-    glassType: undefined,
-    pricePerSqm: undefined,
-    area: undefined
+    items: [],
+    glassType: undefined
   },
   options: {
     notes: undefined

@@ -160,11 +160,9 @@ export async function POST(req: NextRequest) {
       
       // Winter Closure
       winter_closure_enabled: finalWinterClosure.enabled,
-      winter_closure_type: finalWinterClosure.type || null,
       winter_closure_glass_type: finalWinterClosure.glassType || null,
-      winter_closure_price_per_sqm: Number(finalWinterClosure.pricePerSqm) || 0,
-      winter_closure_area: Number(finalWinterClosure.area) || 0,
-      winter_closure_total: Number((finalWinterClosure.pricePerSqm || 0) * (finalWinterClosure.area || 0)) || 0,
+      winter_closure_items: finalWinterClosure.items || [],
+      winter_closure_total: finalWinterClosure.items.reduce((sum: number, item: any) => sum + (item.area * item.pricePerSqm), 0),
       
       // Options (notes only now)
       options_notes: finalOptions.notes || null,
@@ -349,10 +347,8 @@ function transformOfferFromDB(data: any) {
     
     winterClosure: {
       enabled: data.winter_closure_enabled,
-      type: data.winter_closure_type,
+      items: data.winter_closure_items || [],
       glassType: data.winter_closure_glass_type,
-      pricePerSqm: data.winter_closure_price_per_sqm,
-      area: data.winter_closure_area,
     },
     
     options: {

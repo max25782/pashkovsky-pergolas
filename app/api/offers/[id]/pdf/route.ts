@@ -91,10 +91,8 @@ async function fetchOffer(id: string): Promise<Offer | null> {
     },
     winterClosure: {
       enabled: data.winter_closure_enabled,
-      type: data.winter_closure_type,
+      items: data.winter_closure_items || [],
       glassType: data.winter_closure_glass_type,
-      pricePerSqm: data.winter_closure_price_per_sqm,
-      area: data.winter_closure_area,
     },
     options: {
       notes: data.options_notes,

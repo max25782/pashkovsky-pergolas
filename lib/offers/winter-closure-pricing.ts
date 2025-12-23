@@ -30,15 +30,24 @@ export function getWinterClosurePrice(type: WinterClosureType | undefined): numb
 }
 
 /**
- * Calculate total winter closure price
+ * Calculate total winter closure price for a single item
  */
-export function calculateWinterClosureTotal(
+export function calculateWinterClosureItemTotal(
   type: WinterClosureType | undefined,
   area: number | undefined
 ): number {
   if (!type || !area) return 0
   const pricePerSqm = getWinterClosurePrice(type)
   return pricePerSqm * area
+}
+
+/**
+ * Calculate total winter closure price for multiple items
+ */
+export function calculateWinterClosureTotalFromItems(
+  items: Array<{ type: WinterClosureType; area: number; pricePerSqm: number }>
+): number {
+  return items.reduce((sum, item) => sum + (item.area * item.pricePerSqm), 0)
 }
 
 /**

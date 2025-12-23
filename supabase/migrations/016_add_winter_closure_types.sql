@@ -17,25 +17,16 @@ CHECK (winter_closure_type IN (
   'slidingShowcase9000'    -- ויטרינה הזזה דגם 9000 (1,800 ₪/מ"ר)
 ));
 
--- Add winter closure pricing columns if they don't exist
+-- Add winter closure items column (JSON array)
 DO $$ 
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns 
     WHERE table_name = 'offers' 
-    AND column_name = 'winter_closure_price_per_sqm'
+    AND column_name = 'winter_closure_items'
   ) THEN
     ALTER TABLE offers 
-    ADD COLUMN winter_closure_price_per_sqm NUMERIC(10, 2);
-  END IF;
-
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns 
-    WHERE table_name = 'offers' 
-    AND column_name = 'winter_closure_area'
-  ) THEN
-    ALTER TABLE offers 
-    ADD COLUMN winter_closure_area NUMERIC(10, 2);
+    ADD COLUMN winter_closure_items JSONB DEFAULT '[]'::jsonb;
   END IF;
 
   IF NOT EXISTS (
@@ -49,10 +40,9 @@ BEGIN
 END $$;
 
 -- Add comments
-COMMENT ON COLUMN offers.winter_closure_type IS 'Winter closure type: foldingGlass, windows7000 (950), windows9000 (1050), fixedGlass (750), slidingShowcase7000 (1200), slidingShowcase9000 (1800)';
-COMMENT ON COLUMN offers.winter_closure_price_per_sqm IS 'Price per square meter for winter closure (₪/מ"ר)';
-COMMENT ON COLUMN offers.winter_closure_area IS 'Winter closure area in square meters (מ"ר)';
-COMMENT ON COLUMN offers.winter_closure_total IS 'Total winter closure price (winter_closure_price_per_sqm * winter_closure_area)';
+COMMENT ON COLUMN offers.winter_closure_type IS 'DEPRECATED: Use winter_closure_items instead. Legacy field for single closure type.';
+COMMENT ON COLUMN offers.winter_closure_items IS 'Array of winter closure items: [{type, area, pricePerSqm, notes}]';
+COMMENT ON COLUMN offers.winter_closure_total IS 'Total winter closure price (sum of all items)';
 
 -- Create index for better performance
 CREATE INDEX IF NOT EXISTS idx_offers_winter_closure_enabled 

@@ -382,66 +382,159 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
             )}
           </div>
 
-          {/* Winter Closure (Glass) */}
+          {/* Winter Closure (Glass) - Multiple Items */}
           <div className="bg-white/5 rounded-lg p-4 border border-white/10">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-lg font-semibold">סגירת חורף (זכוכית)</h3>
               <label className="flex items-center gap-2 cursor-pointer" onClick={(e) => e.stopPropagation()}>
                 <span className="text-sm text-white/80">הוסף סגירה</span>
-                <input type="checkbox" checked={draft.winterClosure.enabled} onChange={(e) => { e.stopPropagation(); updateWinterClosure({ enabled: e.target.checked }) }} className="w-5 h-5 rounded" />
+                <input type="checkbox" checked={draft.winterClosure.enabled} onChange={(e) => { 
+                  e.stopPropagation(); 
+                  if (e.target.checked && draft.winterClosure.items.length === 0) {
+                    // Add first item when enabled
+                    updateWinterClosure({ enabled: true, items: [{ type: 'fixedGlass', area: 0, pricePerSqm: 750, notes: '' }] })
+                  } else {
+                    updateWinterClosure({ enabled: e.target.checked })
+                  }
+                }} className="w-5 h-5 rounded" />
               </label>
             </div>
             {draft.winterClosure.enabled && (
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm text-white/80 mb-2">סוג סגירה</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="winterClosureType" value="fixedGlass" checked={draft.winterClosure.type === 'fixedGlass'} onChange={() => updateWinterClosure({ type: 'fixedGlass', pricePerSqm: 750 })} className="w-4 h-4" /><span className="text-sm">זכוכית קבועה (750 ₪/מ"ר)</span></label>
-                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="winterClosureType" value="windows7000" checked={draft.winterClosure.type === 'windows7000'} onChange={() => updateWinterClosure({ type: 'windows7000', pricePerSqm: 950 })} className="w-4 h-4" /><span className="text-sm">חלונות 7000 (950 ₪/מ"ר)</span></label>
-                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="winterClosureType" value="windows9000" checked={draft.winterClosure.type === 'windows9000'} onChange={() => updateWinterClosure({ type: 'windows9000', pricePerSqm: 1050 })} className="w-4 h-4" /><span className="text-sm">חלונות 9000 (1,050 ₪/מ"ר)</span></label>
-                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="winterClosureType" value="slidingShowcase7000" checked={draft.winterClosure.type === 'slidingShowcase7000'} onChange={() => updateWinterClosure({ type: 'slidingShowcase7000', pricePerSqm: 1200 })} className="w-4 h-4" /><span className="text-sm">ויטרינה הזזה 7000 (1,200 ₪/מ"ר)</span></label>
-                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="winterClosureType" value="slidingShowcase9000" checked={draft.winterClosure.type === 'slidingShowcase9000'} onChange={() => updateWinterClosure({ type: 'slidingShowcase9000', pricePerSqm: 1800 })} className="w-4 h-4" /><span className="text-sm">ויטרינה הזזה 9000 (1,800 ₪/מ"ר)</span></label>
-                    <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="winterClosureType" value="foldingGlass" checked={draft.winterClosure.type === 'foldingGlass'} onChange={() => updateWinterClosure({ type: 'foldingGlass', pricePerSqm: 0 })} className="w-4 h-4" /><span className="text-sm">זכוכית מתקפלת (אחר)</span></label>
+                {/* List of winter closure items */}
+                {draft.winterClosure.items.map((item, index) => (
+                  <div key={index} className="bg-white/5 border border-white/10 rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-white/90">סגירה #{index + 1}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newItems = draft.winterClosure.items.filter((_, i) => i !== index)
+                          updateWinterClosure({ items: newItems })
+                        }}
+                        className="text-red-400 hover:text-red-300 text-sm"
+                      >
+                        ✕ הסר
+                      </button>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm text-white/80 mb-2">סוג סגירה</label>
+                      <select
+                        value={item.type}
+                        onChange={(e) => {
+                          const newItems = [...draft.winterClosure.items]
+                          const type = e.target.value as typeof item.type
+                          const prices: Record<string, number> = {
+                            fixedGlass: 750,
+                            windows7000: 950,
+                            windows9000: 1050,
+                            slidingShowcase7000: 1200,
+                            slidingShowcase9000: 1800,
+                            foldingGlass: 0
+                          }
+                          newItems[index] = { ...item, type, pricePerSqm: prices[type] }
+                          updateWinterClosure({ items: newItems })
+                        }}
+                        className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white"
+                      >
+                        <option value="fixedGlass">זכוכית קבועה (750 ₪/מ"ר)</option>
+                        <option value="windows7000">חלונות 7000 (950 ₪/מ"ר)</option>
+                        <option value="windows9000">חלונות 9000 (1,050 ₪/מ"ר)</option>
+                        <option value="slidingShowcase7000">ויטרינה הזזה 7000 (1,200 ₪/מ"ר)</option>
+                        <option value="slidingShowcase9000">ויטרינה הזזה 9000 (1,800 ₪/מ"ר)</option>
+                        <option value="foldingGlass">זכוכית מתקפלת (אחר)</option>
+                      </select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm text-white/80 mb-2">שטח (מ"ר)</label>
+                        <input
+                          type="number"
+                          value={item.area || ''}
+                          onChange={(e) => {
+                            const newItems = [...draft.winterClosure.items]
+                            newItems[index] = { ...item, area: parseFloat(e.target.value) || 0 }
+                            updateWinterClosure({ items: newItems })
+                          }}
+                          placeholder="שטח..."
+                          className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white"
+                          step="0.1"
+                          min="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-white/80 mb-2">מחיר למ"ר (₪)</label>
+                        <input
+                          type="number"
+                          value={item.pricePerSqm || ''}
+                          onChange={(e) => {
+                            const newItems = [...draft.winterClosure.items]
+                            newItems[index] = { ...item, pricePerSqm: parseFloat(e.target.value) || 0 }
+                            updateWinterClosure({ items: newItems })
+                          }}
+                          placeholder="מחיר..."
+                          className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white"
+                          step="10"
+                          min="0"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-white/80 mb-2">הערות (איזה צד?)</label>
+                      <input
+                        type="text"
+                        value={item.notes || ''}
+                        onChange={(e) => {
+                          const newItems = [...draft.winterClosure.items]
+                          newItems[index] = { ...item, notes: e.target.value }
+                          updateWinterClosure({ items: newItems })
+                        }}
+                        placeholder="למשל: צד קדמי, צד ימני..."
+                        className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white"
+                      />
+                    </div>
+
+                    {item.area > 0 && item.pricePerSqm > 0 && (
+                      <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-2 text-center">
+                        <span className="text-sm text-white/80">סכום: </span>
+                        <span className="text-lg font-bold text-green-400">
+                          {(item.area * item.pricePerSqm).toLocaleString('he-IL')} ₪
+                        </span>
+                      </div>
+                    )}
                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm text-white/80 mb-2">שטח (מ"ר)</label>
-                    <input
-                      type="number"
-                      value={draft.winterClosure.area || ''}
-                      onChange={(e) => updateWinterClosure({ area: parseFloat(e.target.value) || 0 })}
-                      placeholder="הזן שטח..."
-                      className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white"
-                      step="0.1"
-                      min="0"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-white/80 mb-2">מחיר למ"ר (₪)</label>
-                    <input
-                      type="number"
-                      value={draft.winterClosure.pricePerSqm || ''}
-                      onChange={(e) => updateWinterClosure({ pricePerSqm: parseFloat(e.target.value) || 0 })}
-                      placeholder="מחיר..."
-                      className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white"
-                      step="10"
-                      min="0"
-                    />
-                  </div>
-                </div>
-                {draft.winterClosure.area && draft.winterClosure.pricePerSqm && (
+                ))}
+
+                {/* Add Item Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newItems = [...draft.winterClosure.items, { type: 'fixedGlass' as const, area: 0, pricePerSqm: 750, notes: '' }]
+                    updateWinterClosure({ items: newItems })
+                  }}
+                  className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-medium transition"
+                >
+                  + הוסף עוד סוג סגירה
+                </button>
+
+                {/* Total */}
+                {draft.winterClosure.items.length > 0 && (
                   <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-white/80">סה"כ סגירת חורף:</span>
-                      <span className="text-lg font-bold text-blue-400">
-                        {(draft.winterClosure.area * draft.winterClosure.pricePerSqm).toLocaleString('he-IL')} ₪
+                      <span className="text-xl font-bold text-blue-400">
+                        {draft.winterClosure.items.reduce((sum, item) => sum + (item.area * item.pricePerSqm), 0).toLocaleString('he-IL')} ₪
                       </span>
                     </div>
                   </div>
                 )}
+
+                {/* Glass Type (common for all) */}
                 <div>
-                  <label className="block text-sm text-white/80 mb-2">סוג זכוכית</label>
+                  <label className="block text-sm text-white/80 mb-2">סוג זכוכית (לכל הסגירות)</label>
                   <div className="flex gap-3">
                     <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="winterClosureGlassType" value="tempered" checked={draft.winterClosure.glassType === 'tempered'} onChange={() => updateWinterClosure({ glassType: 'tempered' })} className="w-4 h-4" /><span className="text-sm">מחוסם</span></label>
                     <label className="flex items-center gap-2 cursor-pointer"><input type="radio" name="winterClosureGlassType" value="triplex" checked={draft.winterClosure.glassType === 'triplex'} onChange={() => updateWinterClosure({ glassType: 'triplex' })} className="w-4 h-4" /><span className="text-sm">טריפלקס</span></label>

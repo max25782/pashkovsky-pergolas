@@ -1,6 +1,8 @@
 {
-  "/(crm)/app/admin/deals/page": "app/(crm)/app/admin/deals/page.js",
+  "/icon.svg/route": "app/icon.svg/route.js",
+  "/admin-api/deals/route": "app/admin-api/deals/route.js",
   "/(auth)/login/page": "app/(auth)/login/page.js",
+  "/(crm)/app/admin/deals/page": "app/(crm)/app/admin/deals/page.js",
   "/(crm)/app/admin/users/page": "app/(crm)/app/admin/users/page.js",
   "/(crm)/app/admin/statistics/page": "app/(crm)/app/admin/statistics/page.js",
   "/(crm)/app/admin/page": "app/(crm)/app/admin/page.js"
