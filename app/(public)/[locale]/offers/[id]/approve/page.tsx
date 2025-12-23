@@ -209,6 +209,40 @@ export default function OfferApprovePage() {
                 <div className="col-span-2 pt-2 border-t border-gray-200">
                   <span className="font-medium">שטח כולל:</span> {offer.area} מ״ר
                 </div>
+                {offer.winterClosure?.enabled && offer.winterClosure.items && offer.winterClosure.items.length > 0 && (
+                  <>
+                    <div className="col-span-2 pt-2 border-t border-gray-200">
+                      <span className="font-medium">סגירת חורף (זכוכית):</span>
+                    </div>
+                    {offer.winterClosure.glassType && (
+                      <div className="col-span-2">
+                        <span className="font-medium">סוג זכוכית:</span>{' '}
+                        {offer.winterClosure.glassType === 'tempered' ? 'מחוסם' : 
+                         offer.winterClosure.glassType === 'triplex' ? 'טריפלקס' : 
+                         offer.winterClosure.glassType === 'insulated' ? 'בידודית' : 
+                         offer.winterClosure.glassType}
+                      </div>
+                    )}
+                    {offer.winterClosure.items.map((item: any, index: number) => {
+                      const typeNames: Record<string, string> = {
+                        fixedGlass: 'זכוכית קבועה',
+                        windows7000: 'חלונות 7000',
+                        windows9000: 'חלונות 9000',
+                        slidingShowcase7000: 'ויטרינה הזזה דגם 7000',
+                        slidingShowcase9000: 'ויטרינה הזזה דגם 9000',
+                        foldingGlass: 'זכוכית מתקפלת'
+                      };
+                      const typeName = typeNames[item.type] || item.type;
+                      return (
+                        <div key={index} className="col-span-2 text-sm">
+                          <span className="font-medium">{typeName}:</span>{' '}
+                          {item.area.toFixed(2)} מ״ר
+                          {item.notes && <span className="text-gray-600"> ({item.notes})</span>}
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
               </div>
             </div>
 
@@ -236,6 +270,37 @@ export default function OfferApprovePage() {
                   <span>ניקוז:</span>
                   <span className="font-semibold text-gray-900">{formatPrice(offer.drainageTotal)}</span>
                 </div>
+                {offer.winterClosure?.enabled && offer.winterClosure.items && offer.winterClosure.items.length > 0 && (
+                  <>
+                    {offer.winterClosure.items.map((item: any, index: number) => {
+                      const typeNames: Record<string, string> = {
+                        fixedGlass: 'זכוכית קבועה',
+                        windows7000: 'חלונות 7000',
+                        windows9000: 'חלונות 9000',
+                        slidingShowcase7000: 'ויטרינה הזזה 7000',
+                        slidingShowcase9000: 'ויטרינה הזזה 9000',
+                        foldingGlass: 'זכוכית מתקפלת'
+                      };
+                      const typeName = typeNames[item.type] || item.type;
+                      const itemTotal = item.area * item.pricePerSqm;
+                      return (
+                        <div key={index} className="flex justify-between text-xs">
+                          <span className="text-gray-600">
+                            {typeName} ({item.area.toFixed(2)} מ״ר × {item.pricePerSqm.toLocaleString('he-IL')} ₪)
+                            {item.notes && <span className="text-gray-500"> - {item.notes}</span>}
+                          </span>
+                          <span className="font-semibold text-gray-900">{formatPrice(itemTotal)}</span>
+                        </div>
+                      );
+                    })}
+                    {offer.winterClosure.items.length > 1 && (
+                      <div className="flex justify-between font-semibold text-gray-800 pt-1 border-t border-gray-200">
+                        <span>סה״כ סגירת חורף:</span>
+                        <span>{formatPrice(offer.winterClosureTotal)}</span>
+                      </div>
+                    )}
+                  </>
+                )}
 
                 <div className="flex justify-between text-base font-bold text-gray-800 pt-2 border-t border-blue-200">
                   <span>לפני מע״מ:</span>
