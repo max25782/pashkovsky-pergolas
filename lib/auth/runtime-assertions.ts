@@ -284,7 +284,3 @@ export async function withSecurityAssertions<T>(
     throw error
   }
 }
-
-// Export types for use in other modules
-export type { SecurityViolationError }
-
