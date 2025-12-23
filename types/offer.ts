@@ -76,8 +76,10 @@ export interface ZipScreen {
 
 export interface WinterClosure {
   enabled: boolean
-  type?: 'foldingGlass' | 'windows7000' | 'windows9000'
+  type?: 'foldingGlass' | 'windows7000' | 'windows9000' | 'fixedGlass' | 'slidingShowcase7000' | 'slidingShowcase9000'
   glassType?: 'tempered' | 'triplex' | 'insulated'
+  pricePerSqm?: number // מחיר למ"ר - מחושב אוטומטית לפי הסוג
+  area?: number // שטח למ"ר
 }
 
 export interface Lighting {
@@ -174,9 +176,12 @@ export interface OfferCalculation {
   zipScreenTotal: number
   lightingTotal: number
   drainageTotal: number
+  winterClosureTotal: number
   totalBeforeVat: number
+  vatPercent: number
   vatAmount: number
   priceWithVat: number
+  discountPercent: number
   discountAmount: number
   finalPrice: number
 }
@@ -242,7 +247,9 @@ export const DEFAULT_OFFER_VALUES = {
   winterClosure: {
     enabled: false,
     type: undefined,
-    glassType: undefined
+    glassType: undefined,
+    pricePerSqm: undefined,
+    area: undefined
   },
   options: {
     notes: undefined

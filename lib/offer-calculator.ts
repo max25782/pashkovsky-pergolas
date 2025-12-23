@@ -43,16 +43,22 @@ export function calculateOffer(draft: OfferDraft): OfferCalculation {
     drainageTotal = meters * draft.drainage.pricePerMeter
   }
   
-  // 7. Calculate total before VAT
-  const totalBeforeVat = pergolaTotal + santafTotal + zipScreenTotal + lightingTotal + drainageTotal
+  // 7. Calculate winter closure price (if enabled)
+  let winterClosureTotal = 0
+  if (draft.winterClosure.enabled && draft.winterClosure.pricePerSqm && draft.winterClosure.area) {
+    winterClosureTotal = draft.winterClosure.pricePerSqm * draft.winterClosure.area
+  }
   
-  // 8. Calculate VAT (18%)
+  // 8. Calculate total before VAT
+  const totalBeforeVat = pergolaTotal + santafTotal + zipScreenTotal + lightingTotal + drainageTotal + winterClosureTotal
+  
+  // 9. Calculate VAT (18%)
   const vatAmount = totalBeforeVat * 0.18
   
-  // 9. Calculate price with VAT
+  // 10. Calculate price with VAT
   const priceWithVat = totalBeforeVat + vatAmount
   
-  // 10. Calculate discount (APPLIED AFTER VAT - IMPORTANT!)
+  // 11. Calculate discount (APPLIED AFTER VAT - IMPORTANT!)
   const discountPercent = draft.discountPercent || 0
   const discountAmount = (priceWithVat * discountPercent) / 100
   
@@ -66,9 +72,12 @@ export function calculateOffer(draft: OfferDraft): OfferCalculation {
     zipScreenTotal,
     lightingTotal,
     drainageTotal,
+    winterClosureTotal,
     totalBeforeVat,
+    vatPercent: 18,
     vatAmount,
     priceWithVat,
+    discountPercent,
     discountAmount,
     finalPrice
   }

@@ -1,9 +1,7 @@
 {
-  "/admin-api/users/route": "app/admin-api/users/route.js",
-  "/admin-api/users/invite/route": "app/admin-api/users/invite/route.js",
-  "/(auth)/login/page": "app/(auth)/login/page.js",
-  "/(crm)/app/admin/page": "app/(crm)/app/admin/page.js",
   "/(crm)/app/admin/deals/page": "app/(crm)/app/admin/deals/page.js",
+  "/(auth)/login/page": "app/(auth)/login/page.js",
   "/(crm)/app/admin/users/page": "app/(crm)/app/admin/users/page.js",
-  "/(crm)/app/admin/statistics/page": "app/(crm)/app/admin/statistics/page.js"
+  "/(crm)/app/admin/statistics/page": "app/(crm)/app/admin/statistics/page.js",
+  "/(crm)/app/admin/page": "app/(crm)/app/admin/page.js"
 }
