@@ -46,7 +46,7 @@ export interface AuthUser {
   role?: string
 }
 
-export interface AuthResult {
+export type AuthResult = {
   authorized: true
   user: AuthUser
 } | {
@@ -54,7 +54,7 @@ export interface AuthResult {
   error: NextResponse
 }
 
-export interface CompanyAccessResult {
+export type CompanyAccessResult = {
   authorized: true
 } | {
   authorized: false
