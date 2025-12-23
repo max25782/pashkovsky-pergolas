@@ -5,7 +5,7 @@ import ContactSection from '@/components/contact-section'
 import { getImageUrl } from '@/lib/image-url'
 
 export default function ProfilesPage() {
-  const locale = 'he' // Default locale for CRM
+  // CRM pages use Hebrew by default
   
   // Читаем метаданные из JSON (изображения теперь в S3)
   const profilesJsonPath = path.join(process.cwd(), 'public', 'data', 'profiles.json')
@@ -21,17 +21,11 @@ export default function ProfilesPage() {
     return {
       id: meta?.id || path.basename(imagePath, path.extname(imagePath)),
       image: imagePath ? getImageUrl(imagePath) : '',
-      name: meta?.name || { he: '', ru: '', en: '' },
+      name: meta?.name?.he || '',
       dimensions: meta?.dimensions || '',
-      description: meta?.description || { he: '', ru: '', en: '' },
+      description: meta?.description?.he || '',
     }
   }).filter((item: any) => item.image) // Фильтруем только те, у которых есть изображение
-
-  const t = (he: string, ru: string, en: string) => {
-    if (locale === 'ru') return ru
-    if (locale === 'en') return en
-    return he
-  }
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-neutral-950 to-neutral-900 text-white py-20">
@@ -39,14 +33,10 @@ export default function ProfilesPage() {
         {/* Header */}
         <div className="text-center mb-16">
           <h1 className="text-4xl md:text-5xl font-extrabold mb-6">
-            {t('פרופילים אלומיניום', 'Алюминиевые профили', 'Aluminum Profiles')}
+            פרופילים אלומיניום
           </h1>
           <p className="text-xl text-white/70 max-w-3xl mx-auto">
-            {t(
-              'מגוון רחב של פרופילי אלומיניום איכותיים לכל צורך - מפרגולות ומעקות ועד תאורה ועיצוב',
-              'Широкий выбор качественных алюминиевых профилей для любых нужд - от пергол и перил до освещения и дизайна',
-              'Wide range of quality aluminum profiles for every need - from pergolas and railings to lighting and design'
-            )}
+            מגוון רחב של פרופילי אלומיניום איכותיים לכל צורך - מפרגולות ומעקות ועד תאורה ועיצוב
           </p>
         </div>
 
@@ -61,7 +51,7 @@ export default function ProfilesPage() {
               <div className="relative w-full h-48 bg-white/10 flex items-center justify-center">
                 <Image
                   src={profile.image}
-                  alt={profile.name[locale]}
+                  alt={profile.name}
                   width={300}
                   height={200}
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
@@ -73,18 +63,18 @@ export default function ProfilesPage() {
 
               {/* Content */}
               <div className="p-6">
-                <h3 className="text-xl font-bold mb-2">{profile.name[locale]}</h3>
+                <h3 className="text-xl font-bold mb-2">{profile.name}</h3>
                 {profile.dimensions && (
                   <p className="text-blue-400 text-sm font-semibold mb-3">{profile.dimensions}</p>
                 )}
-                {profile.description?.[locale]?.trim() && (
-                  <p className="text-white/70 text-sm leading-relaxed">{profile.description[locale]}</p>
+                {profile.description?.trim() && (
+                  <p className="text-white/70 text-sm leading-relaxed">{profile.description}</p>
                 )}
               </div>
             </div>
           ))}
         </div>
-        <ContactSection locale={locale} />
+        <ContactSection locale="he" />
       </div>
     </main>
   )
