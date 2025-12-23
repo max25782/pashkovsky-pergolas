@@ -97,7 +97,6 @@ async function fetchOffer(id: string): Promise<Offer | null> {
     options: {
       notes: data.options_notes,
     },
-    discountPercent: data.discount_percent,
 
     area: data.area,
     pergolaTotal: data.pergola_total,
