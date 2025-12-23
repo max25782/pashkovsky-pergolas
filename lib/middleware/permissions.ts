@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { getUserContext } from './auth'
+import { getUserContext } from './company-context'
 import type { UserRole } from '@/types/roles'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
