@@ -322,19 +322,19 @@ export default function AIAnalyticsPage() {
         <h1 className="text-3xl font-bold">AI Аналитика</h1>
         <div className="flex gap-2 flex-wrap">
           <Link
-            href={`//app/admin/deals`}
+            href="/app/admin/deals"
             className="px-4 py-2 rounded bg-green-600 hover:bg-green-700 font-semibold"
           >
             {t.nav.deals}
           </Link>
           <Link
-            href={`//app/admin/statistics`}
+            href="/app/admin/statistics"
             className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-700 font-semibold"
           >
             {t.nav.statistic}
           </Link>
           <Link
-            href={`//app/admin/leads`}
+            href="/app/admin/leads"
             className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 font-semibold"
           >
             {t.nav.leads}
