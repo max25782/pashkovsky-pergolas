@@ -5,6 +5,9 @@ import { signToken } from '@/lib/auth/jwt'
 import { generateToken, hashToken, getExpirationTime } from '@/lib/auth/tokens'
 import { logAuthEvent } from '@/lib/audit/logger'
 
+// Force dynamic rendering - uses request.url
+export const dynamic = 'force-dynamic'
+
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'

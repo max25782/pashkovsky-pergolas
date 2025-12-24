@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getGoogleAuthUrl, isGoogleOAuthConfigured } from '@/lib/auth/oauth/google'
 
+// Force dynamic rendering - uses request.url
+export const dynamic = 'force-dynamic'
+
 /**
  * GET /api/auth/oauth/google
  * Initiate Google OAuth flow
