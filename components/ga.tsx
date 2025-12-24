@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, Suspense } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 import Script from 'next/script'
 
@@ -11,7 +11,7 @@ declare global {
   }
 }
 
-export default function GA() {
+function GAContent() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const gaId = process.env.NEXT_PUBLIC_GA_ID
@@ -69,6 +69,14 @@ export default function GA() {
         }}
       />
     </>
+  )
+}
+
+export default function GA() {
+  return (
+    <Suspense fallback={null}>
+      <GAContent />
+    </Suspense>
   )
 }
 
