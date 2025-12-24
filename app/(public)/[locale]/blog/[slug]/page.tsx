@@ -5,32 +5,37 @@ import fs from 'fs';
 import path from 'path';
 
 interface ArticlePageProps {
-  params: {
+  params: Promise<{
     locale: Locale;
     slug: string;
-  };
+  }>;
 }
 
 export async function generateStaticParams() {
-  const articlesPath = path.join(process.cwd(), 'public', 'data', 'articles.json');
-  const articlesData = JSON.parse(fs.readFileSync(articlesPath, 'utf-8'));
-  const locales: Locale[] = ['he', 'ru', 'en'];
-  const params = [];
-  
-  for (const locale of locales) {
-    for (const article of articlesData.articles) {
-      params.push({
-        locale,
-        slug: article.slug,
-      });
+  try {
+    const articlesPath = path.join(process.cwd(), 'public', 'data', 'articles.json');
+    const articlesData = JSON.parse(fs.readFileSync(articlesPath, 'utf-8'));
+    const locales: Locale[] = ['he', 'ru', 'en'];
+    const params = [];
+    
+    for (const locale of locales) {
+      for (const article of articlesData.articles) {
+        params.push({
+          locale,
+          slug: article.slug,
+        });
+      }
     }
+    
+    return params;
+  } catch (error) {
+    console.error('Error generating static params for blog:', error)
+    return []
   }
-  
-  return params;
 }
 
-export default function ArticlePage({ params }: ArticlePageProps) {
-  const { locale, slug } = params;
+export default async function ArticlePage({ params }: ArticlePageProps) {
+  const { locale, slug } = await params
   
   const articlesPath = path.join(process.cwd(), 'public', 'data', 'articles.json');
   const articlesData = JSON.parse(fs.readFileSync(articlesPath, 'utf-8'));

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Building2, ChevronRight, Loader2 } from 'lucide-react'
 
@@ -10,7 +10,7 @@ interface Company {
   role: 'owner' | 'admin' | 'manager' | 'worker' | 'viewer'
 }
 
-export default function SelectCompanyPage() {
+function SelectCompanyPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectUrl = searchParams.get('redirect') || '/app/admin'
@@ -180,5 +180,19 @@ function getRoleLabel(role: string): string {
     viewer: 'צופה',
   }
   return labels[role] || role
+}
+
+export default function SelectCompanyPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-gradient-to-b from-neutral-950 via-neutral-900 to-neutral-950">
+        <div className="container flex items-center justify-center min-h-screen">
+          <div className="text-white/60">Loading...</div>
+        </div>
+      </main>
+    }>
+      <SelectCompanyPageContent />
+    </Suspense>
+  )
 }
 
