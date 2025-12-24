@@ -1,24 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "version": 2,
-  "name": "pashkovsky-pergolas",
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/next"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/$1"
-    }
-  ],
-  "env": {
-  },
-  "build": {
-    "env": {
-    }
-  }
+  "version": 2
 }
 
