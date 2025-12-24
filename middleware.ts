@@ -69,6 +69,14 @@ export async function middleware(request: NextRequest) {
   const hostname = request.headers.get('host') || ''
   const subdomain = hostname.split('.')[0]
   
+  // ===== PROTECT ALL /app/** ROUTES FIRST (before locale handling) =====
+  if (pathname.startsWith('/app')) {
+    // SKIP middleware auth check for /app routes
+    // Admin token is stored in localStorage (not accessible in middleware)
+    // Client-side pages will handle auth check and redirect if needed
+    return NextResponse.next()
+  }
+  
   // CRM subdomain handling
   const isCRMSubdomain = subdomain === 'crm' || subdomain === 'admin'
   
@@ -80,24 +88,13 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(url)
     }
     
-    // Allow /app routes (will be protected below)
-    if (pathname.startsWith('/app')) {
-      // Continue to CRM protection logic below
-    } else if (!pathname.startsWith('/api') && !pathname.startsWith('/_next')) {
-      // Redirect non-app routes to CRM dashboard
+    // Redirect non-app, non-api routes to CRM dashboard
+    if (!pathname.startsWith('/api') && !pathname.startsWith('/_next')) {
       const url = request.nextUrl.clone()
       url.pathname = `/app/admin`
       return NextResponse.redirect(url)
-    } else {
-      return NextResponse.next()
     }
-  }
-  
-  // ===== PROTECT ALL /app/** ROUTES =====
-  if (pathname.startsWith('/app')) {
-    // SKIP middleware auth check for /app routes
-    // Admin token is stored in localStorage (not accessible in middleware)
-    // Client-side pages will handle auth check and redirect if needed
+    
     return NextResponse.next()
   }
   
