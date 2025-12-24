@@ -43,12 +43,16 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const includeInactive = searchParams.get('includeInactive') === 'true'
 
-    // 🔒 Security: Filter by company_id
+    // 🔒 Security: Filter by company_id (unless admin token)
     let query = supabase
       .from('workers')
       .select('*')
-      .eq('company_id', auth.user.companyId) // Multi-tenant filter
       .order('first_name', { ascending: true })
+
+    // Only filter by company if not using admin token
+    if (auth.user.companyId && auth.user.companyId !== 'admin') {
+      query = query.eq('company_id', auth.user.companyId) // Multi-tenant filter
+    }
 
     if (!includeInactive) {
       query = query.eq('is_active', true)
@@ -100,11 +104,31 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // 🔒 Security: Assign to user's company
+    // 🔒 Security: Assign to user's company (or first available company for admin)
+    let companyId = auth.user.companyId
+    
+    // If using admin token, get the first company from the database
+    if (companyId === 'admin') {
+      const { data: companies } = await supabase
+        .from('companies')
+        .select('id')
+        .limit(1)
+        .single()
+      
+      if (companies) {
+        companyId = companies.id
+      } else {
+        return NextResponse.json(
+          { error: 'No company found. Please create a company first.' },
+          { status: 400 }
+        )
+      }
+    }
+
     const { data, error } = await supabase
       .from('workers')
       .insert({
-        company_id: auth.user.companyId, // Multi-tenant assignment
+        company_id: companyId, // Multi-tenant assignment
         first_name: firstName,
         last_name: lastName,
         phone: phone || null,
