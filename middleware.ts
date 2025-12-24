@@ -101,12 +101,17 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
   
-  // ===== AUTH ROUTES (public) =====
+  // ===== AUTH ROUTES (public, no locale) =====
   if (isPublicRoute(pathname)) {
     return NextResponse.next()
   }
   
-  // ===== LOCALE HANDLING FOR PUBLIC PAGES =====
+  // ===== LOCALE HANDLING FOR PUBLIC PAGES ONLY =====
+  // Skip locale redirect for API routes, static files, and CRM subdomain
+  if (pathname.startsWith('/api') || pathname.startsWith('/_next') || isCRMSubdomain) {
+    return NextResponse.next()
+  }
+  
   const pathnameHasLocale = locales.some(
     (locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`
   )
@@ -115,7 +120,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Redirect to default locale for public pages
+  // Redirect to default locale for public pages ONLY
   const url = request.nextUrl.clone()
   url.pathname = `/${defaultLocale}${pathname}`
   return NextResponse.redirect(url)
