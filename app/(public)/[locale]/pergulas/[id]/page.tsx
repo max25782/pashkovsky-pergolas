@@ -42,7 +42,7 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<{ id: string; locale: Locale }> }): Promise<Metadata> {
   const { id, locale } = await params
   try {
-    const pergola = getProjectById(params.id)
+    const pergola = getProjectById(id)
     if (!pergola) {
       return {
         title: 'Project Not Found | Pashkovski Group',
@@ -50,10 +50,10 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       }
     }
     
-    const titleHe = pergola.title.he ?? params.id
+    const titleHe = pergola.title.he ?? id
     const descHe = pergola.desc.he ?? ''
     const cover = pergola.images?.[0] ? getImageUrl(pergola.images[0]) : undefined
-    const canonical = `https://pashkovsky-group.com/${params.locale}/pergulas/${params.id}`
+    const canonical = `https://pashkovsky-group.com/${locale}/pergulas/${id}`
 
     return {
       title: `פרגולת ${titleHe} | Pashkovski Group` as any,
@@ -67,7 +67,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       },
     }
   } catch (error) {
-    console.error('Error generating metadata for pergula:', params.id, error)
+    console.error('Error generating metadata for pergula:', id, error)
     return {
       title: 'Project | Pashkovski Group',
       description: '',
