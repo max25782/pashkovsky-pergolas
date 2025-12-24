@@ -81,7 +81,7 @@ export default function CRMSidebar() {
           {/* Footer */}
           <div className="pt-4 border-t border-neutral-200 dark:border-neutral-700">
             <Link
-              href="/app/profiles"
+              href="/app/admin/settings"
               className="flex items-center gap-3 px-4 py-3 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-lg transition-colors"
             >
               <Settings size={20} />

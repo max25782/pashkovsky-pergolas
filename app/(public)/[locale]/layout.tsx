@@ -66,7 +66,7 @@ export default function PublicLayout({
       <head>
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />
       </head>
-      <body className="antialiased">
+      <body className="antialiased" suppressHydrationWarning>
         <Providers>
           <Suspense fallback={null}>
             <UTMTracker />

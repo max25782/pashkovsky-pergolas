@@ -3,11 +3,18 @@ import fs from 'fs'
 import path from 'path'
 import ContactSection from '@/components/contact-section'
 import { getImageUrl } from '@/lib/image-url'
+import type { Locale } from '@/lib/locales'
 
-export default function ProfilesPage() {
-  // CRM pages use Hebrew by default
+interface ProfilesPageProps {
+  params: Promise<{
+    locale: Locale
+  }>
+}
+
+export default async function ProfilesPage({ params }: ProfilesPageProps) {
+  const { locale } = await params
   
-  // Читаем метаданные из JSON (изображения теперь в S3)
+  // Read metadata from JSON (images are in S3)
   const profilesJsonPath = path.join(process.cwd(), 'public', 'data', 'profiles.json')
   let profilesMeta: Array<any> = []
   try {
@@ -15,18 +22,33 @@ export default function ProfilesPage() {
     profilesMeta = Array.isArray(profilesData?.profiles) ? profilesData.profiles : []
   } catch {}
 
-  // Используем только данные из JSON (изображения уже в S3)
+  // Use only data from JSON (images are in S3)
   const items = profilesMeta.map((meta: any, index: number) => {
     const imagePath = meta?.image || ''
     return {
       id: meta?.id || path.basename(imagePath, path.extname(imagePath)),
-      uniqueKey: `profile-${index}-${meta?.id || 'unknown'}`, // Уникальный ключ для React
+      uniqueKey: `profile-${index}-${meta?.id || 'unknown'}`,
       image: imagePath ? getImageUrl(imagePath) : '',
-      name: meta?.name?.he || '',
+      name: meta?.name?.[locale] || meta?.name?.he || '',
       dimensions: meta?.dimensions || '',
-      description: meta?.description?.he || '',
+      description: meta?.description?.[locale] || meta?.description?.he || '',
     }
-  }).filter((item: any) => item.image) // Фильтруем только те, у которых есть изображение
+  }).filter((item: any) => item.image)
+
+  const t = {
+    he: {
+      title: 'פרופילים אלומיניום',
+      subtitle: 'מגוון רחב של פרופילי אלומיניום איכותיים לכל צורך - מפרגולות ומעקות ועד תאורה ועיצוב'
+    },
+    ru: {
+      title: 'Алюминиевые профили',
+      subtitle: 'Широкий ассортимент качественных алюминиевых профилей для любых нужд - от пергол и ограждений до освещения и дизайна'
+    },
+    en: {
+      title: 'Aluminum Profiles',
+      subtitle: 'Wide range of quality aluminum profiles for any need - from pergolas and railings to lighting and design'
+    }
+  }
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-neutral-950 to-neutral-900 text-white py-20">
@@ -34,10 +56,10 @@ export default function ProfilesPage() {
         {/* Header */}
         <div className="text-center mb-16">
           <h1 className="text-4xl md:text-5xl font-extrabold mb-6">
-            פרופילים אלומיניום
+            {t[locale].title}
           </h1>
           <p className="text-xl text-white/70 max-w-3xl mx-auto">
-            מגוון רחב של פרופילי אלומיניום איכותיים לכל צורך - מפרגולות ומעקות ועד תאורה ועיצוב
+            {t[locale].subtitle}
           </p>
         </div>
 
@@ -75,7 +97,7 @@ export default function ProfilesPage() {
             </div>
           ))}
         </div>
-        <ContactSection locale="he" />
+        <ContactSection locale={locale} />
       </div>
     </main>
   )

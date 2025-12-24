@@ -19,8 +19,18 @@ export default function WorkersAdminPage() {
   const [showInactive, setShowInactive] = useState(false)
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('admin_token')
-    if (storedToken) setToken(storedToken)
+    // Check for JWT token first (from login/register)
+    const jwtToken = localStorage.getItem('token')
+    if (jwtToken) {
+      setToken(jwtToken)
+      return
+    }
+
+    // Fallback to admin token (legacy)
+    const adminToken = localStorage.getItem('admin_token')
+    if (adminToken) {
+      setToken(adminToken)
+    }
   }, [])
 
   function save() {
@@ -37,10 +47,22 @@ export default function WorkersAdminPage() {
   }
 
   const fetchWorkers = useCallback(async () => {
+    if (!token) return // Don't fetch if no token
+    
     try {
       setLoading(true)
       setError(null)
-      const response = await fetch(`/api/workers?includeInactive=${showInactive}`)
+      
+      const headers: HeadersInit = {}
+      // Check if it's JWT or admin token
+      const isJWT = token.includes('.')
+      if (isJWT) {
+        headers['Authorization'] = `Bearer ${token}`
+      } else {
+        headers['x-admin-token'] = token
+      }
+      
+      const response = await fetch(`/api/workers?includeInactive=${showInactive}`, { headers })
       if (!response.ok) throw new Error('Failed to fetch workers')
       const { workers: workersData } = await response.json()
       setWorkers(workersData || [])
@@ -49,7 +71,7 @@ export default function WorkersAdminPage() {
     } finally {
       setLoading(false)
     }
-  }, [showInactive])
+  }, [showInactive, token])
 
   useEffect(() => {
     fetchWorkers()
@@ -57,10 +79,20 @@ export default function WorkersAdminPage() {
 
   const handleDelete = async (workerId: string) => {
     if (!confirm('האם אתה בטוח שברצונך למחוק עובד זה?')) return
+    if (!token) return
 
     try {
+      const headers: HeadersInit = {}
+      const isJWT = token.includes('.')
+      if (isJWT) {
+        headers['Authorization'] = `Bearer ${token}`
+      } else {
+        headers['x-admin-token'] = token
+      }
+      
       const response = await fetch(`/api/workers/${workerId}`, {
         method: 'DELETE',
+        headers,
       })
 
       if (!response.ok) throw new Error('Failed to delete worker')
@@ -72,10 +104,20 @@ export default function WorkersAdminPage() {
   }
 
   const handleToggleActive = async (worker: Worker) => {
+    if (!token) return
+    
     try {
+      const headers: HeadersInit = { 'Content-Type': 'application/json' }
+      const isJWT = token.includes('.')
+      if (isJWT) {
+        headers['Authorization'] = `Bearer ${token}`
+      } else {
+        headers['x-admin-token'] = token
+      }
+      
       const response = await fetch(`/api/workers/${worker.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ isActive: !worker.isActive }),
       })
 
@@ -280,9 +322,10 @@ export default function WorkersAdminPage() {
         )}
 
         {/* Add/Edit Modal */}
-        {(showAddModal || editingWorker) && (
+        {(showAddModal || editingWorker) && token && (
           <WorkerModal
             worker={editingWorker}
+            token={token}
             onClose={() => {
               setShowAddModal(false)
               setEditingWorker(null)
@@ -303,9 +346,10 @@ interface WorkerModalProps {
   worker?: Worker | null
   onClose: () => void
   onSave: () => void
+  token: string
 }
 
-function WorkerModal({ worker, onClose, onSave }: WorkerModalProps) {
+function WorkerModal({ worker, onClose, onSave, token }: WorkerModalProps) {
   const [formData, setFormData] = useState({
     firstName: worker?.firstName || '',
     lastName: worker?.lastName || '',
@@ -336,9 +380,17 @@ function WorkerModal({ worker, onClose, onSave }: WorkerModalProps) {
       const url = worker ? `/api/workers/${worker.id}` : '/api/workers'
       const method = worker ? 'PATCH' : 'POST'
 
+      const headers: HeadersInit = { 'Content-Type': 'application/json' }
+      const isJWT = token.includes('.')
+      if (isJWT) {
+        headers['Authorization'] = `Bearer ${token}`
+      } else {
+        headers['x-admin-token'] = token
+      }
+
       const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(formData),
       })
 
