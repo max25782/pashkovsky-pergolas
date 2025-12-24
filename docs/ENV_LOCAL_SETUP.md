@@ -14,7 +14,7 @@ Create a `.env.local` file in the project root with the following content:
 ```bash
 # ===== AWS S3 Configuration (for images) =====
 NEXT_PUBLIC_AWS_S3_BUCKET_NAME=pashkovsky-gallery
-NEXT_PUBLIC_AWS_S3_REGION=us-east-1
+NEXT_PUBLIC_AWS_S3_REGION=eu-north-1
 
 # AWS Credentials (optional - only needed for uploading images via admin panel)
 # AWS_ACCESS_KEY_ID=your_access_key_here
@@ -104,6 +104,16 @@ No changes needed for production! 🎉
 2. Verify variables are spelled correctly (check for typos)
 3. Restart the dev server completely
 4. Clear Next.js cache: `rm -rf .next` (or `rmdir /s .next` on Windows)
+
+### Problem: Hydration warning about S3 URLs (different regions)
+
+**Example:** Server uses `eu-north-1`, Client uses `us-east-1`
+
+**Solution:**
+1. Check your S3 bucket's actual region in AWS Console
+2. Update `NEXT_PUBLIC_AWS_S3_REGION` in `.env.local` to match
+3. **IMPORTANT**: Ensure production (Vercel) uses the same region
+4. Restart dev server after changing `.env.local`
 
 ### Problem: AWS upload not working
 
