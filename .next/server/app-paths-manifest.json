@@ -1,7 +1,7 @@
 {
-  "/(crm)/app/profiles/page": "app/(crm)/app/profiles/page.js",
+  "/(public)/[locale]/page": "app/(public)/[locale]/page.js",
   "/(public)/[locale]/profiles/page": "app/(public)/[locale]/profiles/page.js",
-  "/(crm)/app/admin/settings/page": "app/(crm)/app/admin/settings/page.js",
-  "/(crm)/app/admin/leads/page": "app/(crm)/app/admin/leads/page.js",
-  "/(crm)/app/admin/workers/page": "app/(crm)/app/admin/workers/page.js"
+  "/(public)/[locale]/pergola3d/page": "app/(public)/[locale]/pergola3d/page.js",
+  "/(public)/[locale]/mistora/page": "app/(public)/[locale]/mistora/page.js",
+  "/(public)/[locale]/pergulas/page": "app/(public)/[locale]/pergulas/page.js"
 }

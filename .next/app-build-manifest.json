@@ -46,6 +46,26 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/(crm)/app/admin/workers/page.js"
+    ],
+    "/(crm)/app/admin/gallery/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(crm)/app/admin/gallery/page.js"
+    ],
+    "/(public)/[locale]/pergola3d/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(public)/[locale]/pergola3d/page.js"
+    ],
+    "/(public)/[locale]/mistora/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(public)/[locale]/mistora/page.js"
+    ],
+    "/(public)/[locale]/pergulas/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(public)/[locale]/pergulas/page.js"
     ]
   }
 }

@@ -1,0 +1,114 @@
+"use client"
+import { useRef, useState, useEffect } from 'react'
+import { RotatingImage } from './rotating-image'
+import { ModelLightbox } from '@/components/dgamim/model-lightbox'
+import dgamim from '@/data/gallery/dgamim.json'
+import { dgamimInfo } from '@/data/dgamim-info'
+import { processImageArray } from '@/lib/image-url-array-client'
+
+interface DgamimItem { type: string; degem: string; images: string[] }
+
+export function DgamimCarousel(){
+  const staticItems = (dgamim as { items: DgamimItem[] }).items
+  const [dynamicItems, setDynamicItems] = useState<DgamimItem[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  
+  // All hooks must be declared at the top, before any conditional returns
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const dragState = useRef<{ startX:number; scrollLeft:number }|null>(null)
+  const [lightbox, setLightbox] = useState<{ open:boolean; images:string[]; start:number }>({ open:false, images:[], start:0 })
+  
+  // Fetch models from API on mount
+  useEffect(() => {
+    async function fetchModels() {
+      try {
+        const res = await fetch('/api/gallery/models')
+        if (res.ok) {
+          const data = await res.json()
+          if (data.items && data.items.length > 0) {
+            setDynamicItems(data.items)
+          }
+        }
+      } catch (error) {
+        console.warn('[DgamimCarousel] Failed to fetch models from API:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchModels()
+  }, [])
+  
+  // Use dynamic items if available, otherwise fallback to static
+  const items = dynamicItems.length > 0 ? dynamicItems : staticItems
+  
+  if (isLoading) {
+    return (
+      <div className="w-full py-12 text-center text-white/50">
+        <div className="animate-pulse">טוען דגמים...</div>
+      </div>
+    )
+  }
+  
+  if (!items?.length) return null
+
+  return (
+    <div className="w-full">
+      <div
+        ref={containerRef}
+        dir="rtl"
+        className={`${isDragging ? 'cursor-grabbing' : 'cursor-grab'} select-none flex gap-4 overflow-x-auto scrollbar-hide pb-4 snap-x snap-mandatory`}
+        onMouseDown={(e)=>{
+          const el = containerRef.current
+          if (!el) return
+          setIsDragging(true)
+          dragState.current = { startX: e.pageX - el.offsetLeft, scrollLeft: el.scrollLeft }
+        }}
+        onMouseLeave={()=>{ setIsDragging(false); dragState.current = null }}
+        onMouseUp={()=>{ setIsDragging(false); dragState.current = null }}
+        onMouseMove={(e)=>{
+          const el = containerRef.current
+          if (!el || !dragState.current) return
+          e.preventDefault()
+          const x = e.pageX - el.offsetLeft
+          const walk = (x - dragState.current.startX) * 2
+          el.scrollLeft = dragState.current.scrollLeft - walk
+        }}
+        onWheel={(e)=>{
+          const el = containerRef.current
+          if (!el) return
+          if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) el.scrollLeft += e.deltaY
+        }}
+      >
+        {items
+          .slice()
+          .sort((a, b) => {
+            const lang = typeof document !== 'undefined' && document.documentElement.lang === 'ru' ? 'ru' : (typeof document !== 'undefined' && document.documentElement.lang === 'en' ? 'en' : 'he')
+            const ai = dgamimInfo[a.degem.toLowerCase()]
+            const bi = dgamimInfo[b.degem.toLowerCase()]
+            const ap = ai?.price?.[lang] ? parseInt(ai.price[lang].replace(/[^0-9]/g, '')) : Number.MAX_SAFE_INTEGER
+            const bp = bi?.price?.[lang] ? parseInt(bi.price[lang].replace(/[^0-9]/g, '')) : Number.MAX_SAFE_INTEGER
+            return ap - bp
+          })
+          .map((item, i)=>{
+          const lang = typeof document !== 'undefined' && document.documentElement.lang === 'ru' ? 'ru' : (typeof document !== 'undefined' && document.documentElement.lang === 'en' ? 'en' : 'he')
+          const info = dgamimInfo[item.degem.toLowerCase()] || undefined
+          return (
+            <div key={`${item.type}-${item.degem}-${i}`} className="flex-none w-[85%] sm:w-[70%] md:w-1/2 lg:w-1/3 rounded-2xl overflow-hidden border border-white/10 bg-white/5">
+              <div className="relative h-[50vh] sm:h-[60vh] lg:h-[70vh] bg-gray-800">
+                <button aria-label="Open images" className="absolute inset-0 z-10" onClick={()=> setLightbox({ open:true, images:processImageArray(item.images), start:0 })} />
+                <RotatingImage sources={processImageArray(item.images)} alt={`${item.type} - ${item.degem}`} intervalMs={1000} priority={i < 2} />
+              </div>
+                <div className="p-4 text-right">
+                  <div className="font-extrabold">{info ? info.title[lang] : item.degem}</div>
+                  <div className="text-sm text-white/70 mt-1 leading-relaxed">{info ? info.description[lang] : item.type}</div>
+                  {info?.price?.[lang] && <div className="mt-2 text-sm font-bold text-white/90">{info.price[lang]}</div>}
+              </div>
+            </div>
+          )
+        })}
+        <ModelLightbox open={lightbox.open} images={lightbox.images} startIndex={lightbox.start} onClose={()=> setLightbox({ open:false, images:[], start:0 })} locale={typeof document !== 'undefined' && document.documentElement.lang === 'ru' ? 'ru' : (typeof document !== 'undefined' && document.documentElement.lang === 'en' ? 'en' : 'he')} />
+      </div>
+    </div>
+  )
+}

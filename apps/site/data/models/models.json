@@ -1,0 +1,48 @@
+{
+  "SANTA_FE": {
+    "title": {
+      "ru": "Пергола SANTA FE",
+      "en": "SANTA FE Pergola",
+      "he": "פרגולת SANTA FE"
+    },
+    "description": {
+      "ru": "Модель с прочной рамой и классическим дизайном, идеально подходит для домов и террас.",
+      "en": "A model with a strong frame and classic design, ideal for home terraces.",
+      "he": "מודל עם מסגרת חזקה ועיצוב קלאסי, מתאים במיוחד לבתים ומרפסו'הפרגולה הקלאסית שמשתלבת בכל סגנון בית – עיצוב מינימליסטי, קווים נקיים וחוזק שמחזיק שנים."
+    },
+    "profiles": {
+      "sideBeam": {
+        "label": {
+          "ru": "Боковая балка",
+          "en": "Side Beam",
+          "he": "קורה צדדית"
+        },
+        "size": "100/40"
+      },
+      "innerBeam": {
+        "label": {
+          "ru": "Покрытие (внутренние балки)",
+          "en": "Inner Beams (Cover)",
+          "he": "קורות כיסוי פנימיות"
+        },
+        "sizes": ["82/20", "70/20"]
+      },
+      "frame": {
+        "label": {
+          "ru": "Рама",
+          "en": "Frame",
+          "he": "מסגרת"
+        },
+        "size": "100/40"
+      },
+      "column": {
+        "label": {
+          "ru": "Колонна (опора)",
+          "en": "Column (Support)",
+          "he": "עמוד"
+        },
+        "size": "80/80"
+      }
+    }
+  }
+}

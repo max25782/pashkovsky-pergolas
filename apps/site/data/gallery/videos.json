@@ -1,0 +1,19 @@
+{
+  "items": [
+    {
+      "src": "/video/Video-1.mp4",
+      "poster": "/video/Video-1.webp",
+      "type": "video"
+    },
+    {
+      "src": "/video/Video-2.mp4",
+      "poster": "/video/Video-2.webp",
+      "type": "video"
+    },
+    {
+      "src": "/video/Video-3.mp4",
+      "poster": "/video/Video-3.webp",
+      "type": "video"
+    }
+  ]
+}
