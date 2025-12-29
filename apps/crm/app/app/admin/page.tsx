@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
 import { 
   Briefcase, 
@@ -18,51 +19,43 @@ import {
 export default function AdminPage() {
   const t = useCRMTranslations()
   const router = useRouter()
-  const [token, setToken] = useState<string | null>(null)
-  const [input, setInput] = useState('')
-  const [isJWT, setIsJWT] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isChecking, setIsChecking] = useState(true)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
 
   useEffect(() => {
-    // Check for JWT token first (from login/register)
-    const jwtToken = localStorage.getItem('token')
-    if (jwtToken) {
-      setToken(jwtToken)
-      setIsJWT(true)
-      setIsChecking(false)
-      return
-    }
-
-    // Fallback to admin token (legacy)
-    const adminToken = localStorage.getItem('admin_token')
-    if (adminToken) {
-      setToken(adminToken)
-      setIsJWT(false)
-      setIsChecking(false)
-      return
-    }
-
-    // No token found - redirect to login
-    console.log('[AdminPage] No token found, redirecting to /login')
-    window.location.href = '/login'
+    checkAuth()
   }, [])
 
-  function save() {
-    if (input.trim()) {
-      localStorage.setItem('admin_token', input.trim())
-      setToken(input.trim())
-      setIsJWT(false)
+  async function checkAuth() {
+    try {
+      const supabase = createClient()
+      const { data: { user }, error } = await supabase.auth.getUser()
+      
+      console.log('[AdminPage] Checking auth...')
+      console.log('[AdminPage] User:', user?.email || 'null')
+      console.log('[AdminPage] Error:', error?.message || 'none')
+      
+      if (user) {
+        setIsAuthenticated(true)
+        setUserEmail(user.email || null)
+      } else {
+        console.log('[AdminPage] No authenticated user, redirecting to /login')
+        window.location.href = '/login'
+      }
+    } catch (err) {
+      console.error('[AdminPage] Auth check error:', err)
+      window.location.href = '/login'
+    } finally {
+      setIsChecking(false)
     }
   }
 
-  function logout() {
-    localStorage.removeItem('admin_token')
-    localStorage.removeItem('token')
-    localStorage.removeItem('refreshToken')
-    setToken(null)
-    setInput('')
-    setIsJWT(false)
-    router.push(`//login`)
+  async function logout() {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    localStorage.clear()
+    window.location.href = '/login'
   }
 
   // Show loading while checking auth
@@ -77,53 +70,8 @@ export default function AdminPage() {
     )
   }
 
-  if (!token) {
-    return (
-      <main className="container py-16 text-white">
-        <div className="max-w-md mx-auto">
-          <h1 className="text-2xl font-bold mb-4">Admin</h1>
-          
-          {/* Login/Register Links */}
-          <div className="mb-6 space-y-3">
-            <Link
-              href="/login"
-              className="block w-full px-4 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-center font-semibold transition"
-            >
-              Sign In with Email
-            </Link>
-            <Link
-              href="/register"
-              className="block w-full px-4 py-3 rounded-lg bg-white/10 hover:bg-white/20 text-center transition"
-            >
-              Create New Account
-            </Link>
-          </div>
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-white/20"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-gray-900 text-white/60">Or</span>
-            </div>
-          </div>
-
-          {/* Admin Token Form (Legacy) */}
-          <div className="mt-6 bg-white/5 border border-white/10 rounded-xl p-6">
-            <label className="block text-sm mb-2">{t.auth.enterAdminToken}</label>
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              className="w-full px-3 py-2 rounded bg-black/40 border border-white/20"
-              placeholder={t.auth.adminTokenPlaceholder}
-            />
-            <button onClick={save} className="mt-3 px-4 py-2 rounded bg-white/10 hover:bg-white/20">
-              {t.common.continue}
-            </button>
-          </div>
-        </div>
-      </main>
-    )
+  if (!isAuthenticated) {
+    return null // Will redirect to /login
   }
 
   const adminSections = [

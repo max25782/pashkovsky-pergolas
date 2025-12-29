@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { 
   LayoutDashboard, 
   Users, 
@@ -10,10 +10,12 @@ import {
   BarChart3, 
   Settings,
   Menu,
-  X
+  X,
+  LogOut
 } from 'lucide-react'
 import { useState } from 'react'
 import clsx from 'clsx'
+import { createClient } from '@/lib/supabase/client'
 
 const menuItems = [
   { href: '/app/admin', label: 'לוח בקרה', icon: LayoutDashboard },
@@ -26,7 +28,36 @@ const menuItems = [
 
 export default function CRMSidebar() {
   const pathname = usePathname()
+  const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
+  const [loggingOut, setLoggingOut] = useState(false)
+
+  const handleLogout = async () => {
+    try {
+      setLoggingOut(true)
+      
+      const supabase = createClient()
+      
+      // Sign out from Supabase Auth
+      await supabase.auth.signOut()
+      
+      // Clear any old tokens from localStorage
+      localStorage.removeItem('token')
+      localStorage.removeItem('refreshToken')
+      localStorage.removeItem('admin_token')
+      
+      console.log('[Logout] Successfully logged out')
+      
+      // Redirect to login
+      router.push('/login')
+    } catch (error) {
+      console.error('[Logout] Error:', error)
+      // Still redirect even if there's an error
+      router.push('/login')
+    } finally {
+      setLoggingOut(false)
+    }
+  }
 
   return (
     <>
@@ -63,7 +94,11 @@ export default function CRMSidebar() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  onClick={() => setIsOpen(false)}
+                  onClick={(e) => {
+                    console.log('[CRMSidebar] Link clicked:', item.href)
+                    console.log('[CRMSidebar] Current pathname:', pathname)
+                    setIsOpen(false)
+                  }}
                   className={clsx(
                     'flex items-center gap-3 px-4 py-3 rounded-lg transition-colors',
                     isActive
@@ -79,14 +114,23 @@ export default function CRMSidebar() {
           </nav>
 
           {/* Footer */}
-          <div className="pt-4 border-t border-neutral-200 dark:border-neutral-700">
+          <div className="pt-4 border-t border-neutral-200 dark:border-neutral-700 space-y-2">
             <Link
               href="/app/admin/settings"
-              className="flex items-center gap-3 px-4 py-3 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-lg transition-colors"
+              className="flex items-center gap-3 px-4 py-3 rounded-lg text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
             >
               <Settings size={20} />
               <span>הגדרות</span>
             </Link>
+            
+            <button
+              onClick={handleLogout}
+              disabled={loggingOut}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <LogOut size={20} />
+              <span>{loggingOut ? 'מתנתק...' : 'התנתק'}</span>
+            </button>
           </div>
         </div>
       </aside>

@@ -5,6 +5,7 @@ import Image from 'next/image'
 import type { Locale } from '@/lib/locales'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
 import { Trash2, RefreshCw, Eye } from 'lucide-react'
+import { authFetch } from '@/lib/api/auth-fetch'
 
 interface GalleryImage {
   id: string
@@ -16,8 +17,6 @@ interface GalleryImage {
 
 export default function GalleryAdminPage() {
   const t = useCRMTranslations()
-  const [token, setToken] = useState<string | null>(null)
-  const [input, setInput] = useState('')
   const [categories, setCategories] = useState<any[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string>('')
   const [files, setFiles] = useState<File[]>([])
@@ -37,30 +36,9 @@ export default function GalleryAdminPage() {
   const [viewMode, setViewMode] = useState<'upload' | 'manage'>('upload')
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('admin_token')
-    if (storedToken) setToken(storedToken)
-  }, [])
-
-  function save() {
-    if (input.trim()) {
-      localStorage.setItem('admin_token', input.trim())
-      setToken(input.trim())
-    }
-  }
-
-  function logout() {
-    localStorage.removeItem('admin_token')
-    setToken(null)
-    setInput('')
-  }
-
-  useEffect(() => {
     async function loadCategories() {
-      if (!token) return
       try {
-        const res = await fetch('/admin-api/gallery/categories', {
-          headers: { 'x-admin-token': token }
-        })
+        const res = await authFetch('/admin-api/gallery/categories')
         if (!res.ok) throw new Error('Failed to fetch categories')
         const data = await res.json()
         console.log('📦 Categories loaded:', data.data)
@@ -76,23 +54,21 @@ export default function GalleryAdminPage() {
       }
     }
     loadCategories()
-  }, [token])
+  }, [])
 
   // Load images when category changes or after upload
   useEffect(() => {
-    if (viewMode === 'manage' && selectedCategory && token) {
+    if (viewMode === 'manage' && selectedCategory) {
       loadImages()
     }
-  }, [selectedCategory, token, viewMode])
+  }, [selectedCategory, viewMode])
 
   const loadImages = async () => {
-    if (!selectedCategory || !token) return
+    if (!selectedCategory) return
     setLoadingImages(true)
     setError(null)
     try {
-      const res = await fetch(`/admin-api/gallery/images?category_key=${selectedCategory}`, {
-        headers: { 'x-admin-token': token }
-      })
+      const res = await authFetch(`/admin-api/gallery/images?category_key=${selectedCategory}`)
       if (!res.ok) throw new Error('Failed to fetch images')
       const data = await res.json()
       setImages(data.images || [])
@@ -116,7 +92,6 @@ export default function GalleryAdminPage() {
     try {
       const res = await fetch(`/admin-api/gallery/images?id=${imageId}`, {
         method: 'DELETE',
-        headers: { 'x-admin-token': token || '' }
       })
       
       if (!res.ok) {
@@ -163,9 +138,8 @@ export default function GalleryAdminPage() {
       
       console.log('📤 Sending to API:', { category_key: selectedCategory })
       
-      const res = await fetch('/admin-api/gallery/upload', {
+      const res = await authFetch('/admin-api/gallery/upload', {
         method: 'POST',
-        headers: { 'x-admin-token': token || '' },
         body: form,
       })
       const data = await res.json()
@@ -204,11 +178,10 @@ export default function GalleryAdminPage() {
     setMessage(null)
     setCreatingProject(true)
     try {
-      const res = await fetch('/admin-api/pergola-projects', {
+      const res = await authFetch('/admin-api/pergola-projects', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-admin-token': token || '',
         },
         body: JSON.stringify({
           title_he: projTitle.trim(),
@@ -227,26 +200,6 @@ export default function GalleryAdminPage() {
     } finally {
       setCreatingProject(false)
     }
-  }
-
-  if (!token) {
-    return (
-      <main className="container py-16 text-white">
-        <h1 className="text-2xl font-bold mb-4">Admin • {t.gallery.title}</h1>
-        <div className="max-w-md bg-white/5 border border-white/10 rounded-xl p-6">
-          <label className="block text-sm mb-2">{t.auth.enterAdminToken}</label>
-          <input
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            className="w-full px-3 py-2 rounded bg-black/40 border border-white/20"
-            placeholder={t.auth.adminTokenPlaceholder}
-          />
-          <button onClick={save} className="mt-3 px-4 py-2 rounded bg-white/10 hover:bg-white/20">
-            {t.common.continue}
-          </button>
-        </div>
-      </main>
-    )
   }
 
   return (
@@ -290,9 +243,6 @@ export default function GalleryAdminPage() {
           >
             {t.nav.workers}
           </Link>
-          <button onClick={logout} className="px-3 py-2 rounded bg-white/10 hover:bg-white/20">
-            {t.common.logout}
-          </button>
         </div>
       </div>
 

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { Search, RefreshCw, MessageSquare, Trash2, X, User, Bot, Clock, ChevronLeft, Wifi, WifiOff } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
 import { useCRMTranslations } from './useCRMTranslations'
+import { authFetch } from '@/lib/api/auth-fetch'
 
 interface Session {
   id: string
@@ -22,16 +23,12 @@ interface Message {
   created_at: string
 }
 
-interface AIChatsTableProps {
-  adminToken: string
-}
-
 // Initialize Supabase client for realtime
 // Use NEXT_PUBLIC_ versions if available, otherwise fallback to regular (for server-side)
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY
 
-export function AIChatsTable({ adminToken }: AIChatsTableProps) {
+export function AIChatsTable() {
   const t = useCRMTranslations()
   const [sessions, setSessions] = useState<Session[]>([])
   const [loading, setLoading] = useState(true)
@@ -49,9 +46,7 @@ export function AIChatsTable({ adminToken }: AIChatsTableProps) {
       const params = new URLSearchParams()
       if (search) params.set('q', search)
       
-      const res = await fetch(`/admin-api/ai-chats?${params}`, {
-        headers: { 'x-admin-token': adminToken }
-      })
+      const res = await authFetch(`/admin-api/ai-chats?${params}`)
       
       if (res.ok) {
         const data = await res.json()
@@ -63,7 +58,7 @@ export function AIChatsTable({ adminToken }: AIChatsTableProps) {
     } finally {
       setLoading(false)
     }
-  }, [adminToken, search])
+  }, [search])
   
   useEffect(() => {
     fetchSessions()
@@ -121,9 +116,7 @@ export function AIChatsTable({ adminToken }: AIChatsTableProps) {
     setLoadingMessages(true)
     
     try {
-      const res = await fetch(`/admin-api/ai-chats?session_id=${session.id}`, {
-        headers: { 'x-admin-token': adminToken }
-      })
+      const res = await authFetch(`/admin-api/ai-chats?session_id=${session.id}`)
       
       if (res.ok) {
         const data = await res.json()
@@ -140,9 +133,8 @@ export function AIChatsTable({ adminToken }: AIChatsTableProps) {
     if (!confirm(t.aiChats.deleteDialog)) return
     
     try {
-      const res = await fetch(`/admin-api/ai-chats?session_id=${sessionId}`, {
+      const res = await authFetch(`/admin-api/ai-chats?session_id=${sessionId}`, {
         method: 'DELETE',
-        headers: { 'x-admin-token': adminToken }
       })
       
       if (res.ok) {

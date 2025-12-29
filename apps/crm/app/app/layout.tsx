@@ -1,4 +1,4 @@
-import '../../globals.css'
+import '../globals.css'
 import type { Metadata } from 'next'
 import { Providers } from '@/components/providers'
 import CRMSidebar from '@/components/crm/CRMSidebar'
@@ -21,25 +21,18 @@ export default function CRMLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="he" dir="rtl" suppressHydrationWarning>
-      <head>
-        <link rel="icon" href="/icon.svg" type="image/svg+xml" />
-      </head>
-      <body className="antialiased bg-neutral-50 dark:bg-neutral-900">
-        <Providers>
-          <div className="flex min-h-screen">
-            {/* CRM Sidebar */}
-            <Suspense fallback={<div className="w-64 bg-white dark:bg-neutral-800" />}>
-              <CRMSidebar />
-            </Suspense>
-            
-            {/* Main Content */}
-            <main className="flex-1 overflow-y-auto">
-              {children}
-            </main>
-          </div>
-        </Providers>
-      </body>
-    </html>
+    <Providers>
+      <div className="flex min-h-screen">
+        {/* CRM Sidebar */}
+        <Suspense fallback={<div className="w-64 bg-white dark:bg-neutral-800" />}>
+          <CRMSidebar />
+        </Suspense>
+        
+        {/* Main Content */}
+        <main className="flex-1 overflow-y-auto">
+          {children}
+        </main>
+      </div>
+    </Providers>
   )
 }

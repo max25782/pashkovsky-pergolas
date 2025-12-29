@@ -1,157 +1,110 @@
-// Subscription Plans and Usage Types
-
-export type PlanName = 'free' | 'basic' | 'pro'
+// ==========================================
+// Subscription Types & DTOs
+// ==========================================
+// Готово к миграции на NestJS
 
 export interface SubscriptionPlan {
   id: string
-  name: PlanName
-  displayName: string
-  description?: string
-  
-  // Pricing
-  priceMonthly: number
-  priceYearly?: number
-  currency: string
-  
-  // Limits
-  maxUsers?: number // null = unlimited
-  maxDealsPerMonth?: number
-  maxStorageMb?: number
-  
-  // Features
-  features: PlanFeatures
-  
-  isActive: boolean
-  createdAt: string
-  updatedAt: string
+  plan_key: 'trial' | 'basic' | 'pro' | 'enterprise'
+  display_name: {
+    en: string
+    he: string
+    ru: string
+  }
+  price_monthly: number
+  price_yearly?: number
+  features: string[]
+  limits: {
+    users: number // -1 = unlimited
+    deals: number // -1 = unlimited
+    storage_gb: number
+    ai_requests_per_month: number // -1 = unlimited
+  }
+  is_active: boolean
+  sort_order: number
+  created_at: string
 }
-
-export interface PlanFeatures {
-  pdfGeneration: boolean
-  whatsappIntegration: boolean
-  emailIntegration: boolean
-  workerLogs: boolean
-  aiAnalytics: boolean
-  leadScoring: boolean
-  automation: boolean
-  apiAccess: boolean
-  customBranding: boolean
-  prioritySupport: boolean
-}
-
-export type SubscriptionStatus = 'active' | 'cancelled' | 'expired' | 'trial'
 
 export interface CompanySubscription {
   id: string
-  companyId: string
-  planId: string
-  plan?: SubscriptionPlan
-  
-  status: SubscriptionStatus
-  trialEndsAt?: string
-  currentPeriodStart: string
-  currentPeriodEnd: string
-  cancelAtPeriodEnd: boolean
-  
-  paymentMethod?: string
-  externalSubscriptionId?: string
-  lastPaymentAt?: string
-  nextPaymentAt?: string
-  
-  createdAt: string
-  updatedAt: string
+  company_id: string
+  plan_id: string
+  status: 'trialing' | 'active' | 'past_due' | 'canceled' | 'suspended'
+  payment_provider?: 'stripe' | 'manual' | 'bit' | 'paybox'
+  payment_provider_subscription_id?: string
+  payment_provider_customer_id?: string
+  billing_cycle?: 'monthly' | 'yearly'
+  auto_renew: boolean
+  trial_ends_at?: string
+  current_period_end?: string
+  next_billing_date?: string
+  canceled_at?: string
+  created_at: string
+  updated_at: string
 }
 
-export interface CompanyUsage {
+export interface SubscriptionHistory {
   id: string
-  companyId: string
-  
-  periodStart: string
-  periodEnd: string
-  
-  dealsCreated: number
-  offersCreated: number
-  pdfsGenerated: number
-  whatsappSent: number
-  emailsSent: number
-  storageUsedMb: number
-  apiCalls: number
-  
-  createdAt: string
-  updatedAt: string
+  company_id: string
+  old_plan_id?: string
+  new_plan_id: string
+  changed_by: string
+  change_reason?: string
+  created_at: string
 }
 
-export interface PlanLimitCheck {
-  allowed: boolean
-  current: number
-  limit: number | null
-  plan: PlanName
+// DTOs for API requests
+export interface ChangePlanDTO {
+  new_plan_key: string
+  billing_cycle?: 'monthly' | 'yearly'
+  reason?: string
 }
 
-// Plan comparison data for pricing page
-export const PLAN_COMPARISON: Record<PlanName, {
-  price: string
-  features: string[]
-  limits: string[]
-}> = {
-  free: {
-    price: 'חינם',
-    features: [
-      'משתמש 1',
-      '30 לידים לחודש',
-      'ללא PDF',
-      'ללא אינטגרציות',
-    ],
-    limits: [
-      '1 משתמש',
-      '30 עסקאות/חודש',
-      '100 MB אחסון',
-    ],
-  },
-  basic: {
-    price: '₪249/חודש',
-    features: [
-      'עד 3 משתמשים',
-      'יצירת PDF',
-      'WhatsApp + Email',
-      'רישום משמרות',
-      '500 עסקאות/חודש',
-    ],
-    limits: [
-      '3 משתמשים',
-      '500 עסקאות/חודש',
-      '1 GB אחסון',
-    ],
-  },
-  pro: {
-    price: '₪499/חודש',
-    features: [
-      'משתמשים ללא הגבלה',
-      'כל התכונות של Basic',
-      'AI אנליטיקה',
-      'Lead Scoring',
-      'אוטומציות',
-      'API גישה',
-      'מיתוג מותאם',
-      'תמיכה מועדפת',
-    ],
-    limits: [
-      'משתמשים ללא הגבלה',
-      'עסקאות ללא הגבלה',
-      '10 GB אחסון',
-    ],
-  },
-}
-
-export function formatPrice(amount: number, currency: string = '₪'): string {
-  return `${currency}${amount.toFixed(0)}`
-}
-
-export function getPlanBadgeColor(plan: PlanName): string {
-  switch (plan) {
-    case 'free': return 'bg-gray-100 text-gray-800'
-    case 'basic': return 'bg-blue-100 text-blue-800'
-    case 'pro': return 'bg-purple-100 text-purple-800'
+export interface SubscriptionUsage {
+  users: {
+    current: number
+    limit: number
+    percentage: number
+  }
+  deals: {
+    current: number
+    limit: number
+    percentage: number
+  }
+  storage: {
+    current_gb: number
+    limit_gb: number
+    percentage: number
+  }
+  ai_requests: {
+    current_month: number
+    limit: number
+    percentage: number
   }
 }
 
+// Response DTOs
+export interface GetCurrentSubscriptionResponse {
+  subscription: CompanySubscription
+  plan: SubscriptionPlan
+  usage?: SubscriptionUsage
+}
+
+export interface GetPlansResponse {
+  plans: SubscriptionPlan[]
+  current_plan_key?: string
+}
+
+export interface ChangePlanResponse {
+  success: boolean
+  subscription: CompanySubscription
+  message: string
+}
+
+export interface GetHistoryResponse {
+  history: (SubscriptionHistory & {
+    old_plan?: SubscriptionPlan
+    new_plan: SubscriptionPlan
+  })[]
+  total: number
+}

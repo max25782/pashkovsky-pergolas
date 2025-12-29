@@ -1,16 +1,14 @@
 import { useState } from 'react'
 import type { Lead } from '../lead-types'
-import { updateLead, deleteLead } from '../lead-api'
+import { createAuthenticatedClient } from '@/lib/supabase/client'
 
 interface UseLeadActionsParams {
-  adminToken: string
   onUpdate?: (lead: Lead) => void
   onDelete?: (id: string) => void
   onError?: (error: Error) => void
 }
 
 export function useLeadActions({
-  adminToken,
   onUpdate,
   onDelete,
   onError
@@ -21,11 +19,21 @@ export function useLeadActions({
   async function patch(id: string, updates: Partial<Lead>) {
     setUpdating(true)
     try {
-      const updatedLead = await updateLead(id, updates, adminToken)
-      onUpdate?.(updatedLead)
-      return updatedLead
+      const supabase = createAuthenticatedClient()
+      
+      const { data, error: dbError } = await supabase
+        .from('leads')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single()
+      
+      if (dbError) throw new Error(dbError.message)
+      
+      onUpdate?.(data as Lead)
+      return data as Lead
     } catch (e: any) {
-      console.error('Patch error:', e)
+      console.error('[useLeadActions] Patch error:', e)
       const error = e instanceof Error ? e : new Error(String(e))
       onError?.(error)
       alert(`Ошибка обновления: ${error.message}`)
@@ -40,10 +48,18 @@ export function useLeadActions({
     
     setDeleting(true)
     try {
-      await deleteLead(id, adminToken)
+      const supabase = createAuthenticatedClient()
+      
+      const { error: dbError } = await supabase
+        .from('leads')
+        .delete()
+        .eq('id', id)
+      
+      if (dbError) throw new Error(dbError.message)
+      
       onDelete?.(id)
     } catch (e: any) {
-      console.error('Delete error:', e)
+      console.error('[useLeadActions] Delete error:', e)
       const error = e instanceof Error ? e : new Error(String(e))
       onError?.(error)
       alert(`Ошибка удаления: ${error.message}`)

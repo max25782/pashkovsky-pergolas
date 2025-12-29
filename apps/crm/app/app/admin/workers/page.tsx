@@ -6,11 +6,10 @@ import Link from 'next/link'
 import type { Worker } from '@/types/workers'
 import type { Locale } from '@/lib/locales'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
+import { createAuthenticatedClient } from '@/lib/supabase/client'
 
 export default function WorkersAdminPage() {
   const t = useCRMTranslations()
-  const [token, setToken] = useState<string | null>(null)
-  const [input, setInput] = useState('')
   const [workers, setWorkers] = useState<Worker[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -18,60 +17,58 @@ export default function WorkersAdminPage() {
   const [editingWorker, setEditingWorker] = useState<Worker | null>(null)
   const [showInactive, setShowInactive] = useState(false)
 
-  useEffect(() => {
-    // Check for JWT token first (from login/register)
-    const jwtToken = localStorage.getItem('token')
-    if (jwtToken) {
-      setToken(jwtToken)
-      return
-    }
-
-    // Fallback to admin token (legacy)
-    const adminToken = localStorage.getItem('admin_token')
-    if (adminToken) {
-      setToken(adminToken)
-    }
-  }, [])
-
-  function save() {
-    if (input.trim()) {
-      localStorage.setItem('admin_token', input.trim())
-      setToken(input.trim())
-    }
-  }
-
-  function logout() {
-    localStorage.removeItem('admin_token')
-    setToken(null)
-    setInput('')
-  }
-
   const fetchWorkers = useCallback(async () => {
-    if (!token) return // Don't fetch if no token
-    
     try {
       setLoading(true)
       setError(null)
       
-      const headers: HeadersInit = {}
-      // Check if it's JWT or admin token
-      const isJWT = token.includes('.')
-      if (isJWT) {
-        headers['Authorization'] = `Bearer ${token}`
-      } else {
-        headers['x-admin-token'] = token
+      console.log('[Workers] Fetching workers with JWT, showInactive:', showInactive)
+      
+      const supabase = createAuthenticatedClient()
+      const companyId = '6998295e-89ae-4e3d-afd2-8c2b0333eac2' // Your company ID
+      
+      let query = supabase
+        .from('workers')
+        .select('*')
+        .eq('company_id', companyId)
+      
+      if (!showInactive) {
+        query = query.eq('is_active', true)
       }
       
-      const response = await fetch(`/api/workers?includeInactive=${showInactive}`, { headers })
-      if (!response.ok) throw new Error('Failed to fetch workers')
-      const { workers: workersData } = await response.json()
-      setWorkers(workersData || [])
+      const { data, error: dbError } = await query.order('created_at', { ascending: false })
+      
+      console.log('[Workers] Response:', { data: data?.length, error: dbError })
+      console.log('[Workers] First worker:', data?.[0])
+      
+      if (dbError) {
+        console.error('[Workers] DB error:', dbError)
+        setError(dbError.message)
+        return
+      }
+      
+      // Map snake_case DB fields to camelCase for UI
+      const mappedWorkers: Worker[] = (data || []).map((w: any) => ({
+        id: w.id,
+        company_id: w.company_id,
+        firstName: w.first_name,
+        lastName: w.last_name,
+        phone: w.phone,
+        role: w.role,
+        dailyRate: w.daily_rate,
+        isActive: w.is_active,
+        createdAt: w.created_at,
+        updatedAt: w.updated_at,
+      }))
+      
+      setWorkers(mappedWorkers)
     } catch (err: any) {
+      console.error('[Workers] Unexpected error:', err)
       setError(err.message || 'Failed to load workers')
     } finally {
       setLoading(false)
     }
-  }, [showInactive, token])
+  }, [showInactive])
 
   useEffect(() => {
     fetchWorkers()
@@ -79,23 +76,16 @@ export default function WorkersAdminPage() {
 
   const handleDelete = async (workerId: string) => {
     if (!confirm('האם אתה בטוח שברצונך למחוק עובד זה?')) return
-    if (!token) return
 
     try {
-      const headers: HeadersInit = {}
-      const isJWT = token.includes('.')
-      if (isJWT) {
-        headers['Authorization'] = `Bearer ${token}`
-      } else {
-        headers['x-admin-token'] = token
-      }
+      const supabase = createAuthenticatedClient()
       
-      const response = await fetch(`/api/workers/${workerId}`, {
-        method: 'DELETE',
-        headers,
-      })
+      const { error: dbError } = await supabase
+        .from('workers')
+        .delete()
+        .eq('id', workerId)
 
-      if (!response.ok) throw new Error('Failed to delete worker')
+      if (dbError) throw new Error(dbError.message)
 
       fetchWorkers()
     } catch (err: any) {
@@ -104,49 +94,20 @@ export default function WorkersAdminPage() {
   }
 
   const handleToggleActive = async (worker: Worker) => {
-    if (!token) return
-    
     try {
-      const headers: HeadersInit = { 'Content-Type': 'application/json' }
-      const isJWT = token.includes('.')
-      if (isJWT) {
-        headers['Authorization'] = `Bearer ${token}`
-      } else {
-        headers['x-admin-token'] = token
-      }
+      const supabase = createAuthenticatedClient()
       
-      const response = await fetch(`/api/workers/${worker.id}`, {
-        method: 'PATCH',
-        headers,
-        body: JSON.stringify({ isActive: !worker.isActive }),
-      })
+      const { error: dbError } = await supabase
+        .from('workers')
+        .update({ is_active: !worker.isActive })
+        .eq('id', worker.id)
 
-      if (!response.ok) throw new Error('Failed to update worker')
+      if (dbError) throw new Error(dbError.message)
 
       fetchWorkers()
     } catch (err: any) {
       alert('שגיאה בעדכון עובד: ' + err.message)
     }
-  }
-
-  if (!token) {
-    return (
-      <main className="container py-16 text-white">
-        <h1 className="text-2xl font-bold mb-4">Admin • {t.nav.workers}</h1>
-        <div className="max-w-md bg-white/5 border border-white/10 rounded-xl p-6">
-          <label className="block text-sm mb-2">{t.auth.enterAdminToken}</label>
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            className="w-full px-3 py-2 rounded bg-black/40 border border-white/20"
-            placeholder={t.auth.adminTokenPlaceholder}
-          />
-          <button onClick={save} className="mt-3 px-4 py-2 rounded bg-white/10 hover:bg-white/20">
-            {t.common.continue}
-          </button>
-        </div>
-      </main>
-    )
   }
 
   return (
@@ -184,9 +145,6 @@ export default function WorkersAdminPage() {
           >
             {t.nav.aiChats}
           </Link>
-          <button onClick={logout} className="px-3 py-2 rounded bg-white/10 hover:bg-white/20">
-            {t.common.logout}
-          </button>
         </div>
       </div>
 
@@ -322,10 +280,9 @@ export default function WorkersAdminPage() {
         )}
 
         {/* Add/Edit Modal */}
-        {(showAddModal || editingWorker) && token && (
+        {(showAddModal || editingWorker) && (
           <WorkerModal
             worker={editingWorker}
-            token={token}
             onClose={() => {
               setShowAddModal(false)
               setEditingWorker(null)
@@ -346,10 +303,9 @@ interface WorkerModalProps {
   worker?: Worker | null
   onClose: () => void
   onSave: () => void
-  token: string
 }
 
-function WorkerModal({ worker, onClose, onSave, token }: WorkerModalProps) {
+function WorkerModal({ worker, onClose, onSave }: WorkerModalProps) {
   const [formData, setFormData] = useState({
     firstName: worker?.firstName || '',
     lastName: worker?.lastName || '',
@@ -377,26 +333,34 @@ function WorkerModal({ worker, onClose, onSave, token }: WorkerModalProps) {
 
     try {
       setSubmitting(true)
-      const url = worker ? `/api/workers/${worker.id}` : '/api/workers'
-      const method = worker ? 'PATCH' : 'POST'
-
-      const headers: HeadersInit = { 'Content-Type': 'application/json' }
-      const isJWT = token.includes('.')
-      if (isJWT) {
-        headers['Authorization'] = `Bearer ${token}`
-      } else {
-        headers['x-admin-token'] = token
+      
+      const supabase = createAuthenticatedClient()
+      
+      // Convert camelCase to snake_case for DB
+      const dbData = {
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        phone: formData.phone,
+        role: formData.role,
+        daily_rate: formData.dailyRate,
+        is_active: formData.isActive,
       }
-
-      const response = await fetch(url, {
-        method,
-        headers,
-        body: JSON.stringify(formData),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to save worker')
+      
+      if (worker) {
+        // Update existing worker
+        const { error: dbError } = await supabase
+          .from('workers')
+          .update(dbData)
+          .eq('id', worker.id)
+        
+        if (dbError) throw new Error(dbError.message)
+      } else {
+        // Create new worker
+        const { error: dbError } = await supabase
+          .from('workers')
+          .insert([dbData])
+        
+        if (dbError) throw new Error(dbError.message)
       }
 
       onSave()

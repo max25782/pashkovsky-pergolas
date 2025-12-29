@@ -8,25 +8,19 @@ import { DealsStatus } from './DealsStatus'
 import { useLeads } from './hooks/useLeads'
 import { useLeadActions } from './hooks/useLeadActions'
 
-interface Props {
-  adminToken: string
-}
-
-export function LeadsTable({ adminToken }: Props) {
+export function LeadsTable() {
   const [q, setQ] = useState("")
   const [page, setPage] = useState(0)
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const limit = 20
 
   const { leads, loading, error, reload } = useLeads({
-    adminToken,
     searchQuery: q,
     page,
     limit
   })
 
   const { patch, del, updating } = useLeadActions({
-    adminToken,
     onUpdate: (updatedLead) => {
       if (selectedLead?.id === updatedLead.id) {
         setSelectedLead(updatedLead)
@@ -87,7 +81,6 @@ export function LeadsTable({ adminToken }: Props) {
             handleLeadDelete(selectedLead)
             setSelectedLead(null)
           }}
-          adminToken={adminToken}
         />
       )}
     </section>

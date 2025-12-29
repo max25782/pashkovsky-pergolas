@@ -13,14 +13,9 @@ import { useDeals } from './hooks/useDeals'
 import { useDealActions } from './hooks/useDealActions'
 import { useDealDragDrop } from './hooks/useDealDragDrop'
 
-interface Props {
-  adminToken: string
-  isJWT?: boolean
-}
-
 type ViewMode = 'kanban' | 'table'
 
-export function DealsTable({ adminToken, isJWT = false }: Props) {
+export function DealsTable() {
   const [q, setQ] = useState("")
   const [stageFilter, setStageFilter] = useState("")
   const [projectTypeFilter, setProjectTypeFilter] = useState("")
@@ -30,8 +25,6 @@ export function DealsTable({ adminToken, isJWT = false }: Props) {
   const [showCreateModal, setShowCreateModal] = useState(false)
 
   const { deals, loading, error, reload } = useDeals({
-    adminToken,
-    isJWT,
     searchQuery: q,
     stageFilter,
     projectTypeFilter,
@@ -40,8 +33,6 @@ export function DealsTable({ adminToken, isJWT = false }: Props) {
   })
 
   const { create, patch, del, creating, updating, deleting } = useDealActions({
-    adminToken,
-    isJWT,
     onUpdate: async (updatedDeal) => {
       if (selectedDeal?.id === updatedDeal.id) {
         setSelectedDeal(updatedDeal)

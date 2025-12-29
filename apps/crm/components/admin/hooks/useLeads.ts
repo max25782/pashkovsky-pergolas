@@ -1,16 +1,14 @@
 import { useEffect, useState } from 'react'
 import type { Lead } from '../lead-types'
-import { fetchLeads } from '../lead-api'
+import { createAuthenticatedClient } from '@/lib/supabase/client'
 
 interface UseLeadsParams {
-  adminToken: string
   searchQuery?: string
   page?: number
   limit?: number
 }
 
 export function useLeads({
-  adminToken,
   searchQuery = '',
   page = 0,
   limit = 20
@@ -23,17 +21,31 @@ export function useLeads({
     setLoading(true)
     setError(null)
     try {
-      const data = await fetchLeads(
-        {
-          q: searchQuery,
-          limit,
-          offset: page * limit
-        },
-        adminToken
-      )
-      setLeads(data)
+      // Create authenticated client with JWT token
+      const supabase = createAuthenticatedClient()
+      
+      let query = supabase
+        .from('leads')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .range(page * limit, (page + 1) * limit - 1)
+      
+      // Search filter
+      if (searchQuery && searchQuery.trim()) {
+        query = query.or(`name.ilike.%${searchQuery}%,phone.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`)
+      }
+      
+      const { data, error: dbError } = await query
+      
+      if (dbError) {
+        console.error('[useLeads] DB error:', dbError)
+        setError(dbError.message)
+        return
+      }
+      
+      setLeads(data || [])
     } catch (e: any) {
-      console.error('Load error:', e)
+      console.error('[useLeads] Error:', e)
       setError(e.message)
     } finally {
       setLoading(false)
@@ -42,7 +54,7 @@ export function useLeads({
 
   useEffect(() => {
     load()
-  }, [adminToken, searchQuery, page, limit])
+  }, [searchQuery, page, limit]) // removed adminToken
 
   return {
     leads,

@@ -18,49 +18,48 @@ interface Article {
 
 export default function AdminArticlesPage() {
   const t = useCRMTranslations()
-  const [token, setToken] = useState<string | null>(null)
   const [articles, setArticles] = useState<Article[]>([])
   const [loading, setLoading] = useState(true)
   const [editingArticle, setEditingArticle] = useState<Article | null>(null)
   const [showForm, setShowForm] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const router = useRouter()
 
-  function logout() {
-    localStorage.removeItem('admin_token')
-    router.push(`//app/admin/leads`)
-  }
-
   useEffect(() => {
-    const adminToken = localStorage.getItem('admin_token')
-    if (!adminToken) {
-      router.push(`//app/admin/leads`)
-      return
-    }
-    setToken(adminToken)
     loadArticles()
-  }, ['he', router])
+  }, [])
 
   const loadArticles = async () => {
     try {
-      const response = await fetch('/data/articles.json')
+      setLoading(true)
+      setError(null)
+      
+      // Load from Supabase API (or fallback to local JSON if table doesn't exist)
+      const response = await fetch('/api/admin/articles')
+      
+      if (!response.ok) {
+        throw new Error(`Failed to load articles: ${response.statusText}`)
+      }
+      
       const data = await response.json()
-      setArticles(data.articles)
+      setArticles(data.articles || data || [])
     } catch (error) {
-      console.error('Error loading articles:', error)
+      console.error('[Articles] Error loading:', error)
+      setError(error instanceof Error ? error.message : 'Failed to load articles')
+      setArticles([])
     } finally {
       setLoading(false)
     }
   }
 
   const handleSave = async () => {
-    if (!editingArticle || !token) return
+    if (!editingArticle) return
 
     try {
       const response = await fetch('/api/admin/articles', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-admin-token': token,
         },
         body: JSON.stringify(editingArticle),
       })
@@ -174,9 +173,6 @@ export default function AdminArticlesPage() {
               className="px-4 py-2 rounded bg-green-600 hover:bg-green-700 font-semibold"
             >
               + {t.articles.createArticle}
-            </button>
-            <button onClick={logout} className="px-3 py-2 rounded bg-white/10 hover:bg-white/20">
-              {t.common.logout}
             </button>
           </div>
         </div>

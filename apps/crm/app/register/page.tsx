@@ -1,48 +1,64 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import type { Locale } from '@/lib/locales'
+import { createClient } from '@/lib/supabase/client'
 
-function RegisterPageContent({ params }: { params: { locale: Locale } }) {
+function RegisterPageContent() {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     confirmPassword: '',
     full_name: '',
     company_name: '',
-    industry: 'pergola',
+    industry: 'aluminum',
   })
 
-  // Handle OAuth callback tokens
+  // Check if user is already logged in
   useEffect(() => {
-    const token = searchParams.get('token')
-    const refreshToken = searchParams.get('refreshToken')
-    const oauthError = searchParams.get('error')
+    checkUser()
+  }, [])
 
-    if (oauthError) {
-      setError(`OAuth error: ${oauthError}`)
-      return
+  async function checkUser() {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (user) {
+      console.log('[Register] User already logged in, redirecting...')
+      router.push('/app/admin')
     }
+  }
 
-    if (token) {
-      localStorage.setItem('token', token)
-      if (refreshToken) {
-        localStorage.setItem('refreshToken', refreshToken)
+  async function handleGoogleSignup() {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      const supabase = createClient()
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?setup=true`,
+        },
+      })
+
+      if (error) {
+        console.error('[Register] OAuth error:', error)
+        setError(error.message)
+        setLoading(false)
       }
-      router.push(`/${params.locale}/admin`)
+      
+      // User will be redirected to Google
+    } catch (err) {
+      console.error('[Register] Error:', err)
+      setError('Failed to start Google signup')
+      setLoading(false)
     }
-  }, [searchParams, router, params.locale])
-
-  function handleGoogleSignup() {
-    const redirectUrl = `/${params.locale}/admin`
-    const oauthUrl = `/api/auth/oauth/google?redirect=${encodeURIComponent(redirectUrl)}`
-    window.location.href = oauthUrl
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -64,14 +80,41 @@ function RegisterPageContent({ params }: { params: { locale: Locale } }) {
     }
 
     try {
-      const response = await fetch('/api/auth/register', {
+      const supabase = createClient()
+      
+      // Step 1: Create user with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            full_name: formData.full_name,
+          },
+        },
+      })
+
+      if (authError) {
+        console.error('[Register] Auth error:', authError)
+        setError(authError.message)
+        return
+      }
+
+      if (!authData.user) {
+        setError('Failed to create user')
+        return
+      }
+
+      console.log('[Register] User created:', authData.user.id)
+
+      // Step 2: Create company and link to user
+      const response = await fetch('/api/auth/setup-company', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          user_id: authData.user.id,
           email: formData.email,
-          password: formData.password,
           full_name: formData.full_name,
           company_name: formData.company_name,
           industry: formData.industry,
@@ -81,22 +124,54 @@ function RegisterPageContent({ params }: { params: { locale: Locale } }) {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Registration failed')
+        // If company setup fails, we should sign out the user
+        await supabase.auth.signOut()
+        throw new Error(data.error || 'Failed to setup company')
       }
 
-      // Save token
-      if (data.token) {
-        localStorage.setItem('token', data.token)
-        localStorage.setItem('refreshToken', data.refreshToken || '')
+      console.log('[Register] Company setup complete')
+      
+      // Show success message (user needs to verify email)
+      if (authData.user.identities?.length === 0) {
+        // Email confirmation required
+        setSuccess(true)
+      } else {
+        // Email auto-confirmed or OAuth
+        router.push('/app/admin')
       }
-
-      // Redirect to admin panel
-      router.push(`/${params.locale}/admin`)
     } catch (err: any) {
+      console.error('[Register] Error:', err)
       setError(err.message || 'Registration failed. Please try again.')
     } finally {
       setLoading(false)
     }
+  }
+
+  if (success) {
+    return (
+      <main className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-950 text-white flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="bg-white/5 border border-white/10 rounded-xl p-8 text-center">
+            <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold mb-2">Check your email!</h2>
+            <p className="text-white/60 mb-6">
+              We've sent a confirmation link to <strong>{formData.email}</strong>. 
+              Please check your email and click the link to verify your account.
+            </p>
+            <Link
+              href="/login"
+              className="inline-block px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 font-semibold transition"
+            >
+              Go to Login
+            </Link>
+          </div>
+        </div>
+      </main>
+    )
   }
 
   return (
@@ -104,11 +179,11 @@ function RegisterPageContent({ params }: { params: { locale: Locale } }) {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold mb-2">Create Account</h1>
-          <p className="text-white/60">צור חשבון חדש</p>
+          <p className="text-white/60">התחל את תקופת הניסיון שלך</p>
         </div>
 
         <div className="bg-white/5 border border-white/10 rounded-xl p-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 text-red-200">
                 {error}
@@ -116,38 +191,28 @@ function RegisterPageContent({ params }: { params: { locale: Locale } }) {
             )}
 
             <div>
-              <label className="block text-sm mb-2">Email *</label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                required
-                className="w-full px-4 py-2 rounded-lg bg-black/40 border border-white/20 focus:border-blue-500 focus:outline-none"
-                placeholder="your@email.com"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm mb-2">Full Name *</label>
+              <label className="block text-sm mb-2">Full Name</label>
               <input
                 type="text"
                 value={formData.full_name}
                 onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                 required
-                className="w-full px-4 py-2 rounded-lg bg-black/40 border border-white/20 focus:border-blue-500 focus:outline-none"
+                disabled={loading}
+                className="w-full px-4 py-2 rounded-lg bg-black/40 border border-white/20 focus:border-blue-500 focus:outline-none disabled:opacity-50"
                 placeholder="John Doe"
               />
             </div>
 
             <div>
-              <label className="block text-sm mb-2">Company Name *</label>
+              <label className="block text-sm mb-2">Company Name</label>
               <input
                 type="text"
                 value={formData.company_name}
                 onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
                 required
-                className="w-full px-4 py-2 rounded-lg bg-black/40 border border-white/20 focus:border-blue-500 focus:outline-none"
-                placeholder="My Company"
+                disabled={loading}
+                className="w-full px-4 py-2 rounded-lg bg-black/40 border border-white/20 focus:border-blue-500 focus:outline-none disabled:opacity-50"
+                placeholder="Your Company Ltd"
               />
             </div>
 
@@ -156,64 +221,80 @@ function RegisterPageContent({ params }: { params: { locale: Locale } }) {
               <select
                 value={formData.industry}
                 onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
-                className="w-full px-4 py-2 rounded-lg bg-black/40 border border-white/20 focus:border-blue-500 focus:outline-none"
+                className="w-full px-4 py-2 rounded-lg bg-black/40 border border-white/20 focus:border-blue-500 focus:outline-none disabled:opacity-50"
+                disabled={loading}
               >
-                <option value="pergola">Pergola</option>
-                <option value="aluminum">Aluminum</option>
+                <option value="aluminum">Aluminum & Pergolas</option>
+                <option value="construction">Construction</option>
+                <option value="renovation">Renovation</option>
                 <option value="general">General</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-sm mb-2">Password *</label>
+              <label className="block text-sm mb-2">Email</label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                required
+                autoComplete="email"
+                disabled={loading}
+                className="w-full px-4 py-2 rounded-lg bg-black/40 border border-white/20 focus:border-blue-500 focus:outline-none disabled:opacity-50"
+                placeholder="your@email.com"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm mb-2">Password</label>
               <input
                 type="password"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 required
-                minLength={8}
-                className="w-full px-4 py-2 rounded-lg bg-black/40 border border-white/20 focus:border-blue-500 focus:outline-none"
+                autoComplete="new-password"
+                disabled={loading}
+                className="w-full px-4 py-2 rounded-lg bg-black/40 border border-white/20 focus:border-blue-500 focus:outline-none disabled:opacity-50"
                 placeholder="At least 8 characters"
               />
-              <p className="text-xs text-white/50 mt-1">
-                Must contain uppercase, lowercase, and number
-              </p>
             </div>
 
             <div>
-              <label className="block text-sm mb-2">Confirm Password *</label>
+              <label className="block text-sm mb-2">Confirm Password</label>
               <input
                 type="password"
                 value={formData.confirmPassword}
                 onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                 required
-                className="w-full px-4 py-2 rounded-lg bg-black/40 border border-white/20 focus:border-blue-500 focus:outline-none"
-                placeholder="Confirm password"
+                autoComplete="new-password"
+                disabled={loading}
+                className="w-full px-4 py-2 rounded-lg bg-black/40 border border-white/20 focus:border-blue-500 focus:outline-none disabled:opacity-50"
+                placeholder="Confirm your password"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition font-semibold"
+              className="w-full px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 font-semibold transition"
             >
-              {loading ? 'Creating Account...' : 'Create Account'}
+              {loading ? 'Creating account...' : 'Create Account'}
             </button>
-          </form>
 
-          <div className="mt-6">
-            <div className="relative">
+            <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-white/20"></div>
+                <div className="w-full border-t border-white/10"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-gray-900 text-white/60">Or</span>
+                <span className="px-2 bg-gray-900 text-white/60">OR</span>
               </div>
             </div>
 
             <button
+              type="button"
               onClick={handleGoogleSignup}
-              className="mt-6 w-full px-6 py-3 rounded-lg bg-white hover:bg-gray-100 text-gray-900 font-semibold transition flex items-center justify-center gap-3"
+              disabled={loading}
+              className="w-full px-6 py-3 rounded-lg bg-white hover:bg-gray-100 disabled:bg-gray-300 text-gray-900 font-semibold transition flex items-center justify-center gap-3"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path
@@ -233,14 +314,14 @@ function RegisterPageContent({ params }: { params: { locale: Locale } }) {
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                 />
               </svg>
-              Sign up with Google
+              {loading ? 'Redirecting...' : 'Sign up with Google'}
             </button>
-          </div>
+          </form>
 
           <div className="mt-6 text-center">
             <p className="text-white/60">
               Already have an account?{' '}
-              <Link href={`/${params.locale}/auth/login`} className="text-blue-400 hover:text-blue-300">
+              <Link href="/login" className="text-blue-400 hover:text-blue-300">
                 Sign in
               </Link>
             </p>
@@ -248,14 +329,14 @@ function RegisterPageContent({ params }: { params: { locale: Locale } }) {
         </div>
 
         <div className="mt-6 text-center text-sm text-white/50">
-          <p>By registering, you agree to our Terms of Service and Privacy Policy</p>
+          <p>By signing up, you agree to our Terms of Service and Privacy Policy</p>
         </div>
       </div>
     </main>
   )
 }
 
-export default function RegisterPage({ params }: { params: { locale: Locale } }) {
+export default function RegisterPage() {
   return (
     <Suspense fallback={
       <main className="min-h-screen bg-gradient-to-b from-neutral-950 via-neutral-900 to-neutral-950">
@@ -264,8 +345,7 @@ export default function RegisterPage({ params }: { params: { locale: Locale } })
         </div>
       </main>
     }>
-      <RegisterPageContent params={params} />
+      <RegisterPageContent />
     </Suspense>
   )
 }
-

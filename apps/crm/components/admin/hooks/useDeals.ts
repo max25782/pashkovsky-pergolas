@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import type { Deal } from '../deal-types'
-import { fetchDeals } from '../deal-api'
 
 interface UseDealsParams {
-  adminToken: string
-  isJWT?: boolean
   searchQuery?: string
   stageFilter?: string
   projectTypeFilter?: string
@@ -13,41 +11,57 @@ interface UseDealsParams {
 }
 
 export function useDeals({
-  adminToken,
-  isJWT = false,
   searchQuery = '',
   stageFilter = '',
   projectTypeFilter = '',
   page = 0,
   limit = 100
-}: UseDealsParams) {
+}: UseDealsParams = {}) {
   const [deals, setDeals] = useState<Deal[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function load() {
-    // Don't load if adminToken is not provided or is empty
-    if (!adminToken || adminToken.trim() === '') {
-      return
-    }
-    
     setLoading(true)
     setError(null)
+    
     try {
-      const result = await fetchDeals(
-        {
-          q: searchQuery,
-          stage: stageFilter,
-          project_type: projectTypeFilter,
-          limit,
-          offset: page * limit
-        },
-        adminToken,
-        isJWT
-      )
-      setDeals(result.data)
+      const supabase = createClient()
+      
+      // Start with base query
+      let query = supabase
+        .from('deals')
+        .select('*')
+        .order('created_at', { ascending: false })
+      
+      // Apply filters
+      if (stageFilter) {
+        query = query.eq('stage', stageFilter)
+      }
+      
+      if (projectTypeFilter) {
+        query = query.eq('project_type', projectTypeFilter)
+      }
+      
+      // Apply search (search in client_name and address)
+      if (searchQuery) {
+        query = query.or(`client_name.ilike.%${searchQuery}%,address.ilike.%${searchQuery}%`)
+      }
+      
+      // Apply pagination
+      const offset = page * limit
+      query = query.range(offset, offset + limit - 1)
+      
+      const { data, error: queryError } = await query
+      
+      if (queryError) {
+        throw new Error(queryError.message)
+      }
+      
+      console.log('[useDeals] Loaded deals:', data?.length || 0)
+      setDeals(data || [])
     } catch (e: any) {
-      console.error('Load error:', e)
+      console.error('[useDeals] Load error:', e)
       setError(e.message)
     } finally {
       setLoading(false)
@@ -55,11 +69,8 @@ export function useDeals({
   }
 
   useEffect(() => {
-    // Only load if adminToken is provided and not empty
-    if (adminToken && adminToken.trim() !== '') {
-      load()
-    }
-  }, [adminToken, isJWT, searchQuery, stageFilter, projectTypeFilter, page, limit])
+    load()
+  }, [searchQuery, stageFilter, projectTypeFilter, page, limit])
 
   return {
     deals,
@@ -68,4 +79,3 @@ export function useDeals({
     reload: load
   }
 }
-

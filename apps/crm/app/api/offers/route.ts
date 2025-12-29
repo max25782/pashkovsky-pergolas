@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
     const shapeValidation = validatePergolaShape(pergola.shape)
     if (!shapeValidation.valid) {
       return NextResponse.json(
-        { error: `Invalid pergola shape: ${shapeValidation.error}` },
+        { error: `Invalid pergola shape: ${shapeValidation.errors.join(', ')}` },
         { status: 400 }
       )
     }

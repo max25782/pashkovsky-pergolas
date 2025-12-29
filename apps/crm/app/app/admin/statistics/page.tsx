@@ -5,67 +5,57 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { Locale } from '@/lib/locales'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
-import { useDeals } from '@/components/admin/hooks/useDeals'
 import { DealsStatistics } from '@/components/admin/DealsStatistics'
 import type { Deal } from '@/components/admin/deal-types'
+import { createAuthenticatedClient } from '@/lib/supabase/client'
 
 export default function StatisticsPage() {
   const t = useCRMTranslations()
   const router = useRouter()
-  const [token, setToken] = useState<string | null>(null)
-  const [input, setInput] = useState('')
+  const [deals, setDeals] = useState<Deal[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null)
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('admin_token')
-    if (storedToken) setToken(storedToken)
-  }, [])
-
-  const { deals, loading, error } = useDeals({
-    adminToken: token || '',
-    searchQuery: '',
-    stageFilter: '',
-    projectTypeFilter: '',
-    page: 0,
-    limit: 1000 // Get all deals for statistics
-  })
-
-  function save() {
-    if (input.trim()) {
-      localStorage.setItem('admin_token', input.trim())
-      setToken(input.trim())
+    async function loadDeals() {
+      try {
+        setLoading(true)
+        console.log('[Statistics] Loading deals with JWT...')
+        
+        const supabase = createAuthenticatedClient()
+        
+        const { data, error: dbError } = await supabase
+          .from('deals')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(1000)
+        
+        console.log('[Statistics] Response:', { data: data?.length, error: dbError })
+        
+        if (dbError) {
+          console.error('[Statistics] DB error:', dbError)
+          setError(dbError.message)
+          return
+        }
+        
+        console.log('[Statistics] Loaded deals:', data?.length || 0)
+        console.log('[Statistics] First deal:', data?.[0])
+        setDeals(data || [])
+      } catch (e: any) {
+        console.error('[Statistics] Error:', e)
+        setError(e.message)
+      } finally {
+        setLoading(false)
+      }
     }
-  }
-
-  function logout() {
-    localStorage.removeItem('admin_token')
-    setToken(null)
-    setInput('')
-  }
+    
+    loadDeals()
+  }, [])
 
   function handleDealClick(deal: Deal) {
     // Redirect to deals page - the deal will be opened there
     router.push('/app/admin/deals')
-  }
-
-  if (!token) {
-    return (
-      <main className="container py-16 text-white">
-        <h1 className="text-2xl font-bold mb-4">Admin • {t.nav.statistic}</h1>
-        <div className="max-w-md bg-white/5 border border-white/10 rounded-xl p-6">
-          <label className="block text-sm mb-2">{t.auth.enterAdminToken}</label>
-          <input
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            className="w-full px-3 py-2 rounded bg-black/40 border border-white/20"
-            placeholder={t.auth.adminTokenPlaceholder}
-          />
-          <button onClick={save} className="mt-3 px-4 py-2 rounded bg-white/10 hover:bg-white/20">
-            {t.common.continue}
-          </button>
-        </div>
-      </main>
-    )
   }
 
   return (
@@ -127,9 +117,6 @@ export default function StatisticsPage() {
           >
             Weekly Digests
           </Link>
-          <button onClick={logout} className="px-3 py-2 rounded bg-white/10 hover:bg-white/20">
-            {t.common.logout}
-          </button>
         </div>
       </div>
 
