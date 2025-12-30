@@ -9,12 +9,12 @@ interface SketchModalProps {
   existingJson?: any
   onClose: () => void
   onSave: (imageBlob: Blob, jsonData: any) => Promise<void>
-  adminToken: string
+  adminToken?: string
 }
 
 type DrawingTool = 'pencil' | 'dot' | 'rectangle' | 'circle' | 'line' | 'text' | 'pergola-rect' | 'pergola-l' | 'pergola-custom'
 
-export function SketchModal({ dealId, existingImageUrl, existingJson, onClose, onSave, adminToken }: SketchModalProps) {
+export function SketchModal({ dealId, existingImageUrl, existingJson, onClose, onSave, adminToken = '' }: SketchModalProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const fabricCanvasRef = useRef<any>(null)
   const fabricRef = useRef<any>(null)

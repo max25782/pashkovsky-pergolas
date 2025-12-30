@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { X } from 'lucide-react'
 import type { Worker, WorkShiftDraft } from '@/types/workers'
+import { authFetch } from '@/lib/api/auth-fetch'
 
 interface AddWorkShiftModalProps {
   isOpen: boolean
@@ -41,7 +42,7 @@ export function AddWorkShiftModal({
   const fetchWorkers = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/workers')
+      const response = await authFetch('/api/workers')
       if (!response.ok) throw new Error('Failed to fetch workers')
       const { workers: workersData } = await response.json()
       setWorkers(workersData || [])
@@ -76,7 +77,7 @@ export function AddWorkShiftModal({
 
     try {
       setSubmitting(true)
-      const response = await fetch('/api/work-shifts', {
+      const response = await authFetch('/api/work-shifts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),

@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import type { MaterialOrder } from '@/types/material-order'
+import { authFetch } from '@/lib/api/auth-fetch'
 
 interface MaterialOrdersListProps {
   dealId: string
-  adminToken: string
+  adminToken?: string
 }
 
-export function MaterialOrdersList({ dealId, adminToken }: MaterialOrdersListProps) {
+export function MaterialOrdersList({ dealId, adminToken = '' }: MaterialOrdersListProps) {
   const [orders, setOrders] = useState<MaterialOrder[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -20,11 +21,7 @@ export function MaterialOrdersList({ dealId, adminToken }: MaterialOrdersListPro
   async function loadOrders() {
     try {
       setLoading(true)
-      const response = await fetch(`/api/material-orders?dealId=${dealId}`, {
-        headers: {
-          'x-admin-token': adminToken,
-        },
-      })
+      const response = await authFetch(`/api/material-orders?dealId=${dealId}`)
 
       if (!response.ok) {
         throw new Error('Failed to load material orders')

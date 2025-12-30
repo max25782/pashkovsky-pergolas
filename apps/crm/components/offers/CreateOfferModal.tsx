@@ -9,6 +9,7 @@ import { DEFAULT_OFFER_VALUES } from '@/types/offer'
 import { calculateOffer, formatPrice } from '@/lib/offer-calculator'
 import { PergolaShapeSelector } from './PergolaShapeSelector'
 import { calculatePergolaArea, validatePergolaShape } from '@/lib/calculations/pergola-area'
+import { authFetch } from '@/lib/api/auth-fetch'
 
 interface CreateOfferModalProps {
   dealId: string
@@ -44,6 +45,8 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isImprovingText, setIsImprovingText] = useState(false)
+  const [aiSuggestion, setAiSuggestion] = useState<string | null>(null)
 
   // Calculate prices in real-time
   const calculation = useMemo(() => calculateOffer(draft), [draft])
@@ -57,24 +60,11 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
       console.log('Submitting offer:', requestBody)
       console.log('Pergola shape:', requestBody.pergola?.shape)
       
-      // Get authentication token from localStorage
-      const token = localStorage.getItem('token') || localStorage.getItem('admin_token')
-      if (!token) {
-        throw new Error('No authentication token found. Please log in.')
-      }
-      
-      // Determine if it's a JWT token
-      const isJWT = !!localStorage.getItem('token')
-      
-      // Prepare headers with authentication
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        ...(isJWT ? { 'Authorization': `Bearer ${token}` } : { 'x-admin-token': token })
-      }
-      
-      const response = await fetch('/api/offers', {
+      const response = await authFetch('/api/offers', {
         method: 'POST',
-        headers,
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(requestBody),
       })
 
@@ -148,6 +138,55 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
   const updateOptions = useCallback((updates: Partial<typeof draft.options>) => {
     setDraft(prev => ({ ...prev, options: { ...prev.options, ...updates } }))
   }, [])
+  
+  const improveNotesWithAI = useCallback(async () => {
+    const currentNotes = draft.options.notes || ''
+    if (!currentNotes.trim()) {
+      setError('אנא כתוב טקסט להערות לפני שימוש ב-AI')
+      return
+    }
+    
+    setIsImprovingText(true)
+    setError(null)
+    setAiSuggestion(null)
+    
+    try {
+      const response = await authFetch('/api/ai/improve-offer-text', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: currentNotes,
+          context: {
+            customerName: customerName,
+            pergolaType: 'אלומיניום',
+            price: calculation.finalPrice,
+          },
+        }),
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to improve text')
+      }
+      
+      const data = await response.json()
+      setAiSuggestion(data.improvedText)
+    } catch (err: any) {
+      console.error('Error improving text:', err)
+      setError(err.message || 'שגיאה בשיפור הטקסט')
+    } finally {
+      setIsImprovingText(false)
+    }
+  }, [draft.options.notes, customerName, calculation.finalPrice])
+  
+  const acceptAiSuggestion = useCallback(() => {
+    if (aiSuggestion) {
+      updateOptions({ notes: aiSuggestion })
+      setAiSuggestion(null)
+    }
+  }, [aiSuggestion, updateOptions])
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open && !isSubmitting) onClose() }}>
@@ -597,10 +636,66 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
             )}
           </div>
 
-          {/* Notes */}
+          {/* Notes with AI Improvement */}
           <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-            <h3 className="text-lg font-semibold mb-3">הערות נוספות</h3>
-            <textarea value={draft.options.notes || ''} onChange={(e) => updateOptions({ notes: e.target.value || undefined })} className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400 min-h-[80px]" placeholder="הערות..." />
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-semibold">הערות נוספות</h3>
+              <Button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  improveNotesWithAI()
+                }}
+                disabled={isImprovingText || !draft.options.notes?.trim()}
+                className="bg-purple-600 hover:bg-purple-700 text-white text-sm px-3 py-1 h-8"
+              >
+                {isImprovingText ? '⏳ משפר...' : '✨ AI שיפור'}
+              </Button>
+            </div>
+            
+            <textarea 
+              value={draft.options.notes || ''} 
+              onChange={(e) => {
+                updateOptions({ notes: e.target.value || undefined })
+                setAiSuggestion(null)
+              }} 
+              className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400 min-h-[80px]" 
+              placeholder="הערות (לדוגמה: פרגולה בצבע שחור, זכוכית בצד דרום, התקנה כוללת...)"
+            />
+            
+            {/* AI Suggestion */}
+            {aiSuggestion && (
+              <div className="mt-3 p-3 bg-purple-900/30 border border-purple-400/50 rounded-lg">
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-purple-300 text-sm font-semibold">💡 הצעת AI:</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        acceptAiSuggestion()
+                      }}
+                      className="bg-green-600 hover:bg-green-700 text-white text-xs px-2 py-1 h-6"
+                    >
+                      ✓ קבל
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setAiSuggestion(null)
+                      }}
+                      className="bg-white/10 hover:bg-white/20 text-white text-xs px-2 py-1 h-6"
+                    >
+                      ✕ דחה
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-sm text-white/90 whitespace-pre-wrap">{aiSuggestion}</p>
+              </div>
+            )}
           </div>
 
           {/* Price Summary - 3 PRICES */}

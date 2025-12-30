@@ -12,10 +12,10 @@ export function calcLaborCost(shifts: WorkShift[]): number {
 }
 
 /**
- * Calculate profit from revenue and labor cost
+ * Calculate profit from revenue, material cost, and labor cost
  */
-export function calcProfit(revenue: number, laborCost: number): number {
-  return revenue - laborCost
+export function calcProfit(revenue: number, laborCost: number, materialCost: number = 0): number {
+  return revenue - laborCost - materialCost
 }
 
 /**
@@ -51,9 +51,9 @@ export function groupShiftsByDate(shifts: WorkShift[]): WorkShiftGroupedByDate[]
 /**
  * Calculate project profit
  */
-export function calculateProjectProfit(revenue: number, shifts: WorkShift[]): ProjectProfit {
+export function calculateProjectProfit(revenue: number, shifts: WorkShift[], materialCost: number = 0): ProjectProfit {
   const laborCost = calcLaborCost(shifts)
-  const profit = calcProfit(revenue, laborCost)
+  const profit = calcProfit(revenue, laborCost, materialCost)
   const laborCostPercent = revenue > 0 ? (laborCost / revenue) * 100 : 0
 
   return {

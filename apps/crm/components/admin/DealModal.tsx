@@ -20,7 +20,7 @@ interface DealModalProps {
   onDelete: () => void
   formatCurrency: (amount: number | null | undefined) => string
   formatDate: (dateStr: string | null | undefined) => string
-  adminToken: string
+  adminToken?: string
 }
 
 export function DealModal({
@@ -30,7 +30,7 @@ export function DealModal({
   onDelete,
   formatCurrency,
   formatDate,
-  adminToken
+  adminToken = ''
 }: DealModalProps) {
   const t = useCRMTranslations()
   const stages = getStages(t.deals)
@@ -40,6 +40,7 @@ export function DealModal({
   const [showOfferModal, setShowOfferModal] = useState(false)
   const [showLaundryClosetModal, setShowLaundryClosetModal] = useState(false)
   const [offersRefreshTrigger, setOffersRefreshTrigger] = useState(0)
+  const [shiftsRefreshTrigger, setShiftsRefreshTrigger] = useState(0)
   
   // Get revenue from offers
   const revenue = useProjectRevenue(deal.id)
@@ -531,12 +532,20 @@ export function DealModal({
 
           {/* Profit Widget */}
           <div className="pt-4 border-t border-white/10">
-            <ProfitWidget projectId={deal.id} revenue={revenue} />
+            <ProfitWidget 
+              projectId={deal.id} 
+              revenue={revenue} 
+              materialCost={localDeal.my_cost || 0}
+              refreshTrigger={shiftsRefreshTrigger}
+            />
           </div>
 
           {/* Work Log Section */}
           <div className="pt-4 border-t border-white/10">
-            <WorkLogSection projectId={deal.id} />
+            <WorkLogSection 
+              projectId={deal.id}
+              onShiftAdded={() => setShiftsRefreshTrigger(prev => prev + 1)}
+            />
           </div>
 
           {/* Metadata */}

@@ -25,7 +25,6 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { jwtVerify } from 'jose'
 import { createClient } from '@supabase/supabase-js'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
@@ -278,9 +277,11 @@ export async function verifyResourceOwnership(
 // ============================================================
 
 /**
- * Get user from JWT token (modern auth)
+ * Get user from JWT token (Supabase Auth)
  */
 async function getUserFromJWT(req: NextRequest): Promise<AuthUser | null> {
+  if (!supabase) return null
+
   try {
     // Try cookie first
     const tokenFromCookie = req.cookies.get('token')?.value
@@ -295,28 +296,35 @@ async function getUserFromJWT(req: NextRequest): Promise<AuthUser | null> {
 
     if (!token) return null
 
-    // Verify JWT
-    const secret = new TextEncoder().encode(
-      process.env.JWT_SECRET || 'your-secret-key'
-    )
-    const { payload } = await jwtVerify(token, secret)
+    // Use Supabase to verify the token
+    const { data: { user }, error } = await supabase.auth.getUser(token)
 
-    // Extract user data
-    const userId = (payload.sub || payload.user_id) as string
-    const companyId = payload.company_id as string | null
-    const email = payload.email as string | undefined
-    const role = payload.role as string | undefined
+    if (error || !user) {
+      console.warn('[Security] Invalid Supabase token:', error?.message)
+      return null
+    }
 
-    if (!userId) return null
+    // Get company_id from company_members table
+    let companyId: string | null = null
+    
+    const { data: memberData, error: memberError } = await supabase
+      .from('company_members')
+      .select('company_id')
+      .eq('user_id', user.id)
+      .single()
+    
+    if (!memberError && memberData) {
+      companyId = memberData.company_id
+    }
 
     return {
-      userId,
-      email,
+      userId: user.id,
+      email: user.email,
       companyId,
-      role,
+      role: user.role,
     }
   } catch (error) {
-    // JWT verification failed - not an error, just no valid JWT
+    console.error('[Security] Error verifying JWT:', error)
     return null
   }
 }

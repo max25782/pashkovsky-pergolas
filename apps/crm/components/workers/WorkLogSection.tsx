@@ -5,12 +5,14 @@ import { Plus, Trash2 } from 'lucide-react'
 import { AddWorkShiftModal } from './AddWorkShiftModal'
 import { groupShiftsByDate, formatCurrencyILS } from '@/lib/workers/calculations'
 import type { WorkShift, WorkShiftGroupedByDate } from '@/types/workers'
+import { authFetch } from '@/lib/api/auth-fetch'
 
 interface WorkLogSectionProps {
   projectId: string
+  onShiftAdded?: () => void
 }
 
-export function WorkLogSection({ projectId }: WorkLogSectionProps) {
+export function WorkLogSection({ projectId, onShiftAdded }: WorkLogSectionProps) {
   const [shifts, setShifts] = useState<WorkShift[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -20,7 +22,7 @@ export function WorkLogSection({ projectId }: WorkLogSectionProps) {
     try {
       setLoading(true)
       setError(null)
-      const response = await fetch(`/api/work-shifts?projectId=${projectId}`)
+      const response = await authFetch(`/api/work-shifts?projectId=${projectId}`)
       if (!response.ok) throw new Error('Failed to fetch work shifts')
       const { shifts: shiftsData } = await response.json()
       setShifts(shiftsData || [])
@@ -39,13 +41,14 @@ export function WorkLogSection({ projectId }: WorkLogSectionProps) {
     if (!confirm('האם אתה בטוח שברצונך למחוק משמרת זו?')) return
 
     try {
-      const response = await fetch(`/api/work-shifts/${shiftId}`, {
+      const response = await authFetch(`/api/work-shifts/${shiftId}`, {
         method: 'DELETE',
       })
 
       if (!response.ok) throw new Error('Failed to delete work shift')
 
       fetchShifts()
+      onShiftAdded?.() // Trigger refresh of ProfitWidget
     } catch (err: any) {
       alert('שגיאה במחיקת משמרת: ' + err.message)
     }
@@ -151,7 +154,10 @@ export function WorkLogSection({ projectId }: WorkLogSectionProps) {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         projectId={projectId}
-        onShiftAdded={fetchShifts}
+        onShiftAdded={() => {
+          fetchShifts()
+          onShiftAdded?.()
+        }}
       />
     </div>
   )

@@ -1,7 +1,0 @@
-{
-  "/(public)/[locale]/page": "app/(public)/[locale]/page.js",
-  "/(public)/[locale]/profiles/page": "app/(public)/[locale]/profiles/page.js",
-  "/(public)/[locale]/pergola3d/page": "app/(public)/[locale]/pergola3d/page.js",
-  "/(public)/[locale]/mistora/page": "app/(public)/[locale]/mistora/page.js",
-  "/(public)/[locale]/pergulas/page": "app/(public)/[locale]/pergulas/page.js"
-}

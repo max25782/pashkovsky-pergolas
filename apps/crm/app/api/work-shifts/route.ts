@@ -58,23 +58,23 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'projectId is required' }, { status: 400 })
     }
 
-    // 🔒 Security: Verify project belongs to user's company
-    const { data: project, error: projectError } = await supabase
-      .from('pergola_projects')
+    // 🔒 Security: Verify project (deal) belongs to user's company
+    const { data: deal, error: dealError } = await supabase
+      .from('deals')
       .select('company_id')
       .eq('id', projectId)
       .single()
 
-    if (projectError || !project) {
-      console.error('Error fetching project:', projectError)
+    if (dealError || !deal) {
+      console.error('Error fetching deal:', dealError)
       return NextResponse.json(
-        { error: 'Project not found or access denied' },
+        { error: 'Deal not found or access denied' },
         { status: 404 }
       )
     }
 
     // Verify company access
-    const access = await requireCompanyAccess(req, project.company_id)
+    const access = await requireCompanyAccess(req, deal.company_id)
     if (!access.authorized) return access.error
 
     // Now safe to fetch work shifts
@@ -133,22 +133,22 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // 🔒 Security: Verify project belongs to user's company
-    const { data: project, error: projectError } = await supabase
-      .from('pergola_projects')
+    // 🔒 Security: Verify project (deal) belongs to user's company
+    const { data: deal, error: dealError } = await supabase
+      .from('deals')
       .select('company_id')
       .eq('id', projectId)
       .single()
 
-    if (projectError || !project) {
-      console.error('Error fetching project:', projectError)
+    if (dealError || !deal) {
+      console.error('Error fetching deal:', dealError)
       return NextResponse.json(
-        { error: 'Project not found or access denied' },
+        { error: 'Deal not found or access denied' },
         { status: 404 }
       )
     }
 
-    const access = await requireCompanyAccess(req, project.company_id)
+    const access = await requireCompanyAccess(req, deal.company_id)
     if (!access.authorized) return access.error
 
     // 🔒 Security: Verify worker belongs to user's company
@@ -190,6 +190,7 @@ export async function POST(req: NextRequest) {
       .insert({
         project_id: projectId,
         worker_id: workerId,
+        company_id: deal.company_id,
         date,
         pay_type: payType,
         daily_rate_snapshot: dailyRateSnapshot,
