@@ -6,14 +6,61 @@
   - Environments: .env.local
 
    Creating an optimized production build ...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
  ✓ Compiled successfully
    Linting and checking validity of types ...
    Collecting page data ...
-   Generating static pages (0/98) ...
-   Generating static pages (24/98) 
-   Generating static pages (48/98) 
-   Generating static pages (73/98) 
-[Models API] Returning 6 models from S3
- ✓ Generating static pages (98/98)
+   Generating static pages (0/97) ...
+   Generating static pages (24/97) 
+   Generating static pages (48/97) 
+   Generating static pages (72/97) 
+ ✓ Generating static pages (97/97)
    Finalizing page optimization ...
    Collecting build traces ...
+
+Route (app)                              Size     First Load JS
+┌ ○ /_not-found                          161 B          87.3 kB
+├ ƒ /[locale]                            10.9 kB         150 kB
+├ ƒ /[locale]/about                      161 B          87.3 kB
+├ ƒ /[locale]/blog                       161 B          87.3 kB
+├ ● /[locale]/blog/[slug]                296 B          94.2 kB
+├   ├ /he/blog/pergolas-aluminum
+├   ├ /he/blog/glass-railings
+├   ├ /he/blog/fences-gates
+├   └ [+9 more paths]
+├ ƒ /[locale]/contact                    6.62 kB         112 kB
+├ ƒ /[locale]/fences                     3.23 kB         171 kB
+├ ƒ /[locale]/fromShetah                 178 B           109 kB
+├ ƒ /[locale]/legal/privacy              160 B          87.3 kB
+├ ƒ /[locale]/legal/terms                160 B          87.3 kB
+├ ƒ /[locale]/mistora                    3.32 kB         152 kB
+├ ƒ /[locale]/models                     160 B          87.3 kB
+├ ƒ /[locale]/pergola3d                  223 kB          310 kB
+├ ƒ /[locale]/pergulas                   14.9 kB         182 kB
+├ ● /[locale]/pergulas/[id]              175 B          92.4 kB
+├   ├ /he/pergulas/ashdod
+├   ├ /he/pergulas/ashkelon
+├   ├ /he/pergulas/ashkelon2
+├   └ [+75 more paths]
+├ ƒ /[locale]/profiles                   3.31 kB         136 kB
+├ ƒ /[locale]/railings                   3.73 kB         153 kB
+├ ƒ /[locale]/services                   160 B          87.3 kB
+├ ƒ /[locale]/windows                    778 B           109 kB
+├ ƒ /api/gallery/[category]              0 B                0 B
+├ ƒ /api/gallery/models                  0 B                0 B
+├ ○ /api/pergola-projects                0 B                0 B
+├ ○ /icon.svg                            0 B                0 B
+├ ○ /robots.txt                          0 B                0 B
+└ ○ /sitemap.xml                         0 B                0 B
++ First Load JS shared by all            87.1 kB
+  ├ chunks/1dd3208c-3de7ad46c3607b00.js  53.6 kB
+  ├ chunks/286-9db2548052210d3e.js       31.5 kB
+  └ other shared chunks (total)          1.96 kB
+
+
+ƒ Middleware                             28.1 kB
+
+○  (Static)   prerendered as static content
+●  (SSG)      prerendered as static HTML (uses getStaticProps)
+ƒ  (Dynamic)  server-rendered on demand
+

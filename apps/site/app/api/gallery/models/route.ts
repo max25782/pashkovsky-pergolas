@@ -2,20 +2,25 @@ import { NextRequest, NextResponse } from 'next/server'
 import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3'
 import { getImageUrl } from '@/lib/image-url'
 
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 const S3_BUCKET = process.env.NEXT_PUBLIC_AWS_S3_BUCKET_NAME || ''
 const S3_REGION = process.env.NEXT_PUBLIC_AWS_S3_REGION || 'eu-north-1'
 
-const s3Client = S3_BUCKET
-  ? new S3Client({
-      region: S3_REGION,
-      credentials: process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
-        ? {
-            accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-          }
-        : undefined,
-    })
-  : null
+function getS3Client() {
+  if (!S3_BUCKET || !process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
+    return null
+  }
+  
+  return new S3Client({
+    region: S3_REGION,
+    credentials: {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    },
+  })
+}
 
 interface ModelItem {
   type: string
@@ -26,6 +31,8 @@ interface ModelItem {
 // GET - Get models organized by subdirectory from S3
 export async function GET(req: NextRequest) {
   try {
+    const s3Client = getS3Client()
+    
     // If S3 is not configured, return empty array (will use static data)
     if (!s3Client || !S3_BUCKET) {
       console.warn('[Models API] S3 not configured, returning empty array')

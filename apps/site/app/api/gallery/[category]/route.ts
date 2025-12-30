@@ -1,16 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3'
 
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 const S3_BUCKET = process.env.NEXT_PUBLIC_AWS_S3_BUCKET_NAME
 const S3_REGION = process.env.NEXT_PUBLIC_AWS_S3_REGION || 'eu-north-1'
 
-const s3Client = S3_BUCKET && process.env.AWS_ACCESS_KEY_ID ? new S3Client({
-  region: S3_REGION,
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
-}) : undefined
+function getS3Client() {
+  if (!S3_BUCKET || !process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
+    return null
+  }
+  
+  return new S3Client({
+    region: S3_REGION,
+    credentials: {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    },
+  })
+}
 
 interface MediaItem {
   src: string
@@ -32,6 +41,8 @@ export async function GET(
 ) {
   const params = await context.params
   const category = params.category
+
+  const s3Client = getS3Client()
 
   if (!S3_BUCKET || !s3Client) {
     console.error(`[Gallery API] S3 not configured`)

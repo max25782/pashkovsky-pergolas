@@ -2,12 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { jwtVerify } from 'jose'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
-
 export const dynamic = 'force-dynamic'
+
+function getSupabaseClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  
+  if (!url || !key) {
+    throw new Error('Missing Supabase credentials')
+  }
+  
+  return createClient(url, key)
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -35,6 +41,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get all companies where user is a member
+    const supabase = getSupabaseClient()
     const { data: memberships, error } = await supabase
       .from('company_members')
       .select(`
