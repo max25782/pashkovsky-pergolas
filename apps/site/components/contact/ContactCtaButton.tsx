@@ -76,14 +76,23 @@ export default function ContactCtaButton({ locale = 'he', className, buttonText 
     e.preventDefault()
     setLoading(true)
     const utmSource = typeof window !== 'undefined' ? localStorage.getItem('lead_source') : null
+    
+    // Send to CRM Public Leads API
+    const crmUrl = process.env.NEXT_PUBLIC_CRM_API_URL || 'http://localhost:3001'
+    const siteToken = process.env.NEXT_PUBLIC_CRM_SITE_TOKEN || 'dev-token'
+    
     try {
-      const resp = await fetch('/api/leads', {
+      const resp = await fetch(`${crmUrl}/api/public/leads`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-site-token': siteToken,
+        },
         body: JSON.stringify({
           name: form.name,
           phone: form.phone,
-          city: form.city,
+          email: '',
+          message: form.city ? `City: ${form.city}` : '',
           source: utmSource || 'website',
         }),
       })

@@ -19,11 +19,24 @@ export default function ContactPageClient({ locale }: Props){
     const city = String(fd.get('city') || '').trim()
     const utmSource = typeof window !== 'undefined' ? localStorage.getItem('lead_source') : null
 
+    // Send to CRM Public Leads API
+    const crmUrl = process.env.NEXT_PUBLIC_CRM_API_URL || 'http://localhost:3001'
+    const siteToken = process.env.NEXT_PUBLIC_CRM_SITE_TOKEN || 'dev-token'
+
     try {
-      const resp = await fetch('/api/leads', {
+      const resp = await fetch(`${crmUrl}/api/public/leads`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, phone, city, source: utmSource || 'website' }),
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-site-token': siteToken,
+        },
+        body: JSON.stringify({ 
+          name, 
+          phone, 
+          email: '',
+          message: city ? `City: ${city}` : '',
+          source: utmSource || 'website',
+        }),
       })
       if (!resp.ok) throw new Error('Failed to save')
       form.reset()

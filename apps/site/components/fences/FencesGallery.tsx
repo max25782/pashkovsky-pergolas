@@ -18,19 +18,19 @@ function FencesGalleryImpl() {
   const [dynamicImages, setDynamicImages] = useState<string[]>([]);
   const staticItems = (fences as { items: { src: string; type: string }[] }).items;
   
-  // Fetch images from API on mount
+  // Fetch images from S3 via API on mount
   useEffect(() => {
     async function fetchImages() {
       try {
-        const res = await fetch('/api/gallery/images?category_key=fancy&limit=100');
+        const res = await fetch('/api/gallery/fancy');
         if (res.ok) {
           const data = await res.json();
-          if (data.images && data.images.length > 0) {
-            setDynamicImages(data.images);
+          if (data.items && data.items.length > 0) {
+            setDynamicImages(data.items.map((item: { src: string }) => item.src));
           }
         }
       } catch (error) {
-        console.warn('[FencesGallery] Failed to fetch images from API:', error);
+        console.warn('[FencesGallery] Failed to fetch images from S3:', error);
       }
     }
     fetchImages();

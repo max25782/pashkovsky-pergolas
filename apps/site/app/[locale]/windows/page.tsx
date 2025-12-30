@@ -1,16 +1,34 @@
 import type { Locale } from '@/lib/locales'
 import { MediaGallery } from '@/components/generic/MediaGallery'
-import { getGalleryImages } from '@/lib/gallery/get-gallery-images'
-import windows from '@/data/gallery/windows.json'
 import ArticleModal from '@/components/articleModal'
+
+interface MediaItem {
+  src: string
+  type: 'image' | 'video'
+}
+
+async function getWindowsImages(): Promise<MediaItem[]> {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
+                    (typeof window === 'undefined' ? 'http://localhost:3000' : '')
+    const url = `${baseUrl}/api/gallery/windows`
+    
+    const response = await fetch(url, {
+      next: { revalidate: 3600 }
+    })
+    
+    if (!response.ok) return []
+    const data = await response.json()
+    return data.items || []
+  } catch {
+    return []
+  }
+}
 
 export default async function Page({ params: { locale } }: { params: { locale: Locale } }) {
   const t = (he: string, ru: string, en: string) => (locale === 'he' ? he : locale === 'ru' ? ru : en)
   
-  // Fetch directly from database (more reliable in production)
-  const dbItems = await getGalleryImages('windows', { limit: 50, random: true })
-  const staticItems = (windows as { items: { src: string; type: 'image' | 'video' }[] }).items
-  const items = [...dbItems, ...staticItems] // новые загрузки впереди, затем старые медиа
+  const items = await getWindowsImages()
 
   const titleHe = 'חלונות וויטרינות בהתאמה אישית'
   const descHe = 'יצור והתקנה של חלונות וויטרינות מאלומיניום לפי מידה ועיצוב אישי – פתרון אידיאלי למי שמחפש איכות בלתי מתפשרת, בידוד מושלם ומראה מודרני לאורך שנים.'

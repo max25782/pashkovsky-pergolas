@@ -24,14 +24,21 @@ export function DgamimCarousel(){
     async function fetchModels() {
       try {
         const res = await fetch('/api/gallery/models')
+        console.log('[DgamimCarousel] API response status:', res.status)
         if (res.ok) {
           const data = await res.json()
+          console.log('[DgamimCarousel] API data:', data)
           if (data.items && data.items.length > 0) {
+            console.log('[DgamimCarousel] Setting dynamic items:', data.items.length)
             setDynamicItems(data.items)
+          } else {
+            console.warn('[DgamimCarousel] No items in API response, using static items')
           }
+        } else {
+          console.error('[DgamimCarousel] API error:', res.status, res.statusText)
         }
       } catch (error) {
-        console.warn('[DgamimCarousel] Failed to fetch models from API:', error)
+        console.error('[DgamimCarousel] Failed to fetch models from API:', error)
       } finally {
         setIsLoading(false)
       }
@@ -50,7 +57,14 @@ export function DgamimCarousel(){
     )
   }
   
-  if (!items?.length) return null
+  // Show message if no items available
+  if (!items?.length) {
+    return (
+      <div className="w-full py-12 text-center text-white/50">
+        <p>אין דגמים זמינים כרגע</p>
+      </div>
+    )
+  }
 
   return (
     <div className="w-full">

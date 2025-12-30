@@ -1,17 +1,45 @@
 import type { Locale } from '@/lib/locales'
 import { MediaGallery } from '@/components/generic/MediaGallery'
-import { getGalleryImages } from '@/lib/gallery/get-gallery-images'
-import mestora from '@/data/gallery/mestor.json'
 import ContactSection from '@/components/contact-section'
-import ArticleModal from '@/components/articleModal'
+
+interface MediaItem {
+  src: string
+  type: 'image' | 'video'
+}
+
+async function getMestoraImages(): Promise<MediaItem[]> {
+  try {
+    // In server-side, use relative URL or localhost
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
+                    (typeof window === 'undefined' ? 'http://localhost:3000' : '')
+    const url = `${baseUrl}/api/gallery/mestor`
+    
+    console.log('[Mistora] Fetching from:', url)
+    
+    const response = await fetch(url, {
+      next: { revalidate: 3600 }
+    })
+    
+    if (!response.ok) {
+      console.error('[Mistora] API error:', response.status)
+      return []
+    }
+    
+    const data = await response.json()
+    console.log('[Mistora] Got items:', data.items?.length || 0)
+    return data.items || []
+  } catch (error) {
+    console.error('[Mistora] Fetch error:', error)
+    return []
+  }
+}
 
 export default async function Page({ params: { locale } }: { params: { locale: Locale } }) {
   const t = (he: string, ru: string, en: string) => (locale === 'he' ? he : locale === 'ru' ? ru : en)
   
-  // Fetch directly from database (more reliable in production)
-  const dbItems = await getGalleryImages('mestor', { limit: 100 })
-  const staticItems = (mestora as { items: { src: string; type: 'image' | 'video' }[] }).items
-  const items = dbItems.length > 0 ? dbItems : staticItems
+  const items = await getMestoraImages()
+  
+  console.log('[Mistora Page] Rendering with items:', items.length)
   
   return (
     <main className="container py-16">

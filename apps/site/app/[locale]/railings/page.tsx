@@ -1,17 +1,41 @@
 import type { Locale } from '@/lib/locales'
 import { MediaGallery } from '@/components/generic/MediaGallery'
-import { getGalleryImages } from '@/lib/gallery/get-gallery-images'
-import rails from '@/data/gallery/rails.json'
 import ContactSection from '@/components/contact-section'
 import ArticleModal from '@/components/articleModal'
+
+interface MediaItem {
+  src: string
+  type: 'image' | 'video'
+}
+
+async function getRailsImages(): Promise<MediaItem[]> {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
+                    (typeof window === 'undefined' ? 'http://localhost:3000' : '')
+    const url = `${baseUrl}/api/gallery/rails`
+    
+    const response = await fetch(url, {
+      next: { revalidate: 3600 }
+    })
+    
+    if (!response.ok) {
+      console.error('[Railings] API error:', response.status)
+      return []
+    }
+    
+    const data = await response.json()
+    return data.items || []
+  } catch (error) {
+    console.error('[Railings] Fetch error:', error)
+    return []
+  }
+}
 
 export default async function Page({ params: { locale } }: { params: { locale: Locale } }) {
   const t = (he: string, ru: string, en: string) => (locale === 'he' ? he : locale === 'ru' ? ru : en)
   
-  // Fetch directly from database (more reliable in production)
-  const dbItems = await getGalleryImages('rails', { limit: 100 })
-  const staticItems = (rails as { items: { src: string; type: 'image' | 'video' }[] }).items
-  const items = dbItems.length > 0 ? dbItems : staticItems
+  // Fetch directly from S3
+  const items = await getRailsImages()
   
   return (
     <main className="container py-16">

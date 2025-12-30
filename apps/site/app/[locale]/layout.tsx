@@ -1,10 +1,8 @@
-import '../../globals.css'
 import type { Metadata } from 'next'
 import { Providers } from '@/components/providers'
 import Navbar from '@/components/navbar'
 import UTMTracker from '@/components/utm-tracker'
 import { Locale, isRTL } from '@/lib/locales'
-import clsx from 'clsx'
 import { Analytics } from "@vercel/analytics/react"
 import { GoogleAnalytics } from '@/components/google-analytics'
 import GA from '@/components/ga'
@@ -59,31 +57,23 @@ export default function PublicLayout({
   params: { locale: Locale }
 }) {
   const locale = params.locale
-  const dir = isRTL(locale) ? 'rtl' : 'ltr'
 
   return (
-    <html lang={locale} dir={dir} className={clsx('scroll-smooth')} suppressHydrationWarning>
-      <head>
-        <link rel="icon" href="/icon.svg" type="image/svg+xml" />
-      </head>
-      <body className="antialiased" suppressHydrationWarning>
-        <Providers>
-          <Suspense fallback={null}>
-            <UTMTracker />
-          </Suspense>
-          
-          <Navbar locale={locale} />
-          
-          {children}
-          
-          <FloatingWhatsApp />
-          <ChatWidget />
-          
-          <Analytics />
-          <GoogleAnalytics />
-          <GA />
-        </Providers>
-      </body>
-    </html>
+    <Providers>
+      <Suspense fallback={null}>
+        <UTMTracker />
+      </Suspense>
+      
+      <Navbar locale={locale} />
+      
+      {children}
+      
+      <ChatWidget />
+      <FloatingWhatsApp />
+      
+      <Analytics />
+      <GoogleAnalytics />
+      <GA />
+    </Providers>
   )
 }
