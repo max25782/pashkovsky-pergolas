@@ -115,23 +115,48 @@ async function authenticateRequest(request: NextRequest): Promise<{ userId: stri
   const authHeader = request.headers.get('authorization')
   const adminToken = request.headers.get('x-admin-token')
   
+  console.log('[AI Auth] authHeader:', authHeader ? 'Present' : 'Missing')
+  console.log('[AI Auth] adminToken:', adminToken ? 'Present' : 'Missing')
+  
   // If JWT token
   if (authHeader?.startsWith('Bearer ')) {
     const token = authHeader.substring(7)
-    if (!supabase) return null
+    console.log('[AI Auth] JWT token found, length:', token.length)
+    
+    if (!supabase) {
+      console.error('[AI Auth] Supabase client not available')
+      return null
+    }
     
     const { data: { user }, error } = await supabase.auth.getUser(token)
-    if (error || !user) return null
+    if (error) {
+      console.error('[AI Auth] getUser error:', error.message)
+      return null
+    }
+    if (!user) {
+      console.error('[AI Auth] No user found')
+      return null
+    }
+    
+    console.log('[AI Auth] User found:', user.id, user.email)
     
     // Get company from company_members
-    const { data: member } = await supabase
+    const { data: member, error: memberError } = await supabase
       .from('company_members')
       .select('company_id')
       .eq('user_id', user.id)
       .single()
     
-    if (!member) return null
+    if (memberError) {
+      console.error('[AI Auth] company_members query error:', memberError.message)
+    }
     
+    if (!member) {
+      console.error('[AI Auth] User not in any company')
+      return null
+    }
+    
+    console.log('[AI Auth] Company found:', member.company_id)
     return { userId: user.id, companyId: member.company_id }
   }
   
@@ -139,18 +164,24 @@ async function authenticateRequest(request: NextRequest): Promise<{ userId: stri
   if (adminToken) {
     // For admin tokens, use default company
     const defaultCompanyId = process.env.DEFAULT_COMPANY_ID
+    console.log('[AI Auth] Using admin token, default company:', defaultCompanyId)
     if (!defaultCompanyId) return null
     
     return { userId: 'admin', companyId: defaultCompanyId }
   }
   
+  console.error('[AI Auth] No auth method found')
   return null
 }
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('[AI Improve] Request received')
+    
     // 1. Authenticate
     const auth = await authenticateRequest(request)
+    console.log('[AI Improve] Auth result:', auth ? 'authenticated' : 'failed')
+    
     if (!auth) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -158,6 +189,8 @@ export async function POST(request: NextRequest) {
     // 2. Parse request
     const body: ImproveTextRequest = await request.json()
     const { text, context } = body
+    
+    console.log('[AI Improve] Text length:', text?.length, 'Context:', context)
     
     if (!text || typeof text !== 'string' || text.trim().length === 0) {
       return NextResponse.json({ error: 'Text is required' }, { status: 400 })
@@ -167,21 +200,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Text too long (max 2000 characters)' }, { status: 400 })
     }
     
-    // 3. Improve text with AI
-    const improvedText = await improveTextWithGemini(text, context)
+    // 3. Check API key
+    if (!GEMINI_API_KEY) {
+      console.error('[AI Improve] GEMINI_API_KEY not configured!')
+      return NextResponse.json({ error: 'AI service not configured' }, { status: 500 })
+    }
     
-    // 4. Log the improvement (optional, for analytics)
+    console.log('[AI Improve] GEMINI_API_KEY configured:', GEMINI_API_KEY.substring(0, 10) + '...')
+    
+    // 4. Improve text with AI
+    const improvedText = await improveTextWithGemini(text, context)
+    console.log('[AI Improve] Improved text generated successfully')
+    
+    // 5. Log the improvement (optional, for analytics)
     if (supabase) {
-      await supabase.from('ai_text_improvements').insert({
-        company_id: auth.companyId,
-        user_id: auth.userId,
-        original_text: text,
-        improved_text: improvedText,
-        context,
-      }).catch(err => {
+      try {
+        await supabase.from('ai_text_improvements').insert({
+          company_id: auth.companyId,
+          user_id: auth.userId,
+          original_text: text,
+          improved_text: improvedText,
+          context,
+        })
+      } catch (err: any) {
         // Ignore if table doesn't exist
         console.warn('[Offer AI] Failed to log improvement:', err.message)
-      })
+      }
     }
     
     return NextResponse.json({

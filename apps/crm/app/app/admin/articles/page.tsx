@@ -79,14 +79,11 @@ export default function AdminArticlesPage() {
   }
 
   const handleDelete = async (slug: string) => {
-    if (!confirm(t.articles.deleteConfirm) || !token) return
+    if (!confirm(t.articles.deleteConfirm)) return
 
     try {
       const response = await fetch(`/api/admin/articles?slug=${slug}`, {
         method: 'DELETE',
-        headers: {
-          'x-admin-token': token,
-        },
       })
 
       if (!response.ok) {

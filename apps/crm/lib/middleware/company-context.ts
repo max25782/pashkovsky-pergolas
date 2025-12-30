@@ -5,19 +5,32 @@
 
 import { NextRequest } from 'next/server'
 import { verifyToken, extractToken } from '@/lib/auth/jwt'
+import { createClient } from '@supabase/supabase-js'
 
 const PASHKOVSKY_COMPANY_ID = '00000000-0000-0000-0000-000000000001'
 
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
+
+const supabase = SUPABASE_URL && SERVICE_KEY
+  ? createClient(SUPABASE_URL, SERVICE_KEY, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    })
+  : null
+
 /**
- * Get company ID from request
- * Priority:
- * 1. JWT token (from Authorization header)
- * 2. Admin token (legacy support)
- */
+* Get company ID from request (synchronous version - returns cached value)
+* Priority:
+* 1. JWT token (from Authorization header) - verify with Supabase
+* 2. Admin token (legacy support)
+*/
 export function getCompanyId(req: NextRequest): string | null {
   const authHeader = req.headers.get('authorization')
   
-  // Try JWT token first
+  // Try custom JWT token first (legacy)
   if (authHeader) {
     const token = extractToken(authHeader)
     if (token) {
@@ -37,14 +50,60 @@ export function getCompanyId(req: NextRequest): string | null {
     return PASHKOVSKY_COMPANY_ID
   }
   
+  // NOTE: Supabase Auth JWT validation must be done async - use getCompanyIdAsync
   return null
 }
 
 /**
- * Get company ID asynchronously (for future use)
- * Currently just returns the sync version
+ * Get company ID asynchronously from Supabase Auth JWT
+ * This is the recommended method for API routes
  */
 export async function getCompanyIdAsync(req: NextRequest): Promise<string | null> {
+  if (!supabase) return null
+  
+  const authHeader = req.headers.get('authorization')
+  
+  // Try Supabase Auth JWT
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.substring(7)
+    
+    try {
+      // Verify token with Supabase
+      const { data: { user }, error } = await supabase.auth.getUser(token)
+      
+      if (error || !user) {
+        console.log('[getCompanyIdAsync] Supabase auth error:', error?.message || 'No user')
+        return getCompanyId(req) // Fallback to sync version
+      }
+      
+      console.log('[getCompanyIdAsync] User found:', user.id, user.email)
+      
+      // Get company_id from company_members
+      const { data: member, error: memberError } = await supabase
+        .from('company_members')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .single()
+      
+      if (memberError) {
+        console.error('[getCompanyIdAsync] company_members query error:', memberError.message)
+        return null
+      }
+      
+      if (!member) {
+        console.error('[getCompanyIdAsync] User not in any company')
+        return null
+      }
+      
+      console.log('[getCompanyIdAsync] Company found:', member.company_id)
+      return member.company_id
+    } catch (err: any) {
+      console.error('[getCompanyIdAsync] Error:', err.message)
+      return getCompanyId(req) // Fallback to sync version
+    }
+  }
+  
+  // Fallback to sync version (for admin tokens, etc.)
   return getCompanyId(req)
 }
 

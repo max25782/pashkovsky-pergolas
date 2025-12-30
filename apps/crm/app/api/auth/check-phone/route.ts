@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import type { PlatformAdmin } from '@/types/membership'
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest) {
       .select('user_id, email')
       .eq('phone', normalizedPhone)
       .eq('is_active', true)
-      .maybeSingle()
+      .maybeSingle<Pick<PlatformAdmin, 'user_id' | 'email'>>()
     
     if (error) {
       console.error('[Check Phone] Error:', error)
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
       )
     }
     
-    if (!adminData || !adminData.email) {
+    if (!adminData?.email) {
       return NextResponse.json(
         { error: 'Phone number not registered as SuperAdmin' },
         { status: 404 }

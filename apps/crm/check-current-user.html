@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8">
+  <title>בדיקת משתמש נוכחי</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 600px;
+      margin: 0 auto;
+      background: #f5f5f5;
+    }
+    .box {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    .success { background: #d1fae5; border: 2px solid #10b981; }
+    .error { background: #fee2e2; border: 2px solid #ef4444; }
+    code {
+      background: #f3f4f6;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔍 בדיקת משתמש נוכחי</h1>
+  
+  <button onclick="checkUser()" style="background: #3b82f6; color: white; border: none; padding: 12px 24px; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold;">
+    בדוק משתמש
+  </button>
+  
+  <div id="result"></div>
+
+  <script>
+    async function checkUser() {
+      const resultDiv = document.getElementById('result');
+      resultDiv.innerHTML = '<div class="box">⏳ בודק...</div>';
+      
+      try {
+        // Get Supabase session
+        const response = await fetch('http://localhost:3001/api/auth/me', {
+          credentials: 'include'
+        });
+        
+        if (!response.ok) {
+          throw new Error('Not authenticated. Please login first!');
+        }
+        
+        const data = await response.json();
+        
+        resultDiv.innerHTML = `
+          <div class="box success">
+            <h3>✅ משתמש מחובר</h3>
+            <p><strong>ID:</strong> <code>${data.id || 'N/A'}</code></p>
+            <p><strong>Email:</strong> <code>${data.email || 'N/A'}</code></p>
+            <p><strong>Role:</strong> <code>${data.role || 'N/A'}</code></p>
+          </div>
+          <div class="box">
+            <h3>📋 הוראות</h3>
+            <p>העתק את המייל למעלה והשתמש בו בסקריפט SQL:</p>
+            <pre style="background: #f3f4f6; padding: 10px; border-radius: 4px; overflow-x: auto;">WHERE email = '<strong style="color: #ef4444;">${data.email || 'YOUR-EMAIL-HERE'}</strong>'</pre>
+          </div>
+        `;
+        
+      } catch (error) {
+        resultDiv.innerHTML = `
+          <div class="box error">
+            <h3>❌ שגיאה</h3>
+            <p>${error.message}</p>
+            <p style="font-size: 12px; margin-top: 10px;">אנא התחבר למערכת בטאב אחר ונסה שוב.</p>
+          </div>
+        `;
+      }
+    }
+  </script>
+</body>
+</html>
+

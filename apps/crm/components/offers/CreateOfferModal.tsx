@@ -47,6 +47,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
   const [error, setError] = useState<string | null>(null)
   const [isImprovingText, setIsImprovingText] = useState(false)
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null)
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false)
 
   // Calculate prices in real-time
   const calculation = useMemo(() => calculateOffer(draft), [draft])
@@ -146,11 +147,14 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
       return
     }
     
+    console.log('[AI Improve] Starting improvement for text:', currentNotes)
+    
     setIsImprovingText(true)
     setError(null)
     setAiSuggestion(null)
     
     try {
+      console.log('[AI Improve] Calling API...')
       const response = await authFetch('/api/ai/improve-offer-text', {
         method: 'POST',
         headers: {
@@ -166,20 +170,106 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
         }),
       })
       
+      console.log('[AI Improve] Response status:', response.status)
+      
       if (!response.ok) {
         const errorData = await response.json()
+        console.error('[AI Improve] Error response:', errorData)
         throw new Error(errorData.error || 'Failed to improve text')
       }
       
       const data = await response.json()
+      console.log('[AI Improve] Success! Improved text:', data.improvedText)
       setAiSuggestion(data.improvedText)
     } catch (err: any) {
-      console.error('Error improving text:', err)
+      console.error('[AI Improve] Error:', err)
       setError(err.message || 'שגיאה בשיפור הטקסט')
     } finally {
       setIsImprovingText(false)
     }
   }, [draft.options.notes, customerName, calculation.finalPrice])
+
+  // Generate complete professional description automatically
+  const generateCompleteDescription = useCallback(async () => {
+    console.log('[AI Generate] Starting auto-generation...')
+    
+    setIsGeneratingDescription(true)
+    setError(null)
+    
+    try {
+      // Build description from offer data
+      let baseDescription = `הצעת מחיר לפרגולת אלומיניום מתקדמת:\n\n`
+      
+      // Add pergola details
+      baseDescription += `📐 מידות: ${calculation.area} מ"ר\n`
+      
+      // Add features
+      const features = []
+      if (draft.santaf.enabled) {
+        features.push(`סנטף BH ${draft.santaf.withStructure ? 'עם קונסטרוקציה' : 'בסיסי'}`)
+      }
+      if (draft.zipScreen.enabled) {
+        features.push(`מסך ZIP ${draft.zipScreen.type === 'electric' ? 'חשמלי' : 'ידני'}`)
+      }
+      if (draft.lighting.enabled) {
+        features.push('תאורת לד משולבת')
+      }
+      if (draft.drainage.enabled) {
+        features.push('מערכת ניקוז')
+      }
+      if (draft.winterClosure.enabled) {
+        features.push('סגירת חורף (זכוכית)')
+      }
+      
+      if (features.length > 0) {
+        baseDescription += `\n✨ תוספות:\n${features.map(f => `• ${f}`).join('\n')}\n`
+      }
+      
+      baseDescription += `\n💰 מחיר סופי: ${formatPrice(calculation.finalPrice)}`
+      
+      if (draft.discountPercent > 0) {
+        baseDescription += ` (כולל ${draft.discountPercent}% הנחה!)`
+      }
+      
+      console.log('[AI Generate] Base description created, calling AI...')
+      
+      // Now improve it with AI
+      const response = await authFetch('/api/ai/improve-offer-text', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: baseDescription,
+          context: {
+            customerName: customerName,
+            pergolaType: 'אלומיניום',
+            price: calculation.finalPrice,
+          },
+        }),
+      })
+      
+      console.log('[AI Generate] Response status:', response.status)
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error('[AI Generate] Error response:', errorData)
+        throw new Error(errorData.error || 'Failed to generate description')
+      }
+      
+      const data = await response.json()
+      console.log('[AI Generate] Success! Generated text:', data.improvedText)
+      
+      // Set the generated text directly as notes
+      updateOptions({ notes: data.improvedText })
+      setAiSuggestion(null) // Clear any previous suggestions
+    } catch (err: any) {
+      console.error('[AI Generate] Error:', err)
+      setError(err.message || 'שגיאה ביצירת תיאור אוטומטי')
+    } finally {
+      setIsGeneratingDescription(false)
+    }
+  }, [draft, calculation, customerName, updateOptions])
   
   const acceptAiSuggestion = useCallback(() => {
     if (aiSuggestion) {
@@ -640,18 +730,46 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
           <div className="bg-white/5 rounded-lg p-4 border border-white/10">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-lg font-semibold">הערות נוספות</h3>
-              <Button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  improveNotesWithAI()
-                }}
-                disabled={isImprovingText || !draft.options.notes?.trim()}
-                className="bg-purple-600 hover:bg-purple-700 text-white text-sm px-3 py-1 h-8"
-              >
-                {isImprovingText ? '⏳ משפר...' : '✨ AI שיפור'}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    generateCompleteDescription()
+                  }}
+                  disabled={isGeneratingDescription}
+                  className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white text-sm px-4 py-1 h-8 font-bold"
+                >
+                  {isGeneratingDescription ? '⏳ יוצר...' : '🤖 צור הצעה מקצועית'}
+                </Button>
+                <Button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    improveNotesWithAI()
+                  }}
+                  disabled={isImprovingText || !draft.options.notes?.trim()}
+                  className="bg-purple-600 hover:bg-purple-700 text-white text-sm px-3 py-1 h-8"
+                >
+                  {isImprovingText ? '⏳ משפר...' : '✨ שפר טקסט'}
+                </Button>
+              </div>
             </div>
+
+            {/* Auto-generate hint */}
+            {!draft.options.notes && (
+              <div className="mb-3 p-3 bg-gradient-to-r from-purple-900/30 to-blue-900/30 border border-purple-400/30 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <span className="text-2xl">💡</span>
+                  <div>
+                    <p className="text-sm font-semibold text-purple-300 mb-1">טיפ: צור הצעה אוטומטית!</p>
+                    <p className="text-xs text-white/70">
+                      לחץ על "🤖 צור הצעה מקצועית" וה-AI יכתוב עבורך תיאור יפה ומקצועי בהתבסס על כל הנתונים שהזנת!
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
             
             <textarea 
               value={draft.options.notes || ''} 

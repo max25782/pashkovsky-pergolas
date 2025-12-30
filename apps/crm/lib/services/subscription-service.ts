@@ -167,13 +167,15 @@ export class SubscriptionService {
     }
     
     // Update subscription
-    const { data, error } = await supabase
-      .from('company_subscriptions')
-      .update({
-        plan_id: newPlan.id,
-        billing_cycle: dto.billing_cycle || currentSubscription.billing_cycle,
-        updated_at: new Date().toISOString()
-      })
+    const updateData = {
+      plan_id: newPlan.id,
+      billing_cycle: dto.billing_cycle || currentSubscription.billing_cycle,
+      updated_at: new Date().toISOString()
+    }
+    
+    const { data, error } = await (supabase
+      .from('company_subscriptions') as any)
+      .update(updateData)
       .eq('company_id', company_id)
       .select()
       .single()
@@ -183,8 +185,8 @@ export class SubscriptionService {
     }
     
     // Log to history
-    await supabase
-      .from('subscription_history')
+    await (supabase
+      .from('subscription_history') as any)
       .insert({
         company_id,
         old_plan_id: currentSubscription.plan_id,
@@ -242,8 +244,8 @@ export class SubscriptionService {
       updateData.current_period_end = new Date().toISOString()
     }
     
-    const { data, error } = await supabase
-      .from('company_subscriptions')
+    const { data, error } = await (supabase
+      .from('company_subscriptions') as any)
       .update(updateData)
       .eq('company_id', company_id)
       .select()
@@ -254,8 +256,8 @@ export class SubscriptionService {
     }
     
     // Log to history
-    await supabase
-      .from('subscription_history')
+    await (supabase
+      .from('subscription_history') as any)
       .insert({
         company_id,
         old_plan_id: currentSubscription.plan_id,

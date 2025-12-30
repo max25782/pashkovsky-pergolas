@@ -268,7 +268,7 @@ export const DEFAULT_OFFER_VALUES = {
   },
   warranty: {
     years: 7,
-    covers: ['color', 'construction', 'santaf']
+    covers: ['צבע', 'קונסטרוקציה', 'סנטף']
   },
   approval: {
     approved: false,

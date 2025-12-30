@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8">
+  <title>Test AI Endpoint</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    textarea {
+      width: 100%;
+      min-height: 100px;
+      padding: 10px;
+      border: 2px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+    button {
+      background: #8b5cf6;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    button:hover:not(:disabled) {
+      background: #7c3aed;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 4px;
+      white-space: pre-wrap;
+    }
+    .success {
+      background: #d1fae5;
+      border: 2px solid #10b981;
+      color: #065f46;
+    }
+    .error {
+      background: #fee2e2;
+      border: 2px solid #ef4444;
+      color: #991b1b;
+    }
+    .info {
+      background: #dbeafe;
+      border: 2px solid #3b82f6;
+      color: #1e3a8a;
+    }
+    .log {
+      background: #f3f4f6;
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 10px;
+      font-family: monospace;
+      font-size: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 בדיקת AI Text Improvement</h1>
+    <p>דף בדיקה לתכונת שיפור טקסט עם AI</p>
+    
+    <div style="margin-bottom: 20px;">
+      <strong>הנחיות:</strong>
+      <ol>
+        <li>וודא שהסרבר רץ על <code>http://localhost:3001</code></li>
+        <li>התחבר למערכת בטאב אחר</li>
+        <li>כתוב טקסט למטה ולחץ "שפר עם AI"</li>
+      </ol>
+    </div>
+    
+    <textarea id="inputText" placeholder="כתוב כאן טקסט לשיפור, למשל: 'פרגולה בצבע שחור'">פרגולה בצבע שחור</textarea>
+    
+    <button onclick="testImprovement()" id="testBtn">✨ שפר עם AI</button>
+    
+    <div id="result"></div>
+    <div id="logs" class="log" style="display: none;"></div>
+  </div>
+
+  <script>
+    const logsDiv = document.getElementById('logs');
+    const resultDiv = document.getElementById('result');
+    const testBtn = document.getElementById('testBtn');
+    
+    function log(message, isError = false) {
+      console.log(message);
+      logsDiv.style.display = 'block';
+      const timestamp = new Date().toLocaleTimeString('he-IL');
+      const color = isError ? 'red' : '#666';
+      logsDiv.innerHTML += `<div style="color: ${color}">[${timestamp}] ${message}</div>`;
+      logsDiv.scrollTop = logsDiv.scrollHeight;
+    }
+    
+    async function testImprovement() {
+      const text = document.getElementById('inputText').value.trim();
+      
+      if (!text) {
+        alert('אנא כתוב טקסט לשיפור');
+        return;
+      }
+      
+      // Clear previous results
+      resultDiv.innerHTML = '';
+      logsDiv.innerHTML = '<strong>Logs:</strong><br>';
+      logsDiv.style.display = 'block';
+      testBtn.disabled = true;
+      testBtn.textContent = '⏳ משפר...';
+      
+      log('Starting AI improvement test...');
+      log(`Text to improve: "${text}"`);
+      
+      try {
+        // Step 1: Check if user is authenticated
+        log('Step 1: Checking authentication...');
+        
+        const authResponse = await fetch('http://localhost:3001/api/auth/me', {
+          credentials: 'include'
+        });
+        
+        if (!authResponse.ok) {
+          throw new Error(`Authentication failed: ${authResponse.status}. Please login first!`);
+        }
+        
+        const authData = await authResponse.json();
+        log(`✓ Authenticated as: ${authData.email || 'Unknown'}`);
+        
+        // Step 2: Get auth token
+        log('Step 2: Getting auth token...');
+        
+        // Try to get Supabase session
+        const { createClient } = window.supabase || {};
+        if (!createClient) {
+          throw new Error('Supabase client not loaded. Please open this page from the CRM app.');
+        }
+        
+        // Step 3: Call AI API
+        log('Step 3: Calling AI improvement API...');
+        
+        const response = await fetch('http://localhost:3001/api/ai/improve-offer-text', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            text: text,
+            context: {
+              customerName: 'Test Customer',
+              pergolaType: 'אלומיניום',
+              price: 50000,
+            },
+          }),
+        });
+        
+        log(`Response status: ${response.status} ${response.statusText}`);
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || `API Error: ${response.status}`);
+        }
+        
+        log('✓ Success! Received improved text');
+        
+        // Display result
+        resultDiv.innerHTML = `
+          <div class="result success">
+            <h3>✅ הצלחה!</h3>
+            <p><strong>טקסט מקורי:</strong><br>${data.originalText}</p>
+            <hr>
+            <p><strong>טקסט משופר:</strong><br>${data.improvedText}</p>
+            <p style="font-size: 12px; color: #666; margin-top: 10px;">
+              אורך: ${data.improvements.lengthBefore} → ${data.improvements.lengthAfter} תווים
+            </p>
+          </div>
+        `;
+        
+      } catch (error) {
+        log('❌ Error: ' + error.message, true);
+        
+        resultDiv.innerHTML = `
+          <div class="result error">
+            <h3>❌ שגיאה</h3>
+            <p><strong>Error:</strong> ${error.message}</p>
+            <p style="font-size: 12px; margin-top: 10px;">
+              Check the logs below and browser console (F12) for more details.
+            </p>
+          </div>
+        `;
+      } finally {
+        testBtn.disabled = false;
+        testBtn.textContent = '✨ שפר עם AI';
+      }
+    }
+  </script>
+</body>
+</html>
+

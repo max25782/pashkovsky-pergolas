@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { subscriptionService } from '@/lib/services/subscription-service'
 import { createClient } from '@/lib/supabase/server'
 import type { ChangePlanDTO, ChangePlanResponse } from '@/types/subscription'
+import type { CompanyMember } from '@/types/membership'
 
 export async function POST(req: NextRequest) {
   try {
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
       .from('company_members')
       .select('company_id, role, permissions')
       .eq('user_id', user.id)
-      .single()
+      .single<Pick<CompanyMember, 'company_id' | 'role' | 'permissions'>>()
     
     if (!membership) {
       return NextResponse.json(

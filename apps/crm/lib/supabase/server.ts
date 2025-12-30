@@ -6,6 +6,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import type { Database } from '@/types/database'
+import type { CompanyMember } from '@/types/membership'
 
 /**
  * Create Supabase client for Server Components / API Routes
@@ -70,7 +71,7 @@ export async function getUserCompanyId(): Promise<string | null> {
     .from('company_members')
     .select('company_id')
     .eq('user_id', user.id)
-    .single()
+    .single<Pick<CompanyMember, 'company_id'>>()
   
   if (error) {
     console.error('[Server Auth] Error getting company:', error)

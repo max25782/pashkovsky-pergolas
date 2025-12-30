@@ -53,6 +53,8 @@ export async function GET(req: NextRequest) {
     const modelGroups: Record<string, string[]> = {}
 
     for (const folderPrefix of modelFolders) {
+      if (!folderPrefix) continue
+      
       // Extract model name from path: images/dgamim/atlas/ -> atlas
       const modelName = folderPrefix.replace('images/dgamim/', '').replace('/', '')
       

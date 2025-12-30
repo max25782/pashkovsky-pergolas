@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import SignatureCanvas from 'react-signature-canvas'
-import { formatPrice } from '@/lib/offer-calculator'
+import { formatPrice } from '@/types/offer'
 import type { Offer, PergolaShape } from '@/types/offer'
 import { Check, Loader2 } from 'lucide-react'
 
@@ -181,6 +181,19 @@ export default function OfferApprovePage() {
 
           {/* Content */}
           <div className="p-8 space-y-6">
+            {/* Description / Notes - AI Generated or Custom (FIRST!) */}
+            {offer.options?.notes && (
+              <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-300 rounded-xl p-6 shadow-lg">
+                <h2 className="text-xl font-bold mb-4 text-indigo-900 flex items-center gap-2">
+                  <span className="text-2xl">✨</span>
+                  <span>תיאור ההצעה</span>
+                </h2>
+                <div className="text-base text-gray-800 whitespace-pre-wrap leading-relaxed">
+                  {offer.options.notes}
+                </div>
+              </div>
+            )}
+
             {/* Client Info */}
             <div className="bg-gray-50 rounded-lg p-4">
               <h2 className="text-lg font-semibold mb-3 text-gray-900">פרטי לקוח</h2>
@@ -246,7 +259,7 @@ export default function OfferApprovePage() {
               </div>
             </div>
 
-            {/* Pricing - detailed breakdown */}
+            {/* Pricing */}
             <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-6 border-2 border-blue-200">
               <h2 className="text-lg font-semibold mb-4 text-gray-900">תמחור</h2>
               <div className="space-y-2 text-sm text-gray-700">
@@ -271,35 +284,10 @@ export default function OfferApprovePage() {
                   <span className="font-semibold text-gray-900">{formatPrice(offer.drainageTotal)}</span>
                 </div>
                 {offer.winterClosure?.enabled && offer.winterClosure.items && offer.winterClosure.items.length > 0 && (
-                  <>
-                    {offer.winterClosure.items.map((item: any, index: number) => {
-                      const typeNames: Record<string, string> = {
-                        fixedGlass: 'זכוכית קבועה',
-                        windows7000: 'חלונות 7000',
-                        windows9000: 'חלונות 9000',
-                        slidingShowcase7000: 'ויטרינה הזזה 7000',
-                        slidingShowcase9000: 'ויטרינה הזזה 9000',
-                        foldingGlass: 'זכוכית מתקפלת'
-                      };
-                      const typeName = typeNames[item.type] || item.type;
-                      const itemTotal = item.area * item.pricePerSqm;
-                      return (
-                        <div key={index} className="flex justify-between text-xs">
-                          <span className="text-gray-600">
-                            {typeName} ({item.area.toFixed(2)} מ״ר × {item.pricePerSqm.toLocaleString('he-IL')} ₪)
-                            {item.notes && <span className="text-gray-500"> - {item.notes}</span>}
-                          </span>
-                          <span className="font-semibold text-gray-900">{formatPrice(itemTotal)}</span>
-                        </div>
-                      );
-                    })}
-                    {offer.winterClosure.items.length > 1 && (
-                      <div className="flex justify-between font-semibold text-gray-800 pt-1 border-t border-gray-200">
-                        <span>סה״כ סגירת חורף:</span>
-                        <span>{formatPrice(offer.winterClosureTotal)}</span>
-                      </div>
-                    )}
-                  </>
+                  <div className="flex justify-between font-semibold text-gray-800 pt-1 border-t border-gray-200">
+                    <span>סה״כ סגירת חורף:</span>
+                    <span>{formatPrice(offer.winterClosureTotal)}</span>
+                  </div>
                 )}
 
                 <div className="flex justify-between text-base font-bold text-gray-800 pt-2 border-t border-blue-200">

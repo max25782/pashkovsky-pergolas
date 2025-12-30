@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { subscriptionService } from '@/lib/services/subscription-service'
 import { createClient } from '@/lib/supabase/server'
 import type { GetHistoryResponse } from '@/types/subscription'
+import type { CompanyMember } from '@/types/membership'
 
 export async function GET(req: NextRequest) {
   try {
@@ -26,7 +27,7 @@ export async function GET(req: NextRequest) {
       .from('company_members')
       .select('company_id')
       .eq('user_id', user.id)
-      .single()
+      .single<Pick<CompanyMember, 'company_id'>>()
     
     if (!membership) {
       return NextResponse.json(
@@ -58,8 +59,8 @@ export async function GET(req: NextRequest) {
 
         return {
           ...record,
-          old_plan: oldPlan?.data || undefined,
-          new_plan: newPlan.data
+          old_plan: oldPlan?.data ?? undefined,
+          new_plan: newPlan.data!
         }
       })
     )

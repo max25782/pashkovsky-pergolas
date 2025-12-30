@@ -35,6 +35,8 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
 export async function authFetch(url: string, options?: RequestInit): Promise<Response> {
   const authHeaders = await getAuthHeaders()
   
+  console.log('[authFetch] Calling:', url, 'with auth:', Object.keys(authHeaders).length > 0 ? 'YES' : 'NO')
+  
   const headers = {
     ...options?.headers,
     ...authHeaders,

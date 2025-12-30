@@ -59,7 +59,7 @@ export async function GET(
         
         return {
           src: url,
-          type: isVideo ? 'video' : 'image'
+          type: (isVideo ? 'video' : 'image') as 'video' | 'image'
         }
       })
       .sort((a, b) => a.src.localeCompare(b.src)) // Sort by name

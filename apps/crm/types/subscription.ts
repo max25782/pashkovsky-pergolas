@@ -108,3 +108,15 @@ export interface GetHistoryResponse {
   })[]
   total: number
 }
+
+export interface PlanLimitCheck {
+  limit_type: 'users' | 'deals' | 'storage'
+  current_usage: number
+  current: number
+  limit: number | null
+  is_unlimited: boolean
+  is_exceeded: boolean
+  percentage_used: number
+  allowed: boolean
+  plan: string
+}

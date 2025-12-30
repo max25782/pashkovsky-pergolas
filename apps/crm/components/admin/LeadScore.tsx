@@ -5,7 +5,7 @@ import type { Lead } from './lead-types'
 
 interface LeadScoreProps {
   lead: Lead
-  adminToken: string
+  adminToken?: string
   onScoreUpdated?: (lead: Lead) => void
 }
 
@@ -26,9 +26,6 @@ export function LeadScore({ lead, adminToken, onScoreUpdated }: LeadScoreProps) 
     try {
       const res = await fetch(`/api/leads/${lead.id}/score`, {
         method: 'POST',
-        headers: {
-          'x-admin-token': adminToken,
-        },
       })
 
       if (!res.ok) {

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { DEFAULT_OFFER_VALUES, PergolaShape } from '@/types/offer'
 import { calculatePergolaArea, validatePergolaShape } from '@/lib/calculations/pergola-area'
-import { getCompanyId } from '@/lib/middleware/company-context'
+import { getCompanyIdAsync } from '@/lib/middleware/company-context'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -20,14 +20,17 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  // Get company_id from authentication context
-  const companyId = getCompanyId(req)
+  // Get company_id from authentication context (async for Supabase Auth)
+  const companyId = await getCompanyIdAsync(req)
   if (!companyId) {
+    console.error('[POST /api/offers] No company context found')
     return NextResponse.json(
       { error: 'Unauthorized: No company context' },
       { status: 401 }
     )
   }
+  
+  console.log('[POST /api/offers] Company ID:', companyId)
 
   try {
     const body = await req.json()

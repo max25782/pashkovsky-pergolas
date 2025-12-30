@@ -11,7 +11,7 @@ interface LeadModalProps {
   onClose: () => void
   onUpdate: (updates: Partial<Lead>) => Promise<Lead>
   onDelete: () => void
-  adminToken: string
+  adminToken?: string
 }
 
 export function LeadModal({

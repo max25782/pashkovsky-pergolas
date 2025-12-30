@@ -1,0 +1,31 @@
+
+> @pashkovsky/crm@0.1.0 build
+> next build
+
+  ▲ Next.js 14.2.5
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+Failed to compile.
+
+./app/api/subscriptions/current/route.ts:66:7
+Type error: Type 'SubscriptionUsage | null | undefined' is not assignable to type 'SubscriptionUsage | undefined'.
+  Type 'null' is not assignable to type 'SubscriptionUsage | undefined'.
+
+[0m [90m 64 |[39m       subscription[33m,[39m[0m
+[0m [90m 65 |[39m       plan[33m,[39m[0m
+[0m[31m[1m>[22m[39m[90m 66 |[39m       usage[0m
+[0m [90m    |[39m       [31m[1m^[22m[39m[0m
+[0m [90m 67 |[39m     }[0m
+[0m [90m 68 |[39m[0m
+[0m [90m 69 |[39m     [36mreturn[39m [33mNextResponse[39m[33m.[39mjson(response)[0m
+npm error Lifecycle script `build` failed with error:
+npm error code 1
+npm error path C:\Users\97252\Downloads\pashkovsky-pergolas_starter\apps\crm
+npm error workspace @pashkovsky/crm@0.1.0
+npm error location C:\Users\97252\Downloads\pashkovsky-pergolas_starter\apps\crm
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c next build
