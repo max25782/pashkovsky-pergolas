@@ -7,6 +7,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { subscriptionService } from '@/lib/services/subscription-service'
 import type { GetPlansResponse } from '@/types/subscription'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: NextRequest) {
   try {
     // Get all plans (no auth needed)

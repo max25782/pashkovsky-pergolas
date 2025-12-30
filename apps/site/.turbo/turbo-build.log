@@ -6,7 +6,6 @@
   - Environments: .env.local
 
    Creating an optimized production build ...
-[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
  ✓ Compiled successfully
    Linting and checking validity of types ...
    Collecting page data ...
@@ -19,10 +18,10 @@
    Collecting build traces ...
 
 Route (app)                              Size     First Load JS
-┌ ○ /_not-found                          161 B          87.3 kB
+┌ ○ /_not-found                          160 B          87.3 kB
 ├ ƒ /[locale]                            10.9 kB         150 kB
-├ ƒ /[locale]/about                      161 B          87.3 kB
-├ ƒ /[locale]/blog                       161 B          87.3 kB
+├ ƒ /[locale]/about                      160 B          87.3 kB
+├ ƒ /[locale]/blog                       160 B          87.3 kB
 ├ ● /[locale]/blog/[slug]                296 B          94.2 kB
 ├   ├ /he/blog/pergolas-aluminum
 ├   ├ /he/blog/glass-railings

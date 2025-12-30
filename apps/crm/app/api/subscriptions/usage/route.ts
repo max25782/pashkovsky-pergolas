@@ -8,6 +8,8 @@ import { subscriptionService } from '@/lib/services/subscription-service'
 import { createClient } from '@/lib/supabase/server'
 import type { CompanyMember } from '@/types/membership'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: NextRequest) {
   try {
     // Auth check

@@ -6,6 +6,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session/redis-client'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   try {
     // Get session ID from cookie

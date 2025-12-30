@@ -6,132 +6,22 @@
   - Environments: .env.local
 
    Creating an optimized production build ...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
  ✓ Compiled successfully
    Linting and checking validity of types ...
    Collecting page data ...
 ✅ Email transporter is ready to send messages
 ✅ Email transporter is ready to send messages
 ✅ Email transporter is ready to send messages
-   Generating static pages (0/78) ...
 ✅ Email transporter is ready to send messages
-[Monthly Report] Error: q [Error]: Dynamic server usage: Route /api/ai/reports/monthly couldn't be rendered statically because it used `request.headers`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
-    at W (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:21106)
-    at Object.get (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:28459)
-    at m (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\apps\crm\.next\server\app\api\ai\reports\monthly\route.js:58:502)
-    at S (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\apps\crm\.next\server\app\api\ai\reports\monthly\route.js:58:990)
-    at C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:36264
-    at C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\server\lib\trace\tracer.js:140:36
-    at NoopContextManager.with (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:7062)
-    at ContextAPI.with (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:518)
-    at NoopTracer.startActiveSpan (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18093)
-    at ProxyTracer.startActiveSpan (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18854) {
-  description: "Route /api/ai/reports/monthly couldn't be rendered statically because it used `request.headers`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error",
-  digest: 'DYNAMIC_SERVER_USAGE'
-}
-   Generating static pages (19/78) 
-[Weekly Report] Error: q [Error]: Dynamic server usage: Route /api/ai/reports/weekly couldn't be rendered statically because it used `request.headers`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
-    at W (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:21106)
-    at Object.get (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:28459)
-    at y (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\apps\crm\.next\server\app\api\ai\reports\weekly\route.js:45:489)
-    at S (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\apps\crm\.next\server\app\api\ai\reports\weekly\route.js:45:969)
-    at C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:36264
-    at C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\server\lib\trace\tracer.js:140:36
-    at NoopContextManager.with (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:7062)
-    at ContextAPI.with (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:518)
-    at NoopTracer.startActiveSpan (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18093)
-    at ProxyTracer.startActiveSpan (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18854) {
-  description: "Route /api/ai/reports/weekly couldn't be rendered statically because it used `request.headers`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error",
-  digest: 'DYNAMIC_SERVER_USAGE'
-}
-[SuperAdmin Session Check] Error: q [Error]: Dynamic server usage: Route /api/auth/superadmin-session couldn't be rendered statically because it used `request.cookies`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
-    at W (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:21106)
-    at Object.get (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:28459)
-    at p (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\apps\crm\.next\server\app\api\auth\superadmin-session\route.js:1:577)
-    at C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:36264
-    at C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\server\lib\trace\tracer.js:140:36
-    at NoopContextManager.with (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:7062)
-    at ContextAPI.with (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:518)
-    at NoopTracer.startActiveSpan (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18093)
-    at ProxyTracer.startActiveSpan (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18854)
-    at C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\server\lib\trace\tracer.js:122:103 {
-  description: "Route /api/auth/superadmin-session couldn't be rendered statically because it used `request.cookies`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error",
-  digest: 'DYNAMIC_SERVER_USAGE'
-}
-[API] Get plans error: n [Error]: Dynamic server usage: Route /api/public/subscriptions/plans couldn't be rendered statically because it used `cookies`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
-    at l (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\apps\crm\.next\server\chunks\4522.js:1:37248)
-    at f (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\apps\crm\.next\server\chunks\1920.js:23:4124)
-    at s (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\apps\crm\.next\server\app\api\subscriptions\change-plan\route.js:1:6557)
-    at n.getPlans (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\apps\crm\.next\server\app\api\subscriptions\change-plan\route.js:1:2387)
-    at c (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\apps\crm\.next\server\app\api\public\subscriptions\plans\route.js:1:833)
-    at C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:36264
-    at C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\server\lib\trace\tracer.js:140:36
-    at NoopContextManager.with (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:7062)
-    at ContextAPI.with (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:518)
-    at NoopTracer.startActiveSpan (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18093) {
-  description: "Route /api/public/subscriptions/plans couldn't be rendered statically because it used `cookies`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error",
-  digest: 'DYNAMIC_SERVER_USAGE'
-}
-   Generating static pages (38/78) 
-[API] Get history error: n [Error]: Dynamic server usage: Route /api/subscriptions/history couldn't be rendered statically because it used `cookies`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
-    at l (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\apps\crm\.next\server\chunks\4522.js:1:37248)
-    at p (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\apps\crm\.next\server\app\api\ai-chat\route.js:116:1797)
-    at n (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\apps\crm\.next\server\app\api\subscriptions\history\route.js:1:6546)
-    at u (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\apps\crm\.next\server\app\api\subscriptions\history\route.js:1:842)
-    at C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:36264
-    at C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\server\lib\trace\tracer.js:140:36
-    at NoopContextManager.with (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:7062)
-    at ContextAPI.with (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:518)
-    at NoopTracer.startActiveSpan (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18093)
-    at ProxyTracer.startActiveSpan (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18854) {
-  description: "Route /api/subscriptions/history couldn't be rendered statically because it used `cookies`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error",
-  digest: 'DYNAMIC_SERVER_USAGE'
-}
-[API] Get current subscription error: n [Error]: Dynamic server usage: Route /api/subscriptions/current couldn't be rendered statically because it used `cookies`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
-    at l (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\apps\crm\.next\server\chunks\4522.js:1:37248)
-    at f (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\apps\crm\.next\server\chunks\1920.js:23:4124)
-    at n (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\apps\crm\.next\server\app\api\subscriptions\current\route.js:1:6524)
-    at u (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\apps\crm\.next\server\app\api\subscriptions\current\route.js:1:842)
-    at C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:36264
-    at C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\server\lib\trace\tracer.js:140:36
-    at NoopContextManager.with (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:7062)
-    at ContextAPI.with (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:518)
-    at NoopTracer.startActiveSpan (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18093)
-    at ProxyTracer.startActiveSpan (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18854) {
-  description: "Route /api/subscriptions/current couldn't be rendered statically because it used `cookies`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error",
-  digest: 'DYNAMIC_SERVER_USAGE'
-}
-[API] Get usage error: n [Error]: Dynamic server usage: Route /api/subscriptions/usage couldn't be rendered statically because it used `cookies`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
-    at l (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\apps\crm\.next\server\chunks\4522.js:1:37248)
-    at f (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\apps\crm\.next\server\chunks\1920.js:23:4124)
-    at n (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\apps\crm\.next\server\app\api\public\subscriptions\plans\route.js:1:5886)
-    at u (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\apps\crm\.next\server\app\api\subscriptions\usage\route.js:1:842)
-    at C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:36264
-    at C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\server\lib\trace\tracer.js:140:36
-    at NoopContextManager.with (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:7062)
-    at ContextAPI.with (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:518)
-    at NoopTracer.startActiveSpan (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18093)
-    at ProxyTracer.startActiveSpan (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18854) {
-  description: "Route /api/subscriptions/usage couldn't be rendered statically because it used `cookies`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error",
-  digest: 'DYNAMIC_SERVER_USAGE'
-}
-[API] Get plans error: n [Error]: Dynamic server usage: Route /api/subscriptions/plans couldn't be rendered statically because it used `cookies`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error
-    at l (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\apps\crm\.next\server\chunks\4522.js:1:37248)
-    at f (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\apps\crm\.next\server\chunks\1920.js:23:4124)
-    at o (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\apps\crm\.next\server\app\api\auth\check-phone\route.js:1:2158)
-    at u (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\apps\crm\.next\server\app\api\subscriptions\plans\route.js:1:842)
-    at C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:36264
-    at C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\server\lib\trace\tracer.js:140:36
-    at NoopContextManager.with (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:7062)
-    at ContextAPI.with (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:518)
-    at NoopTracer.startActiveSpan (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18093)
-    at ProxyTracer.startActiveSpan (C:\Users\97252\Downloads\pashkovsky-pergolas_starter\node_modules\next\dist\compiled\@opentelemetry\api\index.js:1:18854) {
-  description: "Route /api/subscriptions/plans couldn't be rendered statically because it used `cookies`. See more info here: https://nextjs.org/docs/messages/dynamic-server-error",
-  digest: 'DYNAMIC_SERVER_USAGE'
-}
+   Generating static pages (0/68) ...
+✅ Email transporter is ready to send messages
+   Generating static pages (17/68) 
 [Models API] Returning 10 models with 60 total images
+   Generating static pages (34/68) 
 ✅ Email transporter is ready to send messages
-   Generating static pages (58/78) 
- ✓ Generating static pages (78/78)
+   Generating static pages (51/68) 
+ ✓ Generating static pages (68/68)
    Finalizing page optimization ...
    Collecting build traces ...
 

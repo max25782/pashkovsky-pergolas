@@ -335,6 +335,8 @@ async function* streamGeminiResponse(
   }
 }
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(req: NextRequest) {
   try {
     if (!supabase) {

@@ -9,6 +9,8 @@ import { createClient } from '@/lib/supabase/server'
 import type { ChangePlanDTO, ChangePlanResponse } from '@/types/subscription'
 import type { CompanyMember } from '@/types/membership'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(req: NextRequest) {
   try {
     // Auth check

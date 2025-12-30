@@ -6,6 +6,7 @@
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+SUPABASE_ANON_KEY=your-anon-key
 ```
 
 ### CRM App (@pashkovsky/crm)
@@ -54,8 +55,21 @@ CRON_SECRET_TOKEN=your-cron-secret-token
 ```bash
 NEXT_PUBLIC_AWS_S3_BUCKET_NAME=your-bucket-name
 NEXT_PUBLIC_AWS_S3_REGION=eu-north-1
+AWS_S3_BUCKET_NAME=your-bucket-name
+AWS_S3_REGION=eu-north-1
 AWS_ACCESS_KEY_ID=your-access-key
 AWS_SECRET_ACCESS_KEY=your-secret-key
+```
+
+#### WhatsApp Integration (Optional)
+```bash
+WHATSAPP_VERIFY_TOKEN=your-verify-token
+WHATSAPP_APP_SECRET=your-app-secret
+```
+
+#### Legacy (Optional - for backward compatibility)
+```bash
+ADMIN_TOKEN=your-admin-token
 ```
 
 ## Setup Instructions
