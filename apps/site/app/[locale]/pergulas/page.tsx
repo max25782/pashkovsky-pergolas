@@ -1,6 +1,5 @@
 import type { Locale } from '@/lib/locales'
 import { Suspense } from 'react'
-import { PergulaGallery } from '@/components/pergulas/pergula-gallery'
 import ProjectsGallery from '@/components/pergulas/ProjectsGallery'
 import { DgamimCarousel } from '@/components/dgamim/dgamim-carousel'
 import ContactSection from '@/components/contact-section'
@@ -10,7 +9,6 @@ export default function Page({ params: { locale } }: { params: { locale: Locale 
   return (
     <main className="container py-16">
       <ArticleModal articleSlug="pergolas-aluminum" lang={locale} />
-      <PergulaGallery locale={locale} />
       <Suspense fallback={<div className="mt-12 h-[60vh] w-full rounded-2xl bg-white/5 border border-white/10" />}> 
         <section className="mt-8 mb-12">
           <h2 className="text-3xl md:text-4xl font-extrabold mb-8 text-center text-white">

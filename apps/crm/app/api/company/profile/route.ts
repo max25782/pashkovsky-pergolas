@@ -78,7 +78,7 @@ export async function PUT(request: NextRequest) {
     const canEdit = 
       membership.role === 'owner' ||
       membership.role === 'admin' ||
-      membership.permissions?.company_settings === true
+      membership.permissions?.settings === true
 
     if (!canEdit) {
       return NextResponse.json(

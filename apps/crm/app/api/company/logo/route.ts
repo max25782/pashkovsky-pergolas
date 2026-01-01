@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     const canEdit = 
       membership.role === 'owner' ||
       membership.role === 'admin' ||
-      membership.permissions?.company_settings === true
+      membership.permissions?.settings === true
 
     if (!canEdit) {
       return NextResponse.json(
@@ -97,8 +97,7 @@ export async function POST(request: NextRequest) {
     const { data: company, error: updateError } = await supabase
       .from('companies')
       .update({ 
-        logo_url: logoUrl,
-        updated_at: new Date().toISOString()
+        logo_url: logoUrl
       })
       .eq('id', membership.company_id)
       .select()

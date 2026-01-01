@@ -25,14 +25,41 @@ export interface Database {
           primary_email?: string
           primary_phone?: string
           address?: string
+          logo_url?: string
           settings?: Json
           created_at: string
           updated_at: string
           trial_ends_at?: string
           subscription_ends_at?: string
         }
-        Insert: Omit<Database['public']['Tables']['companies']['Row'], 'id' | 'created_at' | 'updated_at'>
-        Update: Partial<Database['public']['Tables']['companies']['Insert']>
+        Insert: {
+          name: string
+          slug: string
+          status?: string
+          plan?: string
+          industry?: string
+          primary_email?: string
+          primary_phone?: string
+          address?: string
+          logo_url?: string
+          settings?: Json
+          trial_ends_at?: string
+          subscription_ends_at?: string
+        }
+        Update: {
+          name?: string
+          slug?: string
+          status?: string
+          plan?: string
+          industry?: string
+          primary_email?: string
+          primary_phone?: string
+          address?: string
+          logo_url?: string
+          settings?: Json
+          trial_ends_at?: string
+          subscription_ends_at?: string
+        }
       }
       subscription_plans: {
         Row: {
