@@ -1,22 +1,25 @@
-# Vercel Deployment - Site App
+# 🚀 Vercel Deployment - SITE App (Public Website)
 
-## Настройки проекта в Vercel Dashboard:
+## ⚠️ ВАЖНО: Это настройки для SITE приложения!
 
-### General
+Для деплоя публичного сайта `pashkovsky-group.com`
+
+---
+
+## Настройки в Vercel Dashboard
+
+### 1. General Settings
+
+- **Project Name**: `pashkovsky-site` (или любое другое)
 - **Framework Preset**: Next.js
-- **Root Directory**: `apps/site`
-- **Node Version**: 18.x или выше
+- **Root Directory**: `apps/site` ⚠️ **КРИТИЧНО!**
+- **Node Version**: 18.x
 
-### Build & Development Settings
+### 2. Build & Development Settings
 
 **Build Command:**
 ```bash
-cd ../.. && npm install && npm run build:site
-```
-
-**Install Command:**
-```bash
-npm install
+npm run build
 ```
 
 **Output Directory:**
@@ -24,46 +27,61 @@ npm install
 .next
 ```
 
+**Install Command:**
+```bash
+npm install
+```
+
 **Development Command:**
 ```bash
 npm run dev
 ```
 
-### Environment Variables
+### 3. Environment Variables
 
-Добавьте эти переменные в Vercel:
+Добавьте в Vercel:
 
 ```env
-# AWS S3
+# AWS S3 (для изображений галереи)
 NEXT_PUBLIC_AWS_S3_BUCKET_NAME=pashkovsky-gallery
 NEXT_PUBLIC_AWS_S3_REGION=eu-north-1
-AWS_ACCESS_KEY_ID=your-key
-AWS_SECRET_ACCESS_KEY=your-secret
+AWS_ACCESS_KEY_ID=AKIA4PFZSZFMBYZSLE7L
+AWS_SECRET_ACCESS_KEY=9HWJmDZMyon6igmSbqI0h8MvzTDtiUNOPFvFD5du
 
-# Optional: CRM API для отправки лидов
+# Опционально: CRM API для отправки лидов
 NEXT_PUBLIC_CRM_API_URL=https://crm.pashkovsky-group.com
-CRM_SITE_TOKEN=your-token
+CRM_SITE_TOKEN=your-secret-token
 ```
 
-## Важные замечания:
+---
 
-1. **Root Directory** должен быть `apps/site` (не корень репо)
-2. Build command должен выполняться из корня монорепо (`cd ../..`)
-3. Это обеспечит установку всех зависимостей workspace
+## ✅ Проверьте что деплоится именно SITE:
 
-## Альтернативный метод (без Turbo):
+После деплоя должны быть доступны:
+- ✅ `/he` - главная страница
+- ✅ `/he/pergulas` - галерея пергол
+- ✅ `/he/contact` - контакты
+- ✅ `/api/gallery/models` - API моделей
 
-Если возникают проблемы с Turbo, используйте:
+❌ НЕ должно быть:
+- `/app/admin` (это CRM)
+- `/api/auth/login` (это CRM)
 
-**Build Command:**
-```bash
-cd ../.. && npm install && cd apps/site && npm run build
-```
+---
 
-## Troubleshooting:
+## Если деплоится CRM вместо SITE:
 
-Если получаете ошибку `routes-manifest.json`:
-1. Убедитесь что Root Directory = `apps/site`
-2. Убедитесь что Build Command начинается с `cd ../..`
-3. Проверьте что все зависимости установлены
+1. **Проверьте Root Directory**: должно быть `apps/site`
+2. **Удалите** корневой `vercel.json` если есть
+3. **Redeploy** проект
 
+---
+
+## Отдельный проект для CRM
+
+Создайте **отдельный проект** в Vercel для CRM:
+- Project Name: `pashkovsky-crm`
+- Root Directory: `apps/crm`
+- Domain: `crm.pashkovsky-group.com`
+
+**НЕ используйте один проект для обоих приложений!**
