@@ -1,0 +1,12 @@
+<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+  <!-- Icon only version for favicon -->
+  <g transform="translate(5, 5)">
+    <!-- Main A shape in blue -->
+    <path d="M 10 50 L 25 5 L 35 5 L 50 50 Z" fill="#2563EB" opacity="0.9"/>
+    <!-- Silver aluminum bar across middle -->
+    <rect x="21" y="30" width="18" height="6" fill="#94A3B8"/>
+    <!-- Small aluminum detail at top -->
+    <circle cx="30" cy="3" r="3" fill="#94A3B8"/>
+  </g>
+</svg>
+

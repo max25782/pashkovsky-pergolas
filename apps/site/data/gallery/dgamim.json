@@ -1,3 +1,58 @@
 {
-  "items": []
+  "items": [
+    {
+      "type": "pergola",
+      "degem": "santa fe",
+      "images": [
+        "https://pashkovsky-gallery.s3.eu-north-1.amazonaws.com/images/dgamim/santa-fe/1.jpg",
+        "https://pashkovsky-gallery.s3.eu-north-1.amazonaws.com/images/dgamim/santa-fe/2.jpg",
+        "https://pashkovsky-gallery.s3.eu-north-1.amazonaws.com/images/dgamim/santa-fe/3.jpg"
+      ]
+    },
+    {
+      "type": "pergola",
+      "degem": "nova",
+      "images": [
+        "https://pashkovsky-gallery.s3.eu-north-1.amazonaws.com/images/dgamim/nova/1.jpg",
+        "https://pashkovsky-gallery.s3.eu-north-1.amazonaws.com/images/dgamim/nova/2.jpg",
+        "https://pashkovsky-gallery.s3.eu-north-1.amazonaws.com/images/dgamim/nova/3.jpg"
+      ]
+    },
+    {
+      "type": "pergola",
+      "degem": "orion",
+      "images": [
+        "https://pashkovsky-gallery.s3.eu-north-1.amazonaws.com/images/dgamim/orion/1.jpg",
+        "https://pashkovsky-gallery.s3.eu-north-1.amazonaws.com/images/dgamim/orion/2.jpg",
+        "https://pashkovsky-gallery.s3.eu-north-1.amazonaws.com/images/dgamim/orion/3.jpg"
+      ]
+    },
+    {
+      "type": "pergola",
+      "degem": "serenity",
+      "images": [
+        "https://pashkovsky-gallery.s3.eu-north-1.amazonaws.com/images/dgamim/serenity/1.jpg",
+        "https://pashkovsky-gallery.s3.eu-north-1.amazonaws.com/images/dgamim/serenity/2.jpg",
+        "https://pashkovsky-gallery.s3.eu-north-1.amazonaws.com/images/dgamim/serenity/3.jpg"
+      ]
+    },
+    {
+      "type": "pergola",
+      "degem": "horizon",
+      "images": [
+        "https://pashkovsky-gallery.s3.eu-north-1.amazonaws.com/images/dgamim/horizon/1.jpg",
+        "https://pashkovsky-gallery.s3.eu-north-1.amazonaws.com/images/dgamim/horizon/2.jpg",
+        "https://pashkovsky-gallery.s3.eu-north-1.amazonaws.com/images/dgamim/horizon/3.jpg"
+      ]
+    },
+    {
+      "type": "pergola",
+      "degem": "atlas",
+      "images": [
+        "https://pashkovsky-gallery.s3.eu-north-1.amazonaws.com/images/dgamim/atlas/1.jpg",
+        "https://pashkovsky-gallery.s3.eu-north-1.amazonaws.com/images/dgamim/atlas/2.jpg",
+        "https://pashkovsky-gallery.s3.eu-north-1.amazonaws.com/images/dgamim/atlas/3.jpg"
+      ]
+    }
+  ]
 }

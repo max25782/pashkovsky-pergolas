@@ -2,11 +2,56 @@
 @tailwind components;
 @tailwind utilities;
 
-:root { color-scheme: light dark; }
+/* AluminCRM Brand Colors */
+:root {
+  --alumincrm-blue: #2563EB;
+  --alumincrm-silver: #94A3B8;
+  --alumincrm-dark: #1E293B;
+  color-scheme: light dark;
+}
+
 html, body { height: 100%; }
 html { scrollbar-gutter: stable both-edges; }
 body { @apply text-white; background-color: #0e0f12; }
 .container { @apply max-w-screen-xl mx-auto px-4; }
+
+/* AluminCRM Logo Animation */
+@keyframes logo-float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-5px); }
+}
+
+.logo-animate {
+  animation: logo-float 3s ease-in-out infinite;
+}
+
+/* AluminCRM Gradient Background */
+.alumincrm-gradient {
+  background: linear-gradient(135deg, var(--alumincrm-blue) 0%, var(--alumincrm-dark) 100%);
+}
+
+.alumincrm-gradient-light {
+  background: linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%);
+}
+
+/* Card hover effects */
+.alumincrm-card {
+  @apply bg-white rounded-lg shadow-sm border border-gray-200 p-6 transition-all duration-200;
+}
+
+.alumincrm-card:hover {
+  @apply shadow-lg border-blue-200;
+  transform: translateY(-2px);
+}
+
+/* Button styles */
+.alumincrm-btn-primary {
+  @apply px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold;
+}
+
+.alumincrm-btn-secondary {
+  @apply px-6 py-3 bg-gray-100 text-gray-900 rounded-lg hover:bg-gray-200 transition-colors font-semibold;
+}
 
 /* Performance helpers */
 .cv-auto { content-visibility: auto; contain-intrinsic-size: 800px 1200px; }
@@ -58,4 +103,5 @@ body { @apply text-white; background-color: #0e0f12; }
   0% { transform: translateX(0); }
   100% { transform: translateX(-100%); }
 }
+
 

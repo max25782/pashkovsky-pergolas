@@ -1,12 +1,16 @@
 import './globals.css'
 import type { Metadata } from 'next'
+import { Providers } from '@/components/providers'
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_CRM_URL || 'http://localhost:3001'),
   title: {
-    default: 'Pashkovsky CRM',
-    template: '%s | Pashkovsky CRM',
+    default: 'AluminCRM - CRM для строительных компаний',
+    template: '%s | AluminCRM',
   },
+  description: 'Управляйте сделками, клиентами и проектами по алюминиевым конструкциям',
+  applicationName: 'AluminCRM',
+  keywords: ['CRM', 'pergola', 'aluminum', 'construction', 'алюминий', 'пергола'],
   robots: {
     index: false,
     follow: false,
@@ -21,10 +25,12 @@ export default function RootLayout({
   return (
     <html lang="he" dir="rtl" suppressHydrationWarning>
       <head>
-        <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+        <link rel="icon" href="/logo-icon.svg" type="image/svg+xml" />
       </head>
       <body className="antialiased bg-neutral-50 dark:bg-neutral-900" suppressHydrationWarning>
-        {children}
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
   )

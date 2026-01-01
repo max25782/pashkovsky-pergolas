@@ -1,11 +1,12 @@
-import { useParams } from 'next/navigation'
+'use client'
+
+import { useLanguage } from '@/lib/language-context'
 import type { Locale } from '@/lib/locales'
 import { getCRMTranslations, type CRMTranslations } from '@/lib/admin-translations'
 
 export function useCRMTranslations(): CRMTranslations {
-  const params = useParams()
-  const locale = (params?.locale as Locale) || 'he'
-  return getCRMTranslations(locale)
+  const { language } = useLanguage()
+  return getCRMTranslations(language as Locale)
 }
 
 

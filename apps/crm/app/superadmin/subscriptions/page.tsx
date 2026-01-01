@@ -5,6 +5,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { CreditCard, TrendingUp, Calendar, CheckCircle, XCircle, Clock } from 'lucide-react'
+import { getMRR } from '@/lib/utils/mrr'
 
 async function getAllCompanies() {
   const supabase = createClient(
@@ -135,18 +136,8 @@ export default async function SubscriptionsPage() {
   const activeSubscriptions = subscriptions.filter(s => s.status === 'active').length
   const trialSubscriptions = subscriptions.filter(s => s.status === 'trialing').length
   
-  // Calculate MRR (Monthly Recurring Revenue)
-  let mrr = 0
-  subscriptions.forEach((sub: any) => {
-    if (sub.status === 'active' && sub.subscription_plans) {
-      const plan = sub.subscription_plans
-      if (sub.billing_cycle === 'yearly' && plan.price_yearly) {
-        mrr += plan.price_yearly / 12
-      } else {
-        mrr += plan.price_monthly || 0
-      }
-    }
-  })
+  // Calculate MRR using utility function
+  const mrr = await getMRR()
   
   return (
     <div className="space-y-6">

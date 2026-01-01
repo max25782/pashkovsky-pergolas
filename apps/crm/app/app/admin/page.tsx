@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
+import { LanguageSwitcher } from '@/components/admin/LanguageSwitcher'
+import { useLanguage } from '@/lib/language-context'
 import { 
   Briefcase, 
   BarChart3, 
@@ -16,16 +18,87 @@ import {
   TrendingUp
 } from 'lucide-react'
 
+interface DashboardStats {
+  activeDeals: number
+  newLeads: number
+  activeWorkers: number
+}
+
 export default function AdminPage() {
   const t = useCRMTranslations()
+  const { language } = useLanguage()
   const router = useRouter()
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isChecking, setIsChecking] = useState(true)
   const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [stats, setStats] = useState<DashboardStats>({
+    activeDeals: 0,
+    newLeads: 0,
+    activeWorkers: 0
+  })
 
   useEffect(() => {
     checkAuth()
   }, [])
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadStats()
+    }
+  }, [isAuthenticated])
+
+  async function loadStats() {
+    try {
+      const supabase = createClient()
+      
+      // Get user's company
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data: membership } = await supabase
+        .from('company_members')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .single()
+
+      if (!membership) return
+
+      const companyId = membership.company_id
+
+      // Get active deals count - ALL stages except 'done'
+      // Stages: new, measure, offer, offer_approved, material_ordered, approved, production, install
+      const { count: activeDealsCount } = await supabase
+        .from('deals')
+        .select('*', { count: 'exact', head: true })
+        .eq('company_id', companyId)
+        .neq('stage', 'done') // Count all except completed
+
+      // Get new leads (last 30 days)
+      const thirtyDaysAgo = new Date()
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+      const { count: newLeadsCount } = await supabase
+        .from('deals')
+        .select('*', { count: 'exact', head: true })
+        .eq('company_id', companyId)
+        .eq('stage', 'new')
+        .gte('created_at', thirtyDaysAgo.toISOString())
+
+      // Get active workers count
+      const { count: activeWorkersCount } = await supabase
+        .from('workers')
+        .select('*', { count: 'exact', head: true })
+        .eq('company_id', companyId)
+        .eq('is_active', true)
+
+      setStats({
+        activeDeals: activeDealsCount || 0,
+        newLeads: newLeadsCount || 0,
+        activeWorkers: activeWorkersCount || 0
+      })
+    } catch (error) {
+      console.error('[AdminPage] Error loading stats:', error)
+    }
+  }
 
   async function checkAuth() {
     try {
@@ -78,7 +151,7 @@ export default function AdminPage() {
     {
       id: 'deals',
       title: t.nav.deals,
-      description: 'ניהול עסקאות ופרויקטים',
+      description: t.deals.title,
       href: `/app/admin/deals`,
       icon: Briefcase,
       color: 'bg-green-600 hover:bg-green-700',
@@ -86,7 +159,7 @@ export default function AdminPage() {
     {
       id: 'statistic',
       title: t.nav.statistic,
-      description: 'סטטיסטיקה וניתוח נתונים',
+      description: t.deals.statistics,
       href: `/app/admin/statistics`,
       icon: BarChart3,
       color: 'bg-emerald-600 hover:bg-emerald-700',
@@ -94,7 +167,7 @@ export default function AdminPage() {
     {
       id: 'leads',
       title: t.nav.leads,
-      description: 'ניהול לידים ופניות',
+      description: t.leads.title,
       href: `/app/admin/leads`,
       icon: TrendingUp,
       color: 'bg-blue-600 hover:bg-blue-700',
@@ -102,7 +175,7 @@ export default function AdminPage() {
     {
       id: 'gallery',
       title: t.nav.gallery,
-      description: 'ניהול גלריה ותמונות',
+      description: t.nav.gallery,
       href: `/app/admin/gallery`,
       icon: ImageIcon,
       color: 'bg-purple-600 hover:bg-purple-700',
@@ -110,7 +183,7 @@ export default function AdminPage() {
     {
       id: 'ai-chats',
       title: t.nav.aiChats,
-      description: 'ניהול צ\'אטים AI',
+      description: 'AI Chat Management',
       href: `/app/admin/ai-chats`,
       icon: MessageSquare,
       color: 'bg-cyan-600 hover:bg-cyan-700',
@@ -118,7 +191,7 @@ export default function AdminPage() {
     {
       id: 'articles',
       title: t.nav.articles,
-      description: 'ניהול מאמרים',
+      description: t.nav.articles,
       href: `/app/admin/articles`,
       icon: FileText,
       color: 'bg-indigo-600 hover:bg-indigo-700',
@@ -126,7 +199,7 @@ export default function AdminPage() {
     {
       id: 'workers',
       title: t.nav.workers,
-      description: 'ניהול עובדים ומשמרות',
+      description: t.nav.workers,
       href: `/app/admin/workers`,
       icon: UserCog,
       color: 'bg-yellow-600 hover:bg-yellow-700',
@@ -139,15 +212,22 @@ export default function AdminPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-4xl font-bold mb-2">Admin Panel</h1>
-            <p className="text-white/60">פאנל ניהול - Pashkovsky Group</p>
+            <h1 className="text-4xl font-bold mb-2">
+              {language === 'ru' ? 'Панель администратора' : language === 'en' ? 'Admin Panel' : 'פאנל ניהול'}
+            </h1>
+            <p className="text-white/60">
+              {language === 'ru' ? 'Группа Пашковский' : language === 'en' ? 'Pashkovsky Group' : 'פאנל ניהול - Pashkovsky Group'}
+            </p>
           </div>
-          <button
-            onClick={logout}
-            className="px-4 py-2 rounded bg-white/10 hover:bg-white/20 transition"
-          >
-            {t.common.logout}
-          </button>
+          <div className="flex items-center gap-4">
+            <LanguageSwitcher />
+            <button
+              onClick={logout}
+              className="px-4 py-2 rounded bg-white/10 hover:bg-white/20 transition"
+            >
+              {t.common.logout}
+            </button>
+          </div>
         </div>
 
         {/* Admin Sections Grid */}
@@ -176,19 +256,28 @@ export default function AdminPage() {
           })}
         </div>
 
-        {/* Quick Stats (optional) */}
+        {/* Quick Stats */}
         <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-            <h3 className="text-sm text-white/60 mb-2">עסקאות פעילות</h3>
-            <p className="text-3xl font-bold">—</p>
+          <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-6 hover:bg-green-500/20 transition-colors">
+            <h3 className="text-sm text-green-300 mb-2 flex items-center gap-2">
+              <Briefcase className="w-4 h-4" />
+              {language === 'ru' ? 'Активные сделки' : language === 'en' ? 'Active Deals' : 'עסקאות פעילות'}
+            </h3>
+            <p className="text-3xl font-bold text-green-400">{stats.activeDeals}</p>
           </div>
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-            <h3 className="text-sm text-white/60 mb-2">לידים חדשים</h3>
-            <p className="text-3xl font-bold">—</p>
+          <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-6 hover:bg-blue-500/20 transition-colors">
+            <h3 className="text-sm text-blue-300 mb-2 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4" />
+              {language === 'ru' ? 'Новые лиды (30 дней)' : language === 'en' ? 'New Leads (30 days)' : 'לידים חדשים (30 יום)'}
+            </h3>
+            <p className="text-3xl font-bold text-blue-400">{stats.newLeads}</p>
           </div>
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-            <h3 className="text-sm text-white/60 mb-2">עובדים פעילים</h3>
-            <p className="text-3xl font-bold">—</p>
+          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-6 hover:bg-yellow-500/20 transition-colors">
+            <h3 className="text-sm text-yellow-300 mb-2 flex items-center gap-2">
+              <UserCog className="w-4 h-4" />
+              {language === 'ru' ? 'Активные работники' : language === 'en' ? 'Active Workers' : 'עובדים פעילים'}
+            </h3>
+            <p className="text-3xl font-bold text-yellow-400">{stats.activeWorkers}</p>
           </div>
         </div>
       </div>

@@ -1,6 +1,7 @@
 {
-  "name": "@pashkovsky/crm",
-  "version": "0.1.0",
+  "name": "@alumincrm/app",
+  "version": "1.0.0",
+  "description": "AluminCRM - Construction CRM Platform for Aluminum & Pergola Companies",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3001",

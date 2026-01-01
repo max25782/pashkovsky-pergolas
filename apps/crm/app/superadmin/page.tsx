@@ -7,6 +7,7 @@ import { createClient } from '@supabase/supabase-js'
 import { StatCard } from '@/components/superadmin/StatCard'
 import { RecentActivity } from '@/components/superadmin/RecentActivity'
 import { SubscriptionChart } from '@/components/superadmin/SubscriptionChart'
+import { getMRR } from '@/lib/utils/mrr'
 
 async function getPlatformStats() {
   // Use SERVICE_ROLE_KEY to bypass RLS (SuperAdmin has full access)
@@ -45,33 +46,14 @@ async function getPlatformStats() {
       subscription_plans (plan_key, display_name)
     `)
   
-  // Calculate MRR (Monthly Recurring Revenue)
-  const { data: subscriptions } = await supabase
-    .from('company_subscriptions')
-    .select(`
-      plan_id,
-      billing_cycle,
-      subscription_plans (price_monthly, price_yearly)
-    `)
-    .eq('status', 'active')
-  
-  let mrr = 0
-  subscriptions?.forEach((sub: any) => {
-    const plan = sub.subscription_plans
-    if (plan) {
-      if (sub.billing_cycle === 'yearly' && plan.price_yearly) {
-        mrr += plan.price_yearly / 12
-      } else {
-        mrr += plan.price_monthly || 0
-      }
-    }
-  })
+  // Calculate MRR using utility function
+  const mrr = await getMRR()
   
   return {
     companiesCount: companiesCount || 0,
     usersCount: usersCount || 0,
     activeSubscriptions: activeSubscriptions || 0,
-    mrr: Math.round(mrr),
+    mrr,
     planDistribution: planDistribution || []
   }
 }
