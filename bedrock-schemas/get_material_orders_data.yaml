@@ -1,0 +1,86 @@
+openapi: 3.0.0
+info:
+  title: CRM Material Orders Data API
+  version: 1.0.0
+  description: API for fetching material orders/procurement data from CRM
+paths:
+  /api/ai-director/data/material-orders:
+    get:
+      summary: Get material orders list
+      description: Returns material orders for the current company (multi-tenant)
+      operationId: getMaterialOrders
+      parameters:
+        - name: company_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Company ID (from session attributes)
+          x-amazon-bedrock-session-attribute: company_id
+        - name: deal_id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by deal id
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [ordered, confirmed, in_transit, delivered, cancelled]
+          description: Filter by order status
+        - name: supplier_name
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by supplier name (exact match)
+        - name: start_date
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter orders after this date (ISO 8601, order_date)
+        - name: end_date
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter orders before this date (ISO 8601, order_date)
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+          description: Max number of records (max 100)
+      security:
+        - ApiTokenAuth: []
+      responses:
+        '200':
+          description: Material orders list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  material_orders:
+                    type: array
+                    items:
+                      type: object
+                  count:
+                    type: integer
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal Server Error
+components:
+  securitySchemes:
+    ApiTokenAuth:
+      type: apiKey
+      in: header
+      name: x-api-token
+      x-amazon-bedrock-session-attribute: api_token
+
+

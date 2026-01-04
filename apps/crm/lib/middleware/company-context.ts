@@ -25,7 +25,7 @@ const supabase = SUPABASE_URL && SERVICE_KEY
 * Get company ID from request (synchronous version - returns cached value)
 * Priority:
 * 1. JWT token (from Authorization header) - verify with Supabase
-* 2. Admin token (legacy support)
+* 2. Legacy custom JWT token (if still in use)
 */
 export function getCompanyId(req: NextRequest): string | null {
   const authHeader = req.headers.get('authorization')
@@ -39,15 +39,6 @@ export function getCompanyId(req: NextRequest): string | null {
         return payload.companyId
       }
     }
-  }
-  
-  // Fallback to admin token (for backward compatibility)
-  const adminToken = req.headers.get('x-admin-token') || authHeader?.replace(/^Bearer\s+/i, '')
-  const expectedAdminToken = process.env.ADMIN_TOKEN
-  
-  if (adminToken && expectedAdminToken && adminToken === expectedAdminToken) {
-    // Admin token - return Pashkovsky company ID
-    return PASHKOVSKY_COMPANY_ID
   }
   
   // NOTE: Supabase Auth JWT validation must be done async - use getCompanyIdAsync
@@ -136,15 +127,16 @@ export function getUserRole(req: NextRequest): string | null {
 }
 
 /**
- * Get full user context from JWT token
+ * Get full user context from JWT token (synchronous - for middleware)
+ * Note: This only works with custom JWT tokens, not Supabase auth tokens
+ * For Supabase auth, use getUserContextAsync
  */
 export function getUserContext(req: NextRequest): { userId: string; email: string; companyId: string; role: string } | null {
   const authHeader = req.headers.get('authorization')
   if (!authHeader) return null
   
-  const token = extractToken(authHeader)
-  if (!token) return null
-  
+  // Try custom JWT token
+  const token = authHeader.replace(/^Bearer\s+/i, '')
   const payload = verifyToken(token)
   if (!payload || !payload.userId || !payload.companyId) return null
   
@@ -154,6 +146,53 @@ export function getUserContext(req: NextRequest): { userId: string; email: strin
     companyId: payload.companyId,
     role: payload.role,
   }
+}
+
+/**
+ * Get full user context asynchronously (supports Supabase auth)
+ */
+export async function getUserContextAsync(req: NextRequest): Promise<{ userId: string; email: string; companyId: string; role: string } | null> {
+  if (!supabase) return getUserContext(req)
+  
+  const authHeader = req.headers.get('authorization')
+  
+  // Try Supabase Auth JWT
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.substring(7)
+    
+    try {
+      // Verify token with Supabase
+      const { data: { user }, error } = await supabase.auth.getUser(token)
+      
+      if (error || !user) {
+        return getUserContext(req) // Fallback to sync version
+      }
+      
+      // Get company membership
+      const { data: member, error: memberError } = await supabase
+        .from('company_members')
+        .select('company_id, role')
+        .eq('user_id', user.id)
+        .single()
+      
+      if (memberError || !member) {
+        return null
+      }
+      
+      return {
+        userId: user.id,
+        email: user.email || '',
+        companyId: member.company_id,
+        role: member.role,
+      }
+    } catch (err: any) {
+      console.error('[getUserContextAsync] Error:', err.message)
+      return getUserContext(req) // Fallback to sync version
+    }
+  }
+  
+  // Fallback to sync version
+  return getUserContext(req)
 }
 
 /**

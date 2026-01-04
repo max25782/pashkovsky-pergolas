@@ -15,6 +15,14 @@ import type {
 
 export class SubscriptionService {
   /**
+   * Get default plan (trial)
+   * Used as a safe fallback when a company doesn't have a subscription row yet.
+   */
+  async getDefaultPlan(): Promise<SubscriptionPlan | null> {
+    return this.getPlanByKey('trial')
+  }
+
+  /**
    * Get all available subscription plans
    */
   async getPlans(): Promise<SubscriptionPlan[]> {
@@ -78,7 +86,10 @@ export class SubscriptionService {
    */
   async getCurrentPlan(company_id: string): Promise<SubscriptionPlan | null> {
     const subscription = await this.getCurrentSubscription(company_id)
-    if (!subscription || !subscription.plan_id) return null
+    if (!subscription || !subscription.plan_id) {
+      // Company may not have an initialized subscription row yet → treat as trial
+      return this.getDefaultPlan()
+    }
     
     const supabase = createClient()
     const { data, error } = await supabase
@@ -87,7 +98,7 @@ export class SubscriptionService {
       .eq('id', subscription.plan_id)
       .single()
     
-    if (error) return null
+    if (error) return this.getDefaultPlan()
     return data as SubscriptionPlan
   }
 

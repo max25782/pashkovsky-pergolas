@@ -12,6 +12,7 @@ import { can, Permission, Role } from '@/lib/permissions'
  * Returns error response if not authorized
  */
 export function requirePermission(req: NextRequest, permission: Permission): { authorized: boolean; error?: NextResponse } {
+  // Check user context from JWT token
   const userContext = getUserContext(req)
   
   if (!userContext) {
@@ -73,7 +74,7 @@ export function requireAnyPermission(req: NextRequest, permissions: Permission[]
 }
 
 /**
- * Check if user has specific role
+ * Check if user has required role(s)
  */
 export function requireRole(req: NextRequest, role: Role | Role[]): { authorized: boolean; error?: NextResponse } {
   const userContext = getUserContext(req)
@@ -105,22 +106,13 @@ export function requireRole(req: NextRequest, role: Role | Role[]): { authorized
 }
 
 /**
- * Check if request is authenticated (has valid token)
- * Returns admin token as fallback for backward compatibility
+ * Check if request is authenticated (has valid JWT token)
  */
-export function requireAuth(req: NextRequest): { authorized: boolean; error?: NextResponse; isAdmin?: boolean } {
-  // Check for JWT token first
+export function requireAuth(req: NextRequest): { authorized: boolean; error?: NextResponse } {
+  // Check for JWT token
   const userContext = getUserContext(req)
   if (userContext) {
     return { authorized: true }
-  }
-  
-  // Fallback to admin token (for backward compatibility)
-  const adminToken = req.headers.get('x-admin-token') || req.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
-  const expectedAdminToken = process.env.ADMIN_TOKEN
-  
-  if (adminToken && expectedAdminToken && adminToken === expectedAdminToken) {
-    return { authorized: true, isAdmin: true }
   }
   
   return {
@@ -131,6 +123,3 @@ export function requireAuth(req: NextRequest): { authorized: boolean; error?: Ne
     )
   }
 }
-
-
-

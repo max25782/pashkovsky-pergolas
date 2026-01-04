@@ -16,7 +16,8 @@ import {
   LogOut,
   Menu,
   X,
-  Shield
+  Shield,
+  Plug
 } from 'lucide-react'
 
 export function SuperAdminSidebar() {
@@ -28,6 +29,7 @@ export function SuperAdminSidebar() {
     { name: 'Dashboard', href: '/superadmin', iconName: 'dashboard' },
     { name: 'Companies', href: '/superadmin/companies', iconName: 'building' },
     { name: 'Subscriptions', href: '/superadmin/subscriptions', iconName: 'card' },
+    { name: 'Integrations', href: '/superadmin/integrations', iconName: 'plug' },
     { name: 'Platform Admins', href: '/superadmin/admins', iconName: 'shield' },
     { name: 'Settings', href: '/superadmin/settings', iconName: 'settings' },
   ]
@@ -38,6 +40,7 @@ export function SuperAdminSidebar() {
       case 'dashboard': return <LayoutDashboard className="h-5 w-5 flex-shrink-0" />
       case 'building': return <Building2 className="h-5 w-5 flex-shrink-0" />
       case 'card': return <CreditCard className="h-5 w-5 flex-shrink-0" />
+      case 'plug': return <Plug className="h-5 w-5 flex-shrink-0" />
       case 'shield': return <Shield className="h-5 w-5 flex-shrink-0" />
       case 'settings': return <Settings className="h-5 w-5 flex-shrink-0" />
       default: return null

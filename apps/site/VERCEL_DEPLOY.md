@@ -45,13 +45,15 @@ npm run dev
 # AWS S3 (для изображений галереи)
 NEXT_PUBLIC_AWS_S3_BUCKET_NAME=pashkovsky-gallery
 NEXT_PUBLIC_AWS_S3_REGION=eu-north-1
-AWS_ACCESS_KEY_ID=AKIA4PFZSZFMBYZSLE7L
-AWS_SECRET_ACCESS_KEY=9HWJmDZMyon6igmSbqI0h8MvzTDtiUNOPFvFD5du
+AWS_ACCESS_KEY_ID=your_aws_access_key_here
+AWS_SECRET_ACCESS_KEY=your_aws_secret_key_here
 
 # Опционально: CRM API для отправки лидов
 NEXT_PUBLIC_CRM_API_URL=https://crm.pashkovsky-group.com
 CRM_SITE_TOKEN=your-secret-token
 ```
+
+> ⚠️ **ВАЖНО**: Замените `your_aws_access_key_here` и `your_aws_secret_key_here` на реальные ключи из AWS IAM Console
 
 ---
 

@@ -7,29 +7,20 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getWeeklyDigests, getWeeklyDigest } from '@/lib/analytics/weeklyDigest'
+import { requireAuthAsync } from '@/lib/middleware/auth-async'
 
 // Force dynamic rendering since we use request.headers
 export const dynamic = 'force-dynamic'
 
-function auth(req: NextRequest): boolean {
-  const token = req.headers.get('x-admin-token') || req.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
-  const expected = process.env.ADMIN_TOKEN
-  return !!expected && token === expected
-}
-
 export async function GET(req: NextRequest) {
   try {
     // 1. Check auth
-    if (!auth(req)) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    const authCheck = await requireAuthAsync(req)
+    if (!authCheck.authorized) return authCheck.error
 
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id')
-    const companyId = searchParams.get('companyId') || undefined
+    const companyId = authCheck.context?.companyId || searchParams.get('companyId') || undefined
     const limit = parseInt(searchParams.get('limit') || '20')
 
     // 2. Get single digest or list

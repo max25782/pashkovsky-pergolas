@@ -1,0 +1,75 @@
+openapi: 3.0.0
+info:
+  title: CRM Leads Data API
+  version: 1.0.0
+  description: API для получения данных о лидах из CRM
+paths:
+  /api/ai-director/data/leads:
+    description: Endpoint для получения данных о лидах из CRM
+    get:
+      summary: Получить список лидов
+      description: Возвращает список лидов с возможностью фильтрации по статусу и источнику
+      operationId: getLeads
+      parameters:
+        - name: company_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: ID компании (берётся из session attributes)
+          x-amazon-bedrock-session-attribute: company_id
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [new, contacted, qualified, unqualified]
+          description: Фильтр по статусу лида
+        - name: source
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Фильтр по источнику лида
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+          description: Максимальное количество записей
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+          description: Смещение для пагинации
+      security:
+        - ApiTokenAuth: []
+      responses:
+        '200':
+          description: Список лидов
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  leads:
+                    type: array
+                    items:
+                      type: object
+                  total:
+                    type: integer
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal Server Error
+components:
+  securitySchemes:
+    ApiTokenAuth:
+      type: apiKey
+      in: header
+      name: x-api-token
+      x-amazon-bedrock-session-attribute: api_token
+

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import type { Locale } from '@/lib/locales'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
 import type { AnalyticsContext } from '@/lib/ai/analyticsTypes'
+import { authFetch } from '@/lib/api/auth-fetch'
 
 interface WeeklyDigest {
   id: string
@@ -45,8 +46,6 @@ function extractKeyMetrics(context: AnalyticsContext): string[] {
 
 export default function WeeklyDigestsPage() {
   const t = useCRMTranslations()
-  const [token, setToken] = useState<string | null>(null)
-  const [input, setInput] = useState('')
   const [digests, setDigests] = useState<WeeklyDigest[]>([])
   const [selectedDigest, setSelectedDigest] = useState<WeeklyDigest | null>(null)
   const [loading, setLoading] = useState(false)
@@ -54,22 +53,14 @@ export default function WeeklyDigestsPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('admin_token')
-    if (storedToken) {
-      setToken(storedToken)
-      loadDigests(storedToken)
-    }
+    loadDigests()
   }, [])
 
-  async function loadDigests(adminToken: string) {
+  async function loadDigests() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/reports/weekly-digest', {
-        headers: {
-          'x-admin-token': adminToken,
-        },
-      })
+      const res = await authFetch('/api/reports/weekly-digest')
 
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}`)
@@ -85,16 +76,13 @@ export default function WeeklyDigestsPage() {
   }
 
   async function handleGenerate() {
-    if (!token) return
-
     setGenerating(true)
     setError(null)
     try {
-      const res = await fetch('/api/reports/weekly-digest/generate', {
+      const res = await authFetch('/api/reports/weekly-digest/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-admin-token': token,
         },
         body: JSON.stringify({}),
       })
@@ -107,15 +95,11 @@ export default function WeeklyDigestsPage() {
       const data = await res.json()
       
       // Reload digests
-      await loadDigests(token)
+      await loadDigests()
       
       // Select newly generated digest
       if (data.digest) {
-        const res2 = await fetch(`/api/reports/weekly-digest?id=${data.digest.id}`, {
-          headers: {
-            'x-admin-token': token,
-          },
-        })
+        const res2 = await authFetch(`/api/reports/weekly-digest?id=${data.digest.id}`)
         if (res2.ok) {
           const digestData = await res2.json()
           setSelectedDigest(digestData.digest)
@@ -129,14 +113,8 @@ export default function WeeklyDigestsPage() {
   }
 
   async function handleSelectDigest(digestId: string) {
-    if (!token) return
-
     try {
-      const res = await fetch(`/api/reports/weekly-digest?id=${digestId}`, {
-        headers: {
-          'x-admin-token': token,
-        },
-      })
+      const res = await authFetch(`/api/reports/weekly-digest?id=${digestId}`)
 
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}`)
@@ -147,42 +125,6 @@ export default function WeeklyDigestsPage() {
     } catch (err: any) {
       setError(err.message || 'Ошибка загрузки дайджеста')
     }
-  }
-
-  function save() {
-    if (input.trim()) {
-      localStorage.setItem('admin_token', input.trim())
-      setToken(input.trim())
-      loadDigests(input.trim())
-    }
-  }
-
-  function logout() {
-    localStorage.removeItem('admin_token')
-    setToken(null)
-    setInput('')
-    setDigests([])
-    setSelectedDigest(null)
-  }
-
-  if (!token) {
-    return (
-      <main className="container py-16 text-white">
-        <h1 className="text-2xl font-bold mb-4">Weekly Digests</h1>
-        <div className="max-w-md bg-white/5 border border-white/10 rounded-xl p-6">
-          <label className="block text-sm mb-2">{t.auth.enterAdminToken}</label>
-          <input
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            className="w-full px-3 py-2 rounded bg-black/40 border border-white/20"
-            placeholder={t.auth.adminTokenPlaceholder}
-          />
-          <button onClick={save} className="mt-3 px-4 py-2 rounded bg-white/10 hover:bg-white/20">
-            {t.common.continue}
-          </button>
-        </div>
-      </main>
-    )
   }
 
   return (
@@ -208,9 +150,6 @@ export default function WeeklyDigestsPage() {
             className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 font-semibold disabled:opacity-50"
           >
             {generating ? 'Генерирую...' : 'Сгенерировать сейчас'}
-          </button>
-          <button onClick={logout} className="px-3 py-2 rounded bg-white/10 hover:bg-white/20">
-            {t.common.logout}
           </button>
         </div>
       </div>

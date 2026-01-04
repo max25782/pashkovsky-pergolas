@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { requireAuthAsync } from '@/lib/middleware/auth-async'
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -13,6 +14,9 @@ const supabase = SUPABASE_URL && SERVICE_KEY
  * Fetch all articles from Supabase or return empty array
  */
 export async function GET(req: NextRequest) {
+  const authCheck = await requireAuthAsync(req)
+  if (!authCheck.authorized) return authCheck.error
+
   if (!supabase) {
     console.warn('[Articles API] Supabase not configured')
     return NextResponse.json({ articles: [] })
@@ -31,6 +35,7 @@ export async function GET(req: NextRequest) {
         console.log('[Articles API] Table does not exist, returning empty')
         return NextResponse.json({ articles: [] })
       }
+      console.error('[Articles API] Error loading:', error)
       throw error
     }
 
@@ -50,6 +55,9 @@ export async function GET(req: NextRequest) {
  * Create or update article
  */
 export async function POST(req: NextRequest) {
+  const authCheck = await requireAuthAsync(req)
+  if (!authCheck.authorized) return authCheck.error
+
   if (!supabase) {
     return NextResponse.json(
       { error: 'Supabase not configured' },
@@ -97,6 +105,9 @@ export async function POST(req: NextRequest) {
  * Delete article by slug
  */
 export async function DELETE(req: NextRequest) {
+  const authCheck = await requireAuthAsync(req)
+  if (!authCheck.authorized) return authCheck.error
+
   if (!supabase) {
     return NextResponse.json(
       { error: 'Supabase not configured' },

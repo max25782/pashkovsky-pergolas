@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { requireAuth } from '@/lib/middleware/auth'
+import { requireAuthAsync } from '@/lib/middleware/auth-async'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -11,7 +11,7 @@ const supabase = SUPABASE_URL && SERVICE_KEY
 
 // GET (admin) - list all projects
 export async function GET(req: NextRequest) {
-  const authCheck = requireAuth(req)
+  const authCheck = await requireAuthAsync(req)
   if (!authCheck.authorized) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   
   if (!supabase) return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
 
 // POST (admin) - create project
 export async function POST(req: NextRequest) {
-  const authCheck = requireAuth(req)
+  const authCheck = await requireAuthAsync(req)
   if (!authCheck.authorized) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   
   if (!supabase) return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
 
 // DELETE (admin) - delete by id
 export async function DELETE(req: NextRequest) {
-  const authCheck = requireAuth(req)
+  const authCheck = await requireAuthAsync(req)
   if (!authCheck.authorized) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   
   if (!supabase) return NextResponse.json({ error: 'Server not configured' }, { status: 500 })

@@ -7,6 +7,7 @@ import type { Worker } from '@/types/workers'
 import type { Locale } from '@/lib/locales'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
 import { createAuthenticatedClient } from '@/lib/supabase/client'
+import { authFetch } from '@/lib/api/auth-fetch'
 
 export default function WorkersAdminPage() {
   const t = useCRMTranslations()
@@ -334,20 +335,19 @@ function WorkerModal({ worker, onClose, onSave }: WorkerModalProps) {
     try {
       setSubmitting(true)
       
-      const supabase = createAuthenticatedClient()
-      
-      // Convert camelCase to snake_case for DB
-      const dbData = {
-        first_name: formData.firstName,
-        last_name: formData.lastName,
-        phone: formData.phone,
-        role: formData.role,
-        daily_rate: formData.dailyRate,
-        is_active: formData.isActive,
-      }
-      
       if (worker) {
-        // Update existing worker
+        // Update existing worker - use Supabase directly for now
+        const supabase = createAuthenticatedClient()
+        
+        const dbData = {
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          phone: formData.phone,
+          role: formData.role,
+          daily_rate: formData.dailyRate,
+          is_active: formData.isActive,
+        }
+        
         const { error: dbError } = await supabase
           .from('workers')
           .update(dbData)
@@ -355,12 +355,19 @@ function WorkerModal({ worker, onClose, onSave }: WorkerModalProps) {
         
         if (dbError) throw new Error(dbError.message)
       } else {
-        // Create new worker
-        const { error: dbError } = await supabase
-          .from('workers')
-          .insert([dbData])
+        // Create new worker - use API to include company_id
+        const response = await authFetch('/api/workers', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formData),
+        })
         
-        if (dbError) throw new Error(dbError.message)
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Failed to create worker')
+        }
       }
 
       onSave()

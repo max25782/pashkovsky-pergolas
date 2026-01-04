@@ -11,7 +11,8 @@ import {
   Settings,
   Menu,
   X,
-  LogOut
+  LogOut,
+  Brain
 } from 'lucide-react'
 import { useState } from 'react'
 import clsx from 'clsx'
@@ -35,6 +36,7 @@ export default function CRMSidebar() {
 
   const menuItems = [
     { href: '/app/admin', label: language === 'ru' ? 'Панель' : language === 'en' ? 'Dashboard' : 'לוח בקרה', icon: LayoutDashboard },
+    { href: '/app/admin/ai-director', label: language === 'ru' ? 'AI-директор' : language === 'en' ? 'AI Director' : 'מנהל AI', icon: Brain },
     { href: '/app/admin/leads', label: t.nav.leads, icon: Target },
     { href: '/app/admin/deals', label: t.nav.deals, icon: FileText },
     { href: '/app/admin/users', label: language === 'ru' ? 'Пользователи' : language === 'en' ? 'Users' : 'משתמשים', icon: Users },

@@ -11,16 +11,11 @@ import { buildAnalyticsContext } from '@/lib/ai/buildAnalyticsContext'
 import { selectSystemPrompt } from '@/lib/ai/prompts'
 import { callLLM } from '@/lib/ai/client'
 import type { AnalyticsContext } from '@/lib/ai/analyticsTypes'
+import { requireAuthAsync } from '@/lib/middleware/auth-async'
 
 // ============================================================================
-// Auth & Rate Limiting
+// Rate Limiting
 // ============================================================================
-
-function auth(req: NextRequest): boolean {
-  const token = req.headers.get('x-admin-token') || req.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
-  const expected = process.env.ADMIN_TOKEN
-  return !!expected && token === expected
-}
 
 // Simple in-memory rate limit (can be improved with Redis/DB)
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
@@ -94,12 +89,8 @@ interface AnalyticsResponse {
 export async function POST(req: NextRequest) {
   try {
     // 1. Check auth
-    if (!auth(req)) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    const authCheck = await requireAuthAsync(req)
+    if (!authCheck.authorized) return authCheck.error
 
     // 2. Get rate limit identifier (use IP or token hash)
     const identifier = req.headers.get('x-forwarded-for')?.split(',')[0] || 
@@ -164,7 +155,9 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // 4. Build analytics context
+    // 4. Build analytics context (use company from auth if not provided)
+    const companyId = body.companyId || authCheck.context?.companyId
+    
     let context: AnalyticsContext
     try {
       context = await buildAnalyticsContext({
@@ -174,7 +167,7 @@ export async function POST(req: NextRequest) {
           to: body.period.to,
           tz: 'Asia/Jerusalem',
         },
-        companyId: body.companyId,
+        companyId,
       })
     } catch (error: any) {
       console.error('[AI Analytics] Error building context:', {

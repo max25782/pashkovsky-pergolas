@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { requireAuth } from '@/lib/middleware/auth'
+import { requireAuthAsync } from '@/lib/middleware/auth-async'
 
 function env(name: string): string {
   const v = process.env[name]
@@ -17,7 +17,7 @@ const supabase = SUPABASE_URL && SERVICE_KEY
 
 // GET - List all categories
 export async function GET(req: NextRequest) {
-  const authCheck = requireAuth(req)
+  const authCheck = await requireAuthAsync(req)
   if (!authCheck.authorized) return authCheck.error
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
   
@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
 
 // POST - Create a new category
 export async function POST(req: NextRequest) {
-  const authCheck = requireAuth(req)
+  const authCheck = await requireAuthAsync(req)
   if (!authCheck.authorized) return authCheck.error
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
   
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
 
 // PATCH - Update a category
 export async function PATCH(req: NextRequest) {
-  const authCheck = requireAuth(req)
+  const authCheck = await requireAuthAsync(req)
   if (!authCheck.authorized) return authCheck.error
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
   
@@ -132,7 +132,7 @@ export async function PATCH(req: NextRequest) {
 
 // DELETE - Delete a category
 export async function DELETE(req: NextRequest) {
-  const authCheck = requireAuth(req)
+  const authCheck = await requireAuthAsync(req)
   if (!authCheck.authorized) return authCheck.error
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
   

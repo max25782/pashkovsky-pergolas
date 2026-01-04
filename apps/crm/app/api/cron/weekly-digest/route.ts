@@ -57,6 +57,9 @@ export async function POST(req: NextRequest) {
     const results = []
 
     for (const companyId of companyIds) {
+      // Skip undefined companyIds in strict TypeScript mode
+      if (!companyId) continue
+      
       try {
         const digest = await generateWeeklyDigest(companyId)
         results.push({

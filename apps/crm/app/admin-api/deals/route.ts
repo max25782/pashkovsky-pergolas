@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getCompanyId } from '@/lib/middleware/company-context'
-import { requireAuth } from '@/lib/middleware/auth'
+import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { logDealEvent } from '@/lib/audit/logger'
 
 function env(name: string): string {
@@ -20,7 +20,7 @@ const supabase = SUPABASE_URL && SERVICE_KEY
 // GET - List all deals with filters
 export async function GET(req: NextRequest) {
   // Check authentication (JWT or admin token)
-  const authCheck = requireAuth(req)
+  const authCheck = await requireAuthAsync(req)
   if (!authCheck.authorized) return authCheck.error
   
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
 // POST - Create a new deal (usually from a won lead)
 export async function POST(req: NextRequest) {
   // Check authentication (JWT or admin token)
-  const authCheck = requireAuth(req)
+  const authCheck = await requireAuthAsync(req)
   if (!authCheck.authorized) return authCheck.error
   
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
@@ -170,7 +170,7 @@ export async function POST(req: NextRequest) {
 // PATCH - Update a deal
 export async function PATCH(req: NextRequest) {
   // Check authentication (JWT or admin token)
-  const authCheck = requireAuth(req)
+  const authCheck = await requireAuthAsync(req)
   if (!authCheck.authorized) return authCheck.error
   
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
@@ -290,7 +290,7 @@ export async function PATCH(req: NextRequest) {
 // DELETE - Delete a deal
 export async function DELETE(req: NextRequest) {
   // Check authentication (JWT or admin token)
-  const authCheck = requireAuth(req)
+  const authCheck = await requireAuthAsync(req)
   if (!authCheck.authorized) return authCheck.error
   
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })

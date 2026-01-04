@@ -4,7 +4,8 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { requireAuth, requireCompanyAccess } from '@/lib/auth'
+import { requireAuthAsync } from '@/lib/middleware/auth-async'
+import { requireCompanyAccess } from '@/lib/auth'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -19,7 +20,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   // 🔒 Security: Require authentication
-  const auth = await requireAuth(req)
+  const auth = await requireAuthAsync(req)
   if (!auth.authorized) return auth.error
 
   if (!supabase) {

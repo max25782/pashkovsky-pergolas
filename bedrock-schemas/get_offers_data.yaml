@@ -1,0 +1,79 @@
+openapi: 3.0.0
+info:
+  title: CRM Offers Data API
+  version: 1.0.0
+  description: API for fetching offers/quotes (הצעות מחיר) data from CRM
+paths:
+  /api/ai-director/data/offers:
+    get:
+      summary: Get offers list
+      description: Returns offers/quotes for the current company (multi-tenant)
+      operationId: getOffers
+      parameters:
+        - name: company_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Company ID (from session attributes)
+          x-amazon-bedrock-session-attribute: company_id
+        - name: deal_id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by deal id
+        - name: approved
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: Filter by approval status
+        - name: start_date
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter offers created after this date (ISO 8601)
+        - name: end_date
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter offers created before this date (ISO 8601)
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+          description: Max number of records (max 100)
+      security:
+        - ApiTokenAuth: []
+      responses:
+        '200':
+          description: Offers list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  offers:
+                    type: array
+                    items:
+                      type: object
+                  count:
+                    type: integer
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal Server Error
+components:
+  securitySchemes:
+    ApiTokenAuth:
+      type: apiKey
+      in: header
+      name: x-api-token
+      x-amazon-bedrock-session-attribute: api_token
+
+

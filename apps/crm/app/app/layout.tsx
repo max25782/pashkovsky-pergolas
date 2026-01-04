@@ -22,14 +22,14 @@ export default function CRMLayout({
 }) {
   return (
     <Providers>
-      <div className="flex min-h-screen">
+      <div className="flex h-screen overflow-hidden">
         {/* CRM Sidebar */}
         <Suspense fallback={<div className="w-64 bg-white dark:bg-neutral-800" />}>
           <CRMSidebar />
         </Suspense>
         
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 min-h-0 overflow-y-auto">
           {children}
         </main>
       </div>

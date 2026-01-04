@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { requireAuth, requirePermission } from '@/lib/middleware/auth'
+import { requireAuthAsync } from '@/lib/middleware/auth-async'
+import { requirePermission } from '@/lib/middleware/auth'
 import { generateToken, hashToken, getExpirationTime } from '@/lib/auth/tokens'
 import { sendEmail } from '@/lib/email'
 import { logResourceEvent } from '@/lib/audit/logger'
@@ -18,7 +19,7 @@ const supabase = SUPABASE_URL && SERVICE_KEY
  * Invite user to company
  */
 export async function POST(req: NextRequest) {
-  const authCheck = requireAuth(req)
+  const authCheck = await requireAuthAsync(req)
   if (!authCheck.authorized) return authCheck.error
 
   const permissionCheck = requirePermission(req, 'users:invite' as any)
@@ -35,52 +36,44 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate role
-    if (!['admin', 'manager', 'viewer'].includes(role)) {
-      return NextResponse.json({ error: 'Invalid role. Cannot invite as owner.' }, { status: 400 })
+    if (!['admin', 'manager', 'viewer', 'owner'].includes(role)) {
+      return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
     }
 
-    // Check if user already exists
-    let { data: user } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', email)
-      .single()
+    // Check if user already exists in auth.users
+    const { data: existingAuthUsers } = await supabase.auth.admin.listUsers()
+    const existingUser = existingAuthUsers?.users?.find(u => u.email === email)
+    
+    let userId: string
 
-    // If user doesn't exist, create them (they'll need to set password on first login)
-    if (!user) {
-      // Generate temporary password
-      const tempPassword = generateToken(16)
-      const { hashPassword } = await import('@/lib/auth/password')
-      const passwordHash = await hashPassword(tempPassword)
+    if (existingUser) {
+      // User already exists in auth
+      userId = existingUser.id
+      console.log('[Invite] User already exists:', userId)
+    } else {
+      // Create user in Supabase Auth
+      const { data: newAuthUser, error: authError } = await supabase.auth.admin.createUser({
+        email,
+        email_confirm: true, // Auto-confirm email
+        user_metadata: {
+          full_name: email.split('@')[0],
+        },
+      })
 
-      const { data: newUser, error: createError } = await supabase
-        .from('users')
-        .insert({
-          email,
-          password_hash: passwordHash,
-          full_name: email.split('@')[0], // Use email prefix as name
-        })
-        .select()
-        .single()
-
-      if (createError || !newUser) {
-        console.error('[Invite] User creation error:', createError)
-        return NextResponse.json({ error: 'Failed to create user' }, { status: 500 })
+      if (authError || !newAuthUser.user) {
+        console.error('[Invite] Auth user creation error:', authError)
+        return NextResponse.json({ error: 'Failed to create user in auth system' }, { status: 500 })
       }
 
-      user = newUser
-    }
-
-    // At this point, user must be defined
-    if (!user || !user.id) {
-      return NextResponse.json({ error: 'Failed to get or create user' }, { status: 500 })
+      userId = newAuthUser.user.id
+      console.log('[Invite] Created new user:', userId)
     }
 
     // Check if user is already a member
     const { data: existingMember } = await supabase
       .from('company_members')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('company_id', companyId)
       .single()
 
@@ -93,7 +86,7 @@ export async function POST(req: NextRequest) {
       .from('company_members')
       .insert({
         company_id: companyId,
-        user_id: user.id,
+        user_id: userId,
         role,
         invited_at: new Date().toISOString(),
       })
@@ -112,9 +105,9 @@ export async function POST(req: NextRequest) {
       .eq('id', companyId)
       .single()
 
-    // Send invitation email
+    // Send invitation email with password reset link
     try {
-      const inviteUrl = `${APP_URL}/auth/accept-invite?token=${generateToken()}&email=${encodeURIComponent(email)}`
+      const inviteUrl = `${APP_URL}/login?email=${encodeURIComponent(email)}`
       
       await sendEmail({
         to: email,
@@ -122,10 +115,11 @@ export async function POST(req: NextRequest) {
         html: `
           <h2>Вы приглашены!</h2>
           <p>Вы были приглашены присоединиться к компании <strong>${company?.name || ''}</strong> с ролью <strong>${role}</strong>.</p>
-          <p><a href="${inviteUrl}">Принять приглашение</a></p>
-          <p>Или перейдите по ссылке: ${inviteUrl}</p>
+          <p>Для входа перейдите по ссылке и используйте функцию "Забыли пароль" для установки пароля:</p>
+          <p><a href="${inviteUrl}">Войти в систему</a></p>
+          <p>Ваш email: <strong>${email}</strong></p>
         `,
-        text: `Вы приглашены в ${company?.name || 'компанию'}. Перейдите по ссылке: ${inviteUrl}`,
+        text: `Вы приглашены в ${company?.name || 'компанию'}. Перейдите по ссылке для входа: ${inviteUrl}`,
       })
     } catch (emailError) {
       console.error('[Invite] Email sending error:', emailError)
@@ -133,7 +127,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Log the invitation
-    await logResourceEvent(req, 'create', 'user', user.id, { email, role, companyId }, 'success')
+    await logResourceEvent(req, 'create', 'user', userId, { email, role, companyId }, 'success')
 
     return NextResponse.json({
       success: true,

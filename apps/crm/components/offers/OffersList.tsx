@@ -7,6 +7,7 @@ import type { Offer } from '@/types/offer'
 import { FileText, Check, Clock, Download, FileDown, MessageCircle, Mail, Trash2 } from 'lucide-react'
 import { getOfferPublicUrl } from '@/lib/offer-sharing'
 import type { Locale } from '@/lib/locales'
+import { authFetch } from '@/lib/api/auth-fetch'
 
 interface OffersListProps {
   dealId: string
@@ -21,17 +22,6 @@ export function OffersList({ dealId, refreshTrigger, adminToken }: OffersListPro
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Helper to get auth headers
-  const getAuthHeaders = useCallback((): HeadersInit => {
-    const token = adminToken || localStorage.getItem('token') || localStorage.getItem('admin_token')
-    if (!token) return {}
-    
-    const isJWT = !!localStorage.getItem('token') || (adminToken && adminToken.length > 100)
-    if (isJWT) {
-      return { 'Authorization': `Bearer ${token}` }
-    }
-    return { 'x-admin-token': token }
-  }, [adminToken])
 
   const fetchOffers = useCallback(async () => {
     setLoading(true)
@@ -112,9 +102,8 @@ export function OffersList({ dealId, refreshTrigger, adminToken }: OffersListPro
   const handleDelete = useCallback(async (offerId: string) => {
     if (!confirm('למחוק את ההצעה הזו?')) return
     try {
-      const response = await fetch(`/api/offers/${offerId}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders()
+      const response = await authFetch(`/api/offers/${offerId}`, {
+        method: 'DELETE'
       })
       if (!response.ok) {
         const err = await response.json()
@@ -125,14 +114,13 @@ export function OffersList({ dealId, refreshTrigger, adminToken }: OffersListPro
     } catch (err: any) {
       alert('❌ שגיאה במחיקה: ' + err.message)
     }
-  }, [fetchOffers, getAuthHeaders])
+  }, [fetchOffers])
 
   const handleGeneratePdf = useCallback(async (offer: Offer, forceRegenerate = false) => {
     try {
       const url = `/api/offers/${offer.id}/pdf${forceRegenerate ? '?force=true' : ''}`
-      const res = await fetch(url, { 
-        method: 'POST',
-        headers: getAuthHeaders()
+      const res = await authFetch(url, {
+        method: 'POST'
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
@@ -154,7 +142,7 @@ export function OffersList({ dealId, refreshTrigger, adminToken }: OffersListPro
     } catch (err: any) {
       alert('❌ שגיאה ביצירת PDF: ' + err.message)
     }
-  }, [getAuthHeaders])
+  }, [])
 
   const handleViewOffer = useCallback((offerId: string) => {
     const url = getOfferPublicUrl(offerId, locale)

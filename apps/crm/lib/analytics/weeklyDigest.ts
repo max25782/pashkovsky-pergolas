@@ -33,10 +33,14 @@ export interface WeeklyDigestResult {
  * Generate weekly digest for a company
  */
 export async function generateWeeklyDigest(
-  companyId?: string
+  companyId: string // Make it required
 ): Promise<WeeklyDigestResult> {
   if (!supabase) {
     throw new Error('Supabase client not initialized')
+  }
+  
+  if (!companyId) {
+    throw new Error('Company ID is required for generating weekly digest')
   }
 
   // Calculate last 7 days period (Asia/Jerusalem timezone)
@@ -89,7 +93,7 @@ export async function generateWeeklyDigest(
     const { data, error } = await supabase
       .from('weekly_digests')
       .insert({
-        company_id: companyId || null,
+        company_id: companyId,
         period_from: periodFrom,
         period_to: periodTo,
         summary_json: context,
@@ -110,7 +114,7 @@ export async function generateWeeklyDigest(
             status: 'generated',
             error_message: null,
           })
-          .eq('company_id', companyId || null)
+          .eq('company_id', companyId)
           .eq('period_from', periodFrom)
           .eq('period_to', periodTo)
           .select()
@@ -150,7 +154,7 @@ export async function generateWeeklyDigest(
         const { data: existing } = await supabase
           .from('weekly_digests')
           .select('id')
-          .eq('company_id', companyId || null)
+          .eq('company_id', companyId)
           .eq('period_from', periodFrom)
           .eq('period_to', periodTo)
           .single()
@@ -159,7 +163,7 @@ export async function generateWeeklyDigest(
           await supabase
             .from('weekly_digests')
             .insert({
-              company_id: companyId || null,
+              company_id: companyId,
               period_from: periodFrom,
               period_to: periodTo,
               summary_json: {},

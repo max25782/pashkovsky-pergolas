@@ -1,0 +1,69 @@
+openapi: 3.0.0
+info:
+  title: CRM Deals Data API
+  version: 1.0.0
+  description: API для получения данных о сделках из CRM
+paths:
+  /api/ai-director/data/deals:
+    description: Endpoint для получения данных о сделках из CRM
+    get:
+      summary: Получить список сделок
+      description: Возвращает список сделок с возможностью фильтрации по статусу
+      operationId: getDeals
+      parameters:
+        - name: company_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: ID компании (берётся из session attributes)
+          x-amazon-bedrock-session-attribute: company_id
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [lead, negotiation, contract, production, installation, completed, cancelled]
+          description: Фильтр по статусу сделки
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+          description: Максимальное количество записей
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+          description: Смещение для пагинации
+      security:
+        - ApiTokenAuth: []
+      responses:
+        '200':
+          description: Список сделок
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deals:
+                    type: array
+                    items:
+                      type: object
+                  total:
+                    type: integer
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal Server Error
+components:
+  securitySchemes:
+    ApiTokenAuth:
+      type: apiKey
+      in: header
+      name: x-api-token
+      x-amazon-bedrock-session-attribute: api_token
+

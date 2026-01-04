@@ -5,56 +5,36 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { subscriptionService } from '@/lib/services/subscription-service'
-import { createClient } from '@/lib/supabase/server'
+import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import type { GetCurrentSubscriptionResponse } from '@/types/subscription'
-import type { CompanyMember } from '@/types/membership'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
   try {
     // Auth check
-    const supabase = createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+    const authResult = await requireAuthAsync(req)
+    if (!authResult.authorized) {
+      return authResult.error
     }
 
-    // Get company_id
-    const { data: membership } = await supabase
-      .from('company_members')
-      .select('company_id')
-      .eq('user_id', user.id)
-      .single<Pick<CompanyMember, 'company_id'>>()
-    
-    if (!membership) {
+    const company_id = authResult.context.companyId
+    if (!company_id) {
       return NextResponse.json(
         { error: 'No company found' },
         { status: 404 }
       )
     }
 
-    const company_id = membership.company_id
-
-    // Get current subscription
+    // Get current subscription (may be null for newly created companies)
     const subscription = await subscriptionService.getCurrentSubscription(company_id)
-    if (!subscription) {
-      return NextResponse.json(
-        { error: 'No active subscription' },
-        { status: 404 }
-      )
-    }
 
-    // Get plan details
+    // Get plan details (service falls back to trial plan when subscription is missing)
     const plan = await subscriptionService.getCurrentPlan(company_id)
     if (!plan) {
       return NextResponse.json(
         { error: 'Plan not found' },
-        { status: 404 }
+        { status: 500 }
       )
     }
 
@@ -77,4 +57,3 @@ export async function GET(req: NextRequest) {
     )
   }
 }
-

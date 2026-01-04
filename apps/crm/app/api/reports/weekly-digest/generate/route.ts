@@ -8,25 +8,16 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { generateWeeklyDigest } from '@/lib/analytics/weeklyDigest'
+import { requireAuthAsync } from '@/lib/middleware/auth-async'
 
 // Force dynamic rendering since we use request.headers
 export const dynamic = 'force-dynamic'
 
-function auth(req: NextRequest): boolean {
-  const token = req.headers.get('x-admin-token') || req.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
-  const expected = process.env.ADMIN_TOKEN
-  return !!expected && token === expected
-}
-
 export async function POST(req: NextRequest) {
   try {
     // 1. Check auth
-    if (!auth(req)) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    const authCheck = await requireAuthAsync(req)
+    if (!authCheck.authorized) return authCheck.error
 
     // 2. Parse optional companyId from body
     let body: { companyId?: string } = {}
@@ -39,8 +30,18 @@ export async function POST(req: NextRequest) {
       // Empty body is OK
     }
 
+    // Use company from auth context if not provided in body
+    const companyId = body.companyId || authCheck.context?.companyId
+    
+    if (!companyId) {
+      return NextResponse.json(
+        { error: 'Company ID is required' },
+        { status: 400 }
+      )
+    }
+
     // 3. Generate digest
-    const digest = await generateWeeklyDigest(body.companyId)
+    const digest = await generateWeeklyDigest(companyId)
 
     return NextResponse.json({
       success: true,

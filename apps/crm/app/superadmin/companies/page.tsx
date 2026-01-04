@@ -5,6 +5,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { CompaniesTable } from '@/components/superadmin/CompaniesTable'
+import { CompanyOnboardingForm } from '@/components/superadmin/CompanyOnboardingForm'
 
 async function getCompanies() {
   // Use SERVICE_ROLE_KEY to bypass RLS (SuperAdmin has full access)
@@ -54,6 +55,9 @@ export default async function CompaniesPage() {
           <p className="text-gray-600 mt-1">All companies on the platform</p>
         </div>
       </div>
+
+      {/* Onboarding Form */}
+      <CompanyOnboardingForm />
 
       {/* Companies Table with Delete */}
       <CompaniesTable companies={companies} />

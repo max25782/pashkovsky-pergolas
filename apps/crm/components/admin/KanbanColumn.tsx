@@ -23,11 +23,11 @@ export function KanbanColumn({
   const t = useCRMTranslations()
   return (
     <div
-      className="flex-shrink-0 w-[92vw] min-w-[92vw] sm:w-80 sm:min-w-[320px]"
+      className="flex-shrink-0 h-full w-[92vw] min-w-[92vw] sm:w-80 sm:min-w-[320px]"
       onDragOver={onDragOver}
       onDrop={onDrop}
     >
-      <div className="bg-white/5 rounded-lg border border-white/10 overflow-hidden">
+      <div className="bg-white/5 rounded-lg border border-white/10 overflow-hidden flex flex-col h-full min-h-0">
         <div className={`${stage.color} px-4 py-3 flex items-center justify-between`}>
           <h3 className="font-semibold text-white">
             {stage.label}
@@ -36,7 +36,13 @@ export function KanbanColumn({
             {deals.length}
           </span>
         </div>
-        <div className="p-3 space-y-3 min-h-[400px] max-h-[calc(100vh-300px)] overflow-y-auto">
+        <div
+          className="p-3 space-y-3 min-h-0 flex-1 overflow-y-auto"
+          onWheel={(e) => {
+            // Keep vertical scrolling inside the column from being hijacked by the board's horizontal wheel handler
+            e.stopPropagation()
+          }}
+        >
           {deals.map(deal => (
             <DealCard
               key={deal.id}

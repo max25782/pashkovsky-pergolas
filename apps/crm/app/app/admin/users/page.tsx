@@ -1,7 +1,8 @@
 ﻿'use client'
 
 import { useState, useEffect } from 'react'
-import type { Locale } from '@/lib/locales'
+import { authFetch } from '@/lib/api/auth-fetch'
+import { createAuthenticatedClient } from '@/lib/supabase/client'
 
 interface User {
   id: string
@@ -19,22 +20,44 @@ export default function AdminUsersPage() {
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState<'admin' | 'manager' | 'viewer'>('viewer')
   const [inviting, setInviting] = useState(false)
-
-  // Get company ID from token (simplified - in real app, extract from JWT)
-  const companyId = '00000000-0000-0000-0000-000000000001' // TODO: Get from context
+  const [companyId, setCompanyId] = useState<string | null>(null)
 
   useEffect(() => {
-    loadUsers()
+    initializeAndLoadUsers()
   }, [])
 
-  async function loadUsers() {
+  async function initializeAndLoadUsers() {
     try {
-      const token = localStorage.getItem('token') // TODO: Use proper auth context
-      const response = await fetch(`/admin-api/users?company_id=${companyId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      })
+      // Get company ID from user metadata
+      const supabase = createAuthenticatedClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) {
+        console.error('[Users] No authenticated user')
+        return
+      }
+
+      // Get company from localStorage or user metadata
+      const storedCompanyId = localStorage.getItem('company_id')
+      const userCompanyId = user.user_metadata?.company_id
+      const activeCompanyId = storedCompanyId || userCompanyId
+
+      if (!activeCompanyId) {
+        console.error('[Users] No company ID found')
+        return
+      }
+
+      setCompanyId(activeCompanyId)
+      await loadUsers(activeCompanyId)
+    } catch (error) {
+      console.error('[Users] Initialization error:', error)
+      setLoading(false)
+    }
+  }
+
+  async function loadUsers(activeCompanyId: string) {
+    try {
+      const response = await authFetch(`/admin-api/users?company_id=${activeCompanyId}`)
 
       if (!response.ok) {
         throw new Error('Failed to load users')
@@ -51,16 +74,17 @@ export default function AdminUsersPage() {
 
   async function handleInvite(e: React.FormEvent) {
     e.preventDefault()
+    
+    if (!companyId) {
+      alert('Company ID not found')
+      return
+    }
+
     setInviting(true)
 
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch('/admin-api/users/invite', {
+      const response = await authFetch('/admin-api/users/invite', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           email: inviteEmail,
           companyId,
@@ -75,7 +99,7 @@ export default function AdminUsersPage() {
 
       alert('User invited successfully!')
       setInviteEmail('')
-      loadUsers()
+      await loadUsers(companyId)
     } catch (error: any) {
       alert(`Error: ${error.message}`)
     } finally {
@@ -84,14 +108,11 @@ export default function AdminUsersPage() {
   }
 
   async function handleRoleChange(userId: string, newRole: string) {
+    if (!companyId) return
+
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch('/admin-api/users', {
+      const response = await authFetch('/admin-api/users', {
         method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           userId,
           companyId,
@@ -103,7 +124,7 @@ export default function AdminUsersPage() {
         throw new Error('Failed to update role')
       }
 
-      loadUsers()
+      await loadUsers(companyId)
     } catch (error) {
       console.error('Error updating role:', error)
       alert('Failed to update role')
@@ -111,24 +132,22 @@ export default function AdminUsersPage() {
   }
 
   async function handleRemove(userId: string) {
+    if (!companyId) return
+
     if (!confirm('Are you sure you want to remove this user?')) {
       return
     }
 
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`/admin-api/users?user_id=${userId}&company_id=${companyId}`, {
+      const response = await authFetch(`/admin-api/users?user_id=${userId}&company_id=${companyId}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
       })
 
       if (!response.ok) {
         throw new Error('Failed to remove user')
       }
 
-      loadUsers()
+      await loadUsers(companyId)
     } catch (error) {
       console.error('Error removing user:', error)
       alert('Failed to remove user')

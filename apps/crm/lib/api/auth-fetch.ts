@@ -12,13 +12,29 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
 
   try {
     const supabase = createClient()
-    const { data: { session }, error } = await supabase.auth.getSession()
-    
-    if (error || !session?.access_token) {
-      console.warn('[authFetch] No valid session:', error?.message || 'No access_token')
+
+    // First try to get current session
+    let { data: { session }, error } = await supabase.auth.getSession()
+
+    // If no session, try to refresh
+    if (!session || error) {
+      console.log('[authFetch] No session, trying to refresh...')
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
+
+      if (refreshError) {
+        console.warn('[authFetch] Failed to refresh session:', refreshError.message)
+        return {}
+      }
+
+      session = refreshData.session
+    }
+
+    if (!session?.access_token) {
+      console.warn('[authFetch] No valid session after refresh')
       return {}
     }
 
+    console.log('[authFetch] Got valid session token')
     return {
       Authorization: `Bearer ${session.access_token}`
     }

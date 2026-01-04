@@ -1,0 +1,95 @@
+openapi: 3.0.0
+info:
+  title: CRM Analytics Data API
+  version: 1.0.0
+  description: API для получения аналитических данных из CRM
+paths:
+  /api/ai-director/data/analytics:
+    description: Endpoint для получения аналитических данных из CRM, включая доходы, сделки, лиды и статистику за указанный период
+    get:
+      summary: Получить аналитические данные
+      description: Возвращает агрегированные данные по сделкам, лидам и рабочим сменам за период
+      operationId: getAnalytics
+      parameters:
+        - name: company_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: ID компании (берётся из session attributes)
+          x-amazon-bedrock-session-attribute: company_id
+        - name: period
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [week, month, quarter, year, all_time, all]
+            default: month
+          description: Период для аналитики (week, month, quarter, year, all_time для всех данных)
+        - name: start_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Начальная дата для кастомного периода (ISO 8601)
+        - name: end_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Конечная дата для кастомного периода (ISO 8601)
+      security:
+        - ApiTokenAuth: []
+      responses:
+        '200':
+          description: Аналитические данные
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  period:
+                    type: object
+                    properties:
+                      start:
+                        type: string
+                      end:
+                        type: string
+                      type:
+                        type: string
+                  revenue:
+                    type: object
+                    properties:
+                      total:
+                        type: number
+                        description: Общая сумма доходов
+                      from_offers:
+                        type: number
+                        description: Доходы из одобренных предложений
+                      from_deals:
+                        type: number
+                        description: Доходы из завершенных сделок
+                      approved_offers_count:
+                        type: integer
+                        description: Количество одобренных предложений
+                      completed_deals_count:
+                        type: integer
+                        description: Количество завершенных сделок
+                  deals:
+                    type: object
+                  leads:
+                    type: object
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal Server Error
+components:
+  securitySchemes:
+    ApiTokenAuth:
+      type: apiKey
+      in: header
+      name: x-api-token
+      x-amazon-bedrock-session-attribute: api_token
+

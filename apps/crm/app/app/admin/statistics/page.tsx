@@ -54,8 +54,8 @@ export default function StatisticsPage() {
   }, [])
 
   function handleDealClick(deal: Deal) {
-    // Redirect to deals page - the deal will be opened there
-    router.push('/app/admin/deals')
+    // Redirect to deals page with dealId query parameter
+    router.push(`/app/admin/deals?dealId=${deal.id}`)
   }
 
   return (

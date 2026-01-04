@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { Locale } from '@/lib/locales'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
+import { authFetch } from '@/lib/api/auth-fetch'
 
 interface Article {
   id: number
@@ -34,8 +35,8 @@ export default function AdminArticlesPage() {
       setLoading(true)
       setError(null)
       
-      // Load from Supabase API (or fallback to local JSON if table doesn't exist)
-      const response = await fetch('/api/admin/articles')
+      // Load from Supabase API with authentication
+      const response = await authFetch('/api/admin/articles')
       
       if (!response.ok) {
         throw new Error(`Failed to load articles: ${response.statusText}`)
@@ -56,7 +57,7 @@ export default function AdminArticlesPage() {
     if (!editingArticle) return
 
     try {
-      const response = await fetch('/api/admin/articles', {
+      const response = await authFetch('/api/admin/articles', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -82,7 +83,7 @@ export default function AdminArticlesPage() {
     if (!confirm(t.articles.deleteConfirm)) return
 
     try {
-      const response = await fetch(`/api/admin/articles?slug=${slug}`, {
+      const response = await authFetch(`/api/admin/articles?slug=${slug}`, {
         method: 'DELETE',
       })
 

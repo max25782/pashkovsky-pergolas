@@ -1,0 +1,69 @@
+openapi: 3.0.0
+info:
+  title: CRM Workers Data API
+  version: 1.0.0
+  description: API для получения данных о работниках и сменах из CRM
+paths:
+  /api/ai-director/data/workers:
+    description: Endpoint для получения данных о работниках и рабочих сменах из CRM
+    get:
+      summary: Получить список работников и их смен
+      description: Возвращает список работников с опциональной информацией о рабочих сменах
+      operationId: getWorkers
+      parameters:
+        - name: company_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: ID компании (берётся из session attributes)
+          x-amazon-bedrock-session-attribute: company_id
+        - name: include_shifts
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: Включить информацию о рабочих сменах
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+          description: Максимальное количество записей
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+          description: Смещение для пагинации
+      security:
+        - ApiTokenAuth: []
+      responses:
+        '200':
+          description: Список работников
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  workers:
+                    type: array
+                    items:
+                      type: object
+                  total:
+                    type: integer
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal Server Error
+components:
+  securitySchemes:
+    ApiTokenAuth:
+      type: apiKey
+      in: header
+      name: x-api-token
+      x-amazon-bedrock-session-attribute: api_token
+

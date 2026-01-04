@@ -1,0 +1,21 @@
+{
+  "name": "bedrock-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP Server for Amazon Bedrock Agent",
+  "type": "module",
+  "main": "bedrock-server.ts",
+  "scripts": {
+    "start": "tsx bedrock-server.ts",
+    "dev": "tsx watch bedrock-server.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-agent-runtime": "^3.700.0",
+    "@modelcontextprotocol/sdk": "^1.0.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.6.2"
+  }
+}
+

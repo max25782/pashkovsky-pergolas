@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { requireAuth } from '@/lib/middleware/auth'
+import { requireAuthAsync } from '@/lib/middleware/auth-async'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -10,7 +10,7 @@ const supabase = SUPABASE_URL && SERVICE_KEY
   : undefined
 
 export async function POST(req: NextRequest) {
-  const authCheck = requireAuth(req)
+  const authCheck = await requireAuthAsync(req)
   if (!authCheck.authorized) return authCheck.error
   
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })

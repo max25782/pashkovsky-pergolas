@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import sharp from 'sharp'
 import { uploadToS3, isS3Configured } from '@/lib/s3-upload'
-import { requireAuth } from '@/lib/middleware/auth'
+import { requireAuthAsync } from '@/lib/middleware/auth-async'
 
 function env(name: string): string {
   const v = process.env[name]
@@ -24,7 +24,7 @@ const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'
 export async function POST(req: NextRequest) {
   console.log('POST /admin-api/gallery/upload called')
   
-  const authCheck = requireAuth(req)
+  const authCheck = await requireAuthAsync(req)
   if (!authCheck.authorized) {
     console.error('Unauthorized request')
     return new Response('Unauthorized', { status: 401 })

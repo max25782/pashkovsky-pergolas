@@ -5,7 +5,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import type { Worker } from '@/types/workers'
-import { requireAuth } from '@/lib/auth'
+import { requireAuthAsync } from '@/lib/middleware/auth-async'
+import { getUserContextAsync } from '@/lib/middleware/company-context'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -32,8 +33,8 @@ function transformWorkerFromDB(row: any): Worker {
 // GET - List all workers (active by default)
 export async function GET(req: NextRequest) {
   // 🔒 Security: Require authentication
-  const auth = await requireAuth(req)
-  if (!auth.authorized) return auth.error
+  const authCheck = await requireAuthAsync(req)
+  if (!authCheck.authorized) return authCheck.error
 
   if (!supabase) {
     return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
@@ -43,16 +44,20 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const includeInactive = searchParams.get('includeInactive') === 'true'
 
-    // 🔒 Security: Filter by company_id (unless admin token)
+    // Get user context to extract company_id
+    const userContext = await getUserContextAsync(req)
+    const companyId = userContext?.companyId
+
+    if (!companyId) {
+      return NextResponse.json({ error: 'Company ID not found' }, { status: 400 })
+    }
+
+    // 🔒 Security: Filter by company_id
     let query = supabase
       .from('workers')
       .select('*')
+      .eq('company_id', companyId) // Multi-tenant filter
       .order('first_name', { ascending: true })
-
-    // Only filter by company if not using admin token
-    if (auth.user.companyId && auth.user.companyId !== 'admin') {
-      query = query.eq('company_id', auth.user.companyId) // Multi-tenant filter
-    }
 
     if (!includeInactive) {
       query = query.eq('is_active', true)
@@ -79,8 +84,8 @@ export async function GET(req: NextRequest) {
 // POST - Create new worker
 export async function POST(req: NextRequest) {
   // 🔒 Security: Require authentication
-  const auth = await requireAuth(req)
-  if (!auth.authorized) return auth.error
+  const authCheck = await requireAuthAsync(req)
+  if (!authCheck.authorized) return authCheck.error
 
   if (!supabase) {
     return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
@@ -104,25 +109,12 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // 🔒 Security: Assign to user's company (or first available company for admin)
-    let companyId = auth.user.companyId
-    
-    // If using admin token, get the first company from the database
-    if (companyId === 'admin') {
-      const { data: companies } = await supabase
-        .from('companies')
-        .select('id')
-        .limit(1)
-        .single()
-      
-      if (companies) {
-        companyId = companies.id
-      } else {
-        return NextResponse.json(
-          { error: 'No company found. Please create a company first.' },
-          { status: 400 }
-        )
-      }
+    // Get user context to extract company_id
+    const userContext = await getUserContextAsync(req)
+    const companyId = userContext?.companyId
+
+    if (!companyId) {
+      return NextResponse.json({ error: 'Company ID not found' }, { status: 400 })
     }
 
     const { data, error } = await supabase
@@ -141,7 +133,7 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error('Error creating worker:', error)
-      return NextResponse.json({ error: 'Failed to create worker' }, { status: 500 })
+      return NextResponse.json({ error: 'Failed to create worker', details: error.message }, { status: 500 })
     }
 
     return NextResponse.json({ worker: transformWorkerFromDB(data) })

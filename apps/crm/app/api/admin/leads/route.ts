@@ -1,16 +1,11 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { requireAuthAsync } from '@/lib/middleware/auth-async'
 
 function env(name: string): string {
   const v = process.env[name]
   if (!v) throw new Error(`Missing env ${name}`)
   return v
-}
-
-function auth(req: NextRequest) {
-  const token = req.headers.get('x-admin-token') || req.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
-  const expected = process.env.ADMIN_TOKEN
-  return !!expected && token === expected
 }
 
 const SUPABASE_URL = process.env.SUPABASE_URL
@@ -37,7 +32,8 @@ async function sbFetch(path: string, init?: RequestInit) {
 }
 
 export async function GET(req: NextRequest) {
-  if (!auth(req)) return new Response('Unauthorized', { status: 401 })
+  const authCheck = await requireAuthAsync(req)
+  if (!authCheck.authorized) return authCheck.error
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
   const { searchParams } = new URL(req.url)
   const q = searchParams.get('q')?.trim() || ''
@@ -55,7 +51,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  if (!auth(req)) return new Response('Unauthorized', { status: 401 })
+  const authCheck = await requireAuthAsync(req)
+  if (!authCheck.authorized) return authCheck.error
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
   let body: any
   try { body = await req.json() } catch { return new Response('Bad JSON', { status: 400 }) }
@@ -67,7 +64,8 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  if (!auth(req)) return new Response('Unauthorized', { status: 401 })
+  const authCheck = await requireAuthAsync(req)
+  if (!authCheck.authorized) return authCheck.error
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
   const { searchParams } = new URL(req.url)
   const id = searchParams.get('id')
