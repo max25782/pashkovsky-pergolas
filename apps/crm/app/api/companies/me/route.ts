@@ -14,6 +14,9 @@ const supabase = SUPABASE_URL && SERVICE_KEY
   ? createClient(SUPABASE_URL, SERVICE_KEY)
   : null
 
+// Force dynamic rendering (this route uses request headers)
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: NextRequest) {
   try {
     // Authenticate request

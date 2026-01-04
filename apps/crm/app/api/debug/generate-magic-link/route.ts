@@ -30,9 +30,13 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // Use environment variable for redirect URL, fallback to localhost for development
-    const baseUrl = process.env.NEXT_PUBLIC_CRM_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'
+    // Get base URL from request (production or development)
+    const requestUrl = new URL(req.url)
+    const baseUrl = `${requestUrl.protocol}//${requestUrl.host}`
     const redirectUrl = `${baseUrl}/app/admin`
+    
+    console.log('[Debug Magic Link] Using base URL:', baseUrl)
+    console.log('[Debug Magic Link] Redirect URL:', redirectUrl)
 
     const { data, error } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',

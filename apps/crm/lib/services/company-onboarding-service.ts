@@ -292,15 +292,19 @@ async function grantEnterpriseAccess(companyId: string, adminId: string): Promis
 /**
  * Send magic login link
  */
-async function sendMagicLink(email: string): Promise<{ sent: boolean; url?: string }> {
+async function sendMagicLink(email: string, baseUrl: string): Promise<{ sent: boolean; url?: string }> {
   console.log('[Onboarding] Generating magic link for:', email)
+  console.log('[Onboarding] Using base URL:', baseUrl)
 
   try {
+    const redirectUrl = `${baseUrl}/app/admin`
+    console.log('[Onboarding] Redirect URL:', redirectUrl)
+
     const { data, error } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
       email,
       options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_CRM_URL || process.env.NEXT_PUBLIC_APP_URL}/app/admin`,
+        redirectTo: redirectUrl,
       },
     })
 
@@ -329,9 +333,18 @@ async function sendMagicLink(email: string): Promise<{ sent: boolean; url?: stri
 export async function onboardCompany(
   email: string,
   sendInviteEmail: boolean,
-  adminId: string
+  adminId: string,
+  baseUrl?: string
 ): Promise<OnboardingResult> {
   console.log('[Onboarding] Starting onboarding for:', email)
+
+  // Determine base URL: use provided, then env vars, then fallback
+  const finalBaseUrl = baseUrl || 
+    process.env.NEXT_PUBLIC_CRM_URL || 
+    process.env.NEXT_PUBLIC_APP_URL || 
+    'http://localhost:3001'
+  
+  console.log('[Onboarding] Using base URL:', finalBaseUrl)
 
   try {
     // Step 1: Find or create user
@@ -349,7 +362,7 @@ export async function onboardCompany(
     // Step 5: Send magic link (optional)
     let magicLinkResult: { sent: boolean; url?: string } = { sent: false }
     if (sendInviteEmail) {
-      magicLinkResult = await sendMagicLink(userResult.email)
+      magicLinkResult = await sendMagicLink(userResult.email, finalBaseUrl)
     }
 
     console.log('[Onboarding] Onboarding completed successfully')

@@ -59,11 +59,17 @@ export async function POST(request: NextRequest) {
 
     console.log('[API /superadmin/companies/onboard] Starting onboarding for:', email)
 
+    // Get base URL from request (production or development)
+    const requestUrl = new URL(request.url)
+    const baseUrl = `${requestUrl.protocol}//${requestUrl.host}`
+    console.log('[API /superadmin/companies/onboard] Using base URL:', baseUrl)
+
     // Execute onboarding
     const result = await onboardCompany(
       email.toLowerCase().trim(),
       sendInviteEmail,
-      adminSession.user_id
+      adminSession.user_id,
+      baseUrl
     )
 
     if (!result.success) {
