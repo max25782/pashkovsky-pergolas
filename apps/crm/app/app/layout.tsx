@@ -6,7 +6,7 @@ import { Suspense } from 'react'
 
 export const metadata: Metadata = {
   title: {
-    default: 'CRM | Pashkovsky Group',
+    default: 'CRM Dashboard',
     template: '%s | CRM',
   },
   robots: {

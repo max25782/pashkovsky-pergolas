@@ -300,7 +300,7 @@ async function sendMagicLink(email: string): Promise<{ sent: boolean; url?: stri
       type: 'magiclink',
       email,
       options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_CRM_URL || process.env.NEXT_PUBLIC_APP_URL}/app`,
+        redirectTo: `${process.env.NEXT_PUBLIC_CRM_URL || process.env.NEXT_PUBLIC_APP_URL}/app/admin`,
       },
     })
 
