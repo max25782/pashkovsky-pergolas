@@ -31,30 +31,59 @@ interface ModelItem {
 // GET - Get models organized by subdirectory from S3
 export async function GET(req: NextRequest) {
   try {
+    // Debug: Log environment variables (without secrets)
+    console.log('[Models API] S3 Configuration:', {
+      bucket: S3_BUCKET || 'NOT SET',
+      region: S3_REGION,
+      hasAccessKey: !!process.env.AWS_ACCESS_KEY_ID,
+      hasSecretKey: !!process.env.AWS_SECRET_ACCESS_KEY,
+    })
+
     const s3Client = getS3Client()
     
     // If S3 is not configured, return empty array (will use static data)
     if (!s3Client || !S3_BUCKET) {
-      console.warn('[Models API] S3 not configured, returning empty array')
+      console.warn('[Models API] S3 not configured:', {
+        s3Client: !!s3Client,
+        bucket: S3_BUCKET,
+        accessKey: !!process.env.AWS_ACCESS_KEY_ID,
+        secretKey: !!process.env.AWS_SECRET_ACCESS_KEY,
+      })
       return NextResponse.json({ items: [] })
     }
 
     // List all objects in images/dgamim/ prefix
+    const prefix = 'images/dgamim/'
+    console.log(`[Models API] Listing S3 objects with prefix: ${prefix} in bucket: ${S3_BUCKET}`)
+    
     const command = new ListObjectsV2Command({
       Bucket: S3_BUCKET,
-      Prefix: 'images/dgamim/',
+      Prefix: prefix,
       Delimiter: '/',
     })
 
     const response = await s3Client.send(command)
     
+    console.log('[Models API] S3 Response:', {
+      commonPrefixes: response.CommonPrefixes?.length || 0,
+      contents: response.Contents?.length || 0,
+      isTruncated: response.IsTruncated,
+    })
+    
     // Get all model folders (common prefixes)
     const modelFolders = response.CommonPrefixes?.map(prefix => prefix.Prefix) || []
     
     if (modelFolders.length === 0) {
-      console.warn('[Models API] No model folders found in S3')
+      console.warn('[Models API] No model folders found in S3', {
+        prefix,
+        bucket: S3_BUCKET,
+        hasContents: (response.Contents?.length || 0) > 0,
+        contentsCount: response.Contents?.length || 0,
+      })
       return NextResponse.json({ items: [] })
     }
+    
+    console.log(`[Models API] Found ${modelFolders.length} model folders:`, modelFolders)
 
     // For each model folder, list images
     const modelGroups: Record<string, string[]> = {}
@@ -98,8 +127,19 @@ export async function GET(req: NextRequest) {
     console.log(`[Models API] Returning ${items.length} models from S3`)
 
     return NextResponse.json({ items })
-  } catch (error) {
-    console.error('[Models API] Unexpected error:', error)
+  } catch (error: any) {
+    console.error('[Models API] Unexpected error:', {
+      error: error.message,
+      code: error.Code,
+      name: error.name,
+      accessKeyId: error.AWSAccessKeyId,
+    })
+    
+    // If it's an auth error, log it clearly
+    if (error.Code === 'InvalidAccessKeyId' || error.Code === 'SignatureDoesNotMatch') {
+      console.error('[Models API] AWS Authentication failed. Check AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY')
+    }
+    
     // Return empty array on error (will use static data as fallback)
     return NextResponse.json({ items: [] })
   }

@@ -57,29 +57,34 @@ export async function POST(req: NextRequest) {
     const results = []
 
     for (const companyId of companyIds) {
+      // Skip if companyId is undefined
+      if (!companyId) {
+        continue
+      }
+
       try {
         const digest = await generateWeeklyDigest(companyId)
         results.push({
-          companyId: companyId || 'default',
+          companyId: companyId,
           success: true,
           digestId: digest.id,
           period: `${digest.periodFrom} to ${digest.periodTo}`,
         })
 
         console.log('[Weekly Digest Cron] Generated digest:', {
-          companyId: companyId || 'default',
+          companyId: companyId,
           digestId: digest.id,
           period: `${digest.periodFrom} to ${digest.periodTo}`,
         })
       } catch (error: any) {
         results.push({
-          companyId: companyId || 'default',
+          companyId: companyId,
           success: false,
           error: error.message?.substring(0, 200), // Limit log size
         })
 
         console.error('[Weekly Digest Cron] Failed to generate digest:', {
-          companyId: companyId || 'default',
+          companyId: companyId,
           error: error.message?.substring(0, 500), // Limit log size
         })
       }
