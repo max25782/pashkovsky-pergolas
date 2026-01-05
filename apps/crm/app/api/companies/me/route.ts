@@ -3,6 +3,16 @@ import { createClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
+type Membership = {
+  company_id: string
+  role: string
+  companies: {
+    name: string
+    created_at: string
+    status: string
+  }
+}
+
 export async function GET() {
   try {
     const supabase = createClient()
@@ -31,7 +41,7 @@ export async function GET() {
           )
         `
       )
-      .eq('user_id', user.id)
+      .eq('user_id', user.id) as { data: Membership[] | null; error: any }
 
     if (memberError) {
       console.error('[companies/me] memberError:', memberError)
@@ -47,10 +57,10 @@ export async function GET() {
 
     // 3. Выбираем самую новую компанию, где пользователь owner,
     // иначе просто самую новую компанию
-    const owners = memberships.filter((m: any) => m.role === 'owner')
+    const owners = memberships.filter((m) => m.role === 'owner')
     const candidates = owners.length > 0 ? owners : memberships
 
-    candidates.sort((a: any, b: any) => {
+    candidates.sort((a, b) => {
       const da = new Date(a.companies.created_at).getTime()
       const db = new Date(b.companies.created_at).getTime()
       return db - da
