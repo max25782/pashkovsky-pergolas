@@ -1,6 +1,16 @@
 /** @type {import('next').NextConfig} */
+const path = require('path')
+
 const nextConfig = {
   transpilePackages: ['framer-motion'],
+  webpack: (config) => {
+    // Ensure proper path resolution for @ alias
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': path.resolve(__dirname),
+    }
+    return config
+  },
   images: {
     formats: ['image/webp', 'image/avif'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
