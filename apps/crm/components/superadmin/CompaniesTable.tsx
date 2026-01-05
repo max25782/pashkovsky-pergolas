@@ -29,6 +29,16 @@ export function CompaniesTable({ companies }: CompaniesTableProps) {
   const router = useRouter()
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
+  const handleView = (company: Company) => {
+    // Navigate to company details page
+    router.push(`/superadmin/companies/${company.id}`)
+  }
+
+  const handleSettings = (company: Company) => {
+    // Navigate to company settings page
+    router.push(`/superadmin/companies/${company.id}/settings`)
+  }
+
   const handleDelete = async (company: Company) => {
     // Confirm deletion
     const confirmed = window.confirm(
@@ -54,16 +64,23 @@ export function CompaniesTable({ companies }: CompaniesTableProps) {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to delete company')
+        const errorMessage = data.details 
+          ? `${data.error}: ${data.details}`
+          : data.error || 'Failed to delete company'
+        throw new Error(errorMessage)
       }
 
       console.log('[CompaniesTable] Company deleted:', company.name)
+      
+      // Show success message
+      alert(`Company "${company.name}" deleted successfully`)
       
       // Refresh the page to show updated list
       router.refresh()
     } catch (error) {
       console.error('[CompaniesTable] Delete error:', error)
-      alert(`Failed to delete company: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      alert(`Failed to delete company: ${errorMessage}\n\nCheck browser console for details.`)
     } finally {
       setDeletingId(null)
     }
@@ -134,10 +151,16 @@ export function CompaniesTable({ companies }: CompaniesTableProps) {
                   {new Date(company.created_at).toLocaleDateString()}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button className="text-blue-600 hover:text-blue-900 mr-4">
+                  <button 
+                    onClick={() => handleView(company)}
+                    className="text-blue-600 hover:text-blue-900 mr-4"
+                  >
                     View
                   </button>
-                  <button className="text-gray-600 hover:text-gray-900 mr-4">
+                  <button 
+                    onClick={() => handleSettings(company)}
+                    className="text-gray-600 hover:text-gray-900 mr-4"
+                  >
                     Settings
                   </button>
                   <button

@@ -70,24 +70,29 @@ export async function getCompanyIdAsync(req: NextRequest): Promise<string | null
       console.log('[getCompanyIdAsync] User found:', user.id, user.email)
       
       // Get company_id from company_members
-      const { data: member, error: memberError } = await supabase
+      // Priority: 1) Owner role, 2) Most recently joined
+      const { data: members, error: memberError } = await supabase
         .from('company_members')
-        .select('company_id')
+        .select('company_id, role, joined_at, created_at')
         .eq('user_id', user.id)
-        .single()
+        .order('created_at', { ascending: false }) // Most recent first
       
       if (memberError) {
         console.error('[getCompanyIdAsync] company_members query error:', memberError.message)
         return null
       }
       
-      if (!member) {
+      if (!members || members.length === 0) {
         console.error('[getCompanyIdAsync] User not in any company')
         return null
       }
       
-      console.log('[getCompanyIdAsync] Company found:', member.company_id)
-      return member.company_id
+      // Prefer owner role, otherwise take most recent
+      const ownerMember = members.find(m => m.role === 'owner')
+      const selectedMember = ownerMember || members[0]
+      
+      console.log('[getCompanyIdAsync] Company found:', selectedMember.company_id, 'role:', selectedMember.role)
+      return selectedMember.company_id
     } catch (err: any) {
       console.error('[getCompanyIdAsync] Error:', err.message)
       return getCompanyId(req) // Fallback to sync version
