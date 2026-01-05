@@ -69,13 +69,20 @@ export async function getCompanyIdAsync(req: NextRequest): Promise<string | null
       
       console.log('[getCompanyIdAsync] User found:', user.id, user.email)
       
-      // Get company_id from company_members
-      // Priority: 1) Owner role, 2) Most recently joined
+      // Get company_id from company_members with company details
+      // Priority: 1) Most recently created company where user is owner, 2) Most recent membership
       const { data: members, error: memberError } = await supabase
         .from('company_members')
-        .select('company_id, role, joined_at, created_at')
+        .select(`
+          company_id, 
+          role, 
+          joined_at, 
+          created_at,
+          companies!inner (
+            created_at
+          )
+        `)
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false }) // Most recent first
       
       if (memberError) {
         console.error('[getCompanyIdAsync] company_members query error:', memberError.message)
@@ -87,11 +94,33 @@ export async function getCompanyIdAsync(req: NextRequest): Promise<string | null
         return null
       }
       
-      // Prefer owner role, otherwise take most recent
-      const ownerMember = members.find(m => m.role === 'owner')
-      const selectedMember = ownerMember || members[0]
+      console.log('[getCompanyIdAsync] Found', members.length, 'company memberships')
       
-      console.log('[getCompanyIdAsync] Company found:', selectedMember.company_id, 'role:', selectedMember.role)
+      // Filter owner memberships
+      const ownerMemberships = members.filter(m => m.role === 'owner')
+      
+      if (ownerMemberships.length > 0) {
+        // Sort by company creation date (most recent first)
+        ownerMemberships.sort((a, b) => {
+          const dateA = new Date(a.companies.created_at).getTime()
+          const dateB = new Date(b.companies.created_at).getTime()
+          return dateB - dateA // Descending
+        })
+        
+        const selectedMember = ownerMemberships[0]
+        console.log('[getCompanyIdAsync] Selected most recent owner company:', selectedMember.company_id)
+        return selectedMember.company_id
+      }
+      
+      // No owner role - take most recent membership
+      members.sort((a, b) => {
+        const dateA = new Date(a.created_at).getTime()
+        const dateB = new Date(b.created_at).getTime()
+        return dateB - dateA
+      })
+      
+      const selectedMember = members[0]
+      console.log('[getCompanyIdAsync] Selected most recent membership:', selectedMember.company_id, 'role:', selectedMember.role)
       return selectedMember.company_id
     } catch (err: any) {
       console.error('[getCompanyIdAsync] Error:', err.message)
