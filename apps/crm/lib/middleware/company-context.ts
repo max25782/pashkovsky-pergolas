@@ -97,11 +97,11 @@ export async function getCompanyIdAsync(req: NextRequest): Promise<string | null
       console.log('[getCompanyIdAsync] Found', members.length, 'company memberships')
       
       // Filter owner memberships
-      const ownerMemberships = members.filter(m => m.role === 'owner')
+      const ownerMemberships = members.filter((m: any) => m.role === 'owner')
       
       if (ownerMemberships.length > 0) {
         // Sort by company creation date (most recent first)
-        ownerMemberships.sort((a, b) => {
+        ownerMemberships.sort((a: any, b: any) => {
           const dateA = new Date(a.companies.created_at).getTime()
           const dateB = new Date(b.companies.created_at).getTime()
           return dateB - dateA // Descending
@@ -113,7 +113,7 @@ export async function getCompanyIdAsync(req: NextRequest): Promise<string | null
       }
       
       // No owner role - take most recent membership
-      members.sort((a, b) => {
+      members.sort((a: any, b: any) => {
         const dateA = new Date(a.created_at).getTime()
         const dateB = new Date(b.created_at).getTime()
         return dateB - dateA
