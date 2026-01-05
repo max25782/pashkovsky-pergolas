@@ -6,7 +6,7 @@ import { Suspense } from 'react'
 
 export const metadata: Metadata = {
   title: {
-    default: 'CRM Dashboard',
+    default: 'CRM | Pashkovsky Group',
     template: '%s | CRM',
   },
   robots: {
@@ -22,14 +22,14 @@ export default function CRMLayout({
 }) {
   return (
     <Providers>
-      <div className="flex h-screen overflow-hidden">
+      <div className="flex min-h-screen">
         {/* CRM Sidebar */}
         <Suspense fallback={<div className="w-64 bg-white dark:bg-neutral-800" />}>
           <CRMSidebar />
         </Suspense>
         
         {/* Main Content */}
-        <main className="flex-1 min-h-0 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto">
           {children}
         </main>
       </div>

@@ -15,9 +15,6 @@ export type PlatformEventType =
   | 'settings_updated'
   | 'user_invited'
   | 'subscription_canceled'
-  | 'integration_activated'
-  | 'integration_suspended'
-  | 'integration_secret_rotated'
 
 interface LogEventParams {
   event_type: PlatformEventType

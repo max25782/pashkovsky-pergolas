@@ -85,7 +85,7 @@ export interface SubscriptionUsage {
 
 // Response DTOs
 export interface GetCurrentSubscriptionResponse {
-  subscription: CompanySubscription | null
+  subscription: CompanySubscription
   plan: SubscriptionPlan
   usage?: SubscriptionUsage
 }

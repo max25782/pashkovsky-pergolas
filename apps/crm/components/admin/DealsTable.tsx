@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import type { Deal } from './deal-types'
 import { DealModal } from './DealModal'
 import { CreateDealModal } from './CreateDealModal'
@@ -15,11 +15,7 @@ import { useDealDragDrop } from './hooks/useDealDragDrop'
 
 type ViewMode = 'kanban' | 'table'
 
-interface DealsTableProps {
-  initialDealId?: string
-}
-
-export function DealsTable({ initialDealId }: DealsTableProps = {}) {
+export function DealsTable() {
   const [q, setQ] = useState("")
   const [stageFilter, setStageFilter] = useState("")
   const [projectTypeFilter, setProjectTypeFilter] = useState("")
@@ -35,16 +31,6 @@ export function DealsTable({ initialDealId }: DealsTableProps = {}) {
     page,
     limit: 100
   })
-
-  // Auto-open deal if initialDealId is provided
-  useEffect(() => {
-    if (initialDealId && deals.length > 0 && !selectedDeal) {
-      const deal = deals.find(d => d.id === initialDealId)
-      if (deal) {
-        setSelectedDeal(deal)
-      }
-    }
-  }, [initialDealId, deals, selectedDeal])
 
   const { create, patch, del, creating, updating, deleting } = useDealActions({
     onUpdate: async (updatedDeal) => {
@@ -99,7 +85,7 @@ export function DealsTable({ initialDealId }: DealsTableProps = {}) {
   }
 
   return (
-    <section className="flex h-full flex-col p-4 overflow-hidden">
+    <section className="p-4">
       <DealsHeader
         searchQuery={q}
         stageFilter={stageFilter}
@@ -115,42 +101,30 @@ export function DealsTable({ initialDealId }: DealsTableProps = {}) {
       
       <DealsStatus loading={loading || updating || creating || deleting} error={error} />
 
-      <div className="flex-1 min-h-0">
-        {viewMode === 'kanban' && (
-          <KanbanBoard
-            key={`kanban-${deals.length}-${deals.map(d => d.id).join(',')}`}
-            deals={deals}
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
-            onDealDragStart={handleDragStart}
-            onDealClick={setSelectedDeal}
-          />
-        )}
+      {viewMode === 'kanban' && (
+        <KanbanBoard
+          key={`kanban-${deals.length}-${deals.map(d => d.id).join(',')}`}
+          deals={deals}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+          onDealDragStart={handleDragStart}
+          onDealClick={setSelectedDeal}
+        />
+      )}
 
-        {viewMode === 'table' && (
-          <div className="h-full overflow-auto">
-            <DealsTableView
-              deals={filteredRows}
-              loading={loading}
-              onDealClick={setSelectedDeal}
-              onDealDelete={handleDealDelete}
-            />
-          </div>
-        )}
-      </div>
+      {viewMode === 'table' && (
+        <DealsTableView
+          deals={filteredRows}
+          loading={loading}
+          onDealClick={setSelectedDeal}
+          onDealDelete={handleDealDelete}
+        />
+      )}
 
       {selectedDeal && (
         <DealModal
           deal={selectedDeal}
-          onClose={() => {
-            setSelectedDeal(null)
-            // Clear dealId from URL when closing modal
-            if (typeof window !== 'undefined' && window.location.search.includes('dealId=')) {
-              const url = new URL(window.location.href)
-              url.searchParams.delete('dealId')
-              window.history.replaceState({}, '', url.toString())
-            }
-          }}
+          onClose={() => setSelectedDeal(null)}
           onUpdate={async (updates) => {
             console.log('DealsTable onUpdate called with:', updates)
             const result = await patch(selectedDeal.id, updates)
@@ -161,12 +135,6 @@ export function DealsTable({ initialDealId }: DealsTableProps = {}) {
           onDelete={async () => {
             await handleDealDelete(selectedDeal)
             setSelectedDeal(null)
-            // Clear dealId from URL when deleting deal
-            if (typeof window !== 'undefined' && window.location.search.includes('dealId=')) {
-              const url = new URL(window.location.href)
-              url.searchParams.delete('dealId')
-              window.history.replaceState({}, '', url.toString())
-            }
           }}
           formatCurrency={formatCurrency}
           formatDate={formatDate}

@@ -5,8 +5,6 @@ import Link from 'next/link'
 import type { Locale } from '@/lib/locales'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
 import type { AnalyticsContext } from '@/lib/ai/analyticsTypes'
-import { authFetch } from '@/lib/api/auth-fetch'
-import { createClient } from '@/lib/supabase/client'
 
 type AnalyticsMode = 'leads' | 'deals' | 'finance' | 'manager'
 type PeriodPreset = 'last7days' | 'last30days' | 'thismonth' | 'custom'
@@ -112,6 +110,8 @@ function extractKeyNumbers(context: AnalyticsContext): string[] {
 
 export default function AIAnalyticsPage() {
   const t = useCRMTranslations()
+  const [token, setToken] = useState<string | null>(null)
+  const [input, setInput] = useState('')
   
   // Analytics state
   const [mode, setMode] = useState<AnalyticsMode>('manager')
@@ -126,6 +126,9 @@ export default function AIAnalyticsPage() {
   const [applyingSuggestion, setApplyingSuggestion] = useState<string | null>(null)
 
   useEffect(() => {
+    const storedToken = localStorage.getItem('admin_token')
+    if (storedToken) setToken(storedToken)
+    
     // Load history from localStorage
     const storedHistory = localStorage.getItem('ai_analytics_history')
     if (storedHistory) {
@@ -137,7 +140,25 @@ export default function AIAnalyticsPage() {
     }
   }, [])
 
+  function save() {
+    if (input.trim()) {
+      localStorage.setItem('admin_token', input.trim())
+      setToken(input.trim())
+    }
+  }
+
+  function logout() {
+    localStorage.removeItem('admin_token')
+    setToken(null)
+    setInput('')
+  }
+
   async function handleAnalyze() {
+    if (!token) {
+      setError('Требуется авторизация')
+      return
+    }
+
     if (!question.trim()) {
       setError('Введите вопрос')
       return
@@ -150,10 +171,11 @@ export default function AIAnalyticsPage() {
     const period = getPeriodDates(periodPreset, customFrom, customTo)
 
     try {
-      const res = await authFetch('/api/ai/analytics', {
+      const res = await fetch('/api/ai/analytics', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-admin-token': token,
         },
         body: JSON.stringify({
           mode,
@@ -219,6 +241,8 @@ export default function AIAnalyticsPage() {
   }
 
   async function applySuggestion(suggestion: AISuggestion, index: number) {
+    if (!token) return
+
     const suggestionId = `suggestion-${index}`
     setApplyingSuggestion(suggestionId)
 
@@ -226,10 +250,11 @@ export default function AIAnalyticsPage() {
       if (suggestion.type === 'mark_stale' && suggestion.dealIds) {
         // Update deals - add note about being stale
         for (const dealId of suggestion.dealIds) {
-          await authFetch('/admin-api/deals', {
+          await fetch('/admin-api/deals', {
             method: 'PATCH',
             headers: {
               'Content-Type': 'application/json',
+              'x-admin-token': token,
             },
             body: JSON.stringify({
               id: dealId,
@@ -240,10 +265,11 @@ export default function AIAnalyticsPage() {
       } else if (suggestion.type === 'follow_up' && suggestion.leadIds) {
         // Update leads - add note about follow-up needed
         for (const leadId of suggestion.leadIds) {
-          await authFetch('/admin-api/leads', {
+          await fetch('/admin-api/leads', {
             method: 'PATCH',
             headers: {
               'Content-Type': 'application/json',
+              'x-admin-token': token,
             },
             body: JSON.stringify({
               id: leadId,
@@ -268,11 +294,24 @@ export default function AIAnalyticsPage() {
     }
   }
 
-  async function logout() {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    localStorage.clear()
-    window.location.href = '/login'
+  if (!token) {
+    return (
+      <main className="container py-16 text-white">
+        <h1 className="text-2xl font-bold mb-4">AI Аналитика</h1>
+        <div className="max-w-md bg-white/5 border border-white/10 rounded-xl p-6">
+          <label className="block text-sm mb-2">{t.auth.enterAdminToken}</label>
+          <input
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            className="w-full px-3 py-2 rounded bg-black/40 border border-white/20"
+            placeholder={t.auth.adminTokenPlaceholder}
+          />
+          <button onClick={save} className="mt-3 px-4 py-2 rounded bg-white/10 hover:bg-white/20">
+            {t.common.continue}
+          </button>
+        </div>
+      </main>
+    )
   }
 
   const period = getPeriodDates(periodPreset, customFrom, customTo)
@@ -300,11 +339,7 @@ export default function AIAnalyticsPage() {
           >
             {t.nav.leads}
           </Link>
-          <button
-            type="button"
-            onClick={logout}
-            className="px-4 py-2 rounded bg-white/10 hover:bg-white/20 transition font-semibold"
-          >
+          <button onClick={logout} className="px-3 py-2 rounded bg-white/10 hover:bg-white/20">
             {t.common.logout}
           </button>
         </div>

@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { authFetch } from '@/lib/api/auth-fetch'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
 import { LanguageSwitcher } from '@/components/admin/LanguageSwitcher'
 import { useLanguage } from '@/lib/language-context'
@@ -32,7 +31,6 @@ export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isChecking, setIsChecking] = useState(true)
   const [userEmail, setUserEmail] = useState<string | null>(null)
-  const [companyName, setCompanyName] = useState<string | null>(null)
   const [stats, setStats] = useState<DashboardStats>({
     activeDeals: 0,
     newLeads: 0,
@@ -66,19 +64,6 @@ export default function AdminPage() {
       if (!membership) return
 
       const companyId = membership.company_id
-      
-      // Fetch company name via API
-      try {
-        const response = await authFetch('/api/companies/me')
-        if (response.ok) {
-          const data = await response.json()
-          setCompanyName(data.company?.name || null)
-        } else {
-          console.warn('[AdminPage] Failed to fetch company name:', response.status, response.statusText)
-        }
-      } catch (err) {
-        console.warn('[AdminPage] Could not fetch company name:', err)
-      }
 
       // Get active deals count - ALL stages except 'done'
       // Stages: new, measure, offer, offer_approved, material_ordered, approved, production, install
@@ -231,7 +216,7 @@ export default function AdminPage() {
               {language === 'ru' ? 'Панель администратора' : language === 'en' ? 'Admin Panel' : 'פאנל ניהול'}
             </h1>
             <p className="text-white/60">
-              {companyName || (language === 'ru' ? 'Группа Пашковский' : language === 'en' ? 'Pashkovsky Group' : 'פאנל ניהול - Pashkovsky Group')}
+              {language === 'ru' ? 'Группа Пашковский' : language === 'en' ? 'Pashkovsky Group' : 'פאנל ניהול - Pashkovsky Group'}
             </p>
           </div>
           <div className="flex items-center gap-4">

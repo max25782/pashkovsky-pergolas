@@ -5,8 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import type { Worker } from '@/types/workers'
-import { requireAuthAsync } from '@/lib/middleware/auth-async'
-import { verifyResourceOwnership } from '@/lib/auth'
+import { requireAuth, verifyResourceOwnership } from '@/lib/auth'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -38,7 +37,7 @@ export async function PATCH(
   const params = await context.params
 
   // 🔒 Security: Require authentication
-  const auth = await requireAuthAsync(req)
+  const auth = await requireAuth(req)
   if (!auth.authorized) return auth.error
 
   // 🔒 Security: Verify worker belongs to user's company
@@ -72,8 +71,8 @@ export async function PATCH(
       .from('workers')
       .update(updates)
       .eq('id', params.id)
-      // Extra safety: filter by company if available
-      .match(auth.context.companyId ? { company_id: auth.context.companyId } : {})
+      // Extra safety: only filter by company if not admin token
+      .match(auth.user.companyId === 'admin' ? {} : { company_id: auth.user.companyId })
       .select()
       .single()
 
@@ -100,7 +99,7 @@ export async function DELETE(
   const params = await context.params
 
   // 🔒 Security: Require authentication
-  const auth = await requireAuthAsync(req)
+  const auth = await requireAuth(req)
   if (!auth.authorized) return auth.error
 
   // 🔒 Security: Verify worker belongs to user's company
@@ -116,7 +115,7 @@ export async function DELETE(
       .from('workers')
       .delete()
       .eq('id', params.id)
-      .eq('company_id', auth.context.companyId) // Extra safety
+      .eq('company_id', auth.user.companyId) // Extra safety
 
     if (error) {
       console.error('Error deleting worker:', error)
