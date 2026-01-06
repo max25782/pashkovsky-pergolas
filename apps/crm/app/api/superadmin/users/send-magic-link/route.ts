@@ -37,15 +37,22 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Magic link MUST redirect to /auth/callback for SSR cookies
+    // Callback will then redirect to the final destination
+    const callbackUrl = `${request.nextUrl.origin}/auth/callback`
+    const finalDestination = redirectTo || '/app/admin'
+    
     console.log('[SendMagicLink] Generating magic link for:', email)
-    console.log('[SendMagicLink] Redirect URL:', redirectTo)
+    console.log('[SendMagicLink] Callback URL:', callbackUrl)
+    console.log('[SendMagicLink] Final destination:', finalDestination)
 
-    // Generate magic link
+    // Generate magic link that goes to /auth/callback
+    // Supabase will add ?code=xxx automatically
     const { data, error } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
       email,
       options: {
-        redirectTo: redirectTo || `${request.nextUrl.origin}/app/admin`,
+        redirectTo: callbackUrl,
       },
     })
 
@@ -57,7 +64,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('[SendMagicLink] Magic link generated successfully')
+    console.log('[SendMagicLink] ✓ Magic link generated successfully')
+    console.log('[SendMagicLink] Action link:', data.properties.action_link)
+    
+    // Extract and log the redirect_to parameter from the action link
+    try {
+      const actionUrl = new URL(data.properties.action_link)
+      const redirectToParam = actionUrl.searchParams.get('redirect_to')
+      console.log('[SendMagicLink] redirect_to param:', redirectToParam)
+    } catch (e) {
+      console.warn('[SendMagicLink] Could not parse action link URL')
+    }
 
     return NextResponse.json({
       success: true,

@@ -17,17 +17,16 @@ export function SendMagicLinkButton({ email, companyName }: SendMagicLinkButtonP
   const [isLoading, setIsLoading] = useState(false)
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [message, setMessage] = useState('')
-  const [magicLink, setMagicLink] = useState<string | null>(null)
 
   const handleSendMagicLink = async () => {
     setIsLoading(true)
     setStatus('idle')
     setMessage('')
-    setMagicLink(null)
 
     try {
-      // Get current origin for redirect URL
-      const redirectUrl = `${window.location.origin}/app/admin`
+      // Magic link will redirect to /auth/callback (for SSR cookies)
+      // Then callback redirects to final destination
+      const callbackUrl = `${window.location.origin}/auth/callback`
 
       const response = await fetch('/api/superadmin/users/send-magic-link', {
         method: 'POST',
@@ -37,7 +36,7 @@ export function SendMagicLinkButton({ email, companyName }: SendMagicLinkButtonP
         credentials: 'include',
         body: JSON.stringify({
           email,
-          redirectTo: redirectUrl,
+          redirectTo: callbackUrl,
         }),
       })
 
@@ -48,11 +47,12 @@ export function SendMagicLinkButton({ email, companyName }: SendMagicLinkButtonP
       }
 
       setStatus('success')
-      setMessage(`Magic link generated for ${email}`)
+      setMessage(`Magic link sent to ${email}`)
       
-      // Store link to display on screen
+      // Copy link to clipboard if available
       if (data.magicLink) {
-        setMagicLink(data.magicLink)
+        await navigator.clipboard.writeText(data.magicLink)
+        setMessage(`Magic link sent to ${email} and copied to clipboard!`)
       }
     } catch (error: any) {
       console.error('[SendMagicLink] Error:', error)
@@ -63,51 +63,21 @@ export function SendMagicLinkButton({ email, companyName }: SendMagicLinkButtonP
     }
   }
 
-  const handleCopyLink = async () => {
-    if (!magicLink) return
-    
-    try {
-      await navigator.clipboard.writeText(magicLink)
-      setMessage(`Magic link copied to clipboard!`)
-    } catch (error) {
-      // Fallback: select text for manual copy
-      console.error('[SendMagicLink] Clipboard error:', error)
-      setMessage('Please copy the link manually from below')
-    }
-  }
-
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <button
         onClick={handleSendMagicLink}
         disabled={isLoading}
         className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <Mail className="h-4 w-4" />
-        {isLoading ? 'Generating...' : 'Send Magic Login Link'}
+        {isLoading ? 'Sending...' : 'Send Magic Login Link'}
       </button>
 
       {status === 'success' && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 px-3 py-2 rounded">
-            <Check className="h-4 w-4" />
-            {message}
-          </div>
-          
-          {magicLink && (
-            <div className="space-y-2">
-              <div className="p-3 bg-gray-50 border border-gray-200 rounded text-sm break-all">
-                <div className="font-medium text-gray-700 mb-1">Magic Link:</div>
-                <div className="text-blue-600 select-all">{magicLink}</div>
-              </div>
-              <button
-                onClick={handleCopyLink}
-                className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
-              >
-                Copy Link
-              </button>
-            </div>
-          )}
+        <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 px-3 py-2 rounded">
+          <Check className="h-4 w-4" />
+          {message}
         </div>
       )}
 
