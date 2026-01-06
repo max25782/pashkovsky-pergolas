@@ -1,41 +1,19 @@
 /**
- * Supabase Client with Auth for Client Components
- * Uses Supabase Auth for proper RLS and multi-tenancy
+ * Supabase Client for Client Components
+ * Uses cookies for session storage (Safari-safe)
  */
 
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
-import type { SupabaseClient } from '@supabase/supabase-js'
-
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-
-// Singleton instance
-let supabaseInstance: SupabaseClient | null = null
+import { createBrowserClient } from '@supabase/ssr'
 
 /**
- * Create or return existing Supabase client for browser
- * Uses Supabase Auth for RLS - session managed automatically
+ * Create Supabase client for browser
+ * Uses cookies (not localStorage) for session - Safari compatible
  */
 export function createClient() {
-  if (supabaseInstance) {
-    return supabaseInstance
-  }
-  
-  console.log('[Supabase Client] Creating NEW client with Supabase Auth')
-  
-  supabaseInstance = createSupabaseClient(
-    SUPABASE_URL,
-    SUPABASE_ANON_KEY,
-    {
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: true,
-      },
-    }
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
-  
-  return supabaseInstance
 }
 
 // Alias for backward compatibility
