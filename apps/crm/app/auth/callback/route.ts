@@ -14,16 +14,21 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL('/login?error=auth', url.origin))
   }
 
-  const cookies: { name: string; value: string; options: CookieOptions }[] = []
+  const cookiesToSet: { name: string; value: string; options: CookieOptions }[] = []
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get: (name) => request.cookies.get(name)?.value,
-        set: (name, value, options) => cookies.push({ name, value, options }),
-        remove: (name, options) => cookies.push({ name, value: '', options }),
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSetArray) {
+          cookiesToSetArray.forEach((cookie) => {
+            cookiesToSet.push(cookie)
+          })
+        },
       },
     }
   )
@@ -35,15 +40,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL('/login?error=auth', url.origin))
   }
 
-  console.log('[Callback] Success! Cookies:', cookies.length, '→', next)
+  console.log('[Callback] Success! Cookies:', cookiesToSet.length, '→', next)
 
   const response = NextResponse.redirect(new URL(next, url.origin))
 
-  cookies.forEach((c) => {
+  cookiesToSet.forEach((cookie) => {
     response.cookies.set({
-      name: c.name,
-      value: c.value,
-      ...c.options,
+      name: cookie.name,
+      value: cookie.value,
+      ...cookie.options,
     })
   })
 
