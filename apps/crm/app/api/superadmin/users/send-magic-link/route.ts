@@ -47,9 +47,10 @@ export async function POST(request: NextRequest) {
     console.log('[SendMagicLink] Final destination:', finalDestination)
 
     // Generate magic link using PKCE flow (not implicit flow)
-    // type: 'signup' generates ?code=xxx (PKCE), not #access_token (implicit)
+    // type: 'invite' generates ?code=xxx (PKCE), not #access_token (implicit)
+    // Unlike 'signup', 'invite' doesn't require password parameter
     const { data, error } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'signup',
+      type: 'invite',
       email,
       options: {
         redirectTo: callbackUrl,
