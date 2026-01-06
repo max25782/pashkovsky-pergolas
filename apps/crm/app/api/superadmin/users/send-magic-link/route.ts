@@ -46,10 +46,10 @@ export async function POST(request: NextRequest) {
     console.log('[SendMagicLink] Callback URL:', callbackUrl)
     console.log('[SendMagicLink] Final destination:', finalDestination)
 
-    // Generate magic link that goes to /auth/callback
-    // Supabase will add ?code=xxx automatically
+    // Generate magic link using PKCE flow (not implicit flow)
+    // type: 'signup' generates ?code=xxx (PKCE), not #access_token (implicit)
     const { data, error } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'magiclink',
+      type: 'signup',
       email,
       options: {
         redirectTo: callbackUrl,
