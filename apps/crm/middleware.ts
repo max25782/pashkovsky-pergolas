@@ -91,10 +91,10 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
   
-  // Root redirect
+  // Root redirect to /app (not /app/admin)
   if (pathname === '/') {
     const url = request.nextUrl.clone()
-    url.pathname = '/app/admin'
+    url.pathname = '/app'
     return NextResponse.redirect(url)
   }
   
