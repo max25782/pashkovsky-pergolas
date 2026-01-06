@@ -31,16 +31,16 @@ const { data, error } = await supabaseAdmin.auth.admin.generateLink({
 
 // ✅ Стало: PKCE flow (?code=xxx)
 const { data, error } = await supabaseAdmin.auth.admin.generateLink({
-  type: 'signup',  // ← PKCE flow
+  type: 'invite',  // ← PKCE flow (no password required)
   email,
   options: { redirectTo: callbackUrl }
 })
 ```
 
-**Почему `type: 'signup'`?**
-- `'magiclink'` → Supabase returns `#access_token` (implicit)
-- `'signup'` → Supabase returns `?code=xxx` (PKCE)
-- `'invite'` → Same as signup (PKCE)
+**Почему `type: 'invite'`?**
+- `'magiclink'` → Supabase returns `#access_token` (implicit) ❌
+- `'signup'` → Supabase returns `?code=xxx` (PKCE) but requires `password` parameter
+- `'invite'` → Supabase returns `?code=xxx` (PKCE) without password ✅
 
 ### 2. Auth Callback: Упрощён
 **Файл:** `apps/crm/app/auth/callback/route.ts`
@@ -83,7 +83,7 @@ Vercel: https://vercel.com/max25782s-projects
 ```
 https://kvqupacmdishpfnscnio.supabase.co/auth/v1/verify?
   token=xxx
-  &type=signup  ← НЕ 'magiclink'!
+  &type=invite  ← PKCE flow, no password needed
   &redirect_to=https://crm.pashkovsky-group.com/auth/callback
 ```
 
@@ -91,7 +91,7 @@ https://kvqupacmdishpfnscnio.supabase.co/auth/v1/verify?
 ```
 https://...supabase.co/auth/v1/verify?
   token=xxx
-  &type=magiclink  ← Старый способ
+  &type=magiclink  ← Implicit flow (старый способ)
   ...
 ```
 
@@ -147,7 +147,7 @@ fetch('/api/debug/auth').then(r => r.json()).then(console.log)
 
 **Решение:**
 1. Подождите 2-3 минуты
-2. Проверьте Vercel: последний коммит `e5a8686`?
+2. Проверьте Vercel: последний коммит `784aeac`?
 3. Сгенерируйте НОВЫЙ magic link (старые не работают)
 
 ---
