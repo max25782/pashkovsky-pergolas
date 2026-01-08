@@ -8,16 +8,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Loader2, CheckCircle, XCircle } from 'lucide-react'
 
+
 interface OnboardingResponse {
   success: boolean
   company_id?: string
   user_id?: string
   company_name?: string
+  magic_link?: string
   error?: string
 }
 
 export default function CompanyOnboardingForm() {
   const [email, setEmail] = useState('')
+  const [sendMagicLink, setSendMagicLink] = useState(false)
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<OnboardingResponse | null>(null)
 
@@ -37,6 +40,7 @@ export default function CompanyOnboardingForm() {
         credentials: 'include', // Important for cookies
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
+          sendMagicLink: sendMagicLink,
         }),
       })
       
@@ -112,6 +116,20 @@ export default function CompanyOnboardingForm() {
             />
           </div>
 
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="sendMagicLink"
+              checked={sendMagicLink}
+              onChange={(e) => setSendMagicLink(e.target.checked)}
+              disabled={loading}
+              className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+            />
+            <Label htmlFor="sendMagicLink" className="!text-black text-sm font-normal cursor-pointer">
+              Send magic login link to email
+            </Label>
+          </div>
+
           <Button
             type="submit"
             disabled={loading || !email}
@@ -162,6 +180,40 @@ export default function CompanyOnboardingForm() {
                       User can now log in using their email and password, or you can generate a magic link separately.
                     </p>
                   </div>
+                  
+                  {result.magic_link && (
+                    <div className="mt-4 p-4 bg-purple-50 rounded border border-purple-200">
+                      <p className="text-sm text-purple-900 font-medium mb-2">
+                        🔗 Magic Login Link:
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          readOnly
+                          value={result.magic_link}
+                          className="flex-1 px-3 py-2 text-xs font-mono bg-white border border-purple-300 rounded text-black"
+                          onClick={(e) => (e.target as HTMLInputElement).select()}
+                        />
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              await navigator.clipboard.writeText(result.magic_link!)
+                              alert('Magic link copied to clipboard!')
+                            } catch (err) {
+                              console.error('Failed to copy:', err)
+                            }
+                          }}
+                          className="px-3 py-2 bg-purple-600 text-white text-sm rounded hover:bg-purple-700"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                      <p className="text-xs text-purple-700 mt-2">
+                        Click the link to log in as this user, or copy and send it via email.
+                      </p>
+                    </div>
+                  )}
                   <div className="mt-4 p-3 bg-amber-50 rounded border border-amber-200">
                     <p className="text-sm text-amber-900 font-medium">
                       🔄 Page will refresh automatically in 1.5 seconds...

@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireSuperAdmin } from '@/lib/middleware/superadmin-auth'
 import { onboardCompany } from '@/lib/services/company-onboarding-service'
+import { createClient } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
 
 interface OnboardRequest {
   email: string
-  sendInviteEmail?: boolean
+  sendMagicLink?: boolean
 }
 
 /**
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-      const { email } = body
+      const { email, sendMagicLink } = body
 
     // Validate email
     if (!email || typeof email !== 'string') {
@@ -83,11 +84,47 @@ export async function POST(request: NextRequest) {
       user_id: result.user_id,
     })
 
+    // Generate magic link if requested
+    let magicLink: string | undefined
+    if (sendMagicLink) {
+      try {
+        const supabaseAdmin = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.SUPABASE_SERVICE_ROLE_KEY!,
+          {
+            auth: {
+              autoRefreshToken: false,
+              persistSession: false,
+            },
+          }
+        )
+
+        const callbackUrl = `${request.nextUrl.origin}/auth/callback`
+        const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+          type: 'invite',
+          email: email.toLowerCase().trim(),
+          options: {
+            redirectTo: callbackUrl,
+          },
+        })
+
+        if (!linkError && linkData?.properties?.action_link) {
+          magicLink = linkData.properties.action_link
+          console.log('[API /superadmin/companies/onboard] Magic link generated')
+        } else {
+          console.error('[API /superadmin/companies/onboard] Failed to generate magic link:', linkError)
+        }
+      } catch (linkErr: any) {
+        console.error('[API /superadmin/companies/onboard] Exception generating magic link:', linkErr)
+      }
+    }
+
       return NextResponse.json({
         success: true,
         company_id: result.company_id,
         user_id: result.user_id,
         company_name: result.company_name,
+        magic_link: magicLink,
       })
   } catch (error: any) {
     console.error('[API /superadmin/companies/onboard] Unexpected error:', error)
