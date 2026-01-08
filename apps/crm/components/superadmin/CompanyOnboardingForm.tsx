@@ -59,10 +59,11 @@ export default function CompanyOnboardingForm() {
       console.log('[CompanyOnboardingForm] Success response:', data)
       setResult(data)
       
-      // Refresh the page to show new company in the list
+      // Immediately refresh to show new company in the list
+      // Success message will be shown briefly before reload
       setTimeout(() => {
         window.location.reload()
-      }, 3000) // Wait 3 seconds to show success message
+      }, 1500) // Quick refresh (1.5s)
       
     } catch (error: any) {
       console.error('[CompanyOnboardingForm] Error:', error)
@@ -159,6 +160,11 @@ export default function CompanyOnboardingForm() {
                     </p>
                     <p className="text-xs text-blue-700 mt-1">
                       User can now log in using their email and password, or you can generate a magic link separately.
+                    </p>
+                  </div>
+                  <div className="mt-4 p-3 bg-amber-50 rounded border border-amber-200">
+                    <p className="text-sm text-amber-900 font-medium">
+                      🔄 Page will refresh automatically in 1.5 seconds...
                     </p>
                   </div>
                 </AlertDescription>
