@@ -222,5 +222,5 @@ Admin token validation happens in API routes using hardcoded token or database l
 
 ---
 
-**Last Updated:** 2025-12-22
+**Last Updated:** 2025-12-22.
 
