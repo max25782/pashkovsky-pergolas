@@ -1,10 +1,12 @@
 /**
  * SuperAdmin Authorization Helpers
- * Verify SuperAdmin access for platform management endpoints
- * Uses Supabase SSR auth + platform_admins table
+ * Supports TWO authentication methods:
+ * 1. Redis session (primary) - for phone auth login
+ * 2. Supabase auth (fallback) - for magic link testing
  */
 
 import { NextRequest } from 'next/server'
+import { getSession } from '@/lib/session/redis-client'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 
@@ -13,15 +15,33 @@ export interface SuperAdminSession {
   email: string
   role: string
   phone?: string
+  auth_method?: 'redis' | 'supabase'
 }
 
 /**
  * Check SuperAdmin authentication from request
- * Returns session if authenticated, null otherwise
+ * Tries Redis session first, then falls back to Supabase auth
  */
 export async function checkSuperAdminAuth(request: NextRequest): Promise<SuperAdminSession | null> {
+  // 1️⃣ Try Redis session first (primary method - phone auth)
+  const sessionId = request.cookies.get('superadmin_session')?.value
+  if (sessionId) {
+    try {
+      const session = await getSession(sessionId)
+      if (session && session.role === 'superadmin') {
+        console.log('[SuperAdmin Auth] ✓ Redis session valid:', session.email)
+        return {
+          ...session,
+          auth_method: 'redis',
+        } as SuperAdminSession
+      }
+    } catch (error) {
+      console.error('[SuperAdmin Auth] Redis session error:', error)
+    }
+  }
+
+  // 2️⃣ Fallback to Supabase auth (for magic link testing)
   try {
-    // Create SSR client to read cookies
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -37,11 +57,10 @@ export async function checkSuperAdminAuth(request: NextRequest): Promise<SuperAd
       }
     )
 
-    // Get authenticated user from Supabase
     const { data: { user }, error } = await supabase.auth.getUser()
     
     if (error || !user) {
-      console.log('[SuperAdmin Auth] No user session')
+      console.log('[SuperAdmin Auth] No valid auth found')
       return null
     }
 
@@ -49,17 +68,19 @@ export async function checkSuperAdminAuth(request: NextRequest): Promise<SuperAd
     const isAdmin = await isSuperAdmin(user.id)
     
     if (!isAdmin) {
-      console.log('[SuperAdmin Auth] User not in platform_admins:', user.email)
+      console.log('[SuperAdmin Auth] User not SuperAdmin:', user.email)
       return null
     }
 
+    console.log('[SuperAdmin Auth] ✓ Supabase auth valid:', user.email)
     return {
       user_id: user.id,
       email: user.email || '',
       role: 'superadmin',
+      auth_method: 'supabase',
     }
   } catch (error) {
-    console.error('[SuperAdmin Auth] Error:', error)
+    console.error('[SuperAdmin Auth] Supabase auth error:', error)
     return null
   }
 }
