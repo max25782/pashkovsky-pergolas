@@ -46,7 +46,11 @@
         "NEXT_PUBLIC_SITE_URL",
         "GOOGLE_CLIENT_ID",
         "GOOGLE_CLIENT_SECRET",
-        "GOOGLE_REDIRECT_URI"
+        "GOOGLE_REDIRECT_URI",
+        "BEDROCK_AGENT_ID",
+        "BEDROCK_AGENT_ALIAS_ID",
+        "AI_DIRECTOR_API_TOKEN",
+        "AWS_REGION"
       ]
     },
     "dev": {
