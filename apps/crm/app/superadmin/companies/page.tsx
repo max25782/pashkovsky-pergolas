@@ -8,6 +8,10 @@ import { CompaniesTable } from '@/components/superadmin/CompaniesTable'
 import CompanyOnboardingForm from '@/components/superadmin/CompanyOnboardingForm'
 import { Suspense } from 'react'
 
+// Force dynamic rendering - companies list changes frequently
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 async function getCompanies() {
   // Use SERVICE_ROLE_KEY to bypass RLS (SuperAdmin has full access)
   const supabase = createClient(

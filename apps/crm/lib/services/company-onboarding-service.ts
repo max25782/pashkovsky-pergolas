@@ -301,6 +301,27 @@ export async function onboardCompany(
     // 1. Find or create user
     const user = await findOrCreateUser(email)
 
+    // 1.5. Check if user already has a company
+    const { data: existingMemberships } = await supabaseAdmin
+      .from('company_members')
+      .select('company_id, companies(id, name, slug)')
+      .eq('user_id', user.id)
+      .eq('role', 'owner')
+      .limit(1)
+
+    if (existingMemberships && existingMemberships.length > 0) {
+      const existingCompany = existingMemberships[0].companies as any
+      console.log('[Onboarding] User already has a company:', existingCompany.id)
+      
+      return {
+        success: false,
+        error: `User ${email} already has a company: "${existingCompany.name}" (ID: ${existingCompany.id}). Each user can only have one company.`,
+        company_id: existingCompany.id,
+        user_id: user.id,
+        company_name: existingCompany.name,
+      }
+    }
+
     // 2. Create company
     const company = await createCompanyForUser(user.id, email)
 
