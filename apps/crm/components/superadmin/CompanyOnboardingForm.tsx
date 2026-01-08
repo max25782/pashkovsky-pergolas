@@ -27,20 +27,33 @@ export default function CompanyOnboardingForm() {
     setResult(null)
 
     try {
+      console.log('[CompanyOnboardingForm] Submitting:', email)
+      
       const response = await fetch('/api/superadmin/companies/onboard', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Important for cookies
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
         }),
       })
+      
+      console.log('[CompanyOnboardingForm] Response status:', response.status)
 
-      const data: OnboardingResponse = await response.json()
+      let data: OnboardingResponse
+      
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        console.error('[CompanyOnboardingForm] JSON parse error:', jsonError)
+        throw new Error(`Server returned status ${response.status}, but response was not JSON`)
+      }
 
       if (!response.ok) {
-        throw new Error(data.error || 'Onboarding failed')
+        console.error('[CompanyOnboardingForm] Error response:', data)
+        throw new Error(data.error || `Request failed with status ${response.status}`)
       }
 
       console.log('[CompanyOnboardingForm] Success response:', data)
@@ -51,13 +64,21 @@ export default function CompanyOnboardingForm() {
         window.location.reload()
       }, 3000) // Wait 3 seconds to show success message
       
-      // Don't clear email on success - user might want to create another
-      // setEmail('') // Clear form on success
     } catch (error: any) {
       console.error('[CompanyOnboardingForm] Error:', error)
+      
+      // Provide more specific error messages
+      let errorMessage = error.message || 'Unknown error'
+      
+      if (error.message?.includes('Failed to fetch')) {
+        errorMessage = 'Network error: Unable to reach server. Please check your connection and try again.'
+      } else if (error.message?.includes('NetworkError')) {
+        errorMessage = 'Network error: Request was interrupted. Please try again.'
+      }
+      
       setResult({
         success: false,
-        error: error.message || 'Unknown error',
+        error: errorMessage,
       })
     } finally {
       setLoading(false)
@@ -93,7 +114,10 @@ export default function CompanyOnboardingForm() {
           <Button
             type="submit"
             disabled={loading || !email}
-            className="w-full !bg-blue-600 !text-white hover:!bg-blue-700 !border-transparent"
+            className="w-full !bg-blue-600 !text-white hover:!bg-blue-700 !border-transparent disabled:!opacity-50 disabled:!cursor-not-allowed"
+            onClick={() => {
+              console.log('[Button] Clicked! Email:', email, 'Loading:', loading, 'Disabled:', loading || !email)
+            }}
           >
             {loading ? (
               <>
@@ -104,6 +128,13 @@ export default function CompanyOnboardingForm() {
               'Create Company + Give Full Access'
             )}
           </Button>
+          
+          {/* Debug info */}
+          {!email && (
+            <p className="text-sm text-amber-600 mt-2">
+              ⚠️ Enter email to enable the button
+            </p>
+          )}
         </form>
 
         {result && (
