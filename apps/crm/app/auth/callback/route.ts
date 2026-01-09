@@ -8,22 +8,55 @@ export async function GET(request: NextRequest) {
   const next = url.searchParams.get('next') || '/app'
   const urlError = url.searchParams.get('error')
   const errorDescription = url.searchParams.get('error_description')
+  
+  // Check hash fragment for implicit flow errors (shouldn't happen with PKCE)
+  const hash = url.hash
+  let hashError: string | null = null
+  let hashErrorCode: string | null = null
+  let hashErrorDescription: string | null = null
+  
+  if (hash) {
+    console.warn('[Callback] ⚠️ Hash fragment detected - this indicates implicit flow, not PKCE!')
+    const hashParams = new URLSearchParams(hash.substring(1)) // Remove '#'
+    hashError = hashParams.get('error')
+    hashErrorCode = hashParams.get('error_code')
+    hashErrorDescription = hashParams.get('error_description')
+  }
 
   console.log('[Callback] ===================')
   console.log('[Callback] Full URL:', url.href)
+  console.log('[Callback] Hash:', hash || 'none')
   console.log('[Callback] Code:', code ? `✓ (${code.substring(0, 20)}...)` : '✗')
   console.log('[Callback] Type:', type || 'none')
   console.log('[Callback] Next:', next)
-  console.log('[Callback] Error:', urlError || 'none')
-  console.log('[Callback] Error Description:', errorDescription || 'none')
-  console.log('[Callback] All params:', Object.fromEntries(url.searchParams.entries()))
+  console.log('[Callback] Query Error:', urlError || 'none')
+  console.log('[Callback] Query Error Description:', errorDescription || 'none')
+  if (hashError) {
+    console.error('[Callback] Hash Error:', hashError)
+    console.error('[Callback] Hash Error Code:', hashErrorCode)
+    console.error('[Callback] Hash Error Description:', hashErrorDescription)
+  }
+  console.log('[Callback] All query params:', Object.fromEntries(url.searchParams.entries()))
   console.log('[Callback] ===================')
 
-  // Check for Supabase error in URL
-  if (urlError) {
-    console.error('[Callback] Supabase error in URL:', urlError, errorDescription)
+  // Check for Supabase error in URL (query params or hash fragment)
+  const finalError = urlError || hashError
+  const finalErrorDescription = errorDescription || hashErrorDescription || hashErrorCode
+  
+  if (finalError) {
+    console.error('[Callback] Supabase error detected:', finalError)
+    console.error('[Callback] Error source:', urlError ? 'query' : 'hash')
+    console.error('[Callback] Error details:', finalErrorDescription)
+    
+    // If hash error, this means implicit flow was used (wrong!)
+    if (hashError) {
+      console.error('[Callback] ❌ CRITICAL: Hash fragment error indicates implicit flow!')
+      console.error('[Callback] This means magic link was generated with wrong type (magiclink instead of recovery/invite)')
+      console.error('[Callback] Or Supabase redirect URL is not configured correctly')
+    }
+    
     return NextResponse.redirect(
-      new URL(`/login?error=${encodeURIComponent(urlError)}&description=${encodeURIComponent(errorDescription || '')}`, url.origin)
+      new URL(`/login?error=${encodeURIComponent(finalError)}&error_code=${encodeURIComponent(hashErrorCode || '')}&description=${encodeURIComponent(finalErrorDescription || '')}`, url.origin)
     )
   }
 
