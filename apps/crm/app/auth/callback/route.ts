@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 
 export async function GET(request: NextRequest) {
+  // Log raw request URL before parsing
+  console.log('[Callback] Raw request URL:', request.url)
+  console.log('[Callback] Request headers:', {
+    referer: request.headers.get('referer'),
+    'user-agent': request.headers.get('user-agent'),
+  })
+  
   const url = new URL(request.url)
   const code = url.searchParams.get('code')
   const type = url.searchParams.get('type')
