@@ -105,19 +105,45 @@ export async function POST(request: NextRequest) {
 
         const callbackUrl = `${request.nextUrl.origin}/auth/callback`
         
-        // Use 'invite' for all users (both new and existing)
-        // 'invite' works as magic link for existing users too (logs them in without password)
-        // 'recovery' may require password reset flow which doesn't work as magic link
-        // 'magiclink' uses implicit flow (#access_token) which doesn't work with SSR cookies
-        const linkType = 'invite'
+        // Check if user exists to use correct link type
+        const { data: users } = await supabaseAdmin.auth.admin.listUsers()
+        const existingUser = users?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase())
         
-        const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+        // Use different type based on whether user exists
+        // For existing users: try 'recovery' first, fallback to 'signup' if needed
+        // For new users: use 'invite' (creates user + PKCE flow)
+        let linkType = existingUser ? 'recovery' : 'invite'
+        
+        console.log('[API /superadmin/companies/onboard] User exists:', !!existingUser, 'Using type:', linkType)
+        
+        let { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
           type: linkType as any,
           email: email.toLowerCase().trim(),
           options: {
             redirectTo: callbackUrl,
           },
         })
+
+        // If recovery fails for existing user, try signup (works as magic link)
+        if (linkError && existingUser && linkType === 'recovery') {
+          console.warn('[API /superadmin/companies/onboard] Recovery failed, trying signup as fallback:', linkError.message)
+          linkType = 'signup'
+          const signupResult = await supabaseAdmin.auth.admin.generateLink({
+            type: 'signup' as any,
+            email: email.toLowerCase().trim(),
+            options: {
+              redirectTo: callbackUrl,
+            },
+          })
+          if (!signupResult.error && signupResult.data) {
+            linkData = signupResult.data
+            linkError = null
+            console.log('[API /superadmin/companies/onboard] ✓ Signup fallback succeeded')
+          } else {
+            linkError = signupResult.error
+            console.error('[API /superadmin/companies/onboard] Signup fallback also failed:', signupResult.error)
+          }
+        }
 
         if (!linkError && linkData?.properties?.action_link) {
           magicLink = linkData.properties.action_link

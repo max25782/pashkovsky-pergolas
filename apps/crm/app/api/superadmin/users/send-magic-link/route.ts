@@ -51,24 +51,43 @@ export async function POST(request: NextRequest) {
     const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers()
     const existingUser = users?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase())
 
-    // Use 'invite' for all users (both new and existing)
-    // 'invite' works as magic link for existing users too (logs them in without password)
-    // 'recovery' may require password reset flow which doesn't work as magic link
+    // Use different type based on whether user exists
+    // For existing users: try 'recovery' first, fallback to 'signup' if needed
+    // For new users: use 'invite' (creates user + PKCE flow)
     // 'magiclink' type uses implicit flow (#access_token) which doesn't work with SSR cookies
-    const linkType = 'invite'
+    let linkType = existingUser ? 'recovery' : 'invite'
     
     console.log('[SendMagicLink] User exists:', !!existingUser, 'Using type:', linkType)
-    if (existingUser) {
-      console.log('[SendMagicLink] ⚠️ Note: Using invite type for existing user (this should work as magic link)')
-    }
 
-    const { data, error } = await supabaseAdmin.auth.admin.generateLink({
+    let { data, error } = await supabaseAdmin.auth.admin.generateLink({
       type: linkType as any,
       email,
       options: {
         redirectTo: callbackUrl,
       },
     })
+
+    // If recovery fails for existing user, try signup (works as magic link)
+    if (error && existingUser && linkType === 'recovery') {
+      console.warn('[SendMagicLink] Recovery failed, trying signup as fallback:', error.message)
+      linkType = 'signup'
+      const signupResult = await supabaseAdmin.auth.admin.generateLink({
+        type: 'signup' as any,
+        email,
+        options: {
+          redirectTo: callbackUrl,
+          // Signup without password requirement
+        },
+      })
+      if (!signupResult.error && signupResult.data) {
+        data = signupResult.data
+        error = null
+        console.log('[SendMagicLink] ✓ Signup fallback succeeded')
+      } else {
+        error = signupResult.error
+        console.error('[SendMagicLink] Signup fallback also failed:', signupResult.error)
+      }
+    }
 
     if (error || !data) {
       console.error('[SendMagicLink] Error:', error)
@@ -77,8 +96,7 @@ export async function POST(request: NextRequest) {
       let errorMessage = error?.message || 'Failed to generate magic link'
       
       if (error?.message?.includes('already been registered')) {
-        // User exists but we tried to use 'invite' - this shouldn't happen now, but handle it
-        errorMessage = 'User already exists. Please try again - the system will use the correct link type.'
+        errorMessage = 'User already exists. Using recovery link type.'
       } else if (error?.message?.includes('User not found')) {
         errorMessage = 'User not found. Please create the user first or use onboarding form.'
       }
