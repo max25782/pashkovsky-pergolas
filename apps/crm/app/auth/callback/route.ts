@@ -4,7 +4,6 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 export async function GET(request: NextRequest) {
   const url = new URL(request.url)
   const code = url.searchParams.get('code')
-  const token = url.searchParams.get('token') // Recovery links may use 'token' instead of 'code'
   const type = url.searchParams.get('type')
   const next = url.searchParams.get('next') || '/app'
   const error = url.searchParams.get('error')
@@ -13,7 +12,6 @@ export async function GET(request: NextRequest) {
   console.log('[Callback] ===================')
   console.log('[Callback] Full URL:', url.href)
   console.log('[Callback] Code:', code ? `✓ (${code.substring(0, 20)}...)` : '✗')
-  console.log('[Callback] Token:', token ? `✓ (${token.substring(0, 20)}...)` : '✗')
   console.log('[Callback] Type:', type || 'none')
   console.log('[Callback] Next:', next)
   console.log('[Callback] Error:', error || 'none')
@@ -29,11 +27,8 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  // Use code if available, otherwise try token (for recovery links)
-  const authCode = code || token
-  
-  if (!authCode) {
-    console.error('[Callback] Missing both code and token parameters')
+  if (!code) {
+    console.error('[Callback] Missing code parameter')
     console.error('[Callback] Available params:', Array.from(url.searchParams.keys()))
     return NextResponse.redirect(new URL('/login?error=missing_code', url.origin))
   }
@@ -57,8 +52,8 @@ export async function GET(request: NextRequest) {
     }
   )
 
-  console.log('[Callback] Exchanging code/token for session...')
-  const { data: sessionData, error } = await supabase.auth.exchangeCodeForSession(authCode)
+  console.log('[Callback] Exchanging code for session...')
+  const { data: sessionData, error } = await supabase.auth.exchangeCodeForSession(code)
 
   if (error) {
     console.error('[Callback] ✗ Exchange error:', error.message)
