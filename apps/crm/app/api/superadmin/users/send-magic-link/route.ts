@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { sendEmail, generateMagicLinkEmailHTML } from '@/lib/email'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -96,10 +97,38 @@ export async function POST(request: NextRequest) {
       console.warn('[SendMagicLink] Could not parse action link URL')
     }
 
+    // Send email via Zoho
+    let emailSent = false
+    let emailError: string | null = null
+    
+    try {
+      if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+        const html = generateMagicLinkEmailHTML(data.properties.action_link, email)
+        await sendEmail({
+          to: email,
+          subject: 'Your CRM Login Link - AluminCRM',
+          html,
+        })
+        emailSent = true
+        console.log('[SendMagicLink] ✓ Email sent via Zoho')
+      } else {
+        emailError = 'Email not configured (EMAIL_USER/EMAIL_PASS missing)'
+        console.warn('[SendMagicLink] ⚠️', emailError)
+      }
+    } catch (emailErr: any) {
+      emailError = emailErr.message || 'Failed to send email'
+      console.error('[SendMagicLink] ✗ Email send failed:', emailError)
+      // Don't fail the whole request if email fails - magic link is still generated
+    }
+
     return NextResponse.json({
       success: true,
-      message: `Magic link sent to ${email}`,
+      message: emailSent 
+        ? `Magic link sent to ${email}` 
+        : `Magic link generated${emailError ? ` (email not sent: ${emailError})` : ''}`,
       magicLink: data.properties.action_link,
+      emailSent,
+      emailError: emailError || undefined,
     })
   } catch (error: any) {
     console.error('[SendMagicLink] Exception:', error)

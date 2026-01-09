@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireSuperAdmin } from '@/lib/middleware/superadmin-auth'
 import { onboardCompany } from '@/lib/services/company-onboarding-service'
 import { createClient } from '@supabase/supabase-js'
+import { sendEmail, generateMagicLinkEmailHTML } from '@/lib/email'
 
 export const dynamic = 'force-dynamic'
 
@@ -86,6 +87,9 @@ export async function POST(request: NextRequest) {
 
     // Generate magic link if requested
     let magicLink: string | undefined
+    let emailSent = false
+    let emailError: string | null = null
+    
     if (sendMagicLink) {
       try {
         const supabaseAdmin = createClient(
@@ -100,8 +104,14 @@ export async function POST(request: NextRequest) {
         )
 
         const callbackUrl = `${request.nextUrl.origin}/auth/callback`
+        
+        // Check if user exists to use correct link type
+        const { data: users } = await supabaseAdmin.auth.admin.listUsers()
+        const existingUser = users?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase())
+        const linkType = existingUser ? 'magiclink' : 'invite'
+        
         const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-          type: 'invite',
+          type: linkType as any,
           email: email.toLowerCase().trim(),
           options: {
             redirectTo: callbackUrl,
@@ -111,6 +121,26 @@ export async function POST(request: NextRequest) {
         if (!linkError && linkData?.properties?.action_link) {
           magicLink = linkData.properties.action_link
           console.log('[API /superadmin/companies/onboard] Magic link generated')
+          
+          // Send email via Zoho
+          try {
+            if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+              const html = generateMagicLinkEmailHTML(magicLink, email.toLowerCase().trim())
+              await sendEmail({
+                to: email.toLowerCase().trim(),
+                subject: 'Your CRM Login Link - AluminCRM',
+                html,
+              })
+              emailSent = true
+              console.log('[API /superadmin/companies/onboard] ✓ Email sent via Zoho')
+            } else {
+              emailError = 'Email not configured (EMAIL_USER/EMAIL_PASS missing)'
+              console.warn('[API /superadmin/companies/onboard] ⚠️', emailError)
+            }
+          } catch (emailErr: any) {
+            emailError = emailErr.message || 'Failed to send email'
+            console.error('[API /superadmin/companies/onboard] ✗ Email send failed:', emailError)
+          }
         } else {
           console.error('[API /superadmin/companies/onboard] Failed to generate magic link:', linkError)
         }
@@ -125,6 +155,8 @@ export async function POST(request: NextRequest) {
         user_id: result.user_id,
         company_name: result.company_name,
         magic_link: magicLink,
+        email_sent: emailSent,
+        email_error: emailError || undefined,
       })
   } catch (error: any) {
     console.error('[API /superadmin/companies/onboard] Unexpected error:', error)
