@@ -70,7 +70,113 @@ export async function GET(request: NextRequest) {
   if (!code) {
     console.error('[Callback] Missing code parameter')
     console.error('[Callback] Available params:', Array.from(url.searchParams.keys()))
-    return NextResponse.redirect(new URL('/login?error=missing_code', url.origin))
+    
+    // If no code parameter, return HTML page with client-side processing
+    // This handles cases where Supabase redirects with hash fragments (#access_token)
+    // which are not visible to the server
+    console.log('[Callback] Returning client-side processing page for hash fragments')
+    
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Processing authentication...</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    (async function() {
+      const supabaseUrl = '${process.env.NEXT_PUBLIC_SUPABASE_URL}';
+      const supabaseAnonKey = '${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}';
+      const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+      
+      console.log('[Auth Callback Client] Starting callback processing...');
+      console.log('[Auth Callback Client] Current URL:', window.location.href);
+      console.log('[Auth Callback Client] Hash:', window.location.hash);
+      
+      // Check for hash fragment (implicit flow or recovery)
+      const hash = window.location.hash.substring(1);
+      
+      if (hash) {
+        console.log('[Auth Callback Client] Hash fragment detected');
+        const hashParams = new URLSearchParams(hash);
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+        const error = hashParams.get('error');
+        const errorDescription = hashParams.get('error_description');
+        
+        if (error) {
+          console.error('[Auth Callback Client] Hash error:', error, errorDescription);
+          window.location.href = '/login?error=' + encodeURIComponent(error) + 
+            (errorDescription ? '&description=' + encodeURIComponent(errorDescription) : '');
+          return;
+        }
+        
+        if (accessToken && refreshToken) {
+          console.log('[Auth Callback Client] Setting session from hash...');
+          
+          const { data, error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+          
+          if (sessionError) {
+            console.error('[Auth Callback Client] Set session error:', sessionError);
+            window.location.href = '/login?error=' + encodeURIComponent(sessionError.message);
+            return;
+          }
+          
+          console.log('[Auth Callback Client] ✓ Session set successfully');
+          window.location.href = '/app';
+          return;
+        }
+      }
+      
+      // Check for code parameter in URL (shouldn't happen here but just in case)
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      
+      if (code) {
+        console.log('[Auth Callback Client] Code parameter found, exchanging...');
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        
+        if (error) {
+          console.error('[Auth Callback Client] Exchange error:', error);
+          window.location.href = '/login?error=' + encodeURIComponent(error.message);
+          return;
+        }
+        
+        console.log('[Auth Callback Client] ✓ Exchange successful');
+        window.location.href = '/app';
+        return;
+      }
+      
+      // No parameters found
+      console.error('[Auth Callback Client] No authentication parameters found');
+      window.location.href = '/login?error=missing_code';
+    })();
+  </script>
+</head>
+<body>
+  <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: system-ui;">
+    <div style="text-align: center;">
+      <div style="border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 48px; height: 48px; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+      <p style="margin-top: 16px; color: #666;">Processing authentication...</p>
+    </div>
+  </div>
+  <style>
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</body>
+</html>
+    `.trim();
+    
+    return new NextResponse(html, {
+      headers: {
+        'Content-Type': 'text/html',
+      },
+    });
   }
 
   const cookiesToSet: { name: string; value: string; options: CookieOptions }[] = []
