@@ -108,6 +108,15 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[SendMagicLink] ✓ Magic link generated successfully')
+    
+    if (!data.properties?.action_link) {
+      console.error('[SendMagicLink] ❌ Action link is missing from response')
+      return NextResponse.json(
+        { error: 'Magic link generated but action_link is missing' },
+        { status: 500 }
+      )
+    }
+    
     console.log('[SendMagicLink] Action link:', data.properties.action_link)
     
     // Extract and log the redirect_to parameter from the action link
@@ -138,13 +147,16 @@ export async function POST(request: NextRequest) {
       console.error('[SendMagicLink] ❌ Could not parse action link URL:', e)
     }
 
+    // At this point we know data.properties.action_link exists (checked above)
+    const actionLink = data.properties!.action_link
+
     // Send email via Zoho
     let emailSent = false
     let emailError: string | null = null
     
     try {
       if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-        const html = generateMagicLinkEmailHTML(data.properties.action_link, email)
+        const html = generateMagicLinkEmailHTML(actionLink, email)
         await sendEmail({
           to: email,
           subject: 'Your CRM Login Link - AluminCRM',
@@ -167,7 +179,7 @@ export async function POST(request: NextRequest) {
       message: emailSent 
         ? `Magic link sent to ${email}` 
         : `Magic link generated${emailError ? ` (email not sent: ${emailError})` : ''}`,
-      magicLink: data.properties.action_link,
+      magicLink: actionLink,
       emailSent,
       emailError: emailError || undefined,
     })
