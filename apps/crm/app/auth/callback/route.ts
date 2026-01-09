@@ -88,9 +88,12 @@ export async function GET(request: NextRequest) {
       const supabaseAnonKey = '${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}';
       const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
       
+      console.log('[Auth Callback Client] ===================');
       console.log('[Auth Callback Client] Starting callback processing...');
-      console.log('[Auth Callback Client] Current URL:', window.location.href);
+      console.log('[Auth Callback Client] Full URL:', window.location.href);
+      console.log('[Auth Callback Client] Search:', window.location.search);
       console.log('[Auth Callback Client] Hash:', window.location.hash);
+      console.log('[Auth Callback Client] Referrer:', document.referrer);
       
       // Check for hash fragment (implicit flow or recovery)
       const hash = window.location.hash.substring(1);
@@ -150,7 +153,24 @@ export async function GET(request: NextRequest) {
       }
       
       // No parameters found
-      console.error('[Auth Callback Client] No authentication parameters found');
+      console.error('[Auth Callback Client] ❌ No authentication parameters found');
+      console.error('[Auth Callback Client] This means Supabase redirected without code or hash');
+      console.error('[Auth Callback Client] Possible causes:');
+      console.error('[Auth Callback Client] 1. Recovery link expired or invalid');
+      console.error('[Auth Callback Client] 2. Supabase redirect URL not configured correctly');
+      console.error('[Auth Callback Client] 3. Recovery type requires different handling');
+      console.log('[Auth Callback Client] ===================');
+      
+      // Try to get session from cookies (maybe it was set by Supabase directly)
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (session && !sessionError) {
+        console.log('[Auth Callback Client] ✓ Found existing session, redirecting to /app');
+        window.location.href = '/app';
+        return;
+      }
+      
+      console.error('[Auth Callback Client] No session found, redirecting to login');
       window.location.href = '/login?error=missing_code';
     })();
   </script>
@@ -160,6 +180,7 @@ export async function GET(request: NextRequest) {
     <div style="text-align: center;">
       <div style="border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 48px; height: 48px; animation: spin 1s linear infinite; margin: 0 auto;"></div>
       <p style="margin-top: 16px; color: #666;">Processing authentication...</p>
+      <p style="margin-top: 8px; font-size: 12px; color: #999;">Check browser console for details</p>
     </div>
   </div>
   <style>
