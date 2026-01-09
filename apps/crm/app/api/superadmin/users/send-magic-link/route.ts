@@ -46,11 +46,19 @@ export async function POST(request: NextRequest) {
     console.log('[SendMagicLink] Callback URL:', callbackUrl)
     console.log('[SendMagicLink] Final destination:', finalDestination)
 
-    // Generate magic link using PKCE flow (not implicit flow)
-    // type: 'invite' generates ?code=xxx (PKCE), not #access_token (implicit)
-    // Unlike 'signup', 'invite' doesn't require password parameter
+    // Check if user exists
+    const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers()
+    const existingUser = users?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase())
+
+    // Use different type based on whether user exists
+    // For existing users: use 'magiclink' (works with PKCE in newer Supabase versions)
+    // For new users: use 'invite' (creates user + PKCE flow)
+    const linkType = existingUser ? 'magiclink' : 'invite'
+    
+    console.log('[SendMagicLink] User exists:', !!existingUser, 'Using type:', linkType)
+
     const { data, error } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'invite',
+      type: linkType as any,
       email,
       options: {
         redirectTo: callbackUrl,
@@ -59,8 +67,19 @@ export async function POST(request: NextRequest) {
 
     if (error || !data) {
       console.error('[SendMagicLink] Error:', error)
+      
+      // Provide more specific error messages
+      let errorMessage = error?.message || 'Failed to generate magic link'
+      
+      if (error?.message?.includes('already been registered')) {
+        // User exists but we tried to use 'invite' - this shouldn't happen now, but handle it
+        errorMessage = 'User already exists. Please try again - the system will use the correct link type.'
+      } else if (error?.message?.includes('User not found')) {
+        errorMessage = 'User not found. Please create the user first or use onboarding form.'
+      }
+      
       return NextResponse.json(
-        { error: error?.message || 'Failed to generate magic link' },
+        { error: errorMessage },
         { status: 500 }
       )
     }

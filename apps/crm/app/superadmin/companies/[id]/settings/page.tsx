@@ -6,6 +6,9 @@
 
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import { CompanySettingsForm } from '@/components/superadmin/CompanySettingsForm'
+
+export const dynamic = 'force-dynamic'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -32,31 +35,7 @@ export default async function CompanySettingsPage({ params }: PageProps) {
 
       {/* Settings Form */}
       <div className="bg-white rounded-lg shadow p-6">
-        <div className="space-y-6">
-          {/* Placeholder for settings */}
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-            <p className="text-gray-500 mb-4">Settings management coming soon</p>
-            <p className="text-sm text-gray-400">
-              This page will allow you to:
-            </p>
-            <ul className="text-sm text-gray-400 mt-2 space-y-1">
-              <li>• Change company name and email</li>
-              <li>• Modify subscription plan</li>
-              <li>• Manage company members</li>
-              <li>• Configure integrations</li>
-            </ul>
-          </div>
-
-          {/* Back Button */}
-          <div className="flex justify-end">
-            <Link
-              href={`/superadmin/companies/${companyId}`}
-              className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
-            >
-              Back to Details
-            </Link>
-          </div>
-        </div>
+        <CompanySettingsForm companyId={companyId} />
       </div>
     </div>
   )
