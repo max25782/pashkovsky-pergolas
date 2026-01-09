@@ -108,7 +108,9 @@ export async function POST(request: NextRequest) {
         // Check if user exists to use correct link type
         const { data: users } = await supabaseAdmin.auth.admin.listUsers()
         const existingUser = users?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase())
-        const linkType = existingUser ? 'magiclink' : 'invite'
+        // Use 'recovery' for existing users (PKCE flow), 'invite' for new users
+        // 'magiclink' uses implicit flow (#access_token) which doesn't work with SSR cookies
+        const linkType = existingUser ? 'recovery' : 'invite'
         
         const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
           type: linkType as any,

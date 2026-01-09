@@ -52,9 +52,10 @@ export async function POST(request: NextRequest) {
     const existingUser = users?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase())
 
     // Use different type based on whether user exists
-    // For existing users: use 'magiclink' (works with PKCE in newer Supabase versions)
+    // For existing users: use 'recovery' (PKCE flow, password reset link works as magic link)
     // For new users: use 'invite' (creates user + PKCE flow)
-    const linkType = existingUser ? 'magiclink' : 'invite'
+    // 'magiclink' type uses implicit flow (#access_token) which doesn't work with SSR cookies
+    const linkType = existingUser ? 'recovery' : 'invite'
     
     console.log('[SendMagicLink] User exists:', !!existingUser, 'Using type:', linkType)
 
