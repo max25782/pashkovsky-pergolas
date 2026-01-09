@@ -51,13 +51,16 @@ export async function POST(request: NextRequest) {
     const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers()
     const existingUser = users?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase())
 
-    // Use different type based on whether user exists
-    // For existing users: use 'recovery' (PKCE flow, password reset link works as magic link)
-    // For new users: use 'invite' (creates user + PKCE flow)
+    // Use 'invite' for all users (both new and existing)
+    // 'invite' works as magic link for existing users too (logs them in without password)
+    // 'recovery' may require password reset flow which doesn't work as magic link
     // 'magiclink' type uses implicit flow (#access_token) which doesn't work with SSR cookies
-    const linkType = existingUser ? 'recovery' : 'invite'
+    const linkType = 'invite'
     
     console.log('[SendMagicLink] User exists:', !!existingUser, 'Using type:', linkType)
+    if (existingUser) {
+      console.log('[SendMagicLink] ⚠️ Note: Using invite type for existing user (this should work as magic link)')
+    }
 
     const { data, error } = await supabaseAdmin.auth.admin.generateLink({
       type: linkType as any,
@@ -93,9 +96,28 @@ export async function POST(request: NextRequest) {
     try {
       const actionUrl = new URL(data.properties.action_link)
       const redirectToParam = actionUrl.searchParams.get('redirect_to')
-      console.log('[SendMagicLink] redirect_to param:', redirectToParam)
+      const tokenParam = actionUrl.searchParams.get('token')
+      const typeParam = actionUrl.searchParams.get('type')
+      
+      console.log('[SendMagicLink] ===================')
+      console.log('[SendMagicLink] Action link analysis:')
+      console.log('[SendMagicLink] - redirect_to:', redirectToParam || '❌ MISSING!')
+      console.log('[SendMagicLink] - token:', tokenParam ? `✓ (${tokenParam.substring(0, 20)}...)` : '✗')
+      console.log('[SendMagicLink] - type:', typeParam || 'none')
+      console.log('[SendMagicLink] - Expected redirect_to:', callbackUrl)
+      console.log('[SendMagicLink] - Match:', redirectToParam === callbackUrl ? '✅ YES' : '❌ NO')
+      
+      if (!redirectToParam) {
+        console.error('[SendMagicLink] ❌ CRITICAL: redirect_to parameter is missing from action link!')
+        console.error('[SendMagicLink] This means Supabase will redirect to Site URL instead')
+      } else if (redirectToParam !== callbackUrl) {
+        console.warn('[SendMagicLink] ⚠️ WARNING: redirect_to mismatch!')
+        console.warn('[SendMagicLink] Expected:', callbackUrl)
+        console.warn('[SendMagicLink] Got:', redirectToParam)
+      }
+      console.log('[SendMagicLink] ===================')
     } catch (e) {
-      console.warn('[SendMagicLink] Could not parse action link URL')
+      console.error('[SendMagicLink] ❌ Could not parse action link URL:', e)
     }
 
     // Send email via Zoho
