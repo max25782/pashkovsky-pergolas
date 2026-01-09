@@ -7,58 +7,6 @@
   - Environments: .env.local
 
  [37m[1m [22m[39m Creating an optimized production build ...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
  [32m[1m✓[22m[39m Compiled successfully
-[?25l [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G[?25h [37m[1m [22m[39m Linting and checking validity of types     [32m[1m✓[22m[39m Linting and checking validity of types 
-[?25l [37m[1m [22m[39m Collecting page data  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m.[39m[2K[1G[?25h [37m[1m [22m[39m Collecting page data     [32m[1m✓[22m[39m Collecting page data 
-[?25l [37m[1m [22m[39m Generating static pages (0/97)  [36m[    ][39m[2K[1G [37m[1m [22m[39m Generating static pages (0/97)  [36m[=   ][39m[2K[1G [37m[1m [22m[39m Generating static pages (17/97)  [36m[==  ][39m[2K[1G [37m[1m [22m[39m Generating static pages (58/97)  [36m[=== ][39m[2K[1G [37m[1m [22m[39m Generating static pages (58/97)  [36m[ ===][39m[2K[1G[?25h [32m[1m✓[22m[39m Generating static pages (97/97)
-[?25l [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[?25l [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G[?25h [37m[1m [22m[39m Collecting build traces     [32m[1m✓[22m[39m Collecting build traces 
-[2K[1G[?25h [37m[1m [22m[39m Finalizing page optimization     [32m[1m✓[22m[39m Finalizing page optimization 
-
-[4mRoute (app)[24m                              [4mSize[24m     [4mFirst Load JS[24m
-┌ ○ /_not-found                          160 B          [37m[1m87.3 kB[22m[39m
-├ ƒ /[locale]                            10.9 kB         [37m[1m150 kB[22m[39m
-├ ƒ /[locale]/about                      160 B          [37m[1m87.3 kB[22m[39m
-├ ƒ /[locale]/blog                       160 B          [37m[1m87.3 kB[22m[39m
-├ ● /[locale]/blog/[slug]                297 B          [37m[1m94.2 kB[22m[39m
-├   ├ /he/blog/pergolas-aluminum
-├   ├ /he/blog/glass-railings
-├   ├ /he/blog/fences-gates
-├   └ [+9 more paths]
-├ ƒ /[locale]/contact                    6.62 kB         [37m[1m112 kB[22m[39m
-├ ƒ /[locale]/fences                     3.23 kB         [37m[1m171 kB[22m[39m
-├ ƒ /[locale]/fromShetah                 179 B           [37m[1m109 kB[22m[39m
-├ ƒ /[locale]/legal/privacy              160 B          [37m[1m87.3 kB[22m[39m
-├ ƒ /[locale]/legal/terms                160 B          [37m[1m87.3 kB[22m[39m
-├ ƒ /[locale]/mistora                    3.32 kB         [37m[1m152 kB[22m[39m
-├ ƒ /[locale]/models                     160 B          [37m[1m87.3 kB[22m[39m
-├ ƒ /[locale]/pergola3d                  223 kB          [37m[1m310 kB[22m[39m
-├ ƒ /[locale]/pergulas                   15.1 kB         [37m[1m183 kB[22m[39m
-├ ● /[locale]/pergulas/[id]              172 B          [37m[1m92.4 kB[22m[39m
-├   ├ /he/pergulas/ashdod
-├   ├ /he/pergulas/ashkelon
-├   ├ /he/pergulas/ashkelon2
-├   └ [+75 more paths]
-├ ƒ /[locale]/profiles                   3.32 kB         [37m[1m136 kB[22m[39m
-├ ƒ /[locale]/railings                   3.73 kB         [37m[1m153 kB[22m[39m
-├ ƒ /[locale]/services                   160 B          [37m[1m87.3 kB[22m[39m
-├ ƒ /[locale]/windows                    777 B           [37m[1m109 kB[22m[39m
-├ ƒ /api/gallery/[category]              0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/gallery/models                  0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/gallery/test-s3                 0 B                [37m[1m0 B[22m[39m
-├ ○ /api/pergola-projects                0 B                [37m[1m0 B[22m[39m
-├ ○ /icon.svg                            0 B                [37m[1m0 B[22m[39m
-├ ○ /robots.txt                          0 B                [37m[1m0 B[22m[39m
-└ ○ /sitemap.xml                         0 B                [37m[1m0 B[22m[39m
-+ First Load JS shared by all            [37m[1m87.1 kB[22m[39m
-  ├ chunks/1dd3208c-3de7ad46c3607b00.js  53.6 kB
-  ├ chunks/286-9db2548052210d3e.js       31.5 kB
-  └ other shared chunks (total)          1.96 kB
-
-
-ƒ Middleware                             [37m[1m28.1 kB[22m[39m
-
-○  (Static)   prerendered as static content
-●  (SSG)      prerendered as static HTML (uses [36mgetStaticProps[39m)
-ƒ  (Dynamic)  server-rendered on demand
-
-[?25h⠙[1G[0K
+[?25l [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[?25h⠙[1G[0K

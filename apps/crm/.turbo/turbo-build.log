@@ -7,28 +7,82 @@
   - Environments: .env.local
 
  [37m[1m [22m[39m Creating an optimized production build ...
-<w> [webpack.cache.PackFileCacheStrategy] Serializing big strings (130kiB) impacts deserialization performance (consider using Buffer instead and decode when needed)
- ⚠ Compiled with warnings
+Failed to compile.
 
-../../node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
-A Node.js API is used (process.versions at line: 39) which is not supported in the Edge Runtime.
-Learn more: https://nextjs.org/docs/api-reference/edge-runtime
+./app/auth/callback/route.ts
+Error: 
+  [31mx[0m the name `error` is defined multiple times
+    ,-[[36;1;4m/Users/user/Downloads/pashkovsky-pergolas_starter/apps/crm/app/auth/callback/route.ts[0m:6:1]
+ [2m 6[0m |   const code = url.searchParams.get('code')
+ [2m 7[0m |   const type = url.searchParams.get('type')
+ [2m 8[0m |   const next = url.searchParams.get('next') || '/app'
+ [2m 9[0m |   const error = url.searchParams.get('error')
+    : [31;1m        ^^|^^[0m
+    :           [31;1m`-- [31;1mprevious definition of `error` here[0m[0m
+ [2m10[0m |   const errorDescription = url.searchParams.get('error_description')
+ [2m11[0m | 
+ [2m12[0m |   console.log('[Callback] ===================')
+ [2m13[0m |   console.log('[Callback] Full URL:', url.href)
+ [2m14[0m |   console.log('[Callback] Code:', code ? `✓ (${code.substring(0, 20)}...)` : '✗')
+ [2m15[0m |   console.log('[Callback] Type:', type || 'none')
+ [2m16[0m |   console.log('[Callback] Next:', next)
+ [2m17[0m |   console.log('[Callback] Error:', error || 'none')
+ [2m18[0m |   console.log('[Callback] Error Description:', errorDescription || 'none')
+ [2m19[0m |   console.log('[Callback] All params:', Object.fromEntries(url.searchParams.entries()))
+ [2m20[0m |   console.log('[Callback] ===================')
+ [2m21[0m | 
+ [2m22[0m |   // Check for Supabase error in URL
+ [2m23[0m |   if (error) {
+ [2m24[0m |     console.error('[Callback] Supabase error in URL:', error, errorDescription)
+ [2m25[0m |     return NextResponse.redirect(
+ [2m26[0m |       new URL(`/login?error=${encodeURIComponent(error)}&description=${encodeURIComponent(errorDescription || '')}`, url.origin)
+ [2m27[0m |     )
+ [2m28[0m |   }
+ [2m29[0m | 
+ [2m30[0m |   if (!code) {
+ [2m31[0m |     console.error('[Callback] Missing code parameter')
+ [2m32[0m |     console.error('[Callback] Available params:', Array.from(url.searchParams.keys()))
+ [2m33[0m |     return NextResponse.redirect(new URL('/login?error=missing_code', url.origin))
+ [2m34[0m |   }
+ [2m35[0m | 
+ [2m36[0m |   const cookiesToSet: { name: string; value: string; options: CookieOptions }[] = []
+ [2m37[0m | 
+ [2m38[0m |   const supabase = createServerClient(
+ [2m39[0m |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+ [2m40[0m |     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+ [2m41[0m |     {
+ [2m42[0m |       cookies: {
+ [2m43[0m |         getAll() {
+ [2m44[0m |           return request.cookies.getAll()
+ [2m45[0m |         },
+ [2m46[0m |         setAll(cookiesToSetArray) {
+ [2m47[0m |           cookiesToSetArray.forEach((cookie) => {
+ [2m48[0m |             cookiesToSet.push(cookie)
+ [2m49[0m |           })
+ [2m50[0m |         },
+ [2m51[0m |       },
+ [2m52[0m |     }
+ [2m53[0m |   )
+ [2m54[0m | 
+ [2m55[0m |   console.log('[Callback] Exchanging code for session...')
+ [2m56[0m |   const { data: sessionData, error } = await supabase.auth.exchangeCodeForSession(code)
+    : [33;1m                             ^^|^^[0m
+    :                                [33;1m`-- [33;1m`error` redefined here[0m[0m
+ [2m57[0m | 
+ [2m58[0m |   if (error) {
+ [2m59[0m |     console.error('[Callback] ✗ Exchange error:', error.message)
+    `----
 
 Import trace for requested module:
-../../node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
-../../node_modules/@supabase/realtime-js/dist/module/index.js
-../../node_modules/@supabase/supabase-js/dist/index.mjs
-../../node_modules/@supabase/ssr/dist/module/createServerClient.js
-../../node_modules/@supabase/ssr/dist/module/index.js
+./app/auth/callback/route.ts
 
-../../node_modules/@supabase/supabase-js/dist/index.mjs
-A Node.js API is used (process.version at line: 395) which is not supported in the Edge Runtime.
-Learn more: https://nextjs.org/docs/api-reference/edge-runtime
 
-Import trace for requested module:
-../../node_modules/@supabase/supabase-js/dist/index.mjs
-../../node_modules/@supabase/ssr/dist/module/createServerClient.js
-../../node_modules/@supabase/ssr/dist/module/index.js
-
-[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+> Build failed because of webpack errors
+⠙[1G[0K[1mnpm[22m [31merror[39m Lifecycle script `build` failed with error:
+⠙[1G[0K[1mnpm[22m [31merror[39m [94mcode[39m [33m1[39m
+⠙[1G[0K[1mnpm[22m [31merror[39m [94mpath[39m /Users/user/Downloads/pashkovsky-pergolas_starter/apps/crm
+⠙[1G[0K[1mnpm[22m [31merror[39m [94mworkspace[39m @alumincrm/app@1.0.0
+⠙[1G[0K[1mnpm[22m [31merror[39m [94mlocation[39m /Users/user/Downloads/pashkovsky-pergolas_starter/apps/crm
+⠙[1G[0K[1mnpm[22m [31merror[39m command failed
+⠙[1G[0K[1mnpm[22m [31merror[39m [94mcommand[39m sh -c next build
 ⠙[1G[0K

@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
   const code = url.searchParams.get('code')
   const type = url.searchParams.get('type')
   const next = url.searchParams.get('next') || '/app'
-  const error = url.searchParams.get('error')
+  const urlError = url.searchParams.get('error')
   const errorDescription = url.searchParams.get('error_description')
 
   console.log('[Callback] ===================')
@@ -14,16 +14,16 @@ export async function GET(request: NextRequest) {
   console.log('[Callback] Code:', code ? `✓ (${code.substring(0, 20)}...)` : '✗')
   console.log('[Callback] Type:', type || 'none')
   console.log('[Callback] Next:', next)
-  console.log('[Callback] Error:', error || 'none')
+  console.log('[Callback] Error:', urlError || 'none')
   console.log('[Callback] Error Description:', errorDescription || 'none')
   console.log('[Callback] All params:', Object.fromEntries(url.searchParams.entries()))
   console.log('[Callback] ===================')
 
   // Check for Supabase error in URL
-  if (error) {
-    console.error('[Callback] Supabase error in URL:', error, errorDescription)
+  if (urlError) {
+    console.error('[Callback] Supabase error in URL:', urlError, errorDescription)
     return NextResponse.redirect(
-      new URL(`/login?error=${encodeURIComponent(error)}&description=${encodeURIComponent(errorDescription || '')}`, url.origin)
+      new URL(`/login?error=${encodeURIComponent(urlError)}&description=${encodeURIComponent(errorDescription || '')}`, url.origin)
     )
   }
 
