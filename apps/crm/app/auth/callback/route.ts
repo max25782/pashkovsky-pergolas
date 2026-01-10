@@ -8,6 +8,18 @@ function sanitizeNext(input: string | null): string {
   return input
 }
 
+function isLikelyPrefetch(request: NextRequest): boolean {
+  const purpose = request.headers.get('purpose') || request.headers.get('sec-purpose') || request.headers.get('x-purpose')
+  if (purpose && purpose.toLowerCase().includes('prefetch')) return true
+
+  // Many email security scanners do not send Sec-Fetch-User at all.
+  // Real user navigation typically includes: Sec-Fetch-User: ?1
+  const secFetchUser = request.headers.get('sec-fetch-user')
+  if (secFetchUser !== '?1') return true
+
+  return false
+}
+
 /**
  * Supabase Auth Callback (server-only)
  *
@@ -69,6 +81,14 @@ export async function GET(request: NextRequest) {
 
   // Admin-generated login flow (recommended for SuperAdmin “send access link”)
   if (token && type === 'magiclink') {
+    // Prevent link scanners / prefetchers from consuming one-time OTPs.
+    // Gmail/AV scanners often "click" links server-side; that would invalidate the token
+    // before the real user opens it.
+    if (isLikelyPrefetch(request)) {
+      console.warn('[Callback] Skipping verifyOtp: likely prefetch/scanner (not consuming OTP)')
+      return new NextResponse('OK', { status: 200 })
+    }
+
     const { error } = await supabase.auth.verifyOtp({
       type: 'magiclink',
       token_hash: token,
