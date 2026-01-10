@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { sendEmail, generateMagicLinkEmailHTML } from '@/lib/email'
+import { requireSuperAdmin } from '@/lib/middleware/superadmin-auth'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -22,11 +23,16 @@ interface RequestBody {
   redirectTo?: string
 }
 
+function sanitizeNext(input?: string): string {
+  if (!input) return '/app'
+  if (!input.startsWith('/')) return '/app'
+  if (input.startsWith('//')) return '/app'
+  return input
+}
+
 export async function POST(request: NextRequest) {
   try {
-    // TODO: Add SuperAdmin auth check here
-    // const session = await checkSuperAdminAuth(request)
-    // if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    await requireSuperAdmin(request)
 
     const body: RequestBody = await request.json()
     const { email, redirectTo } = body
@@ -38,56 +44,44 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Magic link MUST redirect to /auth/callback for SSR cookies
-    // Callback will then redirect to the final destination
+    // IMPORTANT:
+    // We DO NOT email the Supabase /auth/v1/verify link directly because it ends up
+    // redirecting with a #access_token fragment (server can't see it).
+    //
+    // Instead:
+    // - generateLink(type=magiclink) to get a one-time token
+    // - email OUR callback: /auth/callback?token=...&type=magiclink&next=/app
+    const next = sanitizeNext(redirectTo)
     const callbackUrl = `${request.nextUrl.origin}/auth/callback`
-    const finalDestination = redirectTo || '/app/admin'
+    const appCallbackUrl = `${callbackUrl}?next=${encodeURIComponent(next)}`
     
     console.log('[SendMagicLink] Generating magic link for:', email)
     console.log('[SendMagicLink] Callback URL:', callbackUrl)
-    console.log('[SendMagicLink] Final destination:', finalDestination)
+    console.log('[SendMagicLink] Next:', next)
 
-    // Check if user exists
+    // Ensure user exists (this endpoint is "send login access", not onboarding)
     const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers()
-    const existingUser = users?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase())
+    if (listError) {
+      console.error('[SendMagicLink] listUsers error:', listError)
+      return NextResponse.json({ error: 'Failed to verify user' }, { status: 500 })
+    }
+    const existingUser = users?.users?.find((u) => u.email?.toLowerCase() === email.toLowerCase())
+    if (!existingUser) {
+      return NextResponse.json(
+        { error: 'User not found. Create the company/user first, then send access.' },
+        { status: 404 }
+      )
+    }
 
-    // Use different type based on whether user exists
-    // For existing users: try 'recovery' first, fallback to 'signup' if needed
-    // For new users: use 'invite' (creates user + PKCE flow)
-    // 'magiclink' type uses implicit flow (#access_token) which doesn't work with SSR cookies
-    let linkType = existingUser ? 'recovery' : 'invite'
-    
-    console.log('[SendMagicLink] User exists:', !!existingUser, 'Using type:', linkType)
-
-    let { data, error } = await supabaseAdmin.auth.admin.generateLink({
-      type: linkType as any,
+    const { data, error } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'magiclink' as any,
       email,
       options: {
-        redirectTo: callbackUrl,
+        // IMPORTANT: still set redirectTo to our callback (Supabase uses it for token scoping),
+        // but we won't email the Supabase verify URL.
+        redirectTo: appCallbackUrl,
       },
     })
-
-    // If recovery fails for existing user, try signup (works as magic link)
-    if (error && existingUser && linkType === 'recovery') {
-      console.warn('[SendMagicLink] Recovery failed, trying signup as fallback:', error.message)
-      linkType = 'signup'
-      const signupResult = await supabaseAdmin.auth.admin.generateLink({
-        type: 'signup' as any,
-        email,
-        options: {
-          redirectTo: callbackUrl,
-          // Signup without password requirement
-        },
-      })
-      if (!signupResult.error && signupResult.data) {
-        data = signupResult.data
-        error = null
-        console.log('[SendMagicLink] ✓ Signup fallback succeeded')
-      } else {
-        error = signupResult.error
-        console.error('[SendMagicLink] Signup fallback also failed:', signupResult.error)
-      }
-    }
 
     if (error || !data) {
       console.error('[SendMagicLink] Error:', error)
@@ -95,10 +89,8 @@ export async function POST(request: NextRequest) {
       // Provide more specific error messages
       let errorMessage = error?.message || 'Failed to generate magic link'
       
-      if (error?.message?.includes('already been registered')) {
-        errorMessage = 'User already exists. Using recovery link type.'
-      } else if (error?.message?.includes('User not found')) {
-        errorMessage = 'User not found. Please create the user first or use onboarding form.'
+      if (error?.message?.includes('User not found')) {
+        errorMessage = 'User not found. Create the company/user first, then send access.'
       }
       
       return NextResponse.json(
@@ -131,15 +123,15 @@ export async function POST(request: NextRequest) {
       console.log('[SendMagicLink] - redirect_to:', redirectToParam || '❌ MISSING!')
       console.log('[SendMagicLink] - token:', tokenParam ? `✓ (${tokenParam.substring(0, 20)}...)` : '✗')
       console.log('[SendMagicLink] - type:', typeParam || 'none')
-      console.log('[SendMagicLink] - Expected redirect_to:', callbackUrl)
-      console.log('[SendMagicLink] - Match:', redirectToParam === callbackUrl ? '✅ YES' : '❌ NO')
+      console.log('[SendMagicLink] - Expected redirect_to:', appCallbackUrl)
+      console.log('[SendMagicLink] - Match:', redirectToParam === appCallbackUrl ? '✅ YES' : '❌ NO')
       
       if (!redirectToParam) {
         console.error('[SendMagicLink] ❌ CRITICAL: redirect_to parameter is missing from action link!')
         console.error('[SendMagicLink] This means Supabase will redirect to Site URL instead')
-      } else if (redirectToParam !== callbackUrl) {
+      } else if (redirectToParam !== appCallbackUrl) {
         console.warn('[SendMagicLink] ⚠️ WARNING: redirect_to mismatch!')
-        console.warn('[SendMagicLink] Expected:', callbackUrl)
+        console.warn('[SendMagicLink] Expected:', appCallbackUrl)
         console.warn('[SendMagicLink] Got:', redirectToParam)
       }
       console.log('[SendMagicLink] ===================')
@@ -147,8 +139,19 @@ export async function POST(request: NextRequest) {
       console.error('[SendMagicLink] ❌ Could not parse action link URL:', e)
     }
 
-    // At this point we know data.properties.action_link exists (checked above)
-    const actionLink = data.properties!.action_link
+    // Build OUR callback link (server-readable) from the generated action_link.
+    // Supabase verify link contains ?token=...&type=magiclink, but redirect can end in #access_token.
+    // We extract token+type and call verifyOtp server-side in /auth/callback.
+    const actionUrl = new URL(data.properties.action_link)
+    const token = actionUrl.searchParams.get('token')
+    const verificationType = actionUrl.searchParams.get('type') || 'magiclink'
+
+    if (!token) {
+      console.error('[SendMagicLink] ❌ token missing in action_link')
+      return NextResponse.json({ error: 'Magic link generated but token is missing' }, { status: 500 })
+    }
+
+    const appLink = `${callbackUrl}?token=${encodeURIComponent(token)}&type=${encodeURIComponent(verificationType)}&next=${encodeURIComponent(next)}`
 
     // Send email via Zoho
     let emailSent = false
@@ -156,7 +159,7 @@ export async function POST(request: NextRequest) {
     
     try {
       if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-        const html = generateMagicLinkEmailHTML(actionLink, email)
+        const html = generateMagicLinkEmailHTML(appLink, email)
         await sendEmail({
           to: email,
           subject: 'Your CRM Login Link - AluminCRM',
@@ -179,7 +182,7 @@ export async function POST(request: NextRequest) {
       message: emailSent 
         ? `Magic link sent to ${email}` 
         : `Magic link generated${emailError ? ` (email not sent: ${emailError})` : ''}`,
-      magicLink: actionLink,
+      magicLink: appLink,
       emailSent,
       emailError: emailError || undefined,
     })

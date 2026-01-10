@@ -1,78 +1,42 @@
-/**
- * SuperAdmin Layout
- * Protected layout - only platform admins can access
- */
-
-'use client'
-
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
 import { SuperAdminSidebar } from '@/components/superadmin/SuperAdminSidebar'
+import { getSession } from '@/lib/session/redis-client'
+import { createClient } from '@/lib/supabase/server'
+import { isSuperAdmin } from '@/lib/auth/isSuperAdmin'
 
-export default function SuperAdminLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  const router = useRouter()
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+export default async function SuperAdminLayout({ children }: { children: React.ReactNode }) {
+  const cookieStore = cookies()
 
-  useEffect(() => {
-    // Check SuperAdmin session from server (via httpOnly cookie)
-    async function checkSession() {
-      try {
-        const response = await fetch('/api/auth/superadmin-session', {
-          method: 'GET',
-          credentials: 'include', // Important: include cookies
-        })
-
-        const data = await response.json()
-
-        if (!response.ok || !data.authenticated) {
-          console.log('[SuperAdmin Layout] Not authenticated:', data.error)
-          router.push('/login?error=unauthorized')
-          return
-        }
-
-        console.log('[SuperAdmin Layout] ✓ Authenticated:', data.user.email)
-        setIsAuthenticated(true)
-      } catch (error) {
-        console.error('[SuperAdmin Layout] Session check error:', error)
-        router.push('/login?error=session_check_failed')
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    checkSession()
-  }, [router])
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-gray-100">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Verifying access...</p>
+  // 1) Prefer Redis SuperAdmin session (phone auth)
+  const sessionId = cookieStore.get('superadmin_session')?.value
+  if (sessionId) {
+    const session = await getSession(sessionId)
+    if (session && session.role === 'superadmin') {
+      return (
+        <div className="flex h-screen bg-gray-100" dir="ltr">
+          <SuperAdminSidebar />
+          <main className="flex-1 overflow-y-auto">
+            <div className="container mx-auto px-6 py-8">{children}</div>
+          </main>
         </div>
-      </div>
-    )
+      )
+    }
   }
 
-  if (!isAuthenticated) {
-    return null // Will redirect
-  }
+  // 2) Fallback: Supabase cookie session + platform_admins table
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login?error=authentication_required')
+
+  const ok = await isSuperAdmin(user.id)
+  if (!ok) redirect('/app')
 
   return (
     <div className="flex h-screen bg-gray-100" dir="ltr">
-      {/* Sidebar */}
       <SuperAdminSidebar />
-      
-      {/* Main Content */}
       <main className="flex-1 overflow-y-auto">
-        <div className="container mx-auto px-6 py-8">
-          {children}
-        </div>
+        <div className="container mx-auto px-6 py-8">{children}</div>
       </main>
     </div>
   )

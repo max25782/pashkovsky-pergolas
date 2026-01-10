@@ -104,54 +104,35 @@ export async function POST(request: NextRequest) {
         )
 
         const callbackUrl = `${request.nextUrl.origin}/auth/callback`
-        
-        // Check if user exists to use correct link type
-        const { data: users } = await supabaseAdmin.auth.admin.listUsers()
-        const existingUser = users?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase())
-        
-        // Use different type based on whether user exists
-        // For existing users: try 'recovery' first, fallback to 'signup' if needed
-        // For new users: use 'invite' (creates user + PKCE flow)
-        let linkType = existingUser ? 'recovery' : 'invite'
-        
-        console.log('[API /superadmin/companies/onboard] User exists:', !!existingUser, 'Using type:', linkType)
-        
-        let { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-          type: linkType as any,
+        const next = '/app'
+        const appCallbackUrl = `${callbackUrl}?next=${encodeURIComponent(next)}`
+
+        // Always generate LOGIN magic link (NOT recovery).
+        // Recovery must be reserved for reset-password flow.
+        const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+          type: 'magiclink' as any,
           email: email.toLowerCase().trim(),
           options: {
-            redirectTo: callbackUrl,
+            redirectTo: appCallbackUrl,
           },
         })
 
-        // If recovery fails for existing user, try signup (works as magic link)
-        if (linkError && existingUser && linkType === 'recovery') {
-          console.warn('[API /superadmin/companies/onboard] Recovery failed, trying signup as fallback:', linkError.message)
-          linkType = 'signup'
-          const signupResult = await supabaseAdmin.auth.admin.generateLink({
-            type: 'signup' as any,
-            email: email.toLowerCase().trim(),
-            options: {
-              redirectTo: callbackUrl,
-            },
-          })
-          if (!signupResult.error && signupResult.data) {
-            linkData = signupResult.data
-            linkError = null
-            console.log('[API /superadmin/companies/onboard] ✓ Signup fallback succeeded')
-          } else {
-            linkError = signupResult.error
-            console.error('[API /superadmin/companies/onboard] Signup fallback also failed:', signupResult.error)
-          }
-        }
-
         if (!linkError && linkData?.properties?.action_link) {
-          magicLink = linkData.properties.action_link
-          console.log('[API /superadmin/companies/onboard] Magic link generated')
+          const actionUrl = new URL(linkData.properties.action_link)
+          const token = actionUrl.searchParams.get('token')
+          const type = actionUrl.searchParams.get('type') || 'magiclink'
+
+          if (!token) {
+            console.error('[API /superadmin/companies/onboard] Magic link token missing')
+          } else {
+            magicLink = `${callbackUrl}?token=${encodeURIComponent(token)}&type=${encodeURIComponent(type)}&next=${encodeURIComponent(next)}`
+            console.log('[API /superadmin/companies/onboard] Magic link generated (app link)')
+          }
           
           // Send email via Zoho
           try {
             if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+              if (!magicLink) throw new Error('Magic link token missing')
               const html = generateMagicLinkEmailHTML(magicLink, email.toLowerCase().trim())
               await sendEmail({
                 to: email.toLowerCase().trim(),

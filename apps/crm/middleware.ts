@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
 
 // Public routes that don't require authentication
 const PUBLIC_ROUTES = [
@@ -29,67 +28,12 @@ export async function middleware(request: NextRequest) {
   if (PUBLIC_ROUTES.some(route => pathname === route || pathname.startsWith(`${route}/`))) {
     return NextResponse.next()
   }
-  
-  // Create Supabase client for middleware
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  })
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value
-        },
-        set(name: string, value: string, options: any) {
-          request.cookies.set({
-            name,
-            value,
-            ...options,
-          })
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-          })
-        },
-        remove(name: string, options: any) {
-          request.cookies.set({
-            name,
-            value: '',
-            ...options,
-          })
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          response.cookies.set({
-            name,
-            value: '',
-            ...options,
-          })
-        },
-      },
-    }
-  )
-
-  // NOTE: Auth check disabled in middleware due to Supabase SSR cookie issues
-  // Client-side pages (like AdminPage) handle auth checks and redirects
-  // This is a known issue with Next.js middleware and Supabase Auth cookies
-  if (pathname.startsWith('/app')) {
-    // Just pass through - let client-side handle auth
-    return NextResponse.next()
-  }
+ 
+  // Keep middleware minimal:
+  // - no auth checks
+  // - no DB access
+  // - no role logic
+  if (pathname.startsWith('/app') || pathname.startsWith('/superadmin')) return NextResponse.next()
   
   // Root redirect to /app (not /app/admin)
   if (pathname === '/') {
@@ -97,8 +41,8 @@ export async function middleware(request: NextRequest) {
     url.pathname = '/app'
     return NextResponse.redirect(url)
   }
-  
-  return response
+ 
+  return NextResponse.next()
 }
 
 export const config = {

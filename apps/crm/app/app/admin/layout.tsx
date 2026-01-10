@@ -1,15 +1,15 @@
-/**
- * Admin Layout
- * Note: Auth check is handled client-side in AdminPage component
- * to avoid issues with SSR cookie hydration
- */
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import { isSuperAdmin } from '@/lib/auth/isSuperAdmin'
 
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  // No server-side auth check here - let client handle it
-  // AdminPage already has auth check and redirect logic
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) redirect('/login?error=authentication_required')
+
+  const ok = await isSuperAdmin(user.id)
+  if (!ok) redirect('/app')
+
   return <>{children}</>
 }

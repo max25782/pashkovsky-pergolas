@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { Search, RefreshCw, MessageSquare, Trash2, X, User, Bot, Clock, ChevronLeft, Wifi, WifiOff } from 'lucide-react'
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/client'
 import { useCRMTranslations } from './useCRMTranslations'
 import { authFetch } from '@/lib/api/auth-fetch'
 
@@ -22,11 +22,6 @@ interface Message {
   content: string
   created_at: string
 }
-
-// Initialize Supabase client for realtime
-// Use NEXT_PUBLIC_ versions if available, otherwise fallback to regular (for server-side)
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY
 
 export function AIChatsTable() {
   const t = useCRMTranslations()
@@ -66,9 +61,7 @@ export function AIChatsTable() {
   
   // Setup realtime subscription
   useEffect(() => {
-    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return
-    
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    const supabase = createClient()
     supabaseRef.current = supabase
     
     // Subscribe to new messages

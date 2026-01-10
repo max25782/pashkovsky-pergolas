@@ -20,23 +20,14 @@ export function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
+        getAll() {
+          return cookieStore.getAll()
         },
-        set(name: string, value: string, options: any) {
+        setAll(cookiesToSet) {
           try {
-            cookieStore.set({ name, value, ...options })
-          } catch (error) {
-            // Cookie operations can fail in Server Components
-            // This is expected and safe to ignore
-          }
-        },
-        remove(name: string, options: any) {
-          try {
-            cookieStore.set({ name, value: '', ...options })
-          } catch (error) {
-            // Cookie operations can fail in Server Components
-            // This is expected and safe to ignore
+            cookiesToSet.forEach((cookie) => cookieStore.set(cookie))
+          } catch {
+            // In Server Components, cookie writes can throw; safe to ignore.
           }
         },
       },
