@@ -32,6 +32,7 @@ export async function GET() {
     console.log('[companies/me] User:', user.email)
 
     // 2. Получаем все компании, где состоит пользователь
+    console.log('[companies/me] Fetching memberships for user_id:', user.id)
     const { data: memberships, error: memberError } = await supabase
       .from('company_members')
       .select(
@@ -48,14 +49,20 @@ export async function GET() {
       .eq('user_id', user.id) as { data: Membership[] | null; error: any }
 
     if (memberError) {
-      console.error('[companies/me] memberError:', memberError)
+      console.error('[companies/me] memberError:', JSON.stringify(memberError, null, 2))
       return NextResponse.json(
         { error: 'Failed to load company memberships' },
         { status: 500 }
       )
     }
 
+    console.log('[companies/me] Memberships found:', memberships?.length || 0)
+    if (memberships && memberships.length > 0) {
+      console.log('[companies/me] First membership:', JSON.stringify(memberships[0], null, 2))
+    }
+
     if (!memberships || memberships.length === 0) {
+      console.log('[companies/me] No memberships found for user:', user.email)
       return NextResponse.json({ error: 'Company not found' }, { status: 404 })
     }
 
