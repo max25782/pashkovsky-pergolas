@@ -55,15 +55,13 @@ export default function AdminPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      const { data: membership } = await supabase
-        .from('company_members')
-        .select('company_id')
-        .eq('user_id', user.id)
-        .single()
-
-      if (!membership) return
-
-      const companyId = membership.company_id
+      // IMPORTANT: user can have multiple memberships -> avoid .single() (406).
+      // Use server-selected active company.
+      const companyRes = await fetch('/api/companies/me', { credentials: 'include' })
+      if (!companyRes.ok) return
+      const companyData = await companyRes.json()
+      const companyId = companyData.company_id as string | undefined
+      if (!companyId) return
 
       // Get active deals count - ALL stages except 'done'
       // Stages: new, measure, offer, offer_approved, material_ordered, approved, production, install
