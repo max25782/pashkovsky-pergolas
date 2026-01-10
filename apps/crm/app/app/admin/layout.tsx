@@ -1,11 +1,19 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { isSuperAdmin } from '@/lib/auth/isSuperAdmin'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) redirect('/login?error=authentication_required')
+
+  // SuperAdmins can access /app/admin without company membership (for testing/debugging)
+  const isAdmin = await isSuperAdmin(user.id)
+  if (isAdmin) {
+    console.log('[AdminLayout] SuperAdmin access granted:', user.email)
+    return <>{children}</>
+  }
 
   // Company CRM area: requires membership in at least one company.
   const { data: membership, error: membershipError } = await supabase
