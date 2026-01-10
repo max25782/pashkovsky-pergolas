@@ -17,10 +17,3 @@ export function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 }
-
-// Singleton instance for convenience
-export const supabase = createClient()
-
-// Backward compatibility alias
-export const createAuthenticatedClient = createClient
-

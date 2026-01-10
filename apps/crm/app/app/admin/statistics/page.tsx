@@ -7,7 +7,7 @@ import type { Locale } from '@/lib/locales'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
 import { DealsStatistics } from '@/components/admin/DealsStatistics'
 import type { Deal } from '@/components/admin/deal-types'
-import { createAuthenticatedClient } from '@/lib/supabase/client'
+import { createClient } from '@/lib/supabase/client'
 
 export default function StatisticsPage() {
   const t = useCRMTranslations()
@@ -23,7 +23,7 @@ export default function StatisticsPage() {
         setLoading(true)
         console.log('[Statistics] Loading deals with JWT...')
         
-        const supabase = createAuthenticatedClient()
+        const supabase = createClient()
         
         const { data, error: dbError } = await supabase
           .from('deals')

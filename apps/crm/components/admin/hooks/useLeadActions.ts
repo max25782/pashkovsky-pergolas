@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Lead } from '../lead-types'
-import { createAuthenticatedClient } from '@/lib/supabase/client'
+import { createClient } from '@/lib/supabase/client'
 
 interface UseLeadActionsParams {
   onUpdate?: (lead: Lead) => void
@@ -19,7 +19,7 @@ export function useLeadActions({
   async function patch(id: string, updates: Partial<Lead>) {
     setUpdating(true)
     try {
-      const supabase = createAuthenticatedClient()
+      const supabase = createClient()
       
       const { data, error: dbError } = await supabase
         .from('leads')
@@ -48,7 +48,7 @@ export function useLeadActions({
     
     setDeleting(true)
     try {
-      const supabase = createAuthenticatedClient()
+      const supabase = createClient()
       
       const { error: dbError } = await supabase
         .from('leads')

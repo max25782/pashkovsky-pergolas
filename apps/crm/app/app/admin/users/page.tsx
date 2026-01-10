@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { authFetch } from '@/lib/api/auth-fetch'
-import { createAuthenticatedClient } from '@/lib/supabase/client'
+import { createClient } from '@/lib/supabase/client'
 
 interface User {
   id: string
@@ -29,7 +29,7 @@ export default function AdminUsersPage() {
   async function initializeAndLoadUsers() {
     try {
       // Get company ID from user metadata
-      const supabase = createAuthenticatedClient()
+      const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       
       if (!user) {

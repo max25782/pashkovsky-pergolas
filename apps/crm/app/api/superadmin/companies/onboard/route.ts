@@ -106,27 +106,26 @@ export async function POST(request: NextRequest) {
         const callbackUrl = `${request.nextUrl.origin}/auth/callback`
         const next = '/app'
 
-        // Always generate LOGIN magic link (NOT recovery).
-        // Recovery must be reserved for reset-password flow.
+        // Use 'invite' type for PKCE flow (generates ?code=... instead of ?token=...)
         const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-          type: 'magiclink' as any,
+          type: 'invite',
           email: email.toLowerCase().trim(),
           options: {
-            // Use the exact callback URL (no query) to avoid Supabase falling back to Site URL.
+            // PKCE flow requires redirectTo to be exactly our callback URL
             redirectTo: callbackUrl,
           },
         })
 
         if (!linkError && linkData?.properties?.action_link) {
           const actionUrl = new URL(linkData.properties.action_link)
-          const token = actionUrl.searchParams.get('token')
-          const type = actionUrl.searchParams.get('type') || 'magiclink'
+          const code = actionUrl.searchParams.get('code')
 
-          if (!token) {
-            console.error('[API /superadmin/companies/onboard] Magic link token missing')
+          if (!code) {
+            console.error('[API /superadmin/companies/onboard] PKCE code missing from action_link')
           } else {
-            magicLink = `${callbackUrl}?token=${encodeURIComponent(token)}&type=${encodeURIComponent(type)}&next=${encodeURIComponent(next)}`
-            console.log('[API /superadmin/companies/onboard] Magic link generated (app link)')
+            // Build callback URL with PKCE code
+            magicLink = `${callbackUrl}?code=${encodeURIComponent(code)}&next=${encodeURIComponent(next)}`
+            console.log('[API /superadmin/companies/onboard] PKCE magic link generated')
           }
           
           // Send email via Zoho

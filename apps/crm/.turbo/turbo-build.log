@@ -7,82 +7,165 @@
   - Environments: .env.local
 
  [37m[1m [22m[39m Creating an optimized production build ...
-Failed to compile.
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+ [32m[1m✓[22m[39m Compiled successfully
+[?25l [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G[?25h [37m[1m [22m[39m Linting and checking validity of types     [32m[1m✓[22m[39m Linting and checking validity of types 
+[?25l [37m[1m [22m[39m Collecting page data  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m..[39m[2K[1G[?25h [37m[1m [22m[39m Collecting page data     [32m[1m✓[22m[39m Collecting page data 
+[?25l [37m[1m [22m[39m Generating static pages (0/84)  [36m[    ][39m[2K[1G [37m[1m [22m[39m Generating static pages (9/84)  [36m[=   ][39m✅ Email transporter is ready to send messages
+✅ Email transporter is ready to send messages
+✅ Email transporter is ready to send messages
+✅ Email transporter is ready to send messages
+✅ Email transporter is ready to send messages
+✅ Email transporter is ready to send messages
+[2K[1G [37m[1m [22m[39m Generating static pages (17/84)  [36m[==  ][39m[Models API] Returning 10 models with 60 total images
+[2K[1G [37m[1m [22m[39m Generating static pages (46/84)  [36m[=== ][39m[2K[1G [37m[1m [22m[39m Generating static pages (59/84)  [36m[ ===][39m[2K[1G [37m[1m [22m[39m Generating static pages (71/84)  [36m[  ==][39m[2K[1G [37m[1m [22m[39m Generating static pages (76/84)  [36m[   =][39m✅ Email transporter is ready to send messages
+[2K[1G [37m[1m [22m[39m Generating static pages (80/84)  [36m[    ][39m✅ Email transporter is ready to send messages
+[2K[1G [37m[1m [22m[39m Generating static pages (80/84)  [36m[   =][39m[2K[1G [37m[1m [22m[39m Generating static pages (81/84)  [36m[  ==][39m[2K[1G [37m[1m [22m[39m Generating static pages (81/84)  [36m[ ===][39m[2K[1G [37m[1m [22m[39m Generating static pages (82/84)  [36m[====][39m[2K[1G [37m[1m [22m[39m Generating static pages (83/84)  [36m[=== ][39m[2K[1G [37m[1m [22m[39m Generating static pages (83/84)  [36m[==  ][39m[2K[1G [37m[1m [22m[39m Generating static pages (83/84)  [36m[=   ][39m[2K[1G [37m[1m [22m[39m Generating static pages (83/84)  [36m[    ][39m[2K[1G [37m[1m [22m[39m Generating static pages (83/84)  [36m[=   ][39m[2K[1G [37m[1m [22m[39m Generating static pages (83/84)  [36m[==  ][39m[2K[1G [37m[1m [22m[39m Generating static pages (83/84)  [36m[=== ][39m[2K[1G[?25h [32m[1m✓[22m[39m Generating static pages (84/84)
+[?25l [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[?25l [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G[?25h [37m[1m [22m[39m Collecting build traces     [32m[1m✓[22m[39m Collecting build traces 
+[2K[1G[?25h [37m[1m [22m[39m Finalizing page optimization     [32m[1m✓[22m[39m Finalizing page optimization 
 
-./app/auth/callback/route.ts
-Error: 
-  [31mx[0m the name `error` is defined multiple times
-    ,-[[36;1;4m/Users/user/Downloads/pashkovsky-pergolas_starter/apps/crm/app/auth/callback/route.ts[0m:6:1]
- [2m 6[0m |   const code = url.searchParams.get('code')
- [2m 7[0m |   const type = url.searchParams.get('type')
- [2m 8[0m |   const next = url.searchParams.get('next') || '/app'
- [2m 9[0m |   const error = url.searchParams.get('error')
-    : [31;1m        ^^|^^[0m
-    :           [31;1m`-- [31;1mprevious definition of `error` here[0m[0m
- [2m10[0m |   const errorDescription = url.searchParams.get('error_description')
- [2m11[0m | 
- [2m12[0m |   console.log('[Callback] ===================')
- [2m13[0m |   console.log('[Callback] Full URL:', url.href)
- [2m14[0m |   console.log('[Callback] Code:', code ? `✓ (${code.substring(0, 20)}...)` : '✗')
- [2m15[0m |   console.log('[Callback] Type:', type || 'none')
- [2m16[0m |   console.log('[Callback] Next:', next)
- [2m17[0m |   console.log('[Callback] Error:', error || 'none')
- [2m18[0m |   console.log('[Callback] Error Description:', errorDescription || 'none')
- [2m19[0m |   console.log('[Callback] All params:', Object.fromEntries(url.searchParams.entries()))
- [2m20[0m |   console.log('[Callback] ===================')
- [2m21[0m | 
- [2m22[0m |   // Check for Supabase error in URL
- [2m23[0m |   if (error) {
- [2m24[0m |     console.error('[Callback] Supabase error in URL:', error, errorDescription)
- [2m25[0m |     return NextResponse.redirect(
- [2m26[0m |       new URL(`/login?error=${encodeURIComponent(error)}&description=${encodeURIComponent(errorDescription || '')}`, url.origin)
- [2m27[0m |     )
- [2m28[0m |   }
- [2m29[0m | 
- [2m30[0m |   if (!code) {
- [2m31[0m |     console.error('[Callback] Missing code parameter')
- [2m32[0m |     console.error('[Callback] Available params:', Array.from(url.searchParams.keys()))
- [2m33[0m |     return NextResponse.redirect(new URL('/login?error=missing_code', url.origin))
- [2m34[0m |   }
- [2m35[0m | 
- [2m36[0m |   const cookiesToSet: { name: string; value: string; options: CookieOptions }[] = []
- [2m37[0m | 
- [2m38[0m |   const supabase = createServerClient(
- [2m39[0m |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
- [2m40[0m |     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
- [2m41[0m |     {
- [2m42[0m |       cookies: {
- [2m43[0m |         getAll() {
- [2m44[0m |           return request.cookies.getAll()
- [2m45[0m |         },
- [2m46[0m |         setAll(cookiesToSetArray) {
- [2m47[0m |           cookiesToSetArray.forEach((cookie) => {
- [2m48[0m |             cookiesToSet.push(cookie)
- [2m49[0m |           })
- [2m50[0m |         },
- [2m51[0m |       },
- [2m52[0m |     }
- [2m53[0m |   )
- [2m54[0m | 
- [2m55[0m |   console.log('[Callback] Exchanging code for session...')
- [2m56[0m |   const { data: sessionData, error } = await supabase.auth.exchangeCodeForSession(code)
-    : [33;1m                             ^^|^^[0m
-    :                                [33;1m`-- [33;1m`error` redefined here[0m[0m
- [2m57[0m | 
- [2m58[0m |   if (error) {
- [2m59[0m |     console.error('[Callback] ✗ Exchange error:', error.message)
-    `----
+[4mRoute (app)[24m                                      [4mSize[24m     [4mFirst Load JS[24m
+┌ ○ /_not-found                                  168 B          [37m[1m87.6 kB[22m[39m
+├ ƒ /[locale]/offers/[id]/approve                10.5 kB        [37m[1m97.9 kB[22m[39m
+├ ƒ /[locale]/offers/[id]/success                1.92 kB        [37m[1m96.1 kB[22m[39m
+├ ƒ /admin-api/ai-chats                          0 B                [37m[1m0 B[22m[39m
+├ ƒ /admin-api/deals                             0 B                [37m[1m0 B[22m[39m
+├ ƒ /admin-api/deals/sketch                      0 B                [37m[1m0 B[22m[39m
+├ ƒ /admin-api/gallery/categories                0 B                [37m[1m0 B[22m[39m
+├ ƒ /admin-api/gallery/images                    0 B                [37m[1m0 B[22m[39m
+├ ƒ /admin-api/gallery/upload                    0 B                [37m[1m0 B[22m[39m
+├ ƒ /admin-api/leads                             0 B                [37m[1m0 B[22m[39m
+├ ƒ /admin-api/pergola-projects                  0 B                [37m[1m0 B[22m[39m
+├ ƒ /admin-api/users                             0 B                [37m[1m0 B[22m[39m
+├ ƒ /admin-api/users/invite                      0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/admin/articles                          0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/admin/leads                             0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ai-chat                                 0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ai-director/chat                        0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ai-director/data/analytics              0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ai-director/data/deals                  0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ai-director/data/gallery                0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ai-director/data/leads                  0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ai-director/data/material-orders        0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ai-director/data/offers                 0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ai-director/data/workers                0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ai/analytics                            0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ai/improve-offer-text                   0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ai/reports/monthly                      0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/ai/reports/weekly                       0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/auth/check-phone                        0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/auth/check-superadmin                   0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/auth/companies                          0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/auth/login                              0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/auth/logout                             0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/auth/oauth/google                       0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/auth/oauth/google/callback              0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/auth/password-reset/confirm             0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/auth/password-reset/request             0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/auth/refresh                            0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/auth/register                           0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/auth/select-company                     0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/auth/setup-company                      0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/auth/superadmin-login                   0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/auth/superadmin-logout                  0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/auth/superadmin-session                 0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/auth/verify-email/confirm               0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/auth/verify-email/send                  0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/companies/me                            0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/company/logo                            0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/company/profile                         0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/cron/weekly-digest                      0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/debug/auth                              0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/debug/redis                             0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/gallery/images                          0 B                [37m[1m0 B[22m[39m
+├ ○ /api/gallery/models                          0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/integrations/me                         0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/integrations/request-setup              0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/integrations/webhook/leads              0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/leads                                   0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/leads/[id]/score                        0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/leads/score/batch                       0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/material-orders                         0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/offers                                  0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/offers/[id]                             0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/offers/[id]/approve                     0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/offers/[id]/pdf                         0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/offers/[id]/send-email                  0 B                [37m[1m0 B[22m[39m
+├ ○ /api/pergola-projects                        0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/platform/activity                       0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/platform/integrations/activate          0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/platform/integrations/list              0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/platform/integrations/rotate-secret     0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/platform/integrations/suspend           0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/platform/settings                       0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/public/ai-chat                          0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/public/leads                            0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/public/offers/[id]                      0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/public/payment-instructions             0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/public/subscriptions/plans              0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/reports/monthly                         0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/reports/weekly-digest                   0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/reports/weekly-digest/generate          0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/smm/leads                               0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/subscriptions/change-plan               0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/subscriptions/current                   0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/subscriptions/history                   0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/subscriptions/plans                     0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/subscriptions/usage                     0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/superadmin/companies/[id]               0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/superadmin/companies/[id]/settings      0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/superadmin/companies/[id]/subscription  0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/superadmin/companies/onboard            0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/superadmin/test-auth                    0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/superadmin/users/send-magic-link        0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/webhooks/whatsapp                       0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/work-shifts                             0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/work-shifts/[id]                        0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/workers                                 0 B                [37m[1m0 B[22m[39m
+├ ƒ /api/workers/[id]                            0 B                [37m[1m0 B[22m[39m
+├ ƒ /app                                         168 B          [37m[1m87.6 kB[22m[39m
+├ ƒ /app/admin                                   4.47 kB         [37m[1m159 kB[22m[39m
+├ ƒ /app/admin/ai-analytics                      3.74 kB         [37m[1m102 kB[22m[39m
+├ ƒ /app/admin/ai-chats                          4.93 kB         [37m[1m160 kB[22m[39m
+├ ƒ /app/admin/ai-director                       5.52 kB         [37m[1m149 kB[22m[39m
+├ ƒ /app/admin/articles                          3.05 kB         [37m[1m158 kB[22m[39m
+├ ƒ /app/admin/deals                             40.1 kB         [37m[1m195 kB[22m[39m
+├ ƒ /app/admin/gallery                           4.59 kB         [37m[1m165 kB[22m[39m
+├ ƒ /app/admin/leads                             5.04 kB         [37m[1m160 kB[22m[39m
+├ ƒ /app/admin/reports/monthly                   3.79 kB         [37m[1m221 kB[22m[39m
+├ ƒ /app/admin/reports/weekly                    2.77 kB         [37m[1m157 kB[22m[39m
+├ ƒ /app/admin/settings                          3.1 kB         [37m[1m90.5 kB[22m[39m
+├ ƒ /app/admin/statistics                        6.71 kB         [37m[1m271 kB[22m[39m
+├ ƒ /app/admin/users                             2.34 kB         [37m[1m146 kB[22m[39m
+├ ƒ /app/admin/workers                           5.1 kB          [37m[1m160 kB[22m[39m
+├ ○ /app/onboarding                              2.63 kB          [37m[1m90 kB[22m[39m
+├ ○ /app/profiles                                168 B          [37m[1m87.6 kB[22m[39m
+├ ○ /app/select-company                          2.8 kB         [37m[1m90.2 kB[22m[39m
+├ ○ /app/settings/company                        6.02 kB        [37m[1m99.3 kB[22m[39m
+├ ○ /app/settings/integrations                   6.73 kB         [37m[1m150 kB[22m[39m
+├ ○ /app/settings/integrations/instructions      7.1 kB          [37m[1m151 kB[22m[39m
+├ ƒ /auth/callback                               0 B                [37m[1m0 B[22m[39m
+├ ○ /login                                       3.33 kB         [37m[1m154 kB[22m[39m
+├ ○ /register                                    3.29 kB         [37m[1m154 kB[22m[39m
+├ ○ /reset-password                              1.82 kB          [37m[1m96 kB[22m[39m
+├ ƒ /superadmin                                  3.75 kB        [37m[1m91.1 kB[22m[39m
+├ ƒ /superadmin/admins                           168 B          [37m[1m87.6 kB[22m[39m
+├ ƒ /superadmin/companies                        5.46 kB        [37m[1m92.8 kB[22m[39m
+├ ƒ /superadmin/companies/[id]                   1.92 kB        [37m[1m96.1 kB[22m[39m
+├ ƒ /superadmin/companies/[id]/settings          3.3 kB         [37m[1m97.5 kB[22m[39m
+├ ƒ /superadmin/integrations                     6.17 kB         [37m[1m145 kB[22m[39m
+├ ƒ /superadmin/settings                         3.47 kB        [37m[1m90.9 kB[22m[39m
+├ ƒ /superadmin/subscriptions                    168 B          [37m[1m87.6 kB[22m[39m
+└ ○ /verify-email                                1.56 kB        [37m[1m95.8 kB[22m[39m
++ First Load JS shared by all                    [37m[1m87.4 kB[22m[39m
+  ├ chunks/1dd3208c-a5eebfe1744c4944.js          53.6 kB
+  ├ chunks/286-cef8d25fa86d8a9f.js               31.7 kB
+  └ other shared chunks (total)                  2.05 kB
 
-Import trace for requested module:
-./app/auth/callback/route.ts
 
+ƒ Middleware                                     [37m[1m27.2 kB[22m[39m
 
-> Build failed because of webpack errors
-⠙[1G[0K[1mnpm[22m [31merror[39m Lifecycle script `build` failed with error:
-⠙[1G[0K[1mnpm[22m [31merror[39m [94mcode[39m [33m1[39m
-⠙[1G[0K[1mnpm[22m [31merror[39m [94mpath[39m /Users/user/Downloads/pashkovsky-pergolas_starter/apps/crm
-⠙[1G[0K[1mnpm[22m [31merror[39m [94mworkspace[39m @alumincrm/app@1.0.0
-⠙[1G[0K[1mnpm[22m [31merror[39m [94mlocation[39m /Users/user/Downloads/pashkovsky-pergolas_starter/apps/crm
-⠙[1G[0K[1mnpm[22m [31merror[39m command failed
-⠙[1G[0K[1mnpm[22m [31merror[39m [94mcommand[39m sh -c next build
-⠙[1G[0K
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+[?25h⠙[1G[0K

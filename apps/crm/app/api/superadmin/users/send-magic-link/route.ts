@@ -72,13 +72,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Use 'invite' type for PKCE flow (not 'magiclink' which may use implicit flow)
+    // 'invite' generates PKCE code that redirects to callback with ?code=...
     const { data, error } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'magiclink' as any,
+      type: 'invite',
       email,
       options: {
-        // IMPORTANT: still set redirectTo to our callback (Supabase uses it for token scoping),
-        // but we won't email the Supabase verify URL.
-        // Use the exact callback URL (no query) to avoid Supabase falling back to Site URL.
+        // PKCE flow requires redirectTo to be exactly our callback URL
         redirectTo: callbackUrl,
       },
     })
@@ -139,19 +139,17 @@ export async function POST(request: NextRequest) {
       console.error('[SendMagicLink] ❌ Could not parse action link URL:', e)
     }
 
-    // Build OUR callback link (server-readable) from the generated action_link.
-    // Supabase verify link contains ?token=...&type=magiclink, but redirect can end in #access_token.
-    // We extract token+type and call verifyOtp server-side in /auth/callback.
+    // For PKCE flow ('invite' type), Supabase generates a link that redirects to callback with ?code=...
+    // We should email the action_link directly (Supabase handles PKCE exchange)
+    // However, if we want to add ?next=, we need to extract the code and rebuild
     const actionUrl = new URL(data.properties.action_link)
-    const token = actionUrl.searchParams.get('token')
-    const verificationType = actionUrl.searchParams.get('type') || 'magiclink'
-
-    if (!token) {
-      console.error('[SendMagicLink] ❌ token missing in action_link')
-      return NextResponse.json({ error: 'Magic link generated but token is missing' }, { status: 500 })
-    }
-
-    const appLink = `${callbackUrl}?token=${encodeURIComponent(token)}&type=${encodeURIComponent(verificationType)}&next=${encodeURIComponent(next)}`
+    const code = actionUrl.searchParams.get('code')
+    
+    // If PKCE code exists, build our callback URL with code and next
+    // Otherwise, use action_link as-is (fallback)
+    const appLink = code 
+      ? `${callbackUrl}?code=${encodeURIComponent(code)}&next=${encodeURIComponent(next)}`
+      : data.properties.action_link
 
     // Send email via Zoho
     let emailSent = false

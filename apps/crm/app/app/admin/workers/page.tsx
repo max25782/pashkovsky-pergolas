@@ -6,7 +6,7 @@ import Link from 'next/link'
 import type { Worker } from '@/types/workers'
 import type { Locale } from '@/lib/locales'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
-import { createAuthenticatedClient } from '@/lib/supabase/client'
+import { createClient } from '@/lib/supabase/client'
 import { authFetch } from '@/lib/api/auth-fetch'
 
 export default function WorkersAdminPage() {
@@ -25,7 +25,7 @@ export default function WorkersAdminPage() {
       
       console.log('[Workers] Fetching workers with JWT, showInactive:', showInactive)
       
-      const supabase = createAuthenticatedClient()
+      const supabase = createClient()
       const companyId = '6998295e-89ae-4e3d-afd2-8c2b0333eac2' // Your company ID
       
       let query = supabase
@@ -79,7 +79,7 @@ export default function WorkersAdminPage() {
     if (!confirm('האם אתה בטוח שברצונך למחוק עובד זה?')) return
 
     try {
-      const supabase = createAuthenticatedClient()
+      const supabase = createClient()
       
       const { error: dbError } = await supabase
         .from('workers')
@@ -96,7 +96,7 @@ export default function WorkersAdminPage() {
 
   const handleToggleActive = async (worker: Worker) => {
     try {
-      const supabase = createAuthenticatedClient()
+      const supabase = createClient()
       
       const { error: dbError } = await supabase
         .from('workers')
@@ -337,7 +337,7 @@ function WorkerModal({ worker, onClose, onSave }: WorkerModalProps) {
       
       if (worker) {
         // Update existing worker - use Supabase directly for now
-        const supabase = createAuthenticatedClient()
+        const supabase = createClient()
         
         const dbData = {
           first_name: formData.firstName,

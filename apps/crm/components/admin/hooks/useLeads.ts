@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Lead } from '../lead-types'
-import { createAuthenticatedClient } from '@/lib/supabase/client'
+import { createClient } from '@/lib/supabase/client'
 
 interface UseLeadsParams {
   searchQuery?: string
@@ -22,7 +22,7 @@ export function useLeads({
     setError(null)
     try {
       // Create authenticated client with JWT token
-      const supabase = createAuthenticatedClient()
+      const supabase = createClient()
       
       let query = supabase
         .from('leads')
