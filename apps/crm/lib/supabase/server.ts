@@ -1,17 +1,8 @@
-/**
- * Supabase Client for Server Components and API Routes
- * Uses cookies for session management
- */
-
-import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { createServerClient } from '@supabase/ssr'
 
-/**
- * Create Supabase client for Server Components / API Routes
- * Uses cookies for auth session
- */
 export function createClient() {
-  const cookieStore = cookies()
+  const store = cookies()
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,14 +10,11 @@ export function createClient() {
     {
       cookies: {
         getAll() {
-          return cookieStore.getAll()
+          return store.getAll()
         },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach((cookie) => cookieStore.set(cookie))
-          } catch {
-            // In Server Components, cookie writes can throw; safe to ignore.
-            // Cookies are set in API routes and middleware.
+        setAll(cookies) {
+          for (const c of cookies) {
+            store.set(c.name, c.value, c.options)
           }
         },
       },
