@@ -105,7 +105,6 @@ export async function POST(request: NextRequest) {
 
         const callbackUrl = `${request.nextUrl.origin}/auth/callback`
         const next = '/app'
-        const appCallbackUrl = `${callbackUrl}?next=${encodeURIComponent(next)}`
 
         // Always generate LOGIN magic link (NOT recovery).
         // Recovery must be reserved for reset-password flow.
@@ -113,7 +112,8 @@ export async function POST(request: NextRequest) {
           type: 'magiclink' as any,
           email: email.toLowerCase().trim(),
           options: {
-            redirectTo: appCallbackUrl,
+            // Use the exact callback URL (no query) to avoid Supabase falling back to Site URL.
+            redirectTo: callbackUrl,
           },
         })
 

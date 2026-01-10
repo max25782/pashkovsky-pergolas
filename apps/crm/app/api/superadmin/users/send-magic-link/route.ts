@@ -53,7 +53,6 @@ export async function POST(request: NextRequest) {
     // - email OUR callback: /auth/callback?token=...&type=magiclink&next=/app
     const next = sanitizeNext(redirectTo)
     const callbackUrl = `${request.nextUrl.origin}/auth/callback`
-    const appCallbackUrl = `${callbackUrl}?next=${encodeURIComponent(next)}`
     
     console.log('[SendMagicLink] Generating magic link for:', email)
     console.log('[SendMagicLink] Callback URL:', callbackUrl)
@@ -79,7 +78,8 @@ export async function POST(request: NextRequest) {
       options: {
         // IMPORTANT: still set redirectTo to our callback (Supabase uses it for token scoping),
         // but we won't email the Supabase verify URL.
-        redirectTo: appCallbackUrl,
+        // Use the exact callback URL (no query) to avoid Supabase falling back to Site URL.
+        redirectTo: callbackUrl,
       },
     })
 
@@ -123,15 +123,15 @@ export async function POST(request: NextRequest) {
       console.log('[SendMagicLink] - redirect_to:', redirectToParam || '❌ MISSING!')
       console.log('[SendMagicLink] - token:', tokenParam ? `✓ (${tokenParam.substring(0, 20)}...)` : '✗')
       console.log('[SendMagicLink] - type:', typeParam || 'none')
-      console.log('[SendMagicLink] - Expected redirect_to:', appCallbackUrl)
-      console.log('[SendMagicLink] - Match:', redirectToParam === appCallbackUrl ? '✅ YES' : '❌ NO')
+      console.log('[SendMagicLink] - Expected redirect_to:', callbackUrl)
+      console.log('[SendMagicLink] - Match:', redirectToParam === callbackUrl ? '✅ YES' : '❌ NO')
       
       if (!redirectToParam) {
         console.error('[SendMagicLink] ❌ CRITICAL: redirect_to parameter is missing from action link!')
         console.error('[SendMagicLink] This means Supabase will redirect to Site URL instead')
-      } else if (redirectToParam !== appCallbackUrl) {
+      } else if (redirectToParam !== callbackUrl) {
         console.warn('[SendMagicLink] ⚠️ WARNING: redirect_to mismatch!')
-        console.warn('[SendMagicLink] Expected:', appCallbackUrl)
+        console.warn('[SendMagicLink] Expected:', callbackUrl)
         console.warn('[SendMagicLink] Got:', redirectToParam)
       }
       console.log('[SendMagicLink] ===================')
