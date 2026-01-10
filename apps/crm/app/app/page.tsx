@@ -1,44 +1,18 @@
-'use client'
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import { isSuperAdmin } from '@/lib/auth/isSuperAdmin'
 
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+export default async function AppPage() {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
-export default function AppPage() {
-  const router = useRouter()
+  if (!user) redirect('/login?error=authentication_required')
 
-  useEffect(() => {
-    checkAuthAndRedirect()
-  }, [])
+  // /app/admin is SuperAdmin-only (platform_admins). Normal users must not loop into it.
+  const ok = await isSuperAdmin(user.id)
+  if (ok) redirect('/app/admin')
 
-  async function checkAuthAndRedirect() {
-    const supabase = createClient()
-    const { data: { user }, error } = await supabase.auth.getUser()
-
-    if (error || !user) {
-      router.push('/login')
-      return
-    }
-
-    // Check if user is superadmin
-    try {
-      const response = await fetch('/api/auth/check-superadmin')
-      const data = await response.json()
-
-      if (data.isSuperAdmin) {
-        router.push('/app/admin')
-      } else {
-        router.push('/app/admin/deals')
-      }
-    } catch {
-      // Default to deals page
-      router.push('/app/admin/deals')
-    }
-  }
-
-  return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-    </div>
-  )
+  // Normal (non-platform-admin) landing.
+  // Keep it inside /app (not /app/admin) to avoid redirect loops.
+  redirect('/app/settings/company')
 }

@@ -1,206 +1,69 @@
-# Как протестировать Magic Link
+## Magic Link test plan (server-only callback) / План тестирования Magic Link (только server callback)
 
-## 🔗 Magic Link для пользователя oryaron38@gmail.com
+### 0) Supabase Dashboard checklist / Чеклист Supabase Dashboard
 
-```
-https://kvqupacmdishpfnscnio.supabase.co/auth/v1/verify?token=25e799a2abb92920abf39a2901336ffb8b7af7f7c2b09891dd89e8de&type=magiclink&redirect_to=http://localhost:3001/app/admin
-```
+- **Site URL**: `https://crm.pashkovsky-group.com`
+- **Redirect URLs** include:
+  - `https://crm.pashkovsky-group.com/auth/callback`
+  - `https://crm.pashkovsky-group.com/app/*`
 
----
-
-## ✅ Способ 1: Тестирование в браузере (Рекомендуется)
-
-### Шаги:
-
-1. **Скопируйте ссылку выше**
-
-2. **Откройте новую вкладку в режиме инкогнито** (чтобы не мешала текущая сессия SuperAdmin):
-   - Chrome/Edge: `Cmd+Shift+N` (Mac) или `Ctrl+Shift+N` (Windows)
-   - Safari: `Cmd+Shift+N`
-   - Firefox: `Cmd+Shift+P`
-
-3. **Вставьте ссылку в адресную строку** и нажмите Enter
-
-4. **Что должно произойти:**
-   - ✅ Supabase проверит токен
-   - ✅ Автоматически войдет в систему
-   - ✅ Перенаправит на `http://localhost:3001/app/admin`
-   - ✅ Вы увидите CRM dashboard компании **oryaron38**
-   - ✅ В правом верхнем углу будет email: `oryaron38@gmail.com`
-
-5. **Проверьте:**
-   - Название компании в шапке: должно быть **oryaron38**
-   - Email пользователя в профиле
-   - Доступ к разделам: Deals, Leads, Workers и т.д.
+> Важно: мы больше **не** отправляем пользователю ссылку Supabase `/auth/v1/verify` напрямую.  
+> Мы отправляем ссылку на наш домен: `/auth/callback?token=...&type=magiclink&next=/app`, а сервер делает `verifyOtp()` и ставит cookies.
 
 ---
 
-## ✅ Способ 2: Через CRM UI
+### 1) Generate link / Сгенерировать ссылку
 
-1. **Откройте CRM** в браузере: `http://localhost:3001/superadmin/companies`
-
-2. **Найдите компанию** `oryaron38` и нажмите **"View"**
-
-3. **Прокрутите вниз** до секции **"Send Login Access"**
-
-4. **Нажмите кнопку** "Send Magic Login Link"
-
-5. **Скопируйте ссылку** из буфера обмена (она автоматически скопируется)
-
-6. **Откройте в режиме инкогнито** и проверьте
-
----
-
-## ✅ Способ 3: Через API (для автоматизации)
+From SuperAdmin UI or API:
 
 ```bash
-# Генерация magic link
-curl -X POST http://localhost:3001/api/superadmin/users/send-magic-link \
+curl -X POST https://crm.pashkovsky-group.com/api/superadmin/users/send-magic-link \
   -H "Content-Type: application/json" \
-  -d '{
-    "email": "oryaron38@gmail.com",
-    "redirectTo": "http://localhost:3001/app/admin"
-  }'
+  -d '{ "email": "user@example.com", "redirectTo": "/app" }'
 ```
 
-**Ответ:**
-```json
-{
-  "success": true,
-  "message": "Magic link sent to oryaron38@gmail.com",
-  "magicLink": "https://kvqupacmdishpfnscnio.supabase.co/auth/v1/verify?token=...&type=magiclink&redirect_to=http://localhost:3001/app/admin"
-}
-```
-
-Скопируйте `magicLink` и откройте в браузере.
+Expected response:
+- `magicLink` starts with `https://crm.pashkovsky-group.com/auth/callback?token=...&type=magiclink&next=%2Fapp`
 
 ---
 
-## ✅ Способ 4: Через Supabase Dashboard
+### 2) Open in Incognito / Открыть в инкогнито
 
-1. Откройте **Supabase Dashboard**
-2. Перейдите в **Authentication** → **Users**
-3. Найдите пользователя `oryaron38@gmail.com`
-4. Нажмите на пользователя
-5. Нажмите **"Send magic link"**
-6. В поле **Redirect URL** введите: `http://localhost:3001/app/admin`
-7. Нажмите **"Send magic link"**
-8. Скопируйте ссылку из email preview (или из логов)
+- Chrome/Edge: `Ctrl+Shift+N` / `Cmd+Shift+N`
+- Safari: `Cmd+Shift+N`
 
----
+Open `magicLink` from the response (or from email).
 
-## 🔍 Что проверить после входа:
-
-### 1. Правильная компания
-- Название компании в шапке: **oryaron38**
-- URL: `http://localhost:3001/app/admin`
-
-### 2. Правильный пользователь
-- Email в профиле: `oryaron38@gmail.com`
-- Роль: **owner**
-
-### 3. Подписка
-- План: **Enterprise**
-- Статус: **Active**
-- Срок действия: **1 месяц** (30 дней)
-
-### 4. Доступ к функциям
-- ✅ Deals (Сделки)
-- ✅ Leads (Лиды)
-- ✅ Workers (Рабочие)
-- ✅ Settings (Настройки)
-- ✅ AI Director
+Expected:
+- Redirects to `/app`
+- No infinite loading
 
 ---
 
-## ❌ Возможные проблемы:
+### 3) Verify cookies / Проверить cookies
 
-### Проблема 1: "Invalid or expired link"
-**Причина:** Токен истек (обычно действует 1 час)
+Open DevTools → Application → Cookies:
+- Should have `sb-*` cookies (session stored in cookies, not localStorage)
 
-**Решение:** Сгенерируйте новый magic link
-
-### Проблема 2: Редирект на localhost:3000 вместо 3001
-**Причина:** Неправильный `redirectTo` в Supabase Site URL
-
-**Решение:** 
-1. Откройте Supabase Dashboard
-2. **Authentication** → **URL Configuration**
-3. Добавьте в **Redirect URLs**:
-   - `http://localhost:3001/app/admin`
-   - `http://localhost:3001/app/*`
-
-### Проблема 3: "User not found" или "Company not found"
-**Причина:** Пользователь или компания не созданы
-
-**Решение:** Проверьте в Supabase:
-```sql
--- Проверить пользователя
-SELECT * FROM auth.users WHERE email = 'oryaron38@gmail.com';
-
--- Проверить компанию
-SELECT * FROM companies WHERE primary_email = 'oryaron38@gmail.com';
-
--- Проверить роль
-SELECT * FROM company_members WHERE user_id = '...';
-```
-
-### Проблема 4: Редирект на Pashkovsky Group вместо oryaron38
-**Причина:** Логика определения активной компании в `company-context.ts`
-
-**Решение:** Уже исправлено - система выбирает последнюю созданную компанию, где пользователь owner
+Also check:
+- `/api/debug/auth` returns `authenticated: true` and your email
 
 ---
 
-## 📝 Логи для отладки
+### 4) Admin guard / Проверка server guard для /app/admin
 
-### Проверить логи сервера:
-```bash
-# В терминале где запущен npm run dev
-# Ищите строки:
-# [CompanyContext] User companies: ...
-# [CompanyContext] Selected company: ...
-```
+Try to open `/app/admin` as a normal (non-platform-admin) user:
+- Expected redirect to `/app`
 
-### Проверить в браузере:
-1. Откройте **DevTools** (F12)
-2. **Console** - ищите ошибки
-3. **Network** - проверьте запросы к `/api/companies/me`
-4. **Application** → **Cookies** - проверьте наличие `sb-access-token`
+Try to open `/app/admin` as a platform admin:
+- Expected access allowed
 
 ---
 
-## ✅ Успешный тест выглядит так:
+### 5) SuperAdmin routes guard / Проверка server guard для /superadmin
 
-1. ✅ Кликаете по magic link
-2. ✅ Видите "Redirecting..." или спиннер
-3. ✅ Перенаправляет на `/app/admin`
-4. ✅ Видите dashboard с названием компании **oryaron38**
-5. ✅ Email в профиле: `oryaron38@gmail.com`
-6. ✅ Все разделы доступны
-7. ✅ Подписка: Enterprise, Active, 30 дней
+Open `/superadmin`:
+- With valid SuperAdmin (Redis session or platform_admins) → OK
+- Without → redirect to `/login`
 
----
-
-## 🚀 Готово к продакшену?
-
-Для production нужно:
-
-1. **Обновить Redirect URLs в Supabase:**
-   - `https://crm.pashkovsky-group.com/app/admin`
-   - `https://crm.pashkovsky-group.com/app/*`
-   - `https://crm.pashkovsky-group.com/auth/callback`
-
-2. **Обновить Site URL:**
-   - `https://crm.pashkovsky-group.com`
-
-3. **Тестировать magic link с production URL:**
-   ```bash
-   curl -X POST https://crm.pashkovsky-group.com/api/superadmin/users/send-magic-link \
-     -H "Content-Type: application/json" \
-     -d '{
-       "email": "oryaron38@gmail.com",
-       "redirectTo": "https://crm.pashkovsky-group.com/app/admin"
-     }'
-   ```
 
