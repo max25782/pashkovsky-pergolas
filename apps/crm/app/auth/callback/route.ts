@@ -4,9 +4,11 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 export async function GET(request: NextRequest) {
   const url = new URL(request.url)
   const code = url.searchParams.get('code')
+  const next = url.searchParams.get('next') || '/app'
 
   console.log('[Callback] URL:', url.pathname + url.search)
   console.log('[Callback] Has code:', !!code)
+  console.log('[Callback] Next redirect:', next)
 
   if (!code) {
     console.error('[Callback] Missing code parameter')
@@ -44,7 +46,10 @@ export async function GET(request: NextRequest) {
 
   console.log('[Callback] Session established, user:', sessionData.user?.email)
   console.log('[Callback] Cookies to set:', cookiesToSet.length)
-  
+
+  // Note: Trial activation happens in /app/page.tsx after redirect
+  // This keeps callback minimal and fast
+
   // Log cookie details
   cookiesToSet.forEach((c, i) => {
     console.log(`[Callback] Cookie ${i + 1}:`, {
@@ -58,7 +63,7 @@ export async function GET(request: NextRequest) {
     })
   })
 
-  const response = NextResponse.redirect(new URL('/app', url.origin))
+  const response = NextResponse.redirect(new URL(next, url.origin))
 
   for (const c of cookiesToSet) {
     response.cookies.set({
@@ -73,6 +78,6 @@ export async function GET(request: NextRequest) {
     })
   }
 
-  console.log('[Callback] Redirecting to /app with', cookiesToSet.length, 'cookies set')
+  console.log('[Callback] Redirecting to', next, 'with', cookiesToSet.length, 'cookies set')
   return response
 }

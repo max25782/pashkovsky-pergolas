@@ -53,15 +53,42 @@ export default function AdminPage() {
       
       // Get user's company
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      if (!user) {
+        console.log('[AdminPage] No user in loadStats, skipping')
+        return
+      }
 
       // IMPORTANT: user can have multiple memberships -> avoid .single() (406).
       // Use server-selected active company.
       const companyRes = await fetch('/api/companies/me', { credentials: 'include' })
-      if (!companyRes.ok) return
+      
+      console.log('[AdminPage] /api/companies/me status:', companyRes.status)
+      
+      if (companyRes.status === 401) {
+        console.log('[AdminPage] Unauthorized, redirecting to login')
+        window.location.href = '/login?error=authentication_required'
+        return
+      }
+      
+      if (companyRes.status === 404) {
+        console.log('[AdminPage] No company found, redirecting to onboarding')
+        window.location.href = '/app/onboarding?error=no_company'
+        return
+      }
+      
+      if (!companyRes.ok) {
+        console.error('[AdminPage] /api/companies/me error:', companyRes.status)
+        return
+      }
+      
       const companyData = await companyRes.json()
       const companyId = companyData.company_id as string | undefined
-      if (!companyId) return
+      if (!companyId) {
+        console.log('[AdminPage] No company_id in response')
+        return
+      }
+      
+      console.log('[AdminPage] Company ID:', companyId)
 
       // Get active deals count - ALL stages except 'done'
       // Stages: new, measure, offer, offer_approved, material_ordered, approved, production, install
