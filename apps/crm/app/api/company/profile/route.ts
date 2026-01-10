@@ -11,6 +11,12 @@ import type { CompanyMember } from '@/types/membership'
 
 export const dynamic = 'force-dynamic'
 
+type MembershipPick = Pick<CompanyMember, 'company_id' | 'role' | 'permissions'> & {
+  companies?: {
+    created_at: string
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = createClient()
@@ -20,16 +26,37 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get user's company membership
-    const { data: membership, error: membershipError } = await supabase
+    // Get user's company memberships (choose most recent owner, else most recent company)
+    const { data: memberships, error: membershipError } = await supabase
       .from('company_members')
-      .select('company_id, role, permissions')
-      .eq('user_id', user.id)
-      .single<Pick<CompanyMember, 'company_id' | 'role' | 'permissions'>>()
+      .select(
+        `
+          company_id,
+          role,
+          permissions,
+          companies!inner (
+            created_at
+          )
+        `
+      )
+      .eq('user_id', user.id) as { data: MembershipPick[] | null; error: any }
 
-    if (membershipError || !membership) {
+    if (membershipError) {
+      return NextResponse.json({ error: 'Failed to load company memberships' }, { status: 500 })
+    }
+
+    if (!memberships || memberships.length === 0) {
       return NextResponse.json({ error: 'No company found' }, { status: 404 })
     }
+
+    const owners = memberships.filter((m) => m.role === 'owner')
+    const candidates = owners.length > 0 ? owners : memberships
+    candidates.sort((a, b) => {
+      const da = new Date(a.companies?.created_at ?? 0).getTime()
+      const db = new Date(b.companies?.created_at ?? 0).getTime()
+      return db - da
+    })
+    const membership = candidates[0]
 
     // Get company profile
     const { data: company, error: companyError } = await supabase
@@ -63,16 +90,37 @@ export async function PUT(request: NextRequest) {
 
     const body = await request.json()
 
-    // Get user's company membership and check permissions
-    const { data: membership, error: membershipError } = await supabase
+    // Get memberships (choose most recent owner, else most recent company)
+    const { data: memberships, error: membershipError } = await supabase
       .from('company_members')
-      .select('company_id, role, permissions')
-      .eq('user_id', user.id)
-      .single<Pick<CompanyMember, 'company_id' | 'role' | 'permissions'>>()
+      .select(
+        `
+          company_id,
+          role,
+          permissions,
+          companies!inner (
+            created_at
+          )
+        `
+      )
+      .eq('user_id', user.id) as { data: MembershipPick[] | null; error: any }
 
-    if (membershipError || !membership) {
+    if (membershipError) {
+      return NextResponse.json({ error: 'Failed to load company memberships' }, { status: 500 })
+    }
+
+    if (!memberships || memberships.length === 0) {
       return NextResponse.json({ error: 'No company found' }, { status: 404 })
     }
+
+    const owners = memberships.filter((m) => m.role === 'owner')
+    const candidates = owners.length > 0 ? owners : memberships
+    candidates.sort((a, b) => {
+      const da = new Date(a.companies?.created_at ?? 0).getTime()
+      const db = new Date(b.companies?.created_at ?? 0).getTime()
+      return db - da
+    })
+    const membership = candidates[0]
 
     // Check if user has permission to edit company settings
     const canEdit = 

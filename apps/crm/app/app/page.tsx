@@ -8,11 +8,20 @@ export default async function AppPage() {
 
   if (!user) redirect('/login?error=authentication_required')
 
-  // /app/admin is SuperAdmin-only (platform_admins). Normal users must not loop into it.
+  // Platform admin goes to platform console.
   const ok = await isSuperAdmin(user.id)
-  if (ok) redirect('/app/admin')
+  if (ok) redirect('/superadmin/companies')
 
-  // Normal (non-platform-admin) landing.
-  // Keep it inside /app (not /app/admin) to avoid redirect loops.
-  redirect('/app/settings/company')
+  // Company user: must be member of at least one company to use CRM.
+  const { data: membership } = await supabase
+    .from('company_members')
+    .select('company_id')
+    .eq('user_id', user.id)
+    .limit(1)
+    .maybeSingle()
+
+  if (!membership) redirect('/app/settings/company?error=no_company')
+
+  // Main CRM landing.
+  redirect('/app/admin')
 }

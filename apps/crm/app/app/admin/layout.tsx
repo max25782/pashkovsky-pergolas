@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { isSuperAdmin } from '@/lib/auth/isSuperAdmin'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
@@ -8,8 +7,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   if (!user) redirect('/login?error=authentication_required')
 
-  const ok = await isSuperAdmin(user.id)
-  if (!ok) redirect('/app')
+  // Company CRM area: requires membership in at least one company.
+  const { data: membership, error: membershipError } = await supabase
+    .from('company_members')
+    .select('company_id')
+    .eq('user_id', user.id)
+    .limit(1)
+    .maybeSingle()
+
+  if (membershipError || !membership) redirect('/app/settings/company?error=no_company')
 
   return <>{children}</>
 }
