@@ -73,53 +73,105 @@ export async function GET() {
     // 2. Получаем все компании, где состоит пользователь
     console.log('[companies/me] Fetching memberships for user_id:', user.id)
     
-    // First, try to get memberships with company data (inner join)
-    const { data: memberships, error: memberError } = await supabase
+    // First, get raw memberships (without join)
+    const { data: rawMemberships, error: rawError } = await supabase
       .from('company_members')
-      .select(
-        `
-          company_id,
-          role,
-          companies!inner (
-            name,
-            created_at,
-            status
-          )
-        `
-      )
-      .eq('user_id', user.id) as { data: Membership[] | null; error: any }
+      .select('company_id, role')
+      .eq('user_id', user.id)
 
-    if (memberError) {
-      console.error('[companies/me] memberError:', JSON.stringify(memberError, null, 2))
+    if (rawError) {
+      console.error('[companies/me] rawError:', JSON.stringify(rawError, null, 2))
       return NextResponse.json(
         { error: 'Failed to load company memberships' },
         { status: 500 }
       )
     }
 
-    console.log('[companies/me] Memberships found (with inner join):', memberships?.length || 0)
-    
-    // If no memberships with inner join, try without join to see if memberships exist at all
-    if (!memberships || memberships.length === 0) {
-      console.log('[companies/me] No memberships with inner join, checking raw memberships...')
-      const { data: rawMemberships, error: rawError } = await supabase
-        .from('company_members')
-        .select('company_id, role')
-        .eq('user_id', user.id)
-      
-      console.log('[companies/me] Raw memberships (no join):', rawMemberships?.length || 0)
-      if (rawMemberships && rawMemberships.length > 0) {
-        console.log('[companies/me] Raw memberships:', JSON.stringify(rawMemberships, null, 2))
-        console.log('[companies/me] WARNING: Memberships exist but companies are missing or inaccessible')
-      }
-      
+    if (!rawMemberships || rawMemberships.length === 0) {
       console.log('[companies/me] No memberships found for user:', user.email)
       return NextResponse.json({ error: 'Company not found' }, { status: 404 })
     }
 
-    if (memberships && memberships.length > 0) {
-      console.log('[companies/me] First membership:', JSON.stringify(memberships[0], null, 2))
+    console.log('[companies/me] Raw memberships found:', rawMemberships.length)
+
+    // Try to get companies with left join (companies may be null if RLS blocks access)
+    const { data: membershipsWithCompanies, error: memberError } = await supabase
+      .from('company_members')
+      .select(
+        `
+          company_id,
+          role,
+          companies (
+            name,
+            created_at,
+            status
+          )
+        `
+      )
+      .eq('user_id', user.id) as { data: Array<{
+        company_id: string
+        role: string
+        companies: {
+          name: string
+          created_at: string
+          status: string
+        } | null
+      }> | null; error: any }
+
+    // If companies are inaccessible via RLS, fetch them using service role (for SuperAdmin or fallback)
+    let memberships: Membership[] = []
+    
+    if (memberError || !membershipsWithCompanies) {
+      console.log('[companies/me] Companies inaccessible via RLS, fetching with service role...')
+      
+      // Use service role to fetch companies
+      const { createClient: createServiceClient } = await import('@supabase/supabase-js')
+      const serviceSupabase = createServiceClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false,
+          },
+        }
+      )
+
+      // Fetch companies for each membership
+      for (const membership of rawMemberships) {
+        const { data: company, error: companyError } = await serviceSupabase
+          .from('companies')
+          .select('name, created_at, status')
+          .eq('id', membership.company_id)
+          .single()
+
+        if (!companyError && company) {
+          memberships.push({
+            company_id: membership.company_id,
+            role: membership.role,
+            companies: company,
+          })
+        } else {
+          console.log(`[companies/me] Company ${membership.company_id} not found or inaccessible`)
+        }
+      }
+    } else {
+      // Filter out memberships where company is null (inaccessible via RLS)
+      memberships = membershipsWithCompanies
+        .filter((m): m is Membership => m.companies !== null)
+        .map((m) => ({
+          company_id: m.company_id,
+          role: m.role,
+          companies: m.companies!,
+        }))
     }
+
+    if (memberships.length === 0) {
+      console.log('[companies/me] No accessible companies found for user:', user.email)
+      return NextResponse.json({ error: 'Company not found' }, { status: 404 })
+    }
+
+    console.log('[companies/me] Accessible memberships:', memberships.length)
 
     // 3. Выбираем самую новую компанию, где пользователь owner,
     // иначе просто самую новую компанию
@@ -133,6 +185,7 @@ export async function GET() {
     })
 
     const selected = candidates[0]
+    console.log('[companies/me] Selected company:', selected.company_id, selected.companies.name)
 
     return NextResponse.json(
       {
