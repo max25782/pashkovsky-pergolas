@@ -14,6 +14,7 @@ type Membership = {
 }
 
 export async function GET() {
+  console.log('[companies/me] Route called')
   try {
     const supabase = createClient()
 
@@ -24,8 +25,11 @@ export async function GET() {
     } = await supabase.auth.getUser()
 
     if (userError || !user) {
+      console.log('[companies/me] Unauthorized:', userError?.message || 'No user')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    console.log('[companies/me] User:', user.email)
 
     // 2. Получаем все компании, где состоит пользователь
     const { data: memberships, error: memberError } = await supabase
