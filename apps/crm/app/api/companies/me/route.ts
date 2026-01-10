@@ -19,6 +19,8 @@ type MembershipWithCompany = {
 
 export async function GET() {
   try {
+    console.log('[companies/me] Route called')
+    
     const supabase = createClient()
 
     const { data: { user }, error: userError } = await supabase.auth.getUser()
@@ -53,12 +55,14 @@ export async function GET() {
       }
 
       console.log('[companies/me] SuperAdmin company:', company.id)
-      return NextResponse.json({
+      const response = {
         company_id: company.id,
         company_name: company.name,
         role: 'superadmin',
         status: company.status,
-      })
+      }
+      console.log('[companies/me] Returning SuperAdmin response:', response)
+      return NextResponse.json(response)
     }
 
     // --- Normal user: enforce RLS only ---
@@ -108,15 +112,17 @@ export async function GET() {
     })
 
     // If join succeeded and returned data, use it
-    if (membershipsWithCompanies && !joinError) {
+    if (membershipsWithCompanies && !joinError && membershipsWithCompanies.companies) {
       const company = membershipsWithCompanies.companies
       console.log('[companies/me] Company found via join:', company.id)
-      return NextResponse.json({
+      const response = {
         company_id: company.id,
         company_name: company.name,
         role: membershipsWithCompanies.role,
         status: company.status,
-      })
+      }
+      console.log('[companies/me] Returning join response:', response)
+      return NextResponse.json(response)
     }
 
     // If join failed but we have raw memberships, RLS is blocking access to companies
@@ -130,7 +136,12 @@ export async function GET() {
     )
 
     // Get the newest membership's company_id
-    const newestMembership = rawMemberships[0] // Already sorted by created_at if needed
+    const newestMembership = rawMemberships[0]
+    if (!newestMembership || !newestMembership.company_id) {
+      console.error('[companies/me] Invalid membership data:', newestMembership)
+      return NextResponse.json({ error: 'Company not found' }, { status: 404 })
+    }
+
     const companyId = newestMembership.company_id
 
     const { data: company, error: companyError } = await service
@@ -145,14 +156,18 @@ export async function GET() {
     }
 
     console.log('[companies/me] Company found via service role fallback:', company.id)
-    return NextResponse.json({
+    const response = {
       company_id: company.id,
       company_name: company.name,
-      role: newestMembership.role,
+      role: newestMembership.role || 'worker',
       status: company.status,
-    })
+    }
+    console.log('[companies/me] Returning fallback response:', response)
+    return NextResponse.json(response)
   } catch (error: any) {
     console.error('[companies/me] Unexpected error:', error)
+    console.error('[companies/me] Error stack:', error.stack)
+    // Always return valid JSON, never throw
     return NextResponse.json(
       { error: 'Internal Server Error' },
       { status: 500 }
