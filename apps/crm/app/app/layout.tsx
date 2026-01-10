@@ -23,7 +23,7 @@ export default function CRMLayout({
   return (
     <Providers>
       <div className="flex min-h-screen">
-        {/* CRM Sidebar */}
+        {/* CRM Sidebar - Only render if not on /app (which redirects immediately) */}
         <Suspense fallback={<div className="w-64 bg-white dark:bg-neutral-800" />}>
           <CRMSidebar />
         </Suspense>

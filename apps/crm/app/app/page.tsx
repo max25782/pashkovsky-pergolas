@@ -27,18 +27,17 @@ export default async function AppPage() {
       redirect('/superadmin/companies')
     }
 
-    // Step 3: Check company membership directly (RLS enforced)
-    console.log('[AppPage] Checking company membership')
-    
-    // First check if user has any memberships at all
+    // Step 3: Quick membership check (minimal query to avoid blocking)
+    console.log('[AppPage] Quick membership check')
     const { data: rawMemberships, error: rawError } = await supabase
       .from('company_members')
-      .select('company_id, role')
+      .select('company_id')
       .eq('user_id', user.id)
       .limit(1)
+      .maybeSingle()
 
-    console.log('[AppPage] Raw memberships check:', {
-      count: rawMemberships?.length || 0,
+    console.log('[AppPage] Raw membership check:', {
+      hasMembership: !!rawMemberships,
       error: rawError?.message || 'none',
     })
 
@@ -47,79 +46,14 @@ export default async function AppPage() {
       redirect('/app/onboarding?error=query_failed')
     }
 
-    if (!rawMemberships || rawMemberships.length === 0) {
+    if (!rawMemberships) {
       console.log('[AppPage] No memberships found, redirecting to onboarding')
       redirect('/app/onboarding?error=no_company')
     }
 
-    // Try join with companies!inner (RLS enforced)
-    const { data: membership, error: membershipError } = await supabase
-      .from('company_members')
-      .select(
-        `
-        company_id,
-        role,
-        companies!inner (
-          id,
-          name,
-          status
-        )
-      `
-      )
-      .eq('user_id', user.id)
-      .order('created_at', { foreignTable: 'companies', ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    console.log('[AppPage] Membership join check:', {
-      hasMembership: !!membership,
-      error: membershipError?.message || 'none',
-      companyId: membership?.company_id || 'none',
-    })
-
-    // Step 4: Handle membership result
-    if (membershipError) {
-      console.error('[AppPage] Membership query error:', membershipError)
-      redirect('/app/onboarding?error=query_failed')
-    }
-
-    if (!membership || !membership.companies) {
-      console.log('[AppPage] Join failed but memberships exist - RLS blocking, redirecting to onboarding')
-      redirect('/app/onboarding?error=rls_blocked')
-    }
-
-    console.log('[AppPage] Company found:', membership.company_id)
-    
-    // Step 7: Ensure trial subscription (non-blocking, idempotent)
-    try {
-      const { createClient: createServiceClient } = await import('@supabase/supabase-js')
-      const serviceClient = createServiceClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        {
-          auth: {
-            persistSession: false,
-            autoRefreshToken: false,
-          },
-        }
-      )
-
-      const { error: rpcError } = await serviceClient.rpc('ensure_company_trial', {
-        p_user_id: user.id,
-      })
-
-      if (rpcError) {
-        console.warn('[AppPage] ensure_company_trial failed (non-critical):', rpcError)
-      } else {
-        console.log('[AppPage] Trial ensured successfully')
-      }
-    } catch (trialError: any) {
-      console.warn('[AppPage] Trial ensure error (non-critical):', trialError)
-      // Don't fail the redirect if trial creation fails
-    }
-
-    // Step 8: Final redirect (always executed)
-    console.log('[AppPage] Final redirect to /app/admin')
+    // Step 4: Immediate redirect to /app/admin (let admin layout handle full check)
+    // This prevents layout from preloading all sidebar links
+    console.log('[AppPage] Membership found, redirecting to /app/admin')
     redirect('/app/admin')
 
   } catch (error: any) {
