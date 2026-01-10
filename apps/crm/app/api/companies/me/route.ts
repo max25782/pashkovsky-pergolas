@@ -3,20 +3,34 @@ import { createClient } from '@/lib/supabase/server'
 import { isSuperAdmin } from '@/lib/auth/isSuperAdmin'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 
+type Company = {
+  id: string
+  name: string
+  status: string
+  created_at: string
+}
+
+type MembershipWithCompany = {
+  role: string
+  companies: Company
+}
+
 export async function GET() {
   const supabase = createClient()
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  if (userError || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   const admin = await isSuperAdmin(user.id)
 
+  // --- SuperAdmin: use service role ---
   if (admin) {
     const service = createServiceClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { persistSession: false, autoRefreshToken: false } }
     )
 
     const { data: company, error: companyError } = await service
@@ -24,7 +38,7 @@ export async function GET() {
       .select('id, name, status, created_at')
       .order('created_at', { ascending: false })
       .limit(1)
-      .maybeSingle()
+      .single()
 
     if (companyError || !company) {
       return NextResponse.json({ error: 'No companies available' }, { status: 404 })
@@ -38,9 +52,11 @@ export async function GET() {
     })
   }
 
-  const { data: membership, error } = await supabase
+  // --- Normal user: enforce RLS only ---
+  const { data, error } = await supabase
     .from('company_members')
-    .select(`
+    .select(
+      `
       role,
       companies!inner (
         id,
@@ -48,26 +64,25 @@ export async function GET() {
         status,
         created_at
       )
-    `)
+    `
+    )
     .eq('user_id', user.id)
+    // pick newest company
+    .order('created_at', { foreignTable: 'companies', ascending: false })
     .limit(1)
-    .maybeSingle()
+    .single<MembershipWithCompany>()
 
-  if (error || !membership) {
+  if (error || !data) {
     return NextResponse.json({ error: 'Company not found' }, { status: 404 })
   }
 
-  // TypeScript sees companies as array due to join, but with !inner and single() it's actually an object
-  const companies = membership.companies as unknown as { id: string; name: string; status: string; created_at: string } | null
-
-  if (!companies) {
-    return NextResponse.json({ error: 'Company not found' }, { status: 404 })
-  }
+  // TypeScript knows companies is Company (not array) due to !inner and single()
+  const company = data.companies
 
   return NextResponse.json({
-    company_id: companies.id,
-    company_name: companies.name,
-    role: membership.role,
-    status: companies.status,
+    company_id: company.id,
+    company_name: company.name,
+    role: data.role,
+    status: company.status,
   })
 }

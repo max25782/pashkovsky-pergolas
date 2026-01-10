@@ -93,7 +93,7 @@ export default async function CompanyDetailsPage({ params }: PageProps) {
       )
     `)
     .eq('company_id', companyId)
-    .order('changed_at', { ascending: false })
+    .order('created_at', { ascending: false })
     .limit(10)
 
   console.log('[CompanyDetails] History query result:', {
@@ -271,7 +271,7 @@ export default async function CompanyDetailsPage({ params }: PageProps) {
                     Changed to: {entry.subscription_plans?.plan_key || 'Unknown'}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {new Date(entry.changed_at).toLocaleString()}
+                    {new Date(entry.created_at).toLocaleString()}
                   </p>
                   {entry.change_reason && (
                     <p className="text-xs text-gray-600 mt-1">{entry.change_reason}</p>

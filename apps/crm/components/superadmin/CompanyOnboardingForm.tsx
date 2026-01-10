@@ -15,6 +15,9 @@ interface OnboardingResponse {
   user_id?: string
   company_name?: string
   magic_link?: string
+  email_sent?: boolean
+  email_error?: string
+  method?: 'invite' | 'magiclink'
   error?: string
 }
 
@@ -176,9 +179,19 @@ export default function CompanyOnboardingForm() {
                     <p className="text-sm text-blue-900 font-medium">
                       ✓ Company created successfully with full enterprise access
                     </p>
-                    <p className="text-xs text-blue-700 mt-1">
-                      User can now log in using their email and password, or you can generate a magic link separately.
-                    </p>
+                    {result.email_sent ? (
+                      <p className="text-xs text-green-700 mt-1 font-medium">
+                        ✓ Письмо отправлено пользователю
+                      </p>
+                    ) : result.email_error ? (
+                      <p className="text-xs text-amber-700 mt-1">
+                        ⚠️ Письмо не отправлено: {result.email_error}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-blue-700 mt-1">
+                        User can now log in using their email and password, or you can generate a magic link separately.
+                      </p>
+                    )}
                   </div>
                   
                   {result.magic_link && (

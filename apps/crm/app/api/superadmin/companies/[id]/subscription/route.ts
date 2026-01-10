@@ -62,7 +62,7 @@ export async function GET(
         )
       `)
       .eq('company_id', companyId)
-      .order('changed_at', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(10)
 
     console.log('[SuperAdmin] History query result:', {

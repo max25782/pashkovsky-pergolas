@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireSuperAdmin } from '@/lib/middleware/superadmin-auth'
 import { onboardCompany } from '@/lib/services/company-onboarding-service'
-import { createClient } from '@supabase/supabase-js'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { sendEmail, generateMagicLinkEmailHTML } from '@/lib/email'
 
 export const dynamic = 'force-dynamic'
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-      const { email, sendMagicLink } = body
+    const { email, sendMagicLink } = body
 
     // Validate email
     if (!email || typeof email !== 'string') {
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
 
     console.log('[API /superadmin/companies/onboard] Starting onboarding for:', email)
 
-    // Execute onboarding (no magic link generation)
+    // Execute onboarding
     const result = await onboardCompany(
       email.toLowerCase().trim(),
       adminSession.user_id
@@ -85,14 +85,15 @@ export async function POST(request: NextRequest) {
       user_id: result.user_id,
     })
 
-    // Generate magic link if requested
-    let magicLink: string | undefined
+    // Generate and send magic link if requested
+    let actionLink: string | undefined
     let emailSent = false
     let emailError: string | null = null
-    
-    if (sendMagicLink) {
+    let method: 'invite' | 'magiclink' = 'magiclink'
+
+    if (sendMagicLink && result.user_id) {
       try {
-        const supabaseAdmin = createClient(
+        const supabaseAdmin = createAdminClient(
           process.env.NEXT_PUBLIC_SUPABASE_URL!,
           process.env.SUPABASE_SERVICE_ROLE_KEY!,
           {
@@ -104,35 +105,45 @@ export async function POST(request: NextRequest) {
         )
 
         const callbackUrl = `${request.nextUrl.origin}/auth/callback`
-        const next = '/app'
 
-        // Use 'invite' type for PKCE flow (generates ?code=... instead of ?token=...)
-        const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-          type: 'invite',
-          email: email.toLowerCase().trim(),
-          options: {
-            // PKCE flow requires redirectTo to be exactly our callback URL
-            redirectTo: callbackUrl,
-          },
-        })
+        // Try generateLink first (for existing users - PKCE flow)
+        const { data: linkData, error: linkErr } =
+          await supabaseAdmin.auth.admin.generateLink({
+            type: 'magiclink' as any,
+            email: email.toLowerCase().trim(),
+            options: {
+              redirectTo: callbackUrl,
+            },
+          })
 
-        if (!linkError && linkData?.properties?.action_link) {
-          const actionUrl = new URL(linkData.properties.action_link)
-          const code = actionUrl.searchParams.get('code')
-
-          if (!code) {
-            console.error('[API /superadmin/companies/onboard] PKCE code missing from action_link')
-          } else {
-            // Build callback URL with PKCE code
-            magicLink = `${callbackUrl}?code=${encodeURIComponent(code)}&next=${encodeURIComponent(next)}`
-            console.log('[API /superadmin/companies/onboard] PKCE magic link generated')
-          }
+        if (linkErr || !linkData?.properties?.action_link) {
+          // If generateLink fails (user not found or other error), try inviteUserByEmail
+          console.log('[API /superadmin/companies/onboard] generateLink failed, trying inviteUserByEmail...')
           
-          // Send email via Zoho
+          const { data: inviteData, error: inviteErr } =
+            await supabaseAdmin.auth.admin.inviteUserByEmail(email.toLowerCase().trim(), {
+              redirectTo: callbackUrl,
+            })
+
+          if (inviteErr) {
+            emailError = `Failed to send invite: ${inviteErr.message}`
+            console.error('[API /superadmin/companies/onboard] inviteUserByEmail error:', inviteErr)
+          } else {
+            // inviteUserByEmail sends email via Supabase, no action_link returned
+            method = 'invite'
+            emailSent = true // Supabase sends the invite email
+            actionLink = undefined // No action_link for invite
+            console.log('[API /superadmin/companies/onboard] ✓ Invite sent via Supabase')
+          }
+        } else {
+          // generateLink succeeded - we have action_link, send via Zoho
+          actionLink = linkData.properties.action_link
+          method = 'magiclink'
+
+          // Send email via Zoho (only when we have actionLink)
           try {
             if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-              if (!magicLink) throw new Error('Magic link token missing')
-              const html = generateMagicLinkEmailHTML(magicLink, email.toLowerCase().trim())
+              const html = generateMagicLinkEmailHTML(actionLink, email.toLowerCase().trim())
               await sendEmail({
                 to: email.toLowerCase().trim(),
                 subject: 'Your CRM Login Link - AluminCRM',
@@ -148,23 +159,23 @@ export async function POST(request: NextRequest) {
             emailError = emailErr.message || 'Failed to send email'
             console.error('[API /superadmin/companies/onboard] ✗ Email send failed:', emailError)
           }
-        } else {
-          console.error('[API /superadmin/companies/onboard] Failed to generate magic link:', linkError)
         }
       } catch (linkErr: any) {
+        emailError = linkErr.message || 'Failed to generate magic link'
         console.error('[API /superadmin/companies/onboard] Exception generating magic link:', linkErr)
       }
     }
 
-      return NextResponse.json({
-        success: true,
-        company_id: result.company_id,
-        user_id: result.user_id,
-        company_name: result.company_name,
-        magic_link: magicLink,
-        email_sent: emailSent,
-        email_error: emailError || undefined,
-      })
+    return NextResponse.json({
+      success: true,
+      company_id: result.company_id,
+      user_id: result.user_id,
+      company_name: result.company_name,
+      magic_link: actionLink,
+      email_sent: emailSent,
+      email_error: emailError || undefined,
+      method,
+    })
   } catch (error: any) {
     console.error('[API /superadmin/companies/onboard] Unexpected error:', error)
 

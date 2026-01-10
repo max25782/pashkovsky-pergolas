@@ -4,9 +4,14 @@ import { isSuperAdmin } from '@/lib/auth/isSuperAdmin'
 
 export default async function AppPage() {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-  if (!user) redirect('/login?error=authentication_required')
+  console.log('[AppPage] Auth check - user:', user?.email || 'null', 'error:', authError?.message || 'none')
+
+  if (!user) {
+    console.log('[AppPage] No user found, redirecting to login')
+    redirect('/login?error=authentication_required')
+  }
 
   // Platform admin goes to platform console.
   const ok = await isSuperAdmin(user.id)
