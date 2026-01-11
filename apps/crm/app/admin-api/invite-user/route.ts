@@ -80,8 +80,12 @@ export async function POST(req: NextRequest) {
       (u) => u.email?.toLowerCase() === cleanEmail
     )
 
+    // Store whether user exists for link type selection
+    let userExists = false
+    
     if (existingUser) {
       userId = existingUser.id
+      userExists = true
       console.log('[InviteUser] User exists:', userId)
     } else {
       // Create new user
@@ -169,9 +173,14 @@ export async function POST(req: NextRequest) {
       console.log('[InviteUser] Subscription already exists for company:', company_id)
     }
 
-    // Step 4: Generate magic link (NOT recovery - use magiclink for login)
+    // Step 4: Generate magic link (PKCE flow for login)
+    // CRITICAL: 'magiclink' type generates implicit flow (#access_token) - NOT PKCE!
+    // Use 'invite' for new users or 'recovery' for existing users to get PKCE flow (?code=...)
+    const linkType = userExists ? 'recovery' : 'invite'
+    console.log('[InviteUser] Generating magic link (PKCE flow) with type:', linkType, 'for user:', userExists ? 'existing' : 'new')
+    
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'magiclink' as any, // PKCE flow for login
+      type: linkType as any, // 'invite' or 'recovery' - both generate PKCE flow with ?code=
       email: cleanEmail,
       options: {
         redirectTo: callbackUrl,
@@ -180,6 +189,7 @@ export async function POST(req: NextRequest) {
 
     if (linkError || !linkData?.properties?.action_link) {
       console.error('[InviteUser] Error generating magic link:', linkError)
+      console.error('[InviteUser] Link data:', linkData)
       return NextResponse.json(
         { error: `Failed to generate magic link: ${linkError?.message || 'Unknown error'}` },
         { status: 500 }
@@ -188,6 +198,41 @@ export async function POST(req: NextRequest) {
 
     const actionLink = linkData.properties.action_link
     console.log('[InviteUser] Magic link generated successfully')
+    console.log('[InviteUser] Link preview (first 200 chars):', actionLink.substring(0, 200))
+    
+    // Verify link contains code parameter (PKCE flow)
+    try {
+      const linkUrl = new URL(actionLink)
+      const hasCode = linkUrl.searchParams.has('code')
+      const hasHash = linkUrl.hash.includes('access_token')
+      
+      console.log('[InviteUser] Link analysis:', {
+        hasCode,
+        hasHash,
+        redirectTo: linkUrl.searchParams.get('redirect_to') || 'none',
+        type: linkUrl.searchParams.get('type') || 'none',
+        fullUrl: actionLink.substring(0, 300), // First 300 chars for debugging
+      })
+      
+      if (!hasCode) {
+        console.error('[InviteUser] ❌ CRITICAL: Link does NOT contain code parameter!')
+        console.error('[InviteUser] This means PKCE flow will fail. Link type:', linkType)
+        console.error('[InviteUser] Full link:', actionLink)
+        
+        if (hasHash) {
+          console.error('[InviteUser] Link contains hash fragment - this is IMPLICIT FLOW, not PKCE!')
+          return NextResponse.json(
+            { error: 'Generated link uses implicit flow instead of PKCE. Please check Supabase settings.' },
+            { status: 500 }
+          )
+        }
+      } else {
+        console.log('[InviteUser] ✅ Link contains code parameter - PKCE flow will work')
+      }
+    } catch (urlError: any) {
+      console.error('[InviteUser] Error parsing link URL:', urlError)
+      // Continue anyway - link might still work
+    }
 
     // Step 5: Send email via Zoho
     let emailSent = false

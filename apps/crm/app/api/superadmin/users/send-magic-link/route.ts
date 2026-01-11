@@ -27,20 +27,56 @@ export async function POST(req: NextRequest) {
     const callbackUrl = `${req.nextUrl.origin}/auth/callback`
 
     let actionLink: string | null = null
-    let method: 'invite' | 'magiclink' = 'magiclink'
+    let method: 'invite' | 'recovery' = 'invite'
     let emailSent = false
     let emailError: string | null = null
 
-    // 1) Try generateLink first (works for existing users)
+    // Check if user exists to determine link type
+    const { data: usersData } = await supabaseAdmin.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000,
+    })
+    const userExists = usersData?.users?.some(
+      (u) => u.email?.toLowerCase() === cleanEmail
+    )
+
+    // Use 'recovery' for existing users, 'invite' for new users (both generate PKCE flow)
+    const linkType = userExists ? 'recovery' : 'invite'
+    console.log('[SendMagicLink] Generating link with type:', linkType, 'for user:', userExists ? 'existing' : 'new')
+
+    // 1) Try generateLink first (PKCE flow with ?code= parameter)
     const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'magiclink' as any,
+      type: linkType as any, // 'recovery' or 'invite' - both generate PKCE flow
       email: cleanEmail,
       options: { redirectTo: callbackUrl },
     })
 
     if (!linkErr && linkData?.properties?.action_link) {
       actionLink = linkData.properties.action_link
-      method = 'magiclink'
+      method = linkType
+
+      // Verify link contains code parameter (PKCE flow)
+      try {
+        const linkUrl = new URL(actionLink)
+        const hasCode = linkUrl.searchParams.has('code')
+        const hasHash = linkUrl.hash.includes('access_token')
+        
+        console.log('[SendMagicLink] Link analysis:', {
+          hasCode,
+          hasHash,
+          type: linkType,
+          redirectTo: linkUrl.searchParams.get('redirect_to') || 'none',
+        })
+        
+        if (!hasCode && hasHash) {
+          console.error('[SendMagicLink] ❌ Link uses implicit flow (#access_token) instead of PKCE (?code=)')
+          console.error('[SendMagicLink] This will NOT work with SSR cookies. Link:', actionLink.substring(0, 200))
+        } else if (hasCode) {
+          console.log('[SendMagicLink] ✅ Link contains code parameter - PKCE flow will work')
+        }
+      } catch (urlError) {
+        console.warn('[SendMagicLink] Could not parse link URL:', urlError)
+      }
 
       // Send via Zoho (your mailer)
       try {

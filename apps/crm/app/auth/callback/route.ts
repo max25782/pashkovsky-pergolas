@@ -5,13 +5,44 @@ export async function GET(request: NextRequest) {
   const url = new URL(request.url)
   const code = url.searchParams.get('code')
   const next = url.searchParams.get('next') || '/app'
+  const hash = url.hash
 
-  console.log('[Callback] URL:', url.pathname + url.search)
+  console.log('[Callback] URL:', url.pathname + url.search + (hash ? '#' + hash.substring(0, 50) + '...' : ''))
   console.log('[Callback] Has code:', !!code)
+  console.log('[Callback] Has hash:', !!hash)
   console.log('[Callback] Next redirect:', next)
+  console.log('[Callback] All search params:', Object.fromEntries(url.searchParams))
+
+  // Check for PKCE code in query (preferred)
+  if (code) {
+    console.log('[Callback] Found code parameter, using PKCE flow')
+  } else if (hash) {
+    // Fallback: check for hash fragment (implicit flow - not ideal but handle it)
+    console.warn('[Callback] No code parameter, checking hash fragment (implicit flow)')
+    const hashParams = new URLSearchParams(hash.substring(1))
+    const accessToken = hashParams.get('access_token')
+    const error = hashParams.get('error')
+    
+    if (error) {
+      console.error('[Callback] Error in hash:', error)
+      return NextResponse.redirect(
+        new URL(`/login?error=${encodeURIComponent(error)}`, url.origin)
+      )
+    }
+    
+    if (accessToken) {
+      console.warn('[Callback] Found access_token in hash - this is implicit flow, not PKCE')
+      // For implicit flow, we need to set the session differently
+      // But ideally, we should fix the link generation to use PKCE
+      return NextResponse.redirect(
+        new URL('/login?error=implicit_flow_not_supported', url.origin)
+      )
+    }
+  }
 
   if (!code) {
-    console.error('[Callback] Missing code parameter')
+    console.error('[Callback] Missing code parameter and no valid hash found')
+    console.error('[Callback] Full URL:', url.toString())
     return NextResponse.redirect(
       new URL('/login?error=missing_code', url.origin)
     )

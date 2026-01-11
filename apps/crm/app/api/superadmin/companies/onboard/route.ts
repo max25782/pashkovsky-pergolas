@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     let actionLink: string | undefined
     let emailSent = false
     let emailError: string | null = null
-    let method: 'invite' | 'magiclink' = 'magiclink'
+    let method: 'invite' | 'recovery' = 'invite'
 
     if (sendMagicLink && result.user_id) {
       try {
@@ -106,10 +106,23 @@ export async function POST(request: NextRequest) {
 
         const callbackUrl = `${request.nextUrl.origin}/auth/callback`
 
-        // Try generateLink first (for existing users - PKCE flow)
+        // Check if user exists to determine link type
+        const { data: usersData } = await supabaseAdmin.auth.admin.listUsers({
+          page: 1,
+          perPage: 1000,
+        })
+        const userExists = usersData?.users?.some(
+          (u) => u.email?.toLowerCase() === email.toLowerCase().trim()
+        )
+
+        // Use 'recovery' for existing users, 'invite' for new users (both generate PKCE flow)
+        const linkType = userExists ? 'recovery' : 'invite'
+        console.log('[API /superadmin/companies/onboard] Generating link with type:', linkType, 'for user:', userExists ? 'existing' : 'new')
+
+        // Try generateLink first (PKCE flow with ?code= parameter)
         const { data: linkData, error: linkErr } =
           await supabaseAdmin.auth.admin.generateLink({
-            type: 'magiclink' as any,
+            type: linkType as any, // 'recovery' or 'invite' - both generate PKCE flow
             email: email.toLowerCase().trim(),
             options: {
               redirectTo: callbackUrl,
@@ -138,7 +151,28 @@ export async function POST(request: NextRequest) {
         } else {
           // generateLink succeeded - we have action_link, send via Zoho
           actionLink = linkData.properties.action_link
-          method = 'magiclink'
+          method = linkType
+
+          // Verify link contains code parameter (PKCE flow)
+          try {
+            const linkUrl = new URL(actionLink)
+            const hasCode = linkUrl.searchParams.has('code')
+            const hasHash = linkUrl.hash.includes('access_token')
+            
+            console.log('[API /superadmin/companies/onboard] Link analysis:', {
+              hasCode,
+              hasHash,
+              type: linkType,
+            })
+            
+            if (!hasCode && hasHash) {
+              console.error('[API /superadmin/companies/onboard] ❌ Link uses implicit flow instead of PKCE')
+            } else if (hasCode) {
+              console.log('[API /superadmin/companies/onboard] ✅ Link contains code parameter - PKCE flow will work')
+            }
+          } catch (urlError) {
+            console.warn('[API /superadmin/companies/onboard] Could not parse link URL:', urlError)
+          }
 
           // Send email via Zoho (only when we have actionLink)
           try {
