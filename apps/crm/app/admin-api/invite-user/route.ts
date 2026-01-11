@@ -198,39 +198,61 @@ export async function POST(req: NextRequest) {
 
     const actionLink = linkData.properties.action_link
     console.log('[InviteUser] Magic link generated successfully')
-    console.log('[InviteUser] Link preview (first 200 chars):', actionLink.substring(0, 200))
+    console.log('[InviteUser] Full action_link:', actionLink)
+    console.log('[InviteUser] Link preview (first 300 chars):', actionLink.substring(0, 300))
     
-    // Verify link contains code parameter (PKCE flow)
+    // CRITICAL: Supabase generateLink returns a link to Supabase verify page
+    // This verify page should redirect to callbackUrl with ?code= parameter
+    // But if redirectTo doesn't match Supabase Dashboard settings, it may redirect without code
+    
+    // Verify link structure
     try {
       const linkUrl = new URL(actionLink)
       const hasCode = linkUrl.searchParams.has('code')
       const hasHash = linkUrl.hash.includes('access_token')
+      const redirectTo = linkUrl.searchParams.get('redirect_to')
+      const linkTypeParam = linkUrl.searchParams.get('type')
+      const token = linkUrl.searchParams.get('token')
       
       console.log('[InviteUser] Link analysis:', {
         hasCode,
         hasHash,
-        redirectTo: linkUrl.searchParams.get('redirect_to') || 'none',
-        type: linkUrl.searchParams.get('type') || 'none',
-        fullUrl: actionLink.substring(0, 300), // First 300 chars for debugging
+        redirectTo: redirectTo || 'none',
+        type: linkTypeParam || 'none',
+        hasToken: !!token,
+        hostname: linkUrl.hostname,
+        pathname: linkUrl.pathname,
       })
       
-      if (!hasCode) {
-        console.error('[InviteUser] ❌ CRITICAL: Link does NOT contain code parameter!')
-        console.error('[InviteUser] This means PKCE flow will fail. Link type:', linkType)
-        console.error('[InviteUser] Full link:', actionLink)
-        
-        if (hasHash) {
-          console.error('[InviteUser] Link contains hash fragment - this is IMPLICIT FLOW, not PKCE!')
-          return NextResponse.json(
-            { error: 'Generated link uses implicit flow instead of PKCE. Please check Supabase settings.' },
-            { status: 500 }
-          )
-        }
-      } else {
-        console.log('[InviteUser] ✅ Link contains code parameter - PKCE flow will work')
+      // Supabase verify link structure:
+      // https://PROJECT.supabase.co/auth/v1/verify?token=xxx&type=invite&redirect_to=...
+      // This link goes to Supabase verify page, which then redirects to redirect_to with ?code=
+      
+      if (!redirectTo || redirectTo !== callbackUrl) {
+        console.error('[InviteUser] ❌ CRITICAL: redirect_to in link does not match callbackUrl!')
+        console.error('[InviteUser] Link redirect_to:', redirectTo)
+        console.error('[InviteUser] Expected callbackUrl:', callbackUrl)
+        console.error('[InviteUser] This means Supabase will redirect to wrong URL or without code')
+        return NextResponse.json(
+          { error: `Redirect URL mismatch. Link has: ${redirectTo}, expected: ${callbackUrl}. Check Supabase Dashboard Redirect URLs.` },
+          { status: 500 }
+        )
+      }
+      
+      if (!hasCode && !hasHash) {
+        // This is normal - Supabase verify link doesn't have code yet
+        // Code will be added when Supabase redirects to callbackUrl
+        console.log('[InviteUser] ✅ Link structure correct - Supabase verify page will redirect with code')
+      } else if (hasHash) {
+        console.error('[InviteUser] ❌ Link contains hash fragment - this is IMPLICIT FLOW, not PKCE!')
+        return NextResponse.json(
+          { error: 'Generated link uses implicit flow instead of PKCE. Please check Supabase settings.' },
+          { status: 500 }
+        )
       }
     } catch (urlError: any) {
       console.error('[InviteUser] Error parsing link URL:', urlError)
+      console.error('[InviteUser] Action link:', actionLink)
       // Continue anyway - link might still work
     }
 
