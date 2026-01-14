@@ -226,3 +226,6 @@ const { data, error } = await supabaseAdmin.auth.admin.generateLink({
 3. Cookies установятся правильно
 4. Пользователь попадёт на `/app` (не `/login`)
 
+
+
+

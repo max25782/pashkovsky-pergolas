@@ -154,3 +154,6 @@ SELECT * FROM company_subscriptions WHERE company_id = 'YOUR_COMPANY_ID';
 SELECT * FROM pg_policies WHERE tablename IN ('companies', 'company_members');
 ```
 
+
+
+

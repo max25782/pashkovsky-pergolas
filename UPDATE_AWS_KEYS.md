@@ -106,3 +106,6 @@ http://localhost:3000/api/gallery/test-s3?prefix=images/dgamim/
 2. ✅ MediaGallery и DgamimCarousel будут получать изображения из S3
 3. ✅ API endpoints вернут данные вместо пустых массивов
 
+
+
+

@@ -150,3 +150,6 @@ USING (
 GRANT EXECUTE ON FUNCTION public.ensure_company_trial TO authenticated;
 GRANT EXECUTE ON FUNCTION public.ensure_company_trial TO service_role;
 
+
+
+

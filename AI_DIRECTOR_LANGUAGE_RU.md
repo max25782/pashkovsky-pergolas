@@ -169,3 +169,6 @@ function detectLanguage(message: string): string {
 Я помогу разобраться! 🚀
 
 
+
+
+

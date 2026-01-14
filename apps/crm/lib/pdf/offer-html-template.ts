@@ -9,6 +9,15 @@ import { calculatePergolaArea } from '@/lib/calculations/pergola-area'
  * @returns Self-contained HTML string with embedded fonts
  */
 export function renderOfferHtml(offer: Offer): string {
+  function escapeHtml(value: string): string {
+    return value
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;')
+  }
+
   const formatPrice = (price: number) => {
     return `₪${price.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`
   }
@@ -124,6 +133,8 @@ export function renderOfferHtml(offer: Offer): string {
   
   // Get logo as base64 data URI
   const logoDataUri = getLogoDataUri('public/logo-transparent.png')
+  const notesText = offer.options?.notes?.trim() || ''
+  const safeNotes = notesText ? escapeHtml(notesText) : ''
 
   return `
 <!DOCTYPE html>
@@ -318,6 +329,17 @@ export function renderOfferHtml(offer: Offer): string {
       font-size: 11px;
       color: #64748b;
     }
+
+    .notes {
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 13px;
+      color: #0f172a;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 12px;
+    }
   </style>
 </head>
 <body>
@@ -385,6 +407,13 @@ export function renderOfferHtml(offer: Offer): string {
       <span class="value">אלומיניום פרימיום</span>
     </div>
   </div>
+
+  ${safeNotes ? `
+  <div class="section">
+    <div class="section-title">הערות / תיאור</div>
+    <div class="notes">${safeNotes}</div>
+  </div>
+  ` : ''}
 
   ${offer.santaf?.enabled ? `
   <div class="section">

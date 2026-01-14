@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sendEmail, generateOfferEmailHTML } from '@/lib/email'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
+  ? createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+  : null
 
 export async function POST(
   req: NextRequest,
@@ -33,8 +38,22 @@ export async function POST(
     const defaultLocale = 'he' // Default locale for public offer links
     const finalOfferUrl = offerUrl || `${baseUrl}/${defaultLocale}/offers/${params.id}/approve`
 
-    // Generate HTML email
-    const html = generateOfferEmailHTML(finalOfferUrl, customerName || 'לקוח יקר')
+    // Fetch offer to get AI text
+    let aiText: string | null = null
+    if (supabase) {
+      const { data: offerData } = await supabase
+        .from('offers')
+        .select('options_notes, final_price')
+        .eq('id', params.id)
+        .single()
+      
+      if (offerData?.options_notes) {
+        aiText = offerData.options_notes
+      }
+    }
+
+    // Generate HTML email with AI text
+    const html = generateOfferEmailHTML(finalOfferUrl, customerName || 'לקוח יקר', aiText)
 
     // Send email
     await sendEmail({

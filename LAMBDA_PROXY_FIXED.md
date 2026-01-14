@@ -246,3 +246,6 @@ sessionAttributes: {
 **Обновите Lambda код и проверьте CloudWatch logs! 🔍**
 
 
+
+
+

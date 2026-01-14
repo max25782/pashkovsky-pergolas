@@ -29,8 +29,27 @@ export async function uploadToS3(
   mimeType: string
 ): Promise<string> {
   if (!s3Client || !S3_BUCKET) {
-    throw new Error('S3 not configured. Check AWS environment variables.')
+    const missingVars = []
+    if (!S3_BUCKET) missingVars.push('AWS_S3_BUCKET_NAME')
+    if (!AWS_ACCESS_KEY) missingVars.push('AWS_ACCESS_KEY_ID')
+    if (!AWS_SECRET_KEY) missingVars.push('AWS_SECRET_ACCESS_KEY')
+    
+    throw new Error(
+      `S3 not configured. Missing environment variables: ${missingVars.join(', ')}`
+    )
   }
+
+  // Log configuration (masked) for debugging
+  const maskedKey = AWS_ACCESS_KEY 
+    ? `${AWS_ACCESS_KEY.substring(0, 8)}...${AWS_ACCESS_KEY.substring(AWS_ACCESS_KEY.length - 4)}`
+    : 'not set'
+  
+  console.log('[S3 Upload] Configuration:', {
+    bucket: S3_BUCKET,
+    region: S3_REGION,
+    accessKeyId: maskedKey,
+    hasSecretKey: !!AWS_SECRET_KEY,
+  })
 
   const command = new PutObjectCommand({
     Bucket: S3_BUCKET,
@@ -44,7 +63,25 @@ export async function uploadToS3(
     // Modern S3 buckets use Bucket Policy, not ACLs
   })
 
-  await s3Client.send(command)
+  try {
+    await s3Client.send(command)
+  } catch (error: any) {
+    // Enhanced error logging for AWS credential issues
+    if (error.name === 'InvalidAccessKeyId' || error.Code === 'InvalidAccessKeyId') {
+      console.error('[S3 Upload] AWS Credentials Error:', {
+        error: error.message,
+        accessKeyId: maskedKey,
+        bucket: S3_BUCKET,
+        region: S3_REGION,
+        hint: 'Check AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in .env.local or Vercel environment variables',
+      })
+      throw new Error(
+        `Invalid AWS Access Key ID: ${maskedKey}. ` +
+        `Please verify AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are correct and the key exists in AWS IAM.`
+      )
+    }
+    throw error
+  }
 
   // Return public URL
   return `https://${S3_BUCKET}.s3.${S3_REGION}.amazonaws.com/${key}`

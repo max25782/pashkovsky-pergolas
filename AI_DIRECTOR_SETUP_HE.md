@@ -191,3 +191,6 @@ How many open deals do we have?
 **בהצלחה! 🎉**
 
 
+
+
+

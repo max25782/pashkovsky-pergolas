@@ -148,3 +148,6 @@ WHERE company_id = '82b7f5ca-50bd-4675-a62a-dc2e8f2849df';
 - **SuperAdmin Panel:** https://crm.pashkovsky-group.com/superadmin/companies
 - **Supabase Dashboard:** https://supabase.com/dashboard/project/YOUR_PROJECT_ID
 
+
+
+

@@ -117,3 +117,6 @@ await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
 
 Этот метод гарантирует, что Supabase использует правильные настройки из Dashboard.
 
+
+
+

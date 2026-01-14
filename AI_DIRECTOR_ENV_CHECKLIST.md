@@ -176,3 +176,6 @@ cat .env.local | grep -E "AWS_|BEDROCK_|AI_DIRECTOR_" | sed 's/=.*/=***/'
 **`AI_DIRECTOR_FINAL_SETUP_RU.md`**
 
 
+
+
+

@@ -141,3 +141,6 @@ GRANT SELECT ON public.integration_events TO authenticated;
 GRANT ALL ON public.company_integrations TO service_role;
 GRANT ALL ON public.integration_events TO service_role;
 
+
+
+

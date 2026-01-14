@@ -281,3 +281,6 @@ Supabase (PostgreSQL)
 3. Проверьте CloudWatch Logs в AWS (для Bedrock Agent)
 
 
+
+
+

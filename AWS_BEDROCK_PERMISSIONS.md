@@ -143,3 +143,6 @@ aws bedrock-agent-runtime invoke-agent \
 - Убедитесь, что в `.env.local` нет лишних пробелов или кавычек
 
 
+
+
+

@@ -127,7 +127,19 @@ export function generateMagicLinkEmailHTML(magicLink: string, email: string) {
 }
 
 // Template for offer email
-export function generateOfferEmailHTML(offerUrl: string, customerName: string) {
+export function generateOfferEmailHTML(offerUrl: string, customerName: string, aiText?: string | null) {
+  // Escape HTML for AI text
+  const escapeHtml = (text: string) => {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;')
+  }
+
+  const formattedAiText = aiText ? aiText.split('\n').map(line => escapeHtml(line)).join('<br>') : null
+
   return `
     <!DOCTYPE html>
     <html dir="rtl" lang="he">
@@ -157,8 +169,21 @@ export function generateOfferEmailHTML(offerUrl: string, customerName: string) {
                     הכנו עבורך הצעת מחיר מותאמת אישית עבור הפרגולה שלך.
                   </p>
                   
+                  ${formattedAiText ? `
+                  <!-- AI Generated Description -->
+                  <div style="background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%); border: 2px solid #c084fc; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                    <h3 style="color: #7c3aed; margin: 0 0 12px 0; font-size: 18px; display: flex; align-items: center; gap: 8px;">
+                      <span>✨</span>
+                      <span>תיאור ההצעה</span>
+                    </h3>
+                    <div style="color: #4b5563; font-size: 15px; line-height: 1.8; white-space: pre-wrap;">
+                      ${formattedAiText}
+                    </div>
+                  </div>
+                  ` : ''}
+                  
                   <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
-                    לצפייה בהצעה ולאישור, לחץ על הכפתור למטה:
+                    לצפייה בהצעה המלאה ולאישור, לחץ על הכפתור למטה:
                   </p>
                   
                   <!-- CTA Button -->

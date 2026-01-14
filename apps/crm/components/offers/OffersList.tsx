@@ -61,9 +61,25 @@ export function OffersList({ dealId, refreshTrigger, adminToken }: OffersListPro
       }
       phone = `+${phone}`
 
-      const message = encodeURIComponent(
-        `שלום ${offer.customerName},\n\nלצפייה ואישור הצעת המחיר שלך לחץ כאן:\n${offerUrl}`
-      )
+      // Build message with AI-generated description if available
+      let messageText = `שלום ${offer.customerName},\n\n` +
+        `הצעת המחיר שלך מוכנה! 🎉\n\n`
+      
+      // Add AI-generated description if exists
+      if (offer.options?.notes && offer.options.notes.trim()) {
+        // Limit to ~300 chars to keep WhatsApp message reasonable
+        const shortDescription = offer.options.notes.length > 300
+          ? offer.options.notes.substring(0, 297) + '...'
+          : offer.options.notes
+        
+        messageText += `📋 תיאור:\n${shortDescription}\n\n`
+      }
+      
+      messageText += `לצפייה ואישור הצעת המחיר המלאה לחץ כאן:\n${offerUrl}\n\n` +
+        `💰 סכום: ₪${offer.finalPrice.toLocaleString('he-IL', { minimumFractionDigits: 2 })}\n\n` +
+        `בברכה,\nPashkovsky Group`
+
+      const message = encodeURIComponent(messageText)
       window.open(`https://wa.me/${phone}?text=${message}`, '_blank')
     } catch (err: any) {
       alert('שגיאה: ' + err.message)
@@ -219,6 +235,21 @@ export function OffersList({ dealId, refreshTrigger, adminToken }: OffersListPro
             </div>
           </div>
 
+          {/* AI Text Preview */}
+          {offer.options?.notes && offer.options.notes.trim() && (
+            <div className="mb-3 border-t border-white/10 pt-3">
+              <div className="text-xs text-purple-300 mb-1 flex items-center gap-1">
+                <span>✨</span>
+                <span className="font-semibold">תיאור AI:</span>
+              </div>
+              <p className="text-sm text-white/80 line-clamp-2 whitespace-pre-wrap">
+                {offer.options.notes.length > 150 
+                  ? offer.options.notes.substring(0, 147) + '...' 
+                  : offer.options.notes}
+              </p>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3 text-sm border-t border-white/10 pt-3">
             <div>
               <span className="text-white/60">שטח:</span>
@@ -286,12 +317,22 @@ export function OffersList({ dealId, refreshTrigger, adminToken }: OffersListPro
 
             {/* PDF */}
             <button
-              onClick={() => handleGeneratePdf(offer)}
+              onClick={() => handleGeneratePdf(offer, false)}
               className="w-full sm:flex-1 flex items-center justify-center gap-1 px-2 py-2 rounded bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-200 text-xs font-medium transition-colors"
-              title="PDF"
+              title="הורד PDF (משתמש בקובץ קיים אם יש)"
             >
               <FileDown className="w-4 h-4" />
               PDF
+            </button>
+
+            {/* Regenerate PDF (force) */}
+            <button
+              onClick={() => handleGeneratePdf(offer, true)}
+              className="w-full sm:flex-1 flex items-center justify-center gap-1 px-2 py-2 rounded bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 text-xs font-medium transition-colors"
+              title="צור PDF מחדש (כולל שינויים אחרונים)"
+            >
+              <FileDown className="w-3 h-3" />
+              <span className="text-[10px]">🔄 חדש</span>
             </button>
 
             {/* WhatsApp */}

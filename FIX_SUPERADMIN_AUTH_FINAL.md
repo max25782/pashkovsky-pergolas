@@ -67,3 +67,6 @@ if (!session || session.role !== 'superadmin') {
 
 The authentication now matches the exact pattern used by all other SuperAdmin API endpoints in the project.
 
+
+
+

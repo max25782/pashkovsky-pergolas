@@ -206,3 +206,6 @@ git push
 
 Не должно быть ошибок про "Root Directory does not exist".
 
+
+
+

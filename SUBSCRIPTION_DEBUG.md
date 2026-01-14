@@ -129,3 +129,6 @@ ORDER BY sh.changed_at DESC;
 - `apps/crm/app/api/superadmin/companies/[id]/subscription/route.ts` - новый API endpoint для отладки
 - `apps/crm/lib/services/company-onboarding-service.ts` - логика создания подписки
 
+
+
+

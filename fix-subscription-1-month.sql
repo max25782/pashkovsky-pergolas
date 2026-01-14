@@ -30,3 +30,6 @@ JOIN companies c ON cs.company_id = c.id
 JOIN subscription_plans sp ON cs.plan_id = sp.id
 WHERE cs.company_id = '82b7f5ca-50bd-4675-a62a-dc2e8f2849df';
 
+
+
+

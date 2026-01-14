@@ -227,3 +227,6 @@ rm apps/crm/app/api/debug/auth/route.ts
 
 Или оставить для будущих диагностик (но добавить auth check).
 
+
+
+

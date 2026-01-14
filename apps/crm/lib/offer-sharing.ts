@@ -35,13 +35,25 @@ export function sendOfferViaWhatsApp(offer: Offer): string {
   const phone = formatPhoneForWhatsApp(offer.customerPhone)
   const offerUrl = getOfferPublicUrl(offer.id)
   
-  const message = encodeURIComponent(
-    `שלום ${offer.customerName},\n\n` +
-    `הצעת המחיר שלך מוכנה! 🎉\n\n` +
-    `לצפייה בהצעת מחיר ולחץ כאן:\n${offerUrl}\n\n` +
-    `סכום: ₪${offer.finalPrice.toLocaleString('he-IL', { minimumFractionDigits: 2 })}\n\n` +
+  // Build message with AI-generated description if available
+  let messageText = `שלום ${offer.customerName},\n\n` +
+    `הצעת המחיר שלך מוכנה! 🎉\n\n`
+  
+  // Add AI-generated description if exists
+  if (offer.options?.notes && offer.options.notes.trim()) {
+    // Limit to ~300 chars to keep WhatsApp message reasonable
+    const shortDescription = offer.options.notes.length > 300
+      ? offer.options.notes.substring(0, 297) + '...'
+      : offer.options.notes
+    
+    messageText += `📋 תיאור:\n${shortDescription}\n\n`
+  }
+  
+  messageText += `לצפייה בהצעת מחיר מלאה ולחץ כאן:\n${offerUrl}\n\n` +
+    `💰 סכום: ₪${offer.finalPrice.toLocaleString('he-IL', { minimumFractionDigits: 2 })}\n\n` +
     `בברכה,\nPashkovsky Group`
-  )
+  
+  const message = encodeURIComponent(messageText)
 
   return `https://wa.me/${phone}?text=${message}`
 }

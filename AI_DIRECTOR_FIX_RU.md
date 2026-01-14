@@ -167,3 +167,6 @@ curl https://your-ngrok-url.ngrok-free.app/api/ai-director/data/deals?company_id
 Я помогу разобраться! 🚀
 
 
+
+
+

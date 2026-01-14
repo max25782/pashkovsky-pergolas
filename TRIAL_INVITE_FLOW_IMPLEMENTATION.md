@@ -234,3 +234,6 @@ For issues, check:
 3. Database: `company_subscriptions`, `company_members` tables
 4. Supabase Dashboard: Authentication logs
 
+
+
+

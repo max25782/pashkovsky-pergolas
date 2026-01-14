@@ -313,3 +313,6 @@ const { data: memberships } = await supabase
 4. **No Hacks**: Proper Supabase patterns, no client-side fallbacks
 5. **Production-Ready**: Minimal code, correct error handling, secure by default
 
+
+
+
