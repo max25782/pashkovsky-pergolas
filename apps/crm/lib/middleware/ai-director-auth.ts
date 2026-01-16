@@ -47,12 +47,51 @@ export function verifyAIDirectorToken(req: NextRequest): boolean {
  * Returns error response if authentication fails, null otherwise
  */
 export function requireAIDirectorAuth(req: NextRequest): NextResponse | null {
-  if (!verifyAIDirectorToken(req)) {
+  const expectedToken = process.env.AI_DIRECTOR_API_TOKEN
+  
+  if (!expectedToken) {
+    console.error('[AI Director Auth] AI_DIRECTOR_API_TOKEN is not set in environment variables')
     return NextResponse.json(
-      { error: 'Unauthorized: Invalid AI Director token' },
+      { 
+        error: 'Server configuration error',
+        details: 'AI_DIRECTOR_API_TOKEN is not configured. Please set this environment variable.',
+      },
+      { status: 500 }
+    )
+  }
+  
+  if (!verifyAIDirectorToken(req)) {
+    // Log detailed info for debugging
+    const receivedToken = req.headers.get('x-api-token') || 
+                         req.headers.get('x-ai-director-token') ||
+                         (() => {
+                           const auth = req.headers.get('authorization')
+                           return auth?.match(/^Bearer\s+(.+)$/i)?.[1] || null
+                         })()
+    
+    console.error('[AI Director Auth] Token validation failed:', {
+      hasToken: !!receivedToken,
+      tokenLength: receivedToken?.length || 0,
+      expectedLength: expectedToken.length,
+      tokenPreview: receivedToken ? `***${receivedToken.slice(-4)}` : 'MISSING',
+      expectedPreview: `***${expectedToken.slice(-4)}`,
+      url: req.url,
+      headers: {
+        'x-api-token': req.headers.get('x-api-token') ? 'present' : 'missing',
+        'x-ai-director-token': req.headers.get('x-ai-director-token') ? 'present' : 'missing',
+        'authorization': req.headers.get('authorization') ? 'present' : 'missing',
+      },
+    })
+    
+    return NextResponse.json(
+      { 
+        error: 'The security token included in the request is invalid.',
+        hint: 'Please verify that AI_DIRECTOR_API_TOKEN is correctly configured and matches the token sent by Bedrock Agent.',
+      },
       { status: 401 }
     )
   }
+  
   return null
 }
 
