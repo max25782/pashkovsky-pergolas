@@ -123,32 +123,49 @@ async function saveMessage(sessionId: string, role: 'user' | 'assistant', conten
 }
 
 /**
- * Preflight check for external data API
+ * Preflight check for external data API (non-blocking)
+ * This is a soft check - if it fails, we log a warning but don't block the request
  */
-async function preflightExternalDataApi(apiBaseUrl: string): Promise<NextResponse | null> {
+async function preflightExternalDataApi(apiBaseUrl: string): Promise<void> {
+  // Skip check if URL is not configured
+  if (!apiBaseUrl || apiBaseUrl.trim() === '') {
+    console.warn('[AI Director] NEXT_PUBLIC_APP_URL is not set - Bedrock agent may not be able to fetch data')
+    return
+  }
+
+  // Ensure URL has protocol
+  let normalizedUrl = apiBaseUrl.trim()
+  if (!normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
+    normalizedUrl = `https://${normalizedUrl}`
+  }
+
   try {
-    const healthUrl = `${apiBaseUrl}/api/ai-director/data/deals?company_id=test&limit=1`
+    const healthUrl = `${normalizedUrl}/api/ai-director/data/deals?company_id=test&limit=1`
     const response = await fetch(healthUrl, {
       method: 'GET',
       headers: {
         'x-api-token': process.env.AI_DIRECTOR_API_TOKEN || '',
       },
+      // Add timeout to prevent hanging
+      signal: AbortSignal.timeout(3000), // 3 second timeout
     })
 
     if (!response.ok && response.status !== 400) {
-      return NextResponse.json({
-        error: 'External data API недоступен',
-        hint: `Проверьте, что API доступен по адресу: ${apiBaseUrl}`,
-        checkedUrl: healthUrl,
-      }, { status: 503 })
+      console.warn('[AI Director] Preflight check failed:', {
+        status: response.status,
+        url: healthUrl,
+        hint: 'Bedrock agent may not be able to fetch data, but chat will still work',
+      })
+    } else {
+      console.log('[AI Director] Preflight check passed:', healthUrl)
     }
-
-    return null
   } catch (error: any) {
-    return NextResponse.json({
-      error: 'Не удалось подключиться к внешнему API',
-      hint: `Проверьте настройки NEXT_PUBLIC_APP_URL: ${apiBaseUrl}`,
-    }, { status: 503 })
+    // Log warning but don't block - Bedrock agent will handle API errors gracefully
+    console.warn('[AI Director] Preflight check error (non-blocking):', {
+      error: error.message,
+      url: normalizedUrl,
+      hint: 'This is a soft check. Bedrock agent will attempt to fetch data when needed.',
+    })
   }
 }
 
@@ -192,9 +209,16 @@ export async function POST(req: NextRequest) {
     await saveMessage(session.id, 'user', message)
     
     // Prepare session attributes
+    // Normalize api_base_url: add protocol if missing
+    let apiBaseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || ''
+    if (apiBaseUrl && !apiBaseUrl.startsWith('http://') && !apiBaseUrl.startsWith('https://')) {
+      // Default to https in production, http in development
+      apiBaseUrl = process.env.NODE_ENV === 'production' ? `https://${apiBaseUrl}` : `http://${apiBaseUrl}`
+    }
+
     const sessionAttributes = {
       company_id: companyId,
-      api_base_url: process.env.NEXT_PUBLIC_APP_URL || '',
+      api_base_url: apiBaseUrl,
       api_token: process.env.AI_DIRECTOR_API_TOKEN || '',
       user_language: detectedLanguage,
     }
@@ -210,10 +234,8 @@ export async function POST(req: NextRequest) {
       console.error('[AI Director] ERROR: AI_DIRECTOR_API_TOKEN is not set in environment variables!')
     }
 
-    const preflightError = await preflightExternalDataApi(sessionAttributes.api_base_url)
-    if (preflightError) {
-      return preflightError
-    }
+    // Non-blocking preflight check (logs warnings but doesn't fail)
+    await preflightExternalDataApi(sessionAttributes.api_base_url)
 
     // Check if Lambda proxy is configured
     const invokeLambdaUrl = process.env.AI_DIRECTOR_INVOKE_LAMBDA_URL
