@@ -12,6 +12,7 @@ import { ProfitWidget } from '../workers/ProfitWidget'
 import { useProjectRevenue } from '@/hooks/useProjectRevenue'
 import { LaundryClosetModal } from './LaundryClosetModal'
 import { MaterialOrdersList } from './MaterialOrdersList'
+import { authFetch } from '@/lib/api/auth-fetch'
 
 interface DealModalProps {
   deal: Deal
@@ -593,16 +594,16 @@ export function DealModal({
             formData.append('image', imageBlob, 'sketch.png')
             formData.append('sketchJson', JSON.stringify(jsonData))
 
-            const response = await fetch('/admin-api/deals/sketch', {
+            // Use authFetch to automatically add JWT token from Supabase session
+            const response = await authFetch('/admin-api/deals/sketch', {
               method: 'POST',
-              headers: {
-                'x-admin-token': adminToken,
-              },
               body: formData,
             })
 
             if (!response.ok) {
-              throw new Error('Failed to save sketch')
+              const errorText = await response.text()
+              console.error('[DealModal] Sketch save error:', response.status, errorText)
+              throw new Error(`Failed to save sketch: ${response.status} ${errorText}`)
             }
 
             const result = await response.json()
