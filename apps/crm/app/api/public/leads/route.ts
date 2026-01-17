@@ -254,11 +254,11 @@ export async function POST(request: NextRequest) {
 }
 
 // Health check
-export async function GET(request?: NextRequest) {
+export async function GET(request: NextRequest) {
   return jsonResponse({
     service: 'public-leads',
     status: 'ok',
     rateLimit: RATE_LIMIT_CONFIG,
-  }, undefined, request || null)
+  }, undefined, request)
 }
 
