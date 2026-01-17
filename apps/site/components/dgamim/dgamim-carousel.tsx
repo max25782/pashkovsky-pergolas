@@ -27,15 +27,15 @@ export function DgamimCarousel(){
         console.log('[DgamimCarousel] API response status:', res.status)
         if (res.ok) {
           const data = await res.json()
-          console.log('[DgamimCarousel] API data:', data)
           if (data.items && data.items.length > 0) {
-            console.log('[DgamimCarousel] Setting dynamic items:', data.items.length)
+            console.log('[DgamimCarousel] Using dynamic items from API:', data.items.length)
             setDynamicItems(data.items)
           } else {
-            console.warn('[DgamimCarousel] No items in API response, using static items')
+            // This is expected if S3 is not configured or has no data - fallback to static items
+            console.log('[DgamimCarousel] Using static items (API returned empty or S3 not configured)')
           }
         } else {
-          console.error('[DgamimCarousel] API error:', res.status, res.statusText)
+          console.warn('[DgamimCarousel] API error:', res.status, res.statusText, '- using static items as fallback')
         }
       } catch (error) {
         console.error('[DgamimCarousel] Failed to fetch models from API:', error)
