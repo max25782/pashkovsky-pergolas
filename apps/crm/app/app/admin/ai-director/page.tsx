@@ -35,10 +35,31 @@ export default function AIDirectorPage() {
   async function loadHistory() {
     try {
       const res = await authFetch('/api/ai-director/chat')
+      
+      if (!res.ok) {
+        // If 401/403, user might not be authenticated - that's OK, just start fresh
+        if (res.status === 401 || res.status === 403) {
+          console.warn('[AI Director] Not authenticated, starting fresh session')
+          setMessages([])
+          return
+        }
+        
+        const errorText = await res.text()
+        console.error('[AI Director] Error loading history:', res.status, errorText)
+        return
+      }
+      
       const data = await res.json()
       setMessages(data.messages || [])
+      
+      // Set sessionId if provided
+      if (data.sessionId) {
+        setSessionId(data.sessionId)
+      }
     } catch (error) {
       console.error('Error loading history:', error)
+      // Don't show error to user - just start with empty messages
+      setMessages([])
     }
   }
   

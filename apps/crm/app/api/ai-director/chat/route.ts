@@ -90,6 +90,12 @@ async function getOrCreateDirectorSession(companyId: string, sessionId?: string)
       .single()
 
     if (existing) {
+      // Update last_activity when reusing session
+      await supabase
+        .from('ai_director_sessions')
+        .update({ last_activity: new Date().toISOString() })
+        .eq('id', existing.id)
+      
       return { id: existing.id }
     }
   }
@@ -170,6 +176,64 @@ async function preflightExternalDataApi(apiBaseUrl: string): Promise<void> {
 }
 
 /**
+ * GET /api/ai-director/chat
+ * 
+ * Get chat history for current company's AI Director session
+ */
+export async function GET(req: NextRequest) {
+  const authCheck = await requireAuthAsync(req)
+  if (!authCheck.authorized) return authCheck.error
+  
+  if (!supabase) {
+    return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
+  }
+  
+  try {
+    const companyId = authCheck.context?.companyId
+    
+    if (!companyId) {
+      return NextResponse.json({ error: 'Company ID not found' }, { status: 400 })
+    }
+
+    // Get the most recent session for this company
+    const { data: session } = await supabase
+      .from('ai_director_sessions')
+      .select('id')
+      .eq('company_id', companyId)
+      .order('last_activity', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (!session) {
+      return NextResponse.json({ messages: [], sessionId: null })
+    }
+
+    // Get messages for this session
+    const { data: messages, error: messagesError } = await supabase
+      .from('ai_director_messages')
+      .select('role, content, created_at')
+      .eq('session_id', session.id)
+      .order('created_at', { ascending: true })
+
+    if (messagesError) {
+      console.error('[AI Director] Error loading messages:', messagesError)
+      return NextResponse.json({ error: 'Failed to load messages' }, { status: 500 })
+    }
+
+    return NextResponse.json({
+      messages: messages || [],
+      sessionId: session.id,
+    })
+  } catch (error: any) {
+    console.error('[AI Director] GET error:', error)
+    return NextResponse.json(
+      { error: error.message || 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+/**
  * POST /api/ai-director/chat
  * 
  * Send message to AI Director (Bedrock Agent)
@@ -232,6 +296,11 @@ export async function POST(req: NextRequest) {
     
     if (!sessionAttributes.api_token) {
       console.error('[AI Director] ERROR: AI_DIRECTOR_API_TOKEN is not set in environment variables!')
+      return NextResponse.json({ 
+        error: 'AI Director is not configured',
+        details: 'AI_DIRECTOR_API_TOKEN environment variable is not set',
+        hint: 'Please set AI_DIRECTOR_API_TOKEN in your environment variables (.env.local or Vercel)',
+      }, { status: 500 })
     }
 
     // Non-blocking preflight check (logs warnings but doesn't fail)
@@ -270,7 +339,26 @@ export async function POST(req: NextRequest) {
 
     if (bedrockResponse.error) {
       console.error('[AI Director] Bedrock error:', bedrockResponse.error)
-      return NextResponse.json({ error: bedrockResponse.error }, { status: 500 })
+      
+      // Check if error is about security token - this means Bedrock Agent can't authenticate to data API
+      if (bedrockResponse.error.includes('security token') || bedrockResponse.error.includes('token') || bedrockResponse.error.includes('Unauthorized')) {
+        return NextResponse.json({ 
+          error: 'AI Director configuration error',
+          details: 'Bedrock Agent cannot authenticate to data API. Please verify:',
+          hints: [
+            '1. AI_DIRECTOR_API_TOKEN is set in environment variables',
+            '2. Bedrock Agent Action Groups are configured to use api_token from sessionAttributes',
+            '3. Action Groups pass x-api-token header when calling data API endpoints',
+            `Current token configured: ${process.env.AI_DIRECTOR_API_TOKEN ? 'YES' : 'NO'}`,
+          ],
+          originalError: bedrockResponse.error,
+        }, { status: 500 })
+      }
+      
+      return NextResponse.json({ 
+        error: bedrockResponse.error,
+        hint: 'Check AWS CloudWatch logs for Bedrock Agent for more details',
+      }, { status: 500 })
     }
 
     // Save AI response
