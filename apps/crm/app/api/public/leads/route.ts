@@ -11,19 +11,40 @@ const supabase = createClient(
 export const dynamic = 'force-dynamic'
 
 // CORS headers for cross-origin requests
-const corsHeaders = {
-  'Access-Control-Allow-Origin': process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
+// Allow requests from production site and localhost for development
+const getAllowedOrigin = (origin: string | null): string => {
+  if (!origin) {
+    return process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+  }
+  
+  // Production domains
+  if (origin === 'https://www.pashkovsky-group.com' || origin === 'https://pashkovsky-group.com') {
+    return origin
+  }
+  
+  // Localhost for development
+  if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+    return origin
+  }
+  
+  // Fallback to environment variable or default
+  return process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+}
+
+const corsHeaders = (origin: string | null) => ({
+  'Access-Control-Allow-Origin': getAllowedOrigin(origin),
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, x-site-token',
   'Access-Control-Max-Age': '86400', // 24 hours
-}
+})
 
 // Helper to create response with CORS headers
-function jsonResponse(data: any, init?: ResponseInit) {
+function jsonResponse(data: any, init?: ResponseInit, request?: NextRequest | null) {
+  const origin = request?.headers.get('origin') || null
   return NextResponse.json(data, {
     ...init,
     headers: {
-      ...corsHeaders,
+      ...corsHeaders(origin),
       ...init?.headers,
     },
   })
@@ -39,7 +60,7 @@ const RATE_LIMIT_CONFIG = {
  * OPTIONS handler for CORS preflight
  */
 export async function OPTIONS(request: NextRequest) {
-  return jsonResponse({}, { status: 200 })
+  return jsonResponse({}, { status: 200 }, request)
 }
 
 /**
@@ -68,7 +89,8 @@ export async function POST(request: NextRequest) {
       console.error('[Public Leads] CRM_SITE_TOKEN not configured')
       return jsonResponse(
         { error: 'Service misconfigured' },
-        { status: 500 }
+        { status: 500 },
+        request
       )
     }
 
@@ -76,7 +98,8 @@ export async function POST(request: NextRequest) {
       console.warn('[Public Leads] Invalid site token')
       return jsonResponse(
         { error: 'Unauthorized' },
-        { status: 401 }
+        { status: 401 },
+        request
       )
     }
 
@@ -104,7 +127,8 @@ export async function POST(request: NextRequest) {
             'X-RateLimit-Remaining': String(rateLimitResult.remaining),
             'X-RateLimit-Reset': String(rateLimitResult.resetAt),
           }
-        }
+        },
+        request
       )
     }
 
@@ -118,7 +142,7 @@ export async function POST(request: NextRequest) {
         source: body.source,
       })
       // Return success to not alert the bot
-      return jsonResponse({ success: true, id: 'blocked' })
+      return jsonResponse({ success: true, id: 'blocked' }, undefined, request)
     }
 
     // 5. Validate with Zod
@@ -137,7 +161,8 @@ export async function POST(request: NextRequest) {
             message: issue.message,
           }))
         },
-        { status: 400 }
+        { status: 400 },
+        request
       )
     }
 
@@ -150,7 +175,8 @@ export async function POST(request: NextRequest) {
       console.error('[Public Leads] DEFAULT_COMPANY_ID not configured')
       return jsonResponse(
         { error: 'Service misconfigured' },
-        { status: 500 }
+        { status: 500 },
+        request
       )
     }
 
@@ -180,7 +206,8 @@ export async function POST(request: NextRequest) {
       })
       return jsonResponse(
         { error: 'Failed to save lead' },
-        { status: 500 }
+        { status: 500 },
+        request
       )
     }
 
@@ -207,7 +234,8 @@ export async function POST(request: NextRequest) {
           'X-RateLimit-Remaining': String(rateLimitResult.remaining),
           'X-RateLimit-Reset': String(rateLimitResult.resetAt),
         }
-      }
+      },
+      request
     )
 
   } catch (error: any) {
@@ -219,17 +247,18 @@ export async function POST(request: NextRequest) {
     
     return jsonResponse(
       { error: 'Internal server error' },
-      { status: 500 }
+      { status: 500 },
+      request
     )
   }
 }
 
 // Health check
-export async function GET() {
+export async function GET(request?: NextRequest) {
   return jsonResponse({
     service: 'public-leads',
     status: 'ok',
     rateLimit: RATE_LIMIT_CONFIG,
-  })
+  }, undefined, request || null)
 }
 
