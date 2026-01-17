@@ -4,9 +4,9 @@
       "type": "pergola",
       "degem": "santa fe",
       "images": [
-        "https://pashkovsky-gallery.s3.eu-north-1.amazonaws.com/images/dgamim/santa fe/1.webp",
-        "https://pashkovsky-gallery.s3.eu-north-1.amazonaws.com/images/dgamim/santa fe/2.webp",
-        "https://pashkovsky-gallery.s3.eu-north-1.amazonaws.com/images/dgamim/santa fe/3.webp"
+        "https://pashkovsky-gallery.s3.eu-north-1.amazonaws.com/images/dgamim/santa%20fe/1.webp",
+        "https://pashkovsky-gallery.s3.eu-north-1.amazonaws.com/images/dgamim/santa%20fe/2.webp",
+        "https://pashkovsky-gallery.s3.eu-north-1.amazonaws.com/images/dgamim/santa%20fe/3.webp"
       ]
     },
     {
