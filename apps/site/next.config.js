@@ -19,17 +19,23 @@ const nextConfig = {
     dangerouslyAllowSVG: true,
     // Support S3 remote images if configured
     remotePatterns: [
-      // AWS S3 server-side config
+      // Wildcard for all S3 buckets (simplest for gallery)
+      {
+        protocol: 'https',
+        hostname: '*.s3.*.amazonaws.com',
+        port: '',
+        pathname: '/**',
+      },
+      // Specific bucket patterns (fallback)
       ...(process.env.AWS_S3_BUCKET_NAME ? [{
         protocol: 'https',
-        hostname: `${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_S3_REGION || 'us-east-1'}.amazonaws.com`,
+        hostname: `${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_S3_REGION || 'eu-north-1'}.amazonaws.com`,
         port: '',
         pathname: '/**',
       }] : []),
-      // AWS S3 client-side public config
       ...(process.env.NEXT_PUBLIC_AWS_S3_BUCKET_NAME ? [{
         protocol: 'https',
-        hostname: `${process.env.NEXT_PUBLIC_AWS_S3_BUCKET_NAME}.s3.${process.env.NEXT_PUBLIC_AWS_S3_REGION || 'us-east-1'}.amazonaws.com`,
+        hostname: `${process.env.NEXT_PUBLIC_AWS_S3_BUCKET_NAME}.s3.${process.env.NEXT_PUBLIC_AWS_S3_REGION || 'eu-north-1'}.amazonaws.com`,
         port: '',
         pathname: '/**',
       }] : []),
