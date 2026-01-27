@@ -208,9 +208,15 @@ export default function OfferApprovePage() {
             <div className="bg-gray-50 rounded-lg p-4">
               <h2 className="text-lg font-semibold mb-3 text-gray-900">פרטי פרגולה</h2>
               <div className="grid grid-cols-2 gap-3 text-sm text-gray-700">
-                {renderPergolaDimensions(offer.pergola.shape)}
-                {offer.pergola.height && <div><span className="font-medium">גובה:</span> {offer.pergola.height} מ׳</div>}
-                {offer.pergola.location && <div><span className="font-medium">מקום:</span> {offer.pergola.location}</div>}
+                {offer.pergola ? (
+                  <>
+                    {renderPergolaDimensions(offer.pergola.shape)}
+                    {offer.pergola.height && <div><span className="font-medium">גובה:</span> {offer.pergola.height} מ׳</div>}
+                    {offer.pergola.location && <div><span className="font-medium">מקום:</span> {offer.pergola.location}</div>}
+                  </>
+                ) : (
+                  <div className="col-span-2 text-gray-500">ללא פרגולה</div>
+                )}
                 {offer.shadingRatio && <div><span className="font-medium">הצללה:</span> {offer.shadingRatio}</div>}
                 {(offer.finishType || offer.finishValue) && (
                   <div className="col-span-2">
@@ -263,10 +269,12 @@ export default function OfferApprovePage() {
             <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-6 border-2 border-blue-200">
               <h2 className="text-lg font-semibold mb-4 text-gray-900">תמחור</h2>
               <div className="space-y-2 text-sm text-gray-700">
-                <div className="flex justify-between">
-                  <span>פרגולה:</span>
-                  <span className="font-semibold text-gray-900">{formatPrice(offer.pergolaTotal)}</span>
-                </div>
+                {offer.pergolaTotal ? (
+                  <div className="flex justify-between">
+                    <span>פרגולה:</span>
+                    <span className="font-semibold text-gray-900">{formatPrice(offer.pergolaTotal)}</span>
+                  </div>
+                ) : null}
                 <div className="flex justify-between">
                   <span>סנטף BH:</span>
                   <span className="font-semibold text-gray-900">{formatPrice(offer.santafTotal)}</span>

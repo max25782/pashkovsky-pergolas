@@ -535,7 +535,7 @@ export function DealModal({
           <div className="pt-4 border-t border-white/10">
             <ProfitWidget 
               projectId={deal.id} 
-              revenue={revenue} 
+              revenue={revenue || localDeal.price || 0} 
               materialCost={localDeal.my_cost || 0}
               refreshTrigger={shiftsRefreshTrigger}
             />

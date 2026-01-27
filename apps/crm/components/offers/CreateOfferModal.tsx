@@ -27,7 +27,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
     customerName,
     customerPhone,
     customerCity,
-    pergola: { ...DEFAULT_OFFER_VALUES.pergola },
+    pergola: { ...DEFAULT_OFFER_VALUES.pergola }, // Optional - can be removed for non-pergola offers
     color: { ...DEFAULT_OFFER_VALUES.color },
     roof: { ...DEFAULT_OFFER_VALUES.roof },
     shadingRatio: DEFAULT_OFFER_VALUES.shadingRatio,
@@ -100,12 +100,18 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
     }
   }, [draft, calculation, onCreated, onClose])
 
-  const updatePergola = useCallback((updates: Partial<typeof draft.pergola>) => {
-    setDraft(prev => ({ ...prev, pergola: { ...prev.pergola, ...updates } }))
+  const updatePergola = useCallback((updates: Partial<NonNullable<typeof draft.pergola>>) => {
+    setDraft(prev => ({
+      ...prev,
+      pergola: prev.pergola ? { ...prev.pergola, ...updates } : undefined
+    }))
   }, [])
 
-  const updatePergolaShape = useCallback((shape: typeof draft.pergola.shape) => {
-    setDraft(prev => ({ ...prev, pergola: { ...prev.pergola, shape } }))
+  const updatePergolaShape = useCallback((shape: NonNullable<typeof draft.pergola>['shape']) => {
+    setDraft(prev => ({
+      ...prev,
+      pergola: prev.pergola ? { ...prev.pergola, shape } : undefined
+    }))
   }, [])
 
   const updateColor = useCallback((updates: Partial<typeof draft.color>) => {
@@ -314,9 +320,31 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
             </div>
           </div>
 
+          {/* Include Pergola Toggle */}
+          <div className="bg-white/5 rounded-lg p-4 border border-white/10 mb-6">
+            <label className="flex items-center space-x-3 space-x-reverse cursor-pointer">
+              <input
+                type="checkbox"
+                checked={!!draft.pergola}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    // Add pergola with defaults
+                    setDraft(prev => ({ ...prev, pergola: { ...DEFAULT_OFFER_VALUES.pergola } }))
+                  } else {
+                    // Remove pergola
+                    setDraft(prev => ({ ...prev, pergola: undefined }))
+                  }
+                }}
+                className="w-4 h-4 text-blue-600 bg-white/10 border-white/20 rounded focus:ring-blue-500 focus:ring-2"
+              />
+              <span className="text-white font-medium">כלול פרגולה בהצעה</span>
+            </label>
+          </div>
+
           {/* Pergola Dimensions & Price */}
-          <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-            <h3 className="text-lg font-semibold mb-3">פרגולה</h3>
+          {draft.pergola && (
+            <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+              <h3 className="text-lg font-semibold mb-3">פרגולה</h3>
             
             {/* Shape Selector */}
             <div className="mb-4">
@@ -343,7 +371,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
               <div className="flex items-end">
                 <div className="text-sm w-full">
                   <div className="text-white/60">שטח מחושב: <span className="font-bold text-blue-400">{calculation.area.toFixed(2)} מ״ר</span></div>
-                  <div className="text-white/60">סה״כ פרגולה: <span className="font-bold text-green-400">{formatPrice(calculation.pergolaTotal)}</span></div>
+                  <div className="text-white/60">סה״כ פרגולה: <span className="font-bold text-green-400">{calculation.pergolaTotal ? formatPrice(calculation.pergolaTotal) : '₪0'}</span></div>
                 </div>
               </div>
             </div>
@@ -389,6 +417,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
               </div>
             </div>
           </div>
+          )}
 
           {/* Color */}
           <div className="bg-white/5 rounded-lg p-4 border border-white/10">
@@ -821,10 +850,12 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
             <h3 className="text-lg font-semibold mb-3">סיכום מחירים</h3>
             <div className="space-y-2 text-sm">
               {/* Components */}
-              <div className="flex justify-between text-white/70">
-                <span>פרגולה:</span>
-                <span>{formatPrice(calculation.pergolaTotal)}</span>
-              </div>
+              {calculation.pergolaTotal ? (
+                <div className="flex justify-between text-white/70">
+                  <span>פרגולה:</span>
+                  <span>{formatPrice(calculation.pergolaTotal)}</span>
+                </div>
+              ) : null}
               {calculation.santafTotal > 0 && (
                 <div className="flex justify-between text-white/70">
                   <span>סנטף:</span>
@@ -941,7 +972,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
             <Button 
               type="button" 
               onClick={(e) => { e.stopPropagation(); handleSubmit() }} 
-              disabled={isSubmitting || !validatePergolaShape(draft.pergola.shape).valid || calculatePergolaArea(draft.pergola.shape) <= 0} 
+              disabled={isSubmitting || (draft.pergola && (!validatePergolaShape(draft.pergola.shape).valid || calculatePergolaArea(draft.pergola.shape) <= 0))} 
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               {isSubmitting ? 'שומר...' : 'שמור הצעת מחיר'}

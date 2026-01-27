@@ -54,7 +54,7 @@ export function ProfitWidget({ projectId, revenue, materialCost = 0, refreshTrig
 
           {/* Material Cost */}
           <div className="flex items-center justify-between">
-            <span className="text-white/80">עלות חומר:</span>
+            <span className="text-white/80">מחיר החומר:</span>
             <span className="text-white font-semibold">
               {formatCurrencyILS(materialCost)}
             </span>

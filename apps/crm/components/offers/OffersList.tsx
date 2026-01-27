@@ -202,8 +202,14 @@ export function OffersList({ dealId, refreshTrigger, adminToken }: OffersListPro
               <FileText className="w-5 h-5 text-blue-400" />
               <div>
                 <div className="font-semibold">
-                  {offer.pergola.width}×{offer.pergola.length} מ׳
-                  {offer.pergola.height && ` (גובה: ${offer.pergola.height} מ׳)`}
+                  {offer.pergola ? (
+                    <>
+                      {offer.pergola.width}×{offer.pergola.length} מ׳
+                      {offer.pergola.height && ` (גובה: ${offer.pergola.height} מ׳)`}
+                    </>
+                  ) : (
+                    <span className="text-white/60">ללא פרגולה</span>
+                  )}
                 </div>
                 <div className="text-sm text-white/60">
                   {new Date(offer.createdAt).toLocaleDateString('he-IL', {

@@ -34,7 +34,5 @@ next-env.d.ts
 
 #env
 .env
-.env.local
-
-# Cursor MCP config (may contain secrets)
+.env.local# Cursor MCP config (may contain secrets)
 .cursor/mcp.json

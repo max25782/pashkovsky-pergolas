@@ -105,7 +105,7 @@ export interface Options {
 
 export interface Pricing {
   // Calculated values
-  pergolaTotal: number              // area * pricePerSqm
+  pergolaTotal?: number              // area * pricePerSqm
   santafTotal: number               // area * santaf price
   zipScreenTotal: number            // ZIP-экран
   lightingTotal: number             // תאורה
@@ -155,8 +155,8 @@ export interface OfferDraft {
   customerName: string
   customerPhone?: string
   customerCity?: string
-  
-  pergola: Pergola
+
+  pergola?: Pergola
   color: Color
   roof: Roof
   shadingRatio?: '40/20' | '50/20' | '70/20' | null
@@ -177,7 +177,7 @@ export interface OfferDraft {
 
 export interface OfferCalculation {
   area: number
-  pergolaTotal: number
+  pergolaTotal?: number
   santafTotal: number
   zipScreenTotal: number
   lightingTotal: number

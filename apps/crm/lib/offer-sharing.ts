@@ -108,10 +108,12 @@ export function getOfferEmailBody(offer: Offer): string {
       <p>שמחים להציג לך את הצעת המחיר המפורטת עבור פרגולת האלומיניום שלך.</p>
       
       <div class="details">
+        ${offer.pergola ? `
         <h3>פרטי הפרגולה:</h3>
         <ul>
           <li><strong>גודל:</strong> ${offer.pergola.width}m × ${offer.pergola.length}m (${offer.area} מ״ר)</li>
           ${offer.pergola.height ? `<li><strong>גובה:</strong> ${offer.pergola.height}m</li>` : ''}
+        </ul>` : '<h3>ללא פרגולה</h3>'}
           ${offer.santaf?.enabled ? `<li><strong>סנטף:</strong> ${offer.santaf.withStructure ? 'עם קונסטרוקציה' : 'בסיסי'}</li>` : ''}
           ${offer.discountPercent > 0 ? `<li><strong>הנחה:</strong> ${offer.discountPercent}%</li>` : ''}
         </ul>

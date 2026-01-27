@@ -2,11 +2,11 @@ import type { OfferDraft, OfferCalculation } from '@/types/offer'
 import { calculatePergolaArea } from '@/lib/calculations/pergola-area'
 
 export function calculateOffer(draft: OfferDraft): OfferCalculation {
-  // 1. Calculate area from shape
-  const area = calculatePergolaArea(draft.pergola.shape)
-  
+  // 1. Calculate area from shape (0 if no pergola)
+  const area = draft.pergola?.shape ? calculatePergolaArea(draft.pergola.shape) : 0
+
   // 2. Calculate pergola price
-  const pergolaTotal = area * draft.pergola.pricePerSqm
+  const pergolaTotal = draft.pergola ? area * draft.pergola.pricePerSqm : undefined
   
   // 3. Calculate santaf price (if enabled)
   let santafTotal = 0
@@ -52,7 +52,7 @@ export function calculateOffer(draft: OfferDraft): OfferCalculation {
   }
   
   // 8. Calculate total before VAT
-  const totalBeforeVat = pergolaTotal + santafTotal + zipScreenTotal + lightingTotal + drainageTotal + winterClosureTotal
+  const totalBeforeVat = (pergolaTotal || 0) + santafTotal + zipScreenTotal + lightingTotal + drainageTotal + winterClosureTotal
   
   // 9. Calculate VAT (18%)
   const vatAmount = totalBeforeVat * 0.18

@@ -29,6 +29,10 @@ export function renderOfferHtml(offer: Offer): string {
 
   // Helper to format pergola shape dimensions
   const formatPergolaDimensions = () => {
+    if (!offer.pergola) {
+      return `<div class="info-row"><span class="label">פרגולה:</span><span class="value">ללא פרגולה</span></div>`
+    }
+
     const shape = offer.pergola.shape
     if (!shape) {
       // Fallback to legacy format
@@ -383,6 +387,7 @@ export function renderOfferHtml(offer: Offer): string {
     </div>
   </div>
 
+  ${offer.pergola ? `
   <div class="section">
     <div class="section-title">פרטי פרגולה</div>
     ${formatPergolaDimensions()}
@@ -397,7 +402,8 @@ export function renderOfferHtml(offer: Offer): string {
       <span class="label">מקום:</span>
       <span class="value">${offer.pergola.location}</span>
     </div>
-    ` : ''}
+    ` : ''}` : ''}
+    ${offer.pergola ? `
     <div class="info-row">
       <span class="label">שטח כולל:</span>
       <span class="value">${offer.area.toFixed(2)} מ״ר</span>
@@ -406,7 +412,7 @@ export function renderOfferHtml(offer: Offer): string {
       <span class="label">חומר:</span>
       <span class="value">אלומיניום פרימיום</span>
     </div>
-  </div>
+  </div>` : ''}
 
   ${safeNotes ? `
   <div class="section">
@@ -463,10 +469,11 @@ export function renderOfferHtml(offer: Offer): string {
         </tr>
       </thead>
       <tbody>
+        ${offer.pergolaTotal ? `
         <tr>
           <td class="price-label">פרגולה (${offer.area.toFixed(2)} מ״ר)</td>
           <td class="price-value">${formatPrice(offer.pergolaTotal)}</td>
-        </tr>
+        </tr>` : ''}
         ${offer.santaf?.enabled ? `
         <tr>
           <td class="price-label">סנטף BH</td>

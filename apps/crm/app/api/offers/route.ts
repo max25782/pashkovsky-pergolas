@@ -73,20 +73,15 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    if (!pergola || !pergola.shape) {
-      return NextResponse.json(
-        { error: 'Invalid offer data: pergola shape is required' },
-        { status: 400 }
-      )
-    }
-
-    // Validate pergola shape
-    const shapeValidation = validatePergolaShape(pergola.shape)
-    if (!shapeValidation.valid) {
-      return NextResponse.json(
-        { error: `Invalid pergola shape: ${shapeValidation.errors.join(', ')}` },
-        { status: 400 }
-      )
+    // Validate pergola shape if pergola is provided
+    if (pergola && pergola.shape) {
+      const shapeValidation = validatePergolaShape(pergola.shape)
+      if (!shapeValidation.valid) {
+        return NextResponse.json(
+          { error: `Invalid pergola shape: ${shapeValidation.errors.join(', ')}` },
+          { status: 400 }
+        )
+      }
     }
 
     // Ensure required objects exist with defaults
@@ -99,9 +94,9 @@ export async function POST(req: NextRequest) {
     const finalWinterClosure = winterClosure || { enabled: false }
     const finalOptions = options || { notes: null }
 
-    // Calculate area from shape
-    const calculatedArea = calculatePergolaArea(pergola.shape)
-    
+    // Calculate area from shape (0 if no pergola)
+    const calculatedArea = pergola?.shape ? calculatePergolaArea(pergola.shape) : 0
+
     // Use provided area or calculated area
     const finalArea = area || calculatedArea
 
@@ -115,16 +110,16 @@ export async function POST(req: NextRequest) {
       // Multi-tenant: Add company_id
       company_id: companyId,
       
-      // Pergola - new shape-based structure
-      pergola_shape_type: pergola.shape.type,
-      pergola_shape_data: pergola.shape as any, // JSONB will store the shape object
-      pergola_height: pergola.height ? Number(pergola.height) : null,
-      pergola_location: pergola.location || null,
-      pergola_price_per_sqm: Number(pergola.pricePerSqm) || 750,
-      
+      // Pergola - new shape-based structure (optional)
+      pergola_shape_type: pergola?.shape?.type || null,
+      pergola_shape_data: pergola?.shape as any, // JSONB will store the shape object
+      pergola_height: pergola?.height ? Number(pergola.height) : null,
+      pergola_location: pergola?.location || null,
+      pergola_price_per_sqm: pergola ? Number(pergola.pricePerSqm) || 750 : null,
+
       // Legacy fields for backward compatibility (extract from shape if rectangle)
-      pergola_width: pergola.shape.type === 'rectangle' ? pergola.shape.width : null,
-      pergola_length: pergola.shape.type === 'rectangle' ? pergola.shape.length : null,
+      pergola_width: pergola?.shape?.type === 'rectangle' ? pergola.shape.width : null,
+      pergola_length: pergola?.shape?.type === 'rectangle' ? pergola.shape.length : null,
       
       // Color
       color_type: finalColor.type,
@@ -288,23 +283,25 @@ function transformOfferFromDB(data: any) {
     customerPhone: data.customer_phone,
     customerCity: data.customer_city,
     
-    pergola: {
-      // New shape-based structure
-      shape: data.pergola_shape_data 
-        ? (data.pergola_shape_data as PergolaShape)
-        : {
-            // Fallback to legacy format if shape_data is missing
-            type: 'rectangle' as const,
-            width: data.pergola_width || 0,
-            length: data.pergola_length || 0,
-          },
-      height: data.pergola_height,
-      location: data.pergola_location,
-      pricePerSqm: data.pergola_price_per_sqm,
-      // Legacy fields for backward compatibility
-      width: data.pergola_width,
-      length: data.pergola_length,
-    },
+    ...(data.pergola_shape_data || data.pergola_width ? {
+      pergola: {
+        // New shape-based structure
+        shape: data.pergola_shape_data
+          ? (data.pergola_shape_data as PergolaShape)
+          : {
+              // Fallback to legacy format if shape_data is missing
+              type: 'rectangle' as const,
+              width: data.pergola_width || 0,
+              length: data.pergola_length || 0,
+            },
+        height: data.pergola_height,
+        location: data.pergola_location,
+        pricePerSqm: data.pergola_price_per_sqm,
+        // Legacy fields for backward compatibility
+        width: data.pergola_width,
+        length: data.pergola_length,
+      }
+    } : {}),
     
     color: {
       type: data.color_type,
