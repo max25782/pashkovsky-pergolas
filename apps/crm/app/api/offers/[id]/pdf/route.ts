@@ -203,11 +203,27 @@ export async function POST(
     console.log('[PDF API] PDF URL saved to database')
     return NextResponse.json({ pdfUrl, cached: false })
   } catch (error: any) {
-    console.error('[PDF API] Error generating PDF:', error)
-    console.error('[PDF API] Error stack:', error?.stack)
-    console.error('[PDF API] Error message:', error?.message)
+    console.error('[PDF API] ==========================================')
+    console.error('[PDF API] ❌ ERROR generating PDF:')
+    console.error('[PDF API] Error type:', error?.constructor?.name || typeof error)
+    console.error('[PDF API] Error message:', error?.message || String(error))
+    console.error('[PDF API] Error stack:', error?.stack || 'No stack trace')
+    console.error('[PDF API] ==========================================')
+    
+    // Provide more helpful error messages
+    let errorMessage = error?.message || 'Unknown error'
+    if (errorMessage.includes('Failed to launch browser') || errorMessage.includes('Failed to launch Puppeteer')) {
+      errorMessage = 'Не удалось запустить браузер для генерации PDF. Убедитесь, что Puppeteer установлен правильно.'
+    } else if (errorMessage.includes('Failed to render PDF')) {
+      errorMessage = 'Не удалось преобразовать HTML в PDF. Проверьте содержимое предложения.'
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to generate PDF', details: error?.message || 'Unknown error' },
+      { 
+        error: 'Failed to generate PDF', 
+        details: errorMessage,
+        originalError: process.env.NODE_ENV === 'development' ? error?.message : undefined
+      },
       { status: 500 }
     )
   }

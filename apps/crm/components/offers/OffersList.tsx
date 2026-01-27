@@ -135,16 +135,29 @@ export function OffersList({ dealId, refreshTrigger, adminToken }: OffersListPro
   const handleGeneratePdf = useCallback(async (offer: Offer, forceRegenerate = false) => {
     try {
       const url = `/api/offers/${offer.id}/pdf${forceRegenerate ? '?force=true' : ''}`
+      console.log('[PDF] Generating PDF for offer:', offer.id, 'URL:', url)
+      
       const res = await authFetch(url, {
         method: 'POST'
       })
+      
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        throw new Error(err.error || err.details || 'Failed to generate PDF')
+        const errorMessage = err.error || err.details || `HTTP ${res.status}: ${res.statusText}`
+        console.error('[PDF] PDF generation failed:', errorMessage, err)
+        throw new Error(errorMessage)
       }
+      
       const data = await res.json()
+      console.log('[PDF] PDF generation response:', data)
+      
       if (data?.pdfUrl) {
-        window.open(data.pdfUrl, '_blank')
+        // Safari-compatible way to open PDF
+        const pdfWindow = window.open(data.pdfUrl, '_blank')
+        if (!pdfWindow) {
+          // Safari might block popup, fallback to direct navigation
+          window.location.href = data.pdfUrl
+        }
         // If it was cached, ask if user wants to regenerate
         if (data.cached && !forceRegenerate) {
           const shouldRegenerate = confirm('PDF כבר קיים. האם לייצר מחדש?')
@@ -156,7 +169,9 @@ export function OffersList({ dealId, refreshTrigger, adminToken }: OffersListPro
         alert('PDF נוצר אך לא הוחזר קישור')
       }
     } catch (err: any) {
-      alert('❌ שגיאה ביצירת PDF: ' + err.message)
+      console.error('[PDF] Error in handleGeneratePdf:', err)
+      const errorMessage = err?.message || 'שגיאה לא ידועה'
+      alert('❌ שגיאה ביצירת PDF: ' + errorMessage)
     }
   }, [])
 
