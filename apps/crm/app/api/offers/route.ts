@@ -87,18 +87,33 @@ export async function POST(req: NextRequest) {
     // Ensure required objects exist with defaults
     const finalColor = color || { type: 'white' }
     const finalRoof = roof || { type: 'open' }
-    const finalSantaf = santaf || { enabled: false, withStructure: false, pricePerSqmBasic: 0, pricePerSqmWithStructure: 0 }
+    const finalSantaf = santaf || { enabled: false, withStructure: false, pricePerSqmBasic: 0, pricePerSqmWithStructure: 0, width: undefined, length: undefined }
     const finalZipScreen = zipScreen || { enabled: false, pricePerSqmManual: 0, pricePerSqmElectric: 0 }
     const finalLighting = lighting || { enabled: false, pricePerMeter: 0 }
     const finalDrainage = drainage || { enabled: false, pricePerMeter: 0 }
     const finalWinterClosure = winterClosure || { enabled: false }
     const finalOptions = options || { notes: null }
 
+    // Validate: If pergola is not included but Santaf is enabled, Santaf dimensions are required
+    if (!pergola && finalSantaf.enabled) {
+      if (!finalSantaf.width || !finalSantaf.length) {
+        return NextResponse.json(
+          { error: 'Santaf dimensions (width and length) are required when pergola is not included' },
+          { status: 400 }
+        )
+      }
+    }
+
     // Calculate area from shape (0 if no pergola)
     const calculatedArea = pergola?.shape ? calculatePergolaArea(pergola.shape) : 0
 
-    // Use provided area or calculated area
-    const finalArea = area || calculatedArea
+    // Calculate Santaf area if pergola is not included
+    const santafArea = (!pergola && finalSantaf.enabled && finalSantaf.width && finalSantaf.length) 
+      ? finalSantaf.width * finalSantaf.length 
+      : 0
+
+    // Use provided area, calculated pergola area, or Santaf area
+    const finalArea = area || calculatedArea || santafArea
 
     // Prepare insert data with proper defaults
     const insertData: any = {
@@ -118,8 +133,17 @@ export async function POST(req: NextRequest) {
       pergola_price_per_sqm: pergola ? Number(pergola.pricePerSqm) || 750 : null,
 
       // Legacy fields for backward compatibility (extract from shape if rectangle)
-      pergola_width: pergola?.shape?.type === 'rectangle' ? pergola.shape.width : null,
-      pergola_length: pergola?.shape?.type === 'rectangle' ? pergola.shape.length : null,
+      // Also use for Santaf dimensions when pergola is not included
+      pergola_width: pergola?.shape?.type === 'rectangle' 
+        ? pergola.shape.width 
+        : (!pergola && finalSantaf.enabled && finalSantaf.width) 
+          ? Number(finalSantaf.width) 
+          : 0, // Default to 0 if neither pergola nor santaf dimensions provided
+      pergola_length: pergola?.shape?.type === 'rectangle' 
+        ? pergola.shape.length 
+        : (!pergola && finalSantaf.enabled && finalSantaf.length) 
+          ? Number(finalSantaf.length) 
+          : 0, // Default to 0 if neither pergola nor santaf dimensions provided
       
       // Color
       color_type: finalColor.type,
@@ -323,6 +347,9 @@ function transformOfferFromDB(data: any) {
       withStructure: data.santaf_with_structure,
       pricePerSqmBasic: data.santaf_price_per_sqm_basic,
       pricePerSqmWithStructure: data.santaf_price_per_sqm_with_structure,
+      // Restore Santaf dimensions from pergola_width/length if pergola is not included
+      width: (!data.pergola_shape_data && data.santaf_enabled && data.pergola_width) ? Number(data.pergola_width) : undefined,
+      length: (!data.pergola_shape_data && data.santaf_enabled && data.pergola_length) ? Number(data.pergola_length) : undefined,
     },
     
     zipScreen: {

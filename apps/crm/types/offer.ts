@@ -64,6 +64,9 @@ export interface Santaf {
   withStructure: boolean // false = 220 ₪/m², true = 450 ₪/m²
   pricePerSqmBasic: number // Default 220, editable
   pricePerSqmWithStructure: number // Default 450, editable
+  width?: number // Dimensions when pergola is not included (מידות)
+  length?: number // Dimensions when pergola is not included (מידות)
+  overlapType?: 'single' | 'double' // Sheet overlap type: 'single' (1-wave) or 'double' (2-wave, recommended)
 }
 
 export interface ZipScreen {
@@ -232,6 +235,9 @@ export const DEFAULT_OFFER_VALUES = {
     withStructure: false,
     pricePerSqmBasic: 220,
     pricePerSqmWithStructure: 450,
+    width: undefined,
+    length: undefined,
+    overlapType: 'double' as const, // Default to double overlap (manufacturer recommended)
   },
   zipScreen: {
     enabled: false,

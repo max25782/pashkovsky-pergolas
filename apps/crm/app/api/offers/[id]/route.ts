@@ -167,6 +167,9 @@ function transformOfferFromDB(data: any) {
       withStructure: data.santaf_with_structure,
       pricePerSqmBasic: data.santaf_price_per_sqm_basic,
       pricePerSqmWithStructure: data.santaf_price_per_sqm_with_structure,
+      // Restore Santaf dimensions from pergola_width/length if pergola is not included
+      width: (!data.pergola_shape_data && data.santaf_enabled && data.pergola_width) ? Number(data.pergola_width) : undefined,
+      length: (!data.pergola_shape_data && data.santaf_enabled && data.pergola_length) ? Number(data.pergola_length) : undefined,
     },
     
     zipScreen: {

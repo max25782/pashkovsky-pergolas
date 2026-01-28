@@ -469,6 +469,43 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
             </div>
             {draft.santaf.enabled && (
               <div className="space-y-4">
+                {/* Dimensions - only show if pergola is not included */}
+                {!draft.pergola && (
+                  <div>
+                    <label className="block text-sm text-white/80 mb-2">מידות (מ״ר)</label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs text-white/60 mb-1">רוחב (מ׳)</label>
+                        <input 
+                          type="number" 
+                          step="0.1" 
+                          min="0" 
+                          value={draft.santaf.width || ''} 
+                          onChange={(e) => updateSantaf({ width: e.target.value ? parseFloat(e.target.value) : undefined })} 
+                          className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400" 
+                          placeholder="0.00"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-white/60 mb-1">אורך (מ׳)</label>
+                        <input 
+                          type="number" 
+                          step="0.1" 
+                          min="0" 
+                          value={draft.santaf.length || ''} 
+                          onChange={(e) => updateSantaf({ length: e.target.value ? parseFloat(e.target.value) : undefined })} 
+                          className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400" 
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+                    {draft.santaf.width && draft.santaf.length && (
+                      <div className="mt-2 text-sm text-white/60">
+                        שטח מחושב: <span className="font-bold text-blue-400">{(draft.santaf.width * draft.santaf.length).toFixed(2)} מ״ר</span>
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div>
                   <label className="block text-sm text-white/80 mb-2">סוג סנטף</label>
                   <div className="flex gap-3">
@@ -481,6 +518,32 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
                       <span className="text-sm">סנטף + קונסטרוקציה</span>
                     </label>
                   </div>
+                </div>
+                <div>
+                  <label className="block text-sm text-white/80 mb-2">סוג חפיפה</label>
+                  <div className="flex gap-3">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input 
+                        type="radio" 
+                        name="santafOverlap" 
+                        checked={(draft.santaf.overlapType || 'double') === 'single'} 
+                        onChange={() => updateSantaf({ overlapType: 'single' })} 
+                        className="w-4 h-4" 
+                      />
+                      <span className="text-sm">חפיפה אחת (0.988 מ׳)</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input 
+                        type="radio" 
+                        name="santafOverlap" 
+                        checked={(draft.santaf.overlapType || 'double') === 'double'} 
+                        onChange={() => updateSantaf({ overlapType: 'double' })} 
+                        className="w-4 h-4" 
+                      />
+                      <span className="text-sm">חפיפה כפולה (0.969 מ׳) - מומלץ</span>
+                    </label>
+                  </div>
+                  <p className="text-xs text-white/50 mt-1">חפיפה כפולה מומלצת על ידי היצרן</p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
