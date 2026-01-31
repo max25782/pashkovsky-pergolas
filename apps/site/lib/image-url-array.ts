@@ -13,7 +13,7 @@ if (typeof window !== 'undefined') {
   // Client-side: use NEXT_PUBLIC_ variables
   const USE_S3 = !!(process.env.NEXT_PUBLIC_AWS_S3_BUCKET_NAME && process.env.NEXT_PUBLIC_AWS_S3_REGION)
   const S3_BUCKET = process.env.NEXT_PUBLIC_AWS_S3_BUCKET_NAME || ''
-  const S3_REGION = process.env.NEXT_PUBLIC_AWS_S3_REGION || 'us-east-1'
+  const S3_REGION = process.env.NEXT_PUBLIC_AWS_S3_REGION || 'eu-north-1'
   const S3_BASE_URL = USE_S3 ? `https://${S3_BUCKET}.s3.${S3_REGION}.amazonaws.com` : ''
   
   getImageUrl = (path: string) => {

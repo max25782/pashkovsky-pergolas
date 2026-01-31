@@ -1,47 +1,95 @@
 import type { Locale } from '@/lib/locales'
 import { MediaGallery } from '@/components/generic/MediaGallery'
+import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3'
 import fromShetahData from '@/data/gallery/fromShetah.json'
-import { headers } from 'next/headers'
 
 interface MediaItem {
   src: string
   type: 'image' | 'video'
 }
 
-function getRequestBaseUrl(): string {
-  const h = headers()
-  const proto = h.get('x-forwarded-proto') || 'http'
-  const host = h.get('x-forwarded-host') || h.get('host') || 'localhost:3000'
-  return `${proto}://${host}`
+const S3_BUCKET = process.env.NEXT_PUBLIC_AWS_S3_BUCKET_NAME
+const S3_REGION = process.env.NEXT_PUBLIC_AWS_S3_REGION || 'eu-north-1'
+
+function getS3Client() {
+  if (!S3_BUCKET || !process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
+    return null
+  }
+  
+  return new S3Client({
+    region: S3_REGION,
+    credentials: {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+    },
+  })
 }
 
 async function getFromShetahImages(): Promise<MediaItem[]> {
+  const s3Client = getS3Client()
+  
+  if (!S3_BUCKET || !s3Client) {
+    console.log('[FromShetah] S3 not configured, using static data')
+    const staticItems = (fromShetahData as { items: MediaItem[] }).items || []
+    console.log(`[FromShetah] Static data contains ${staticItems.length} items`)
+    return staticItems
+  }
+
   try {
-    // Fetch from API route (server-side only)
-    const baseUrl = getRequestBaseUrl()
-    const response = await fetch(`${baseUrl}/api/gallery/from-shetah`, {
-      cache: 'no-store',
+    const prefix = 'images/fromShetah/'
+    console.log(`[FromShetah] Fetching from S3: bucket=${S3_BUCKET}, region=${S3_REGION}, prefix=${prefix}`)
+    
+    const command = new ListObjectsV2Command({
+      Bucket: S3_BUCKET,
+      Prefix: prefix,
     })
 
-    if (!response.ok) {
-      console.warn('[FromShetah Page] API returned', response.status, '- using static fallback')
-      return (fromShetahData as { items: MediaItem[] }).items || []
+    const response = await s3Client.send(command)
+    const contents = response.Contents || []
+    
+    console.log(`[FromShetah] S3 response: ${contents.length} total objects, isTruncated=${response.IsTruncated}`)
+    if (contents.length > 0) {
+      console.log(`[FromShetah] Sample keys:`, contents.slice(0, 3).map(c => c.Key))
     }
 
-    const data = await response.json()
-    const items = data.items || []
+    const items: MediaItem[] = contents
+      .filter(item => {
+        const key = item.Key || ''
+        return /\.(webp|jpg|jpeg|png|gif|mp4|webm|mov)$/i.test(key)
+      })
+      .map(item => {
+        const url = `https://${S3_BUCKET}.s3.${S3_REGION}.amazonaws.com/${item.Key}`
+        const isVideo = /\.(mp4|webm|mov|avi)$/i.test(item.Key || '')
+        
+        return {
+          src: url,
+          type: (isVideo ? 'video' : 'image') as 'video' | 'image'
+        }
+      })
+      .sort((a, b) => a.src.localeCompare(b.src))
 
-    // If API returns empty, fallback to static data
+    console.log(`[FromShetah] Processed ${items.length} media items (${items.filter(i => i.type === 'video').length} videos, ${items.filter(i => i.type === 'image').length} images)`)
+
+    // If S3 is empty, fallback to static data
     if (items.length === 0) {
-      console.log('[FromShetah Page] API returned 0 items, using static fallback')
-      return (fromShetahData as { items: MediaItem[] }).items || []
+      console.warn('[FromShetah] S3 returned 0 items, falling back to static data')
+      const staticItems = (fromShetahData as { items: MediaItem[] }).items || []
+      console.log(`[FromShetah] Static fallback contains ${staticItems.length} items`)
+      return staticItems
     }
 
-    console.log('[FromShetah Page] Loaded from API:', items.length, 'items')
     return items
   } catch (error: any) {
-    console.error('[FromShetah Page] Error fetching from API:', error.message)
-    return (fromShetahData as { items: MediaItem[] }).items || []
+    console.error('[FromShetah] Error fetching from S3:', {
+      message: error.message,
+      code: error.Code || error.code,
+      name: error.name,
+      httpStatusCode: error.$metadata?.httpStatusCode,
+      requestId: error.$metadata?.requestId,
+    })
+    const staticItems = (fromShetahData as { items: MediaItem[] }).items || []
+    console.log(`[FromShetah] Error fallback: static data contains ${staticItems.length} items`)
+    return staticItems
   }
 }
 

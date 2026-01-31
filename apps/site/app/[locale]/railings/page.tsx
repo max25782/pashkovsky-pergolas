@@ -32,11 +32,15 @@ async function getRailsImages(): Promise<MediaItem[]> {
   
   if (!S3_BUCKET || !s3Client) {
     console.log('[Railings] S3 not configured, using static data')
-    return (railsData as { items: MediaItem[] }).items || []
+    const staticItems = (railsData as { items: MediaItem[] }).items || []
+    console.log(`[Railings] Static data contains ${staticItems.length} items`)
+    return staticItems
   }
 
   try {
     const prefix = 'images/rails/'
+    console.log(`[Railings] Fetching from S3: bucket=${S3_BUCKET}, region=${S3_REGION}, prefix=${prefix}`)
+    
     const command = new ListObjectsV2Command({
       Bucket: S3_BUCKET,
       Prefix: prefix,
@@ -44,6 +48,11 @@ async function getRailsImages(): Promise<MediaItem[]> {
 
     const response = await s3Client.send(command)
     const contents = response.Contents || []
+    
+    console.log(`[Railings] S3 response: ${contents.length} total objects, isTruncated=${response.IsTruncated}`)
+    if (contents.length > 0) {
+      console.log(`[Railings] Sample keys:`, contents.slice(0, 3).map(c => c.Key))
+    }
 
     const items: MediaItem[] = contents
       .filter(item => {
@@ -61,16 +70,28 @@ async function getRailsImages(): Promise<MediaItem[]> {
       })
       .sort((a, b) => a.src.localeCompare(b.src))
 
+    console.log(`[Railings] Processed ${items.length} media items (${items.filter(i => i.type === 'video').length} videos, ${items.filter(i => i.type === 'image').length} images)`)
+
     // If S3 is empty, fallback to static data
     if (items.length === 0) {
-      console.log('[Railings] S3 returned 0 items, using static fallback')
-      return (railsData as { items: MediaItem[] }).items || []
+      console.warn('[Railings] S3 returned 0 items, falling back to static data')
+      const staticItems = (railsData as { items: MediaItem[] }).items || []
+      console.log(`[Railings] Static fallback contains ${staticItems.length} items`)
+      return staticItems
     }
 
     return items
   } catch (error: any) {
-    console.error('[Railings] Error fetching from S3:', error.message)
-    return (railsData as { items: MediaItem[] }).items || []
+    console.error('[Railings] Error fetching from S3:', {
+      message: error.message,
+      code: error.Code || error.code,
+      name: error.name,
+      httpStatusCode: error.$metadata?.httpStatusCode,
+      requestId: error.$metadata?.requestId,
+    })
+    const staticItems = (railsData as { items: MediaItem[] }).items || []
+    console.log(`[Railings] Error fallback: static data contains ${staticItems.length} items`)
+    return staticItems
   }
 }
 

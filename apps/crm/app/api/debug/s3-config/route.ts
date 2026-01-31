@@ -32,7 +32,7 @@ export async function GET() {
     },
     // Expected values (from AWS IAM screenshot)
     expected: {
-      accessKeyId: 'AKIA4PFZSZFMCYNRASVZ',
+      accessKeyId: 'your-access-key-id',
       region: 'us-east-1', // From IAM console screenshot
       bucket: 'pashkovsky-gallery', // Common bucket name
     },

@@ -3,9 +3,9 @@
 ## Текущая ситуация
 
 ✅ **Новый активный ключ найден в AWS IAM:**
-- Access Key ID: `AKIA4PFZSZFMCYNRASVZ`
+- Access Key ID: `your-access-key-id`
 - Статус: Active
-- Создан: 11 часов назад
+- Создан: недавно
 - Никогда не использовался
 
 ❌ **Старый ключ в логах (неверный):**
@@ -33,7 +33,7 @@
 
 ```env
 # AWS S3 Configuration
-AWS_ACCESS_KEY_ID=AKIA4PFZSZFMCYNRASVZ
+AWS_ACCESS_KEY_ID=your-access-key-id
 AWS_SECRET_ACCESS_KEY=your-secret-access-key-here
 NEXT_PUBLIC_AWS_S3_BUCKET_NAME=pashkovsky-gallery
 NEXT_PUBLIC_AWS_S3_REGION=eu-north-1
@@ -45,7 +45,7 @@ NEXT_PUBLIC_AWS_S3_REGION=eu-north-1
 2. Выберите проект `pashkovsky-site` (или ваш проект)
 3. Settings → Environment Variables
 4. Обновите или создайте:
-   - `AWS_ACCESS_KEY_ID` = `AKIA4PFZSZFMCYNRASVZ`
+   - `AWS_ACCESS_KEY_ID` = `your-access-key-id`
    - `AWS_SECRET_ACCESS_KEY` = `your-secret-access-key`
    - `NEXT_PUBLIC_AWS_S3_BUCKET_NAME` = `pashkovsky-gallery`
    - `NEXT_PUBLIC_AWS_S3_REGION` = `eu-north-1`
