@@ -108,12 +108,24 @@ export function getOfferEmailBody(offer: Offer): string {
       <p>שמחים להציג לך את הצעת המחיר המפורטת עבור פרגולת האלומיניום שלך.</p>
       
       <div class="details">
-        ${offer.pergola ? `
-        <h3>פרטי הפרגולה:</h3>
-        <ul>
-          <li><strong>גודל:</strong> ${offer.pergola.width}m × ${offer.pergola.length}m (${offer.area} מ״ר)</li>
-          ${offer.pergola.height ? `<li><strong>גובה:</strong> ${offer.pergola.height}m</li>` : ''}
-        </ul>` : '<h3>ללא פרגולה</h3>'}
+        ${(() => {
+          const pergolas = offer.pergolas || (offer.pergola ? [offer.pergola] : [])
+          if (pergolas.length === 0) {
+            return '<h3>ללא פרגולה</h3>'
+          }
+          let html = '<h3>פרטי הפרגולות:</h3><ul>'
+          pergolas.forEach((pergola, index) => {
+            const prefix = pergolas.length > 1 ? `פרגולה ${index + 1}: ` : ''
+            const width = pergola.shape?.type === 'rectangle' ? pergola.shape.width : pergola.width || 0
+            const length = pergola.shape?.type === 'rectangle' ? pergola.shape.length : pergola.length || 0
+            html += `<li><strong>${prefix}גודל:</strong> ${width}m × ${length}m</li>`
+            if (pergola.height) {
+              html += `<li><strong>${prefix}גובה:</strong> ${pergola.height}m</li>`
+            }
+          })
+          html += `</ul><ul>`
+          return html
+        })()}
           ${offer.santaf?.enabled ? `<li><strong>סנטף:</strong> ${offer.santaf.withStructure ? 'עם קונסטרוקציה' : 'בסיסי'}</li>` : ''}
           ${offer.discountPercent > 0 ? `<li><strong>הנחה:</strong> ${offer.discountPercent}%</li>` : ''}
         </ul>

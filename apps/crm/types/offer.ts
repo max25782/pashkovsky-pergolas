@@ -159,6 +159,10 @@ export interface OfferDraft {
   customerPhone?: string
   customerCity?: string
 
+  // Support multiple pergolas in one offer
+  pergolas?: Pergola[]
+  // Legacy field for backward compatibility (deprecated - use pergolas array instead)
+  /** @deprecated Use pergolas array instead */
   pergola?: Pergola
   color: Color
   roof: Roof

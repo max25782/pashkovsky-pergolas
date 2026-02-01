@@ -39,7 +39,6 @@ export async function POST(req: NextRequest) {
     const {
       dealId,
       customerName,
-      pergola,
       color,
       roof,
       shadingRatio,
@@ -73,16 +72,24 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Validate pergola shape if pergola is provided
-    if (pergola && pergola.shape) {
-      const shapeValidation = validatePergolaShape(pergola.shape)
-      if (!shapeValidation.valid) {
-        return NextResponse.json(
-          { error: `Invalid pergola shape: ${shapeValidation.errors.join(', ')}` },
-          { status: 400 }
-        )
+    // Support multiple pergolas - use pergolas array if available, otherwise fall back to single pergola
+    const pergolas = body.pergolas || (body.pergola ? [body.pergola] : [])
+    
+    // Validate all pergola shapes
+    for (const perg of pergolas) {
+      if (perg && perg.shape) {
+        const shapeValidation = validatePergolaShape(perg.shape)
+        if (!shapeValidation.valid) {
+          return NextResponse.json(
+            { error: `Invalid pergola shape: ${shapeValidation.errors.join(', ')}` },
+            { status: 400 }
+          )
+        }
       }
     }
+    
+    // For backward compatibility, use first pergola as single pergola
+    const pergola = pergolas.length > 0 ? pergolas[0] : undefined
 
     // Ensure required objects exist with defaults
     const finalColor = color || { type: 'white' }
@@ -104,8 +111,13 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Calculate area from shape (0 if no pergola)
-    const calculatedArea = pergola?.shape ? calculatePergolaArea(pergola.shape) : 0
+    // Calculate total area from all pergolas
+    let calculatedArea = 0
+    for (const perg of pergolas) {
+      if (perg?.shape) {
+        calculatedArea += calculatePergolaArea(perg.shape)
+      }
+    }
 
     // Calculate Santaf area if pergola is not included
     const santafArea = (!pergola && finalSantaf.enabled && finalSantaf.width && finalSantaf.length) 
@@ -125,7 +137,10 @@ export async function POST(req: NextRequest) {
       // Multi-tenant: Add company_id
       company_id: companyId,
       
-      // Pergola - new shape-based structure (optional)
+      // Pergolas - support multiple pergolas (new)
+      pergolas_data: pergolas.length > 0 ? pergolas as any : null, // JSONB array of pergolas
+      
+      // Pergola - single pergola for backward compatibility (use first pergola if array exists)
       pergola_shape_type: pergola?.shape?.type || null,
       pergola_shape_data: pergola?.shape as any, // JSONB will store the shape object
       pergola_height: pergola?.height ? Number(pergola.height) : null,
@@ -307,24 +322,32 @@ function transformOfferFromDB(data: any) {
     customerPhone: data.customer_phone,
     customerCity: data.customer_city,
     
-    ...(data.pergola_shape_data || data.pergola_width ? {
-      pergola: {
-        // New shape-based structure
-        shape: data.pergola_shape_data
-          ? (data.pergola_shape_data as PergolaShape)
-          : {
-              // Fallback to legacy format if shape_data is missing
-              type: 'rectangle' as const,
-              width: data.pergola_width || 0,
-              length: data.pergola_length || 0,
-            },
-        height: data.pergola_height,
-        location: data.pergola_location,
-        pricePerSqm: data.pergola_price_per_sqm,
-        // Legacy fields for backward compatibility
-        width: data.pergola_width,
-        length: data.pergola_length,
-      }
+    // Support multiple pergolas - prefer pergolas_data array, fall back to single pergola
+    ...(data.pergolas_data || data.pergola_shape_data || data.pergola_width ? {
+      // Use pergolas array if available
+      pergolas: data.pergolas_data || undefined,
+      // Single pergola for backward compatibility (use first from array or single pergola)
+      pergola: data.pergolas_data && Array.isArray(data.pergolas_data) && data.pergolas_data.length > 0
+        ? data.pergolas_data[0]
+        : data.pergola_shape_data || data.pergola_width
+          ? {
+              // New shape-based structure
+              shape: data.pergola_shape_data
+                ? (data.pergola_shape_data as PergolaShape)
+                : {
+                    // Fallback to legacy format if shape_data is missing
+                    type: 'rectangle' as const,
+                    width: data.pergola_width || 0,
+                    length: data.pergola_length || 0,
+                  },
+              height: data.pergola_height,
+              location: data.pergola_location,
+              pricePerSqm: data.pergola_price_per_sqm,
+              // Legacy fields for backward compatibility
+              width: data.pergola_width,
+              length: data.pergola_length,
+            }
+          : undefined,
     } : {}),
     
     color: {

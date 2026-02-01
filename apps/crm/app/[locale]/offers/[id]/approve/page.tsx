@@ -208,15 +208,23 @@ export default function OfferApprovePage() {
             <div className="bg-gray-50 rounded-lg p-4">
               <h2 className="text-lg font-semibold mb-3 text-gray-900">פרטי פרגולה</h2>
               <div className="grid grid-cols-2 gap-3 text-sm text-gray-700">
-                {offer.pergola ? (
-                  <>
-                    {renderPergolaDimensions(offer.pergola.shape)}
-                    {offer.pergola.height && <div><span className="font-medium">גובה:</span> {offer.pergola.height} מ׳</div>}
-                    {offer.pergola.location && <div><span className="font-medium">מקום:</span> {offer.pergola.location}</div>}
-                  </>
-                ) : (
-                  <div className="col-span-2 text-gray-500">ללא פרגולה</div>
-                )}
+                {(() => {
+                  const pergolas = offer.pergolas || (offer.pergola ? [offer.pergola] : [])
+                  if (pergolas.length === 0) {
+                    return <div className="col-span-2 text-gray-500">ללא פרגולה</div>
+                  }
+                  
+                  return pergolas.map((pergola, index) => (
+                    <div key={index} className={`${pergolas.length > 1 ? 'col-span-2 border-b border-gray-200 pb-3 mb-3' : ''}`}>
+                      {pergolas.length > 1 && (
+                        <div className="font-semibold text-gray-800 mb-2">פרגולה #{index + 1}</div>
+                      )}
+                      {renderPergolaDimensions(pergola.shape)}
+                      {pergola.height && <div><span className="font-medium">גובה:</span> {pergola.height} מ׳</div>}
+                      {pergola.location && <div><span className="font-medium">מקום:</span> {pergola.location}</div>}
+                    </div>
+                  ))
+                })()}
                 {offer.shadingRatio && <div><span className="font-medium">הצללה:</span> {offer.shadingRatio}</div>}
                 {(offer.finishType || offer.finishValue) && (
                   <div className="col-span-2">

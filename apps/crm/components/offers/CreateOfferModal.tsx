@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { X } from 'lucide-react'
-import type { OfferDraft, Offer } from '@/types/offer'
+import type { OfferDraft, Offer, PergolaShape, Pergola } from '@/types/offer'
 import { DEFAULT_OFFER_VALUES } from '@/types/offer'
 import { calculateOffer, formatPrice } from '@/lib/offer-calculator'
 import { PergolaShapeSelector } from './PergolaShapeSelector'
@@ -27,7 +27,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
     customerName,
     customerPhone,
     customerCity,
-    pergola: { ...DEFAULT_OFFER_VALUES.pergola }, // Optional - can be removed for non-pergola offers
+    pergolas: [{ ...DEFAULT_OFFER_VALUES.pergola }], // Start with one pergola, can add more
     color: { ...DEFAULT_OFFER_VALUES.color },
     roof: { ...DEFAULT_OFFER_VALUES.roof },
     shadingRatio: DEFAULT_OFFER_VALUES.shadingRatio,
@@ -100,18 +100,62 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
     }
   }, [draft, calculation, onCreated, onClose])
 
-  const updatePergola = useCallback((updates: Partial<NonNullable<typeof draft.pergola>>) => {
-    setDraft(prev => ({
-      ...prev,
-      pergola: prev.pergola ? { ...prev.pergola, ...updates } : undefined
-    }))
+  // Helper to get current pergolas array (support both new and legacy format)
+  const getPergolas = useCallback(() => {
+    return draft.pergolas || (draft.pergola ? [draft.pergola] : [])
+  }, [draft])
+
+  // Add a new pergola
+  const addPergola = useCallback(() => {
+    setDraft(prev => {
+      const currentPergolas = prev.pergolas || (prev.pergola ? [prev.pergola] : [])
+      return {
+        ...prev,
+        pergolas: [...currentPergolas, { ...DEFAULT_OFFER_VALUES.pergola }],
+        pergola: undefined // Clear legacy field
+      }
+    })
   }, [])
 
-  const updatePergolaShape = useCallback((shape: NonNullable<typeof draft.pergola>['shape']) => {
-    setDraft(prev => ({
-      ...prev,
-      pergola: prev.pergola ? { ...prev.pergola, shape } : undefined
-    }))
+  // Remove a pergola by index
+  const removePergola = useCallback((index: number) => {
+    setDraft(prev => {
+      const currentPergolas = prev.pergolas || (prev.pergola ? [prev.pergola] : [])
+      const newPergolas = currentPergolas.filter((_, i) => i !== index)
+      return {
+        ...prev,
+        pergolas: newPergolas.length > 0 ? newPergolas : undefined,
+        pergola: undefined // Clear legacy field
+      }
+    })
+  }, [])
+
+  // Update a specific pergola by index
+  const updatePergola = useCallback((index: number, updates: Partial<Pergola>) => {
+    setDraft(prev => {
+      const currentPergolas = prev.pergolas || (prev.pergola ? [prev.pergola] : [])
+      const newPergolas = [...currentPergolas]
+      newPergolas[index] = { ...newPergolas[index], ...updates }
+      return {
+        ...prev,
+        pergolas: newPergolas,
+        pergola: undefined // Clear legacy field
+      }
+    })
+  }, [])
+
+  // Update pergola shape by index
+  const updatePergolaShape = useCallback((index: number, shape: PergolaShape) => {
+    setDraft(prev => {
+      const currentPergolas = prev.pergolas || (prev.pergola ? [prev.pergola] : [])
+      const newPergolas = [...currentPergolas]
+      newPergolas[index] = { ...newPergolas[index], shape }
+      return {
+        ...prev,
+        pergolas: newPergolas,
+        pergola: undefined // Clear legacy field
+      }
+    })
   }, [])
 
   const updateColor = useCallback((updates: Partial<typeof draft.color>) => {
@@ -320,89 +364,153 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
             </div>
           </div>
 
-          {/* Include Pergola Toggle */}
-          <div className="bg-white/5 rounded-lg p-4 border border-white/10 mb-6">
-            <label className="flex items-center space-x-3 space-x-reverse cursor-pointer">
-              <input
-                type="checkbox"
-                checked={!!draft.pergola}
-                onChange={(e) => {
-                  if (e.target.checked) {
-                    // Add pergola with defaults
-                    setDraft(prev => ({ ...prev, pergola: { ...DEFAULT_OFFER_VALUES.pergola } }))
-                  } else {
-                    // Remove pergola
-                    setDraft(prev => ({ ...prev, pergola: undefined }))
-                  }
-                }}
-                className="w-4 h-4 text-blue-600 bg-white/10 border-white/20 rounded focus:ring-blue-500 focus:ring-2"
-              />
-              <span className="text-white font-medium">כלול פרגולה בהצעה</span>
-            </label>
-          </div>
-
-          {/* Pergola Dimensions & Price */}
-          {draft.pergola && (
-            <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-              <h3 className="text-lg font-semibold mb-3">פרגולה</h3>
-            
-            {/* Shape Selector */}
-            <div className="mb-4">
-              <PergolaShapeSelector
-                value={draft.pergola.shape}
-                onChange={updatePergolaShape}
-              />
+          {/* Pergolas Section */}
+          <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">פרגולות</h3>
+              <button
+                type="button"
+                onClick={addPergola}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded border border-blue-500 transition text-sm"
+              >
+                + הוסף פרגולה
+              </button>
             </div>
 
-            {/* Height, Location, Price */}
-            <div className="grid grid-cols-4 gap-4 mb-4">
-              <div>
-                <label className="block text-sm text-white/80 mb-1">גובה (אופציונלי)</label>
-                <input type="number" step="0.1" min="0" value={draft.pergola.height || ''} onChange={(e) => updatePergola({ height: e.target.value ? parseFloat(e.target.value) : undefined })} className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400" placeholder="לא חובה" />
+            {/* List of Pergolas */}
+            {getPergolas().length === 0 ? (
+              <div className="text-center py-8 text-white/60">
+                <p>אין פרגולות בהצעה. לחץ על "הוסף פרגולה" כדי להתחיל.</p>
               </div>
-              <div>
-                <label className="block text-sm text-white/80 mb-1">מקום בבית</label>
-                <input type="text" value={draft.pergola.location || ''} onChange={(e) => updatePergola({ location: e.target.value || undefined })} className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400" placeholder="גינה..." />
-              </div>
-              <div>
-                <label className="block text-sm text-white/80 mb-1">מחיר למ״ר (₪)</label>
-                <input type="number" step="10" min="0" value={draft.pergola.pricePerSqm} onChange={(e) => updatePergola({ pricePerSqm: parseFloat(e.target.value) || 750 })} className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400" />
-              </div>
-              <div className="flex items-end">
-                <div className="text-sm w-full">
-                  <div className="text-white/60">שטח מחושב: <span className="font-bold text-blue-400">{calculation.area.toFixed(2)} מ״ר</span></div>
-                  <div className="text-white/60">סה״כ פרגולה: <span className="font-bold text-green-400">{calculation.pergolaTotal ? formatPrice(calculation.pergolaTotal) : '₪0'}</span></div>
+            ) : (
+              <div className="space-y-4">
+                {getPergolas().map((pergola, index) => {
+                  const pergolaArea = pergola?.shape ? calculatePergolaArea(pergola.shape) : 0
+                  const pergolaPrice = pergolaArea * pergola.pricePerSqm
+                  
+                  return (
+                    <div key={index} className="bg-white/5 rounded-lg p-4 border border-white/10 relative">
+                      {/* Remove button */}
+                      {getPergolas().length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removePergola(index)}
+                          className="absolute top-2 left-2 p-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs"
+                          title="הסר פרגולה"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                      
+                      <div className="mb-2">
+                        <h4 className="text-md font-semibold text-white/90">
+                          פרגולה #{index + 1}
+                        </h4>
+                      </div>
+
+                      {/* Shape Selector */}
+                      <div className="mb-4">
+                        <PergolaShapeSelector
+                          value={pergola.shape}
+                          onChange={(shape) => updatePergolaShape(index, shape)}
+                        />
+                      </div>
+
+                      {/* Height, Location, Price */}
+                      <div className="grid grid-cols-4 gap-4 mb-4">
+                        <div>
+                          <label className="block text-sm text-white/80 mb-1">גובה (אופציונלי)</label>
+                          <input 
+                            type="number" 
+                            step="0.1" 
+                            min="0" 
+                            value={pergola.height || ''} 
+                            onChange={(e) => updatePergola(index, { height: e.target.value ? parseFloat(e.target.value) : undefined })} 
+                            className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400" 
+                            placeholder="לא חובה" 
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm text-white/80 mb-1">מקום בבית</label>
+                          <input 
+                            type="text" 
+                            value={pergola.location || ''} 
+                            onChange={(e) => updatePergola(index, { location: e.target.value || undefined })} 
+                            className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400" 
+                            placeholder="גינה..." 
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm text-white/80 mb-1">מחיר למ״ר (₪)</label>
+                          <input 
+                            type="number" 
+                            step="10" 
+                            min="0" 
+                            value={pergola.pricePerSqm} 
+                            onChange={(e) => updatePergola(index, { pricePerSqm: parseFloat(e.target.value) || 750 })} 
+                            className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400" 
+                          />
+                        </div>
+                        <div className="flex items-end">
+                          <div className="text-sm w-full">
+                            <div className="text-white/60">שטח: <span className="font-bold text-blue-400">{pergolaArea.toFixed(2)} מ״ר</span></div>
+                            <div className="text-white/60">מחיר: <span className="font-bold text-green-400">{formatPrice(pergolaPrice)}</span></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+                
+                {/* Total Summary */}
+                <div className="bg-blue-600/20 rounded-lg p-4 border border-blue-500/30 mt-4">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-white/80">שטח כולל:</span>
+                      <span className="mr-2 font-bold text-blue-300">{calculation.area.toFixed(2)} מ״ר</span>
+                    </div>
+                    <div>
+                      <span className="text-white/80">סה״כ פרגולות:</span>
+                      <span className="mr-2 font-bold text-green-300">{calculation.pergolaTotal ? formatPrice(calculation.pergolaTotal) : '₪0'}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
-              <div className="flex flex-col gap-1">
-                <label className="text-sm text-white/70">הצללה</label>
-                <select
-                  value={draft.shadingRatio || ''}
-                  onChange={(e) => {
-                    const value = (e.target.value as '40/20' | '50/20' | '70/20' | '') || null
-                    setDraft(prev => ({ ...prev, shadingRatio: value }))
-                  }}
-                  className="w-full px-3 py-2 rounded bg-white/10 border border-white/20 text-white"
-                >
-                  <option value="">בחר</option>
-                  <option value="40/20">40/20</option>
-                  <option value="50/20">50/20</option>
-                  <option value="70/20">70/20</option>
-                </select>
-              </div>
-              <div className="flex flex-col gap-1 sm:col-span-2">
-                <label className="text-sm text-white/70">גמר (RAL / דמוי עץ)</label>
-                <div className="grid grid-cols-2 gap-2">
+            )}
+          </div>
+
+          {/* Shading Ratio and Finish (shared for all pergolas) */}
+          {getPergolas().length > 0 && (
+            <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+              <h3 className="text-lg font-semibold mb-3">הגדרות כלליות לפרגולות</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm text-white/70">הצללה</label>
                   <select
-                    value={draft.finishType || ''}
+                    value={draft.shadingRatio || ''}
                     onChange={(e) => {
-                      const value = (e.target.value as 'ral' | 'wood' | '') || null
-                      setDraft(prev => ({ ...prev, finishType: value }))
+                      const value = (e.target.value as '40/20' | '50/20' | '70/20' | '') || null
+                      setDraft(prev => ({ ...prev, shadingRatio: value }))
                     }}
                     className="w-full px-3 py-2 rounded bg-white/10 border border-white/20 text-white"
                   >
+                    <option value="">בחר</option>
+                    <option value="40/20">40/20</option>
+                    <option value="50/20">50/20</option>
+                    <option value="70/20">70/20</option>
+                  </select>
+                </div>
+                <div className="flex flex-col gap-1 sm:col-span-2">
+                  <label className="text-sm text-white/70">גמר (RAL / דמוי עץ)</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <select
+                      value={draft.finishType || ''}
+                      onChange={(e) => {
+                        const value = (e.target.value as 'ral' | 'wood' | '') || null
+                        setDraft(prev => ({ ...prev, finishType: value }))
+                      }}
+                      className="w-full px-3 py-2 rounded bg-white/10 border border-white/20 text-white"
+                    >
                     <option value="">בחר</option>
                     <option value="ral">RAL</option>
                     <option value="wood">דמוי עץ</option>
@@ -1035,7 +1143,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
             <Button 
               type="button" 
               onClick={(e) => { e.stopPropagation(); handleSubmit() }} 
-              disabled={isSubmitting || (draft.pergola && (!validatePergolaShape(draft.pergola.shape).valid || calculatePergolaArea(draft.pergola.shape) <= 0))} 
+              disabled={isSubmitting || getPergolas().some(p => !validatePergolaShape(p.shape).valid || calculatePergolaArea(p.shape) <= 0)} 
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               {isSubmitting ? 'שומר...' : 'שמור הצעת מחיר'}

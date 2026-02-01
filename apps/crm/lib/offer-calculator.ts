@@ -3,14 +3,26 @@ import { calculatePergolaArea } from '@/lib/calculations/pergola-area'
 import { calculateSuntufSheets, calculateSuntufPriceByArea } from '@/lib/calculations/suntuf-sheets'
 
 export function calculateOffer(draft: OfferDraft): OfferCalculation {
-  // 1. Calculate area from shape (0 if no pergola)
-  const pergolaArea = draft.pergola?.shape ? calculatePergolaArea(draft.pergola.shape) : 0
+  // Support multiple pergolas - use pergolas array if available, otherwise fall back to single pergola
+  const pergolas = draft.pergolas || (draft.pergola ? [draft.pergola] : [])
   
-  // 2. Calculate santaf area (use pergola area if pergola exists, otherwise use santaf dimensions)
+  // 1. Calculate total area from all pergolas
+  let pergolaArea = 0
+  let pergolaTotal = 0
+  
+  for (const pergola of pergolas) {
+    if (pergola?.shape) {
+      const singleArea = calculatePergolaArea(pergola.shape)
+      pergolaArea += singleArea
+      pergolaTotal += singleArea * pergola.pricePerSqm
+    }
+  }
+  
+  // 2. Calculate santaf area (use pergola area if pergolas exist, otherwise use santaf dimensions)
   let santafArea = 0
   if (draft.santaf.enabled) {
-    if (draft.pergola?.shape) {
-      // Use pergola area if pergola is included
+    if (pergolaArea > 0) {
+      // Use total pergola area if pergolas are included
       santafArea = pergolaArea
     } else if (draft.santaf.width && draft.santaf.length) {
       // Use santaf dimensions if pergola is not included
@@ -21,8 +33,8 @@ export function calculateOffer(draft: OfferDraft): OfferCalculation {
   // Use pergola area for general area calculation
   const area = pergolaArea || santafArea
 
-  // 3. Calculate pergola price
-  const pergolaTotal = draft.pergola ? pergolaArea * draft.pergola.pricePerSqm : undefined
+  // 3. Set pergolaTotal (undefined if no pergolas, otherwise sum of all)
+  const pergolaTotalFinal = pergolas.length > 0 ? pergolaTotal : undefined
   
   // 4. Calculate santaf price (if enabled)
   // IMPORTANT: Suntuf sheets are priced by MATERIAL AREA (full sheet dimensions),
@@ -37,15 +49,16 @@ export function calculateOffer(draft: OfferDraft): OfferCalculation {
     let suntufWidth = 0
     let suntufLength = 0
     
-    if (draft.pergola?.shape) {
-      // Extract from pergola shape (for rectangle shapes)
-      if (draft.pergola.shape.type === 'rectangle') {
-        suntufWidth = draft.pergola.shape.width
-        suntufLength = draft.pergola.shape.length
+    // Use first pergola for Suntuf calculation (or sum if multiple)
+    if (pergolas.length > 0 && pergolas[0]?.shape) {
+      const firstPergola = pergolas[0]
+      if (firstPergola.shape.type === 'rectangle') {
+        // For multiple pergolas, sum widths/lengths or use largest
+        // For now, use first pergola dimensions as approximation
+        suntufWidth = firstPergola.shape.width
+        suntufLength = firstPergola.shape.length
       } else {
         // For complex shapes, use pergola area as approximation
-        // This is a fallback - ideally complex shapes should be broken down
-        // For now, we'll use square root approximation for width/length
         const sideLength = Math.sqrt(santafArea)
         suntufWidth = sideLength
         suntufLength = sideLength
@@ -105,7 +118,7 @@ export function calculateOffer(draft: OfferDraft): OfferCalculation {
   }
   
   // 9. Calculate total before VAT
-  const totalBeforeVat = (pergolaTotal || 0) + santafTotal + zipScreenTotal + lightingTotal + drainageTotal + winterClosureTotal
+  const totalBeforeVat = (pergolaTotalFinal || 0) + santafTotal + zipScreenTotal + lightingTotal + drainageTotal + winterClosureTotal
   
   // 10. Calculate VAT (18%)
   const vatAmount = totalBeforeVat * 0.18
@@ -122,7 +135,7 @@ export function calculateOffer(draft: OfferDraft): OfferCalculation {
   
   return {
     area,
-    pergolaTotal,
+    pergolaTotal: pergolaTotalFinal,
     santafTotal,
     zipScreenTotal,
     lightingTotal,

@@ -27,23 +27,22 @@ export function renderOfferHtml(offer: Offer): string {
     return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`
   }
 
-  // Helper to format pergola shape dimensions
-  const formatPergolaDimensions = () => {
-    if (!offer.pergola) {
-      return `<div class="info-row"><span class="label">פרגולה:</span><span class="value">ללא פרגולה</span></div>`
-    }
-
-    const shape = offer.pergola.shape
+  // Helper to format a single pergola shape dimensions
+  const formatSinglePergolaDimensions = (pergola: typeof offer.pergola, index?: number) => {
+    if (!pergola) return ''
+    
+    const prefix = index !== undefined ? `פרגולה ${index + 1}: ` : ''
+    const shape = pergola.shape
     if (!shape) {
       // Fallback to legacy format
       return `
         <div class="info-row">
-          <span class="label">רוחב:</span>
-          <span class="value">${offer.pergola.width || 0} מטר</span>
+          <span class="label">${prefix}רוחב:</span>
+          <span class="value">${pergola.width || 0} מטר</span>
         </div>
         <div class="info-row">
           <span class="label">אורך:</span>
-          <span class="value">${offer.pergola.length || 0} מטר</span>
+          <span class="value">${pergola.length || 0} מטר</span>
         </div>
       `
     }
@@ -130,6 +129,35 @@ export function renderOfferHtml(offer: Offer): string {
       default:
         return ''
     }
+  }
+
+  // Helper to format all pergolas (supports both array and single pergola for backward compatibility)
+  const formatPergolaDimensions = () => {
+    const pergolas = offer.pergolas || (offer.pergola ? [offer.pergola] : [])
+    
+    if (pergolas.length === 0) {
+      return `<div class="info-row"><span class="label">פרגולה:</span><span class="value">ללא פרגולה</span></div>`
+    }
+    
+    if (pergolas.length === 1) {
+      return formatSinglePergolaDimensions(pergolas[0])
+    }
+    
+    // Multiple pergolas
+    return pergolas.map((pergola, index) => {
+      const dimensions = formatSinglePergolaDimensions(pergola, index)
+      const height = pergola.height ? `<div class="info-row"><span class="label">גובה:</span><span class="value">${pergola.height} מטר</span></div>` : ''
+      const location = pergola.location ? `<div class="info-row"><span class="label">מקום:</span><span class="value">${pergola.location}</span></div>` : ''
+      const area = calculatePergolaArea(pergola.shape)
+      return `
+        <div style="margin-bottom: 15px; padding: 10px; background: #f5f5f5; border-radius: 5px;">
+          ${dimensions}
+          ${height}
+          ${location}
+          <div class="info-row"><span class="label">שטח:</span><span class="value">${area.toFixed(2)} מ״ר</span></div>
+        </div>
+      `
+    }).join('')
   }
 
   // Get embedded fonts CSS
