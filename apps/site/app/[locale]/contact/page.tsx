@@ -17,7 +17,14 @@ export async function generateMetadata({ params }: { params: { locale: Locale } 
   return {
     title,
     description,
-    alternates: { canonical: `https://pashkovsky-group.com/${l}/contact` }
+    alternates: {
+      canonical: `https://pashkovsky-group.com/${l}/contact`,
+      languages: {
+        'he': 'https://pashkovsky-group.com/he/contact',
+        'ru': 'https://pashkovsky-group.com/ru/contact',
+        'en': 'https://pashkovsky-group.com/en/contact',
+      },
+    },
   }
 }
 

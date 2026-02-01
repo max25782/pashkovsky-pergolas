@@ -3,7 +3,7 @@ import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
 import projects from '@/data/gallery/pergulot.json'
 import Image from 'next/image'
-import { getImageUrl } from '@/lib/image-url'
+import { getImageUrl, getOgImageUrl } from '@/lib/image-url'
 
 type Locale = 'he' | 'ru' | 'en'
 
@@ -52,18 +52,32 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     
     const titleHe = pergola.title.he ?? id
     const descHe = pergola.desc.he ?? ''
-    const cover = pergola.images?.[0] ? getImageUrl(pergola.images[0]) : undefined
+    const coverPath = pergola.images?.[0]
+    const cover = coverPath ? getOgImageUrl(coverPath) : undefined
     const canonical = `https://pashkovsky-group.com/${locale}/pergulas/${id}`
 
     return {
       title: `פרגולת ${titleHe} | Pashkovski Group` as any,
       description: descHe,
-      alternates: { canonical },
+      alternates: {
+        canonical,
+        languages: {
+          'he': `https://pashkovsky-group.com/he/pergulas/${id}`,
+          'ru': `https://pashkovsky-group.com/ru/pergulas/${id}`,
+          'en': `https://pashkovsky-group.com/en/pergulas/${id}`,
+        },
+      },
       openGraph: {
         title: `פרגולת ${titleHe}`,
         description: descHe,
-        images: cover ? [{ url: cover }] : undefined,
+        images: cover ? [{ url: cover, width: 1200, height: 630 }] : undefined,
         url: canonical,
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: `פרגולת ${titleHe}`,
+        description: descHe,
+        images: cover ? [cover] : undefined,
       },
     }
   } catch (error) {

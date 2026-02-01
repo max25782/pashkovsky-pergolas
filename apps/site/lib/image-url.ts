@@ -46,3 +46,29 @@ export function getImageBaseUrl(): string {
   return USE_S3 ? S3_BASE_URL : ''
 }
 
+/**
+ * Get absolute URL for Open Graph images (always returns absolute URL)
+ * Social networks require absolute URLs for Open Graph images
+ * @param path Image path relative to public folder (e.g., '/images/pergulot/ashkelon2/img.webp')
+ * @returns Absolute URL to image (S3 URL if configured, otherwise site URL)
+ */
+export function getOgImageUrl(path: string): string {
+  // If already a full URL, return as is
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path
+  }
+  
+  const SITE_URL = 'https://pashkovsky-group.com'
+  
+  // If S3 is configured, use S3 URL
+  if (USE_S3 && S3_BASE_URL) {
+    const cleanPath = path.startsWith('/') ? path.slice(1) : path
+    return `${S3_BASE_URL}/${cleanPath}`
+  }
+  
+  // Otherwise, use site URL with relative path
+  // Remove leading slash if present for consistency
+  const cleanPath = path.startsWith('/') ? path : `/${path}`
+  return `${SITE_URL}${cleanPath}`
+}
+

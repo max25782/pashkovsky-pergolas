@@ -9,6 +9,12 @@ import GA from '@/components/ga'
 import { Suspense } from 'react'
 import FloatingWhatsApp from '@/components/contact/FloatingWhatsApp'
 import { ChatWidget } from '@/components/ai-chat/ChatWidget'
+import { getOgImageUrl } from '@/lib/image-url'
+import { StructuredData } from '@/components/seo/structured-data'
+
+// Generate absolute URL for Open Graph image
+const ogImagePath = '/images/pergulot/ashkelon2/IMG_20240312_134433.webp'
+const ogImageUrl = getOgImageUrl(ogImagePath)
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://pashkovsky-group.com'),
@@ -30,7 +36,7 @@ export const metadata: Metadata = {
     siteName: 'Pashkovsky-group.com',
     images: [
       {
-        url: '/images/pergulot/ashkelon2/IMG_20240312_134433.webp',
+        url: ogImageUrl,
         width: 1200,
         height: 630,
         alt: 'פרגולות אלומיניום בעיצוב יוקרתי',
@@ -41,11 +47,17 @@ export const metadata: Metadata = {
   },
   alternates: {
     canonical: 'https://pashkovsky-group.com',
+    languages: {
+      'he': 'https://pashkovsky-group.com/he',
+      'ru': 'https://pashkovsky-group.com/ru',
+      'en': 'https://pashkovsky-group.com/en',
+    },
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Pashkovsky Group',
     description: 'פרגולות ומעקות אלומיניום בישראל ברמה הגבוהה ביותר.',
+    images: [ogImageUrl],
   },
 }
 
@@ -60,6 +72,7 @@ export default function PublicLayout({
 
   return (
     <Providers>
+      <StructuredData locale={locale} />
       <Suspense fallback={null}>
         <UTMTracker />
       </Suspense>
