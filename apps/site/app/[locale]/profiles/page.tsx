@@ -143,7 +143,13 @@ export default async function ProfilesPage({ params }: ProfilesPageProps) {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-neutral-950 to-neutral-900 text-white py-20">
+    <main 
+      className="min-h-screen text-white py-20"
+      style={{
+        background: 'linear-gradient(180deg, rgba(10, 10, 10, 1) 21%, rgba(23, 23, 23, 0.5) 100%)',
+        backgroundColor: 'rgba(0, 0, 0, 1)'
+      }}
+    >
       <div className="container mx-auto px-6">
         {/* Header */}
         <div className="text-center mb-16">

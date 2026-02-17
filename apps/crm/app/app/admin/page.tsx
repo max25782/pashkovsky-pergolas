@@ -15,7 +15,9 @@ import {
   MessageSquare, 
   FileText, 
   UserCog,
-  TrendingUp
+  TrendingUp,
+  Box,
+  ShoppingCart
 } from 'lucide-react'
 
 interface DashboardStats {
@@ -228,6 +230,22 @@ export default function AdminPage() {
       href: `/app/admin/workers`,
       icon: UserCog,
       color: 'bg-yellow-600 hover:bg-yellow-700',
+    },
+    {
+      id: 'profiles',
+      title: 'Профили',
+      description: 'Управление алюминиевыми профилями',
+      href: `/app/profiles`,
+      icon: Box,
+      color: 'bg-orange-600 hover:bg-orange-700',
+    },
+    {
+      id: 'orders',
+      title: language === 'ru' ? 'Заказы' : language === 'en' ? 'Orders' : 'הזמנות',
+      description: language === 'ru' ? 'Заказы профилей' : language === 'en' ? 'Profile Orders' : 'הזמנות פרופילים',
+      href: `/app/admin/orders`,
+      icon: ShoppingCart,
+      color: 'bg-pink-600 hover:bg-pink-700',
     },
   ]
 

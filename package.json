@@ -9,8 +9,11 @@
   ],
   "scripts": {
     "dev": "turbo run dev",
+    "dev:all": "./start-all.sh",
+    "dev:profiles": "turbo run dev --filter=@pashkovsky/profiles-api --filter=@pashkovsky/profiles-store",
     "dev:site": "turbo run dev --filter=@pashkovsky/site",
     "dev:crm": "turbo run dev --filter=@pashkovsky/crm",
+    "stop:all": "./stop-all.sh",
     "build": "turbo run build",
     "build:site": "turbo run build --filter=@pashkovsky/site",
     "build:crm": "turbo run build --filter=@pashkovsky/crm",

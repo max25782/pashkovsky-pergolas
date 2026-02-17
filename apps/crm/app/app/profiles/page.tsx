@@ -1,29 +1,22 @@
+'use client'
+
+import { ProfilesTable } from '@/components/admin/ProfilesTable'
+import Link from 'next/link'
+
 export default function ProfilesPage() {
-  // TODO: Implement profiles page for CRM
-  // This page should be implemented separately from the site
-  
-  const items: any[] = []
-
   return (
-    <main className="min-h-screen bg-gradient-to-b from-neutral-950 to-neutral-900 text-white py-20">
-      <div className="container mx-auto px-6">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <h1 className="text-4xl md:text-5xl font-extrabold mb-6">
-            פרופילים אלומיניום
-          </h1>
-          <p className="text-xl text-white/70 max-w-3xl mx-auto">
-            מגוון רחב של פרופילי אלומיניום איכותיים לכל צורך - מפרגולות ומעקות ועד תאורה ועיצוב
-          </p>
-        </div>
-
-        {/* Empty State */}
-        <div className="text-center py-20">
-          <p className="text-white/60 text-lg">
-            This page is under construction
-          </p>
-        </div>
+    <main className="container py-8 text-white">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">Управление профилями</h1>
+        <Link 
+          href="/app/admin"
+          className="px-4 py-2 rounded bg-white/10 hover:bg-white/20 transition"
+        >
+          ← Назад
+        </Link>
       </div>
+      
+      <ProfilesTable />
     </main>
   )
 }

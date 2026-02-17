@@ -584,15 +584,19 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs text-white/60 mb-1">רוחב (מ׳)</label>
-                        <input 
-                          type="number" 
-                          step="0.1" 
-                          min="0" 
-                          value={draft.santaf.width || ''} 
-                          onChange={(e) => updateSantaf({ width: e.target.value ? parseFloat(e.target.value) : undefined })} 
-                          className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400" 
-                          placeholder="0.00"
-                        />
+                        <select
+                          value={draft.santaf.width?.toString() ?? ''} 
+                          onChange={(e) => {
+                            const width = e.target.value ? parseFloat(e.target.value) : undefined
+                            updateSantaf({ width, length: 0 })
+                          }} 
+                          className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400"
+                        >
+                          <option value="">בחר רוחב</option>
+                          <option value="6">6 מ׳</option>
+                          <option value="6.5">6.5 מ׳</option>
+                          <option value="7">7 מ׳</option>
+                        </select>
                       </div>
                       <div>
                         <label className="block text-xs text-white/60 mb-1">אורך (מ׳)</label>
@@ -600,10 +604,11 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
                           type="number" 
                           step="0.1" 
                           min="0" 
-                          value={draft.santaf.length || ''} 
-                          onChange={(e) => updateSantaf({ length: e.target.value ? parseFloat(e.target.value) : undefined })} 
-                          className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400" 
-                          placeholder="0.00"
+                          value={draft.santaf.length ?? 0} 
+                          onChange={(e) => updateSantaf({ length: e.target.value ? parseFloat(e.target.value) : 0 })} 
+                          className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400 disabled:opacity-50 disabled:cursor-not-allowed" 
+                          placeholder="0"
+                          disabled
                         />
                       </div>
                     </div>

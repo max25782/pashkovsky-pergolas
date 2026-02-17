@@ -32,7 +32,7 @@ COMMENT ON COLUMN offers.pergolas_data IS 'JSONB array of pergola objects. Each 
 -- Success message
 DO $$ 
 BEGIN 
-  RAISE NOTICE '✅ Migration 017_add_multiple_pergolas completed successfully';
-  RAISE NOTICE '📋 Existing single pergolas migrated to array format';
-  RAISE NOTICE '🎯 Multiple pergolas per offer are now supported';
+  RAISE NOTICE 'Migration 017_add_multiple_pergolas completed successfully';
+  RAISE NOTICE 'Existing single pergolas migrated to array format';
+  RAISE NOTICE 'Multiple pergolas per offer are now supported';
 END $$;
