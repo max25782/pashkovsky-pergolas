@@ -1,5 +1,5 @@
 "use client"
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import type { Deal } from './deal-types'
 import { formatCurrency } from './deal-utils'
 import { MonthlyDealsModal } from './MonthlyDealsModal'
@@ -8,6 +8,7 @@ import { MonthlyStatsChart } from './MonthlyStatsChart'
 import { useLanguage } from '@/lib/language-context'
 import { statisticsTranslations } from '@/lib/translations/statistics'
 import { LanguageSwitcher } from './LanguageSwitcher'
+import { authFetch } from '@/lib/api/auth-fetch'
 
 interface DealsStatisticsProps {
   deals: Deal[]
@@ -31,15 +32,38 @@ export function DealsStatistics({ deals, onDealClick }: DealsStatisticsProps) {
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null)
   const [selectedMonthLabel, setSelectedMonthLabel] = useState<string>('')
   const [statisticType, setStatisticType] = useState<StatisticType>('money')
-  
+  const [payments, setPayments] = useState<Array<{ deal_id: string; amount: number; paid_at: string }>>([])
+
+  useEffect(() => {
+    let cancelled = false
+    authFetch('/admin-api/deals/payments-summary')
+      .then((res) => (res.ok ? res.json() : { payments: [] }))
+      .then((data) => {
+        if (!cancelled) setPayments(data.payments ?? [])
+      })
+      .catch(() => { if (!cancelled) setPayments([]) })
+    return () => { cancelled = true }
+  }, [])
+
+  const paymentsByDeal = useMemo(() => {
+    const map = new Map<string, Array<{ amount: number; paid_at: string }>>()
+    payments.forEach((p) => {
+      const list = map.get(p.deal_id) ?? []
+      list.push({ amount: Number(p.amount), paid_at: p.paid_at })
+      map.set(p.deal_id, list)
+    })
+    return map
+  }, [payments])
+
   // Filter deals based on statistic type
   const validDeals = useMemo(() => {
     let filtered = deals.filter(deal => deal && deal.id)
     
-    // Если выбран тип 'money', показываем только завершенные сделки (done)
     if (statisticType === 'money') {
       filtered = filtered.filter(deal => {
-        return deal.stage === 'done'
+        const isContractor = deal.customer_type === 'contractor'
+        if (isContractor) return true
+        return deal.stage === 'done' && deal.installation_date != null
       })
     }
     
@@ -49,28 +73,10 @@ export function DealsStatistics({ deals, onDealClick }: DealsStatisticsProps) {
   const monthlyStats = useMemo(() => {
     const statsMap = new Map<string, MonthlyStats>()
     
-    validDeals.forEach(deal => {
-      // Используем дату установки (installation_date) в приоритете
-      // Если даты установки нет, используем дату заказа (order_date)
-      // Если и её нет, используем дату создания (created_at)
-      let dateToUse: string | null | undefined = deal.installation_date || deal.order_date || deal.created_at
-      
-      if (!dateToUse) return
-
-      // Парсим дату и используем UTC для избежания проблем с часовыми поясами
-      const date = new Date(dateToUse)
-      // Проверяем, что дата валидна
-      if (isNaN(date.getTime())) return
-      
-      // Используем UTC методы для правильного определения месяца независимо от часового пояса
-      const year = date.getUTCFullYear()
-      const month = date.getUTCMonth() + 1 // getUTCMonth() возвращает 0-11
-      const monthKey = `${year}-${String(month).padStart(2, '0')}`
-      
-      // Создаем дату в локальном времени для отображения месяца на иврите
-      const localDate = new Date(year, month - 1, 1) // month - 1 потому что конструктор использует 0-11
+    const addToMonth = (monthKey: string, revenue: number, expenses: number, dealCount: number) => {
+      const [y, m] = monthKey.split('-').map(Number)
+      const localDate = new Date(y, m - 1, 1)
       const monthLabel = localDate.toLocaleDateString('he-IL', { year: 'numeric', month: 'long' })
-
       const existing = statsMap.get(monthKey) || {
         month: monthKey,
         monthLabel,
@@ -79,19 +85,52 @@ export function DealsStatistics({ deals, onDealClick }: DealsStatisticsProps) {
         profit: 0,
         dealCount: 0
       }
-
-      existing.revenue += deal.price || 0
-      existing.expenses += deal.my_cost || 0
+      existing.revenue += revenue
+      existing.expenses += expenses
       existing.profit = existing.revenue - existing.expenses
-      existing.dealCount += 1
-
+      existing.dealCount += dealCount
       statsMap.set(monthKey, existing)
+    }
+
+    validDeals.forEach(deal => {
+      const isContractor = deal.customer_type === 'contractor'
+      
+      if (statisticType === 'money' && isContractor) {
+        const dealPayments = paymentsByDeal.get(deal.id) ?? []
+        const dealMonths = new Set<string>()
+        dealPayments.forEach((p) => {
+          const date = new Date(p.paid_at)
+          if (isNaN(date.getTime())) return
+          const year = date.getUTCFullYear()
+          const month = date.getUTCMonth() + 1
+          const monthKey = `${year}-${String(month).padStart(2, '0')}`
+          addToMonth(monthKey, p.amount, 0, 0)
+          dealMonths.add(monthKey)
+        })
+        dealMonths.forEach((monthKey) => addToMonth(monthKey, 0, 0, 1))
+        return
+      }
+
+      const dateToUse: string | null | undefined = statisticType === 'money'
+        ? deal.installation_date
+        : (deal.installation_date || deal.order_date || deal.created_at)
+      
+      if (!dateToUse) return
+
+      const date = new Date(dateToUse)
+      if (isNaN(date.getTime())) return
+      
+      const year = date.getUTCFullYear()
+      const month = date.getUTCMonth() + 1
+      const monthKey = `${year}-${String(month).padStart(2, '0')}`
+
+      addToMonth(monthKey, deal.price || 0, deal.my_cost || 0, 1)
     })
 
     return Array.from(statsMap.values())
       .sort((a, b) => a.month.localeCompare(b.month))
       .reverse()
-  }, [validDeals])
+  }, [validDeals, paymentsByDeal, statisticType])
 
   const totals = useMemo(() => {
     return monthlyStats.reduce(

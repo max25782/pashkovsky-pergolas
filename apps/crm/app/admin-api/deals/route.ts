@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { getCompanyId } from '@/lib/middleware/company-context'
+import { getCompanyId, getCompanyIdAsync } from '@/lib/middleware/company-context'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { logDealEvent } from '@/lib/audit/logger'
 
@@ -25,8 +25,8 @@ export async function GET(req: NextRequest) {
   
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
   
-  // Multi-tenant: Get company_id from request
-  const companyId = getCompanyId(req)
+  // Multi-tenant: Get company_id (sync for custom JWT, async for Supabase Auth)
+  const companyId = getCompanyId(req) ?? (await getCompanyIdAsync(req)) ?? authCheck.context.companyId ?? null
   if (!companyId) return new Response('Unauthorized: No company context', { status: 401 })
   
   const { searchParams } = new URL(req.url)
@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabase
     .from('deals')
-    .select('*', { count: 'exact' })
+    .select('*, deal_railings_details(*)', { count: 'exact' })
     .eq('company_id', companyId) // Multi-tenant filter
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1)
@@ -90,8 +90,8 @@ export async function POST(req: NextRequest) {
   
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
   
-  // Multi-tenant: Get company_id from request
-  const companyId = getCompanyId(req)
+  // Multi-tenant: Get company_id (sync for custom JWT, async for Supabase Auth)
+  const companyId = getCompanyId(req) ?? (await getCompanyIdAsync(req)) ?? authCheck.context.companyId ?? null
   if (!companyId) return new Response('Unauthorized: No company context', { status: 401 })
   
   let body: any
@@ -102,7 +102,25 @@ export async function POST(req: NextRequest) {
     return new Response('Bad JSON', { status: 400 })
   }
   
-  const { lead_id, ...dealData } = body || {}
+  const { lead_id, work_type, meters_total, height_cm, profile_type, color, location_type, glass_type, railings_notes, ...dealData } = body || {}
+  
+  const effectiveWorkType = work_type || 'pergola'
+  dealData.work_type = effectiveWorkType
+  
+  if (effectiveWorkType === 'railings') {
+    if (!meters_total || Number(meters_total) <= 0) {
+      return new Response(JSON.stringify({ error: 'meters_total is required and must be > 0' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+    }
+    if (!profile_type || String(profile_type).trim() === '') {
+      return new Response(JSON.stringify({ error: 'profile_type is required' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+    }
+    if (!color || String(color).trim() === '') {
+      return new Response(JSON.stringify({ error: 'color is required' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+    }
+    if (!location_type || String(location_type).trim() === '') {
+      return new Response(JSON.stringify({ error: 'location_type is required' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+    }
+  }
   
   // If lead_id is provided, fetch lead data to populate deal
   if (lead_id) {
@@ -158,6 +176,39 @@ export async function POST(req: NextRequest) {
     })
   }
   
+  if (effectiveWorkType === 'railings') {
+    const { error: railingsError } = await supabase
+      .from('deal_railings_details')
+      .insert({
+        deal_id: data.id,
+        company_id: companyId,
+        meters_total: Number(meters_total),
+        height_cm: height_cm != null ? Number(height_cm) : null,
+        profile_type: String(profile_type).trim(),
+        color: String(color).trim(),
+        location_type: String(location_type).trim() as 'balcony' | 'stairs' | 'roof' | 'yard' | 'other',
+        glass_type: glass_type != null ? String(glass_type).trim() : null,
+        notes: railings_notes != null ? String(railings_notes).trim() : null,
+      })
+    if (railingsError) {
+      console.error('POST: Railings insert error', railingsError)
+      await supabase.from('deals').delete().eq('id', data.id)
+      return new Response(JSON.stringify({ error: railingsError.message }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
+    const { data: railingsRow } = await supabase
+      .from('deal_railings_details')
+      .select('*')
+      .eq('deal_id', data.id)
+      .single()
+    return new Response(JSON.stringify({ ...data, deal_railings_details: railingsRow }), {
+      status: 201,
+      headers: { 'Content-Type': 'application/json' }
+    })
+  }
+  
   // Log successful creation
   await logDealEvent(req, 'create', data.id, dealData, 'success')
   
@@ -175,8 +226,8 @@ export async function PATCH(req: NextRequest) {
   
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
   
-  // Multi-tenant: Get company_id from request
-  const companyId = getCompanyId(req)
+  // Multi-tenant: Get company_id (sync for custom JWT, async for Supabase Auth)
+  const companyId = getCompanyId(req) ?? (await getCompanyIdAsync(req)) ?? authCheck.context.companyId ?? null
   if (!companyId) return new Response('Unauthorized: No company context', { status: 401 })
   
   let body: any
@@ -187,13 +238,16 @@ export async function PATCH(req: NextRequest) {
     return new Response('Bad JSON', { status: 400 })
   }
   
-  const { id, ...updates } = body || {}
+  const { id, meters_total, height_cm, profile_type, color, location_type, glass_type, railings_notes, ...updates } = body || {}
   if (!id) {
     return new Response('Missing id', { status: 400 })
   }
   
+  const railingsUpdates = { meters_total, height_cm, profile_type, color, location_type, glass_type, railings_notes }
+  const hasRailingsUpdates = Object.values(railingsUpdates).some(v => v !== undefined)
+  
   // Проверяем, что есть что обновлять
-  if (Object.keys(updates).length === 0) {
+  if (Object.keys(updates).length === 0 && !hasRailingsUpdates) {
     console.log('PATCH: No updates provided, fetching current deal')
     // Если нет обновлений, просто возвращаем текущую сделку
     const { data: currentDeal, error: fetchError } = await supabase
@@ -237,9 +291,76 @@ export async function PATCH(req: NextRequest) {
     })
   }
   
+  if (hasRailingsUpdates) {
+    const { data: existingDeal } = await supabase
+      .from('deals')
+      .select('work_type')
+      .eq('id', id)
+      .eq('company_id', companyId)
+      .single()
+    const effectiveWorkType = updates.work_type ?? existingDeal?.work_type
+    if (effectiveWorkType === 'railings') {
+      const railingsPayload: Record<string, unknown> = {}
+      if (meters_total != null) {
+        const v = Number(meters_total)
+        if (v <= 0) {
+          return new Response(JSON.stringify({ error: 'meters_total must be > 0' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+        }
+        railingsPayload.meters_total = v
+      }
+      if (height_cm != null) railingsPayload.height_cm = Number(height_cm)
+      if (profile_type != null) railingsPayload.profile_type = String(profile_type).trim()
+      if (color != null) railingsPayload.color = String(color).trim()
+      if (location_type != null) railingsPayload.location_type = String(location_type).trim()
+      if (glass_type != null) railingsPayload.glass_type = String(glass_type).trim() || null
+      if (railings_notes !== undefined) railingsPayload.notes = railings_notes != null ? String(railings_notes).trim() : null
+      if (Object.keys(railingsPayload).length > 0) {
+        const { data: existingRailings } = await supabase
+          .from('deal_railings_details')
+          .select('deal_id')
+          .eq('deal_id', id)
+          .single()
+        if (existingRailings) {
+          await supabase
+            .from('deal_railings_details')
+            .update(railingsPayload)
+            .eq('deal_id', id)
+        } else {
+          const { data: dealRow } = await supabase.from('deals').select('id').eq('id', id).single()
+          if (dealRow && railingsPayload.meters_total && railingsPayload.profile_type && railingsPayload.color && railingsPayload.location_type) {
+            await supabase.from('deal_railings_details').insert({
+              deal_id: id,
+              company_id: companyId,
+              meters_total: railingsPayload.meters_total,
+              height_cm: railingsPayload.height_cm ?? null,
+              profile_type: railingsPayload.profile_type,
+              color: railingsPayload.color,
+              location_type: railingsPayload.location_type,
+              glass_type: railingsPayload.glass_type ?? null,
+              notes: railingsPayload.notes ?? null,
+            })
+          }
+        }
+      }
+    }
+  }
+  
+  // When moving to completed: auto-set installation_date if empty (server time)
+  if (updates.stage === 'done') {
+    const { data: current } = await supabase
+      .from('deals')
+      .select('installation_date')
+      .eq('id', id)
+      .eq('company_id', companyId)
+      .single()
+    if (current?.installation_date == null) {
+      updates.installation_date = new Date().toISOString()
+    }
+  }
+  
   const { data, error } = await supabase
     .from('deals')
-    .update(updates)
+    .update(Object.keys(updates).length > 0 ? updates : { updated_at: new Date().toISOString() })
     .eq('id', id)
     .eq('company_id', companyId) // Multi-tenant: ensure same company
     .select()
@@ -281,6 +402,18 @@ export async function PATCH(req: NextRequest) {
   // Log successful update
   await logDealEvent(req, 'update', data.id, updates, 'success')
   
+  if (data.work_type === 'railings') {
+    const { data: railingsRow } = await supabase
+      .from('deal_railings_details')
+      .select('*')
+      .eq('deal_id', data.id)
+      .single()
+    return new Response(JSON.stringify({ ...data, deal_railings_details: railingsRow }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    })
+  }
+  
   return new Response(JSON.stringify(data), {
     status: 200,
     headers: { 'Content-Type': 'application/json' }
@@ -295,8 +428,8 @@ export async function DELETE(req: NextRequest) {
   
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
   
-  // Multi-tenant: Get company_id from request
-  const companyId = getCompanyId(req)
+  // Multi-tenant: Get company_id (sync for custom JWT, async for Supabase Auth)
+  const companyId = getCompanyId(req) ?? (await getCompanyIdAsync(req)) ?? authCheck.context.companyId ?? null
   if (!companyId) return new Response('Unauthorized: No company context', { status: 401 })
   
   const { searchParams } = new URL(req.url)

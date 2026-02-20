@@ -374,17 +374,18 @@ export async function getFinanceSummary(
   // Get revenue from deals with stage='done' OR from offers with final_price
   // Strategy: Use deals.price if available, otherwise use offers.final_price
   
-  // First, get won deals (stage='done') in period
+  // Get won deals (stage='done') by installation_date for revenue attribution
   let dealsQuery = supabase
     .from('deals')
     .select('id, price, stage')
     .eq('stage', 'done')
-    .gte('created_at', from)
-    .lte('created_at', to)
+    .not('installation_date', 'is', null)
+    .gte('installation_date', from)
+    .lte('installation_date', to)
 
-  // if (companyId) {
-  //   dealsQuery = dealsQuery.eq('company_id', companyId)
-  // }
+  if (companyId) {
+    dealsQuery = dealsQuery.eq('company_id', companyId)
+  }
 
   const { data: wonDeals, error: dealsError } = await dealsQuery
 

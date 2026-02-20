@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { getCompanyId } from '@/lib/middleware/company-context'
+import { getCompanyId, getCompanyIdAsync } from '@/lib/middleware/company-context'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
 
 function env(name: string): string {
@@ -23,8 +23,8 @@ export async function GET(req: NextRequest) {
   
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
   
-  // Multi-tenant: Get company_id from request
-  const companyId = getCompanyId(req)
+  // Multi-tenant: Get company_id (sync for custom JWT, async for Supabase Auth)
+  const companyId = getCompanyId(req) ?? (await getCompanyIdAsync(req)) ?? authCheck.context.companyId ?? null
   if (!companyId) return new Response('Unauthorized: No company context', { status: 401 })
   
   const { searchParams } = new URL(req.url)
@@ -78,8 +78,8 @@ export async function PATCH(req: NextRequest) {
   
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
   
-  // Multi-tenant: Get company_id from request
-  const companyId = getCompanyId(req)
+  // Multi-tenant: Get company_id (sync for custom JWT, async for Supabase Auth)
+  const companyId = getCompanyId(req) ?? (await getCompanyIdAsync(req)) ?? authCheck.context.companyId ?? null
   if (!companyId) return new Response('Unauthorized: No company context', { status: 401 })
   
   let body: any
@@ -177,8 +177,8 @@ export async function DELETE(req: NextRequest) {
   
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
   
-  // Multi-tenant: Get company_id from request
-  const companyId = getCompanyId(req)
+  // Multi-tenant: Get company_id (sync for custom JWT, async for Supabase Auth)
+  const companyId = getCompanyId(req) ?? (await getCompanyIdAsync(req)) ?? authCheck.context.companyId ?? null
   if (!companyId) return new Response('Unauthorized: No company context', { status: 401 })
   
   const { searchParams } = new URL(req.url)

@@ -12,6 +12,9 @@ import { ProfitWidget } from '../workers/ProfitWidget'
 import { useProjectRevenue } from '@/hooks/useProjectRevenue'
 import { LaundryClosetModal } from './LaundryClosetModal'
 import { MaterialOrdersList } from './MaterialOrdersList'
+import { RailingsFormFields, type RailingsFormValue } from './RailingsFormFields'
+import { DealPaymentsWidget } from './DealPaymentsWidget'
+import { ContractorPaymentPlan } from './deals/templates/ContractorPaymentPlan'
 import { authFetch } from '@/lib/api/auth-fetch'
 
 interface DealModalProps {
@@ -42,12 +45,49 @@ export function DealModal({
   const [showLaundryClosetModal, setShowLaundryClosetModal] = useState(false)
   const [offersRefreshTrigger, setOffersRefreshTrigger] = useState(0)
   const [shiftsRefreshTrigger, setShiftsRefreshTrigger] = useState(0)
+
+  const [railingsForm, setRailingsForm] = useState<RailingsFormValue>(() => {
+    const rd = deal.deal_railings_details
+    const row = Array.isArray(rd) ? rd[0] : rd
+    return {
+      meters_total: row?.meters_total ?? null,
+      height_cm: row?.height_cm ?? null,
+      profile_type: row?.profile_type ?? '',
+      color: row?.color ?? '',
+      location_type: (row?.location_type as RailingsFormValue['location_type']) ?? 'balcony',
+      glass_type: row?.glass_type ?? '',
+      notes: row?.notes ?? '',
+    }
+  })
   
   // Get revenue from offers
   const revenue = useProjectRevenue(deal.id)
 
   useEffect(() => {
     setLocalDeal(deal)
+    const rd = deal.deal_railings_details
+    const row = Array.isArray(rd) ? rd[0] : rd
+    if (deal.work_type === 'railings' && row) {
+      setRailingsForm({
+        meters_total: row.meters_total ?? null,
+        height_cm: row.height_cm ?? null,
+        profile_type: row.profile_type ?? '',
+        color: row.color ?? '',
+        location_type: (row.location_type as RailingsFormValue['location_type']) ?? 'balcony',
+        glass_type: row.glass_type ?? '',
+        notes: row.notes ?? '',
+      })
+    } else if (deal.work_type === 'railings') {
+      setRailingsForm({
+        meters_total: null,
+        height_cm: null,
+        profile_type: '',
+        color: '',
+        location_type: 'balcony',
+        glass_type: '',
+        notes: '',
+      })
+    }
   }, [deal])
 
   async function handleSave() {
@@ -101,7 +141,38 @@ export function DealModal({
       if (localDeal.laundry_model !== deal.laundry_model) updates.laundry_model = localDeal.laundry_model
       if (localDeal.laundry_distance !== deal.laundry_distance) updates.laundry_distance = localDeal.laundry_distance
       if (localDeal.laundry_lighting !== deal.laundry_lighting) updates.laundry_lighting = localDeal.laundry_lighting
-      
+      if (localDeal.work_type !== deal.work_type) updates.work_type = localDeal.work_type
+      if (localDeal.customer_type !== deal.customer_type) updates.customer_type = localDeal.customer_type
+      if (localDeal.pricing_model !== deal.pricing_model) updates.pricing_model = localDeal.pricing_model
+      if (JSON.stringify(localDeal.contractor_payment_profile) !== JSON.stringify(deal.contractor_payment_profile)) {
+        updates.contractor_payment_profile = localDeal.contractor_payment_profile
+      }
+
+      if (localDeal.work_type === 'railings' && railingsForm) {
+        updates.meters_total = railingsForm.meters_total ?? undefined
+        updates.height_cm = railingsForm.height_cm ?? undefined
+        updates.profile_type = railingsForm.profile_type || undefined
+        updates.color = railingsForm.color || undefined
+        updates.location_type = railingsForm.location_type
+        updates.glass_type = railingsForm.glass_type || undefined
+        updates.railings_notes = railingsForm.notes || undefined
+      }
+
+      if (localDeal.work_type === 'railings') {
+        if (!railingsForm.meters_total || railingsForm.meters_total <= 0) {
+          alert(`${t.deals.metersTotal} ${t.deals.required}`)
+          return
+        }
+        if (!railingsForm.profile_type?.trim()) {
+          alert(`${t.deals.profileType} ${t.deals.required}`)
+          return
+        }
+        if (!railingsForm.color?.trim()) {
+          alert(`${t.deals.color} ${t.deals.required}`)
+          return
+        }
+      }
+
       // Проверяем, что есть хотя бы одно поле для обновления
       if (Object.keys(updates).length === 0) {
         onClose()
@@ -238,6 +309,44 @@ export function DealModal({
           {/* Project Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
+              <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.customerType}</label>
+              <select
+                value={localDeal.customer_type || 'private'}
+                onChange={(e) => updateField('customer_type', (e.target.value || 'private') as 'private' | 'contractor')}
+                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
+              >
+                <option value="private">{t.deals.customerTypes.private}</option>
+                <option value="contractor">{t.deals.customerTypes.contractor}</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.workType}</label>
+              <select
+                value={localDeal.work_type || 'pergola'}
+                onChange={(e) => updateField('work_type', (e.target.value || 'pergola') as 'pergola' | 'railings' | 'gates' | 'facade' | 'other')}
+                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
+              >
+                <option value="pergola">{t.deals.workTypes.pergola}</option>
+                <option value="railings">{t.deals.workTypes.railings}</option>
+                <option value="gates">{t.deals.workTypes.gates}</option>
+                <option value="facade">{t.deals.workTypes.facade}</option>
+                <option value="other">{t.deals.workTypes.other}</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.pricingModel}</label>
+              <select
+                value={localDeal.pricing_model || 'fixed'}
+                onChange={(e) => updateField('pricing_model', (e.target.value || 'fixed') as 'fixed' | 'per_meter' | 'per_sqm' | 'custom')}
+                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
+              >
+                <option value="fixed">{t.deals.pricingModels.fixed}</option>
+                <option value="per_meter">{t.deals.pricingModels.per_meter}</option>
+                <option value="per_sqm">{t.deals.pricingModels.per_sqm}</option>
+                <option value="custom">{t.deals.pricingModels.custom}</option>
+              </select>
+            </div>
+            <div>
               <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.projectType}</label>
               <select
                 value={localDeal.project_type || ''}
@@ -274,38 +383,42 @@ export function DealModal({
                 ))}
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.width}</label>
-              <input
-                type="number"
-                value={localDeal.width || ''}
-                onChange={(e) => updateField('width', e.target.value ? parseFloat(e.target.value) : null)}
-                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
-                placeholder="0"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.depth}</label>
-              <input
-                type="number"
-                value={localDeal.depth || ''}
-                onChange={(e) => updateField('depth', e.target.value ? parseFloat(e.target.value) : null)}
-                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
-                placeholder="0"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.shape}</label>
-              <select
-                value={localDeal.shape || ''}
-                onChange={(e) => updateField('shape', (e.target.value || null) as any)}
-                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
-              >
-                <option value="">-</option>
-                <option value="прямоугольник">{t.deals.rectangle}</option>
-                <option value="Г-образная">{t.deals.lShape}</option>
-              </select>
-            </div>
+            {localDeal.work_type !== 'railings' && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.width}</label>
+                  <input
+                    type="number"
+                    value={localDeal.width || ''}
+                    onChange={(e) => updateField('width', e.target.value ? parseFloat(e.target.value) : null)}
+                    className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.depth}</label>
+                  <input
+                    type="number"
+                    value={localDeal.depth || ''}
+                    onChange={(e) => updateField('depth', e.target.value ? parseFloat(e.target.value) : null)}
+                    className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.shape}</label>
+                  <select
+                    value={localDeal.shape || ''}
+                    onChange={(e) => updateField('shape', (e.target.value || null) as any)}
+                    className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
+                  >
+                    <option value="">-</option>
+                    <option value="прямоугольник">{t.deals.rectangle}</option>
+                    <option value="Г-образная">{t.deals.lShape}</option>
+                  </select>
+                </div>
+              </>
+            )}
             <div>
               <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.price}</label>
               <input
@@ -370,7 +483,7 @@ export function DealModal({
                 className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
               />
             </div>
-            {localDeal.project_type !== 'laundry_closet' && (
+            {localDeal.project_type !== 'laundry_closet' && localDeal.work_type !== 'railings' && (
               <div>
                 <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.lighting}</label>
                 <input
@@ -483,6 +596,28 @@ export function DealModal({
             </div>
           </div>
 
+          {/* Railings Details (when work_type is railings) */}
+          {localDeal.work_type === 'railings' && (
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-4">{t.deals.railingsDetails}</h3>
+              <RailingsFormFields
+                value={railingsForm}
+                onChange={setRailingsForm}
+                readOnly={false}
+                translations={{
+                  metersTotal: t.deals.metersTotal,
+                  heightCm: t.deals.heightCm,
+                  profileType: t.deals.profileType,
+                  color: t.deals.color,
+                  locationType: t.deals.locationType,
+                  glassType: t.deals.glassType,
+                  notes: t.deals.notes,
+                  required: t.deals.required,
+                }}
+              />
+            </div>
+          )}
+
           {/* Notes */}
           <div>
             <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.notes}</label>
@@ -494,15 +629,17 @@ export function DealModal({
             />
           </div>
 
-          {/* Sketch & Offers Buttons */}
+          {/* Sketch & Offers Buttons (hide sketch for railings) */}
           <div className="pt-4 border-t border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <button
-              onClick={() => setShowSketchModal(true)}
-              className="px-4 py-2 rounded-lg bg-amber-600/20 hover:bg-amber-600/30 text-amber-200 font-medium flex items-center justify-center gap-2"
-            >
-              <FileImage className="w-4 h-4" />
-              {t.deals.openSketch}
-            </button>
+            {localDeal.work_type !== 'railings' && (
+              <button
+                onClick={() => setShowSketchModal(true)}
+                className="px-4 py-2 rounded-lg bg-amber-600/20 hover:bg-amber-600/30 text-amber-200 font-medium flex items-center justify-center gap-2"
+              >
+                <FileImage className="w-4 h-4" />
+                {t.deals.openSketch}
+              </button>
+            )}
             <button
               onClick={() => setShowOfferModal(true)}
               className="px-4 py-2 rounded-lg bg-green-600/20 hover:bg-green-600/30 text-green-200 font-medium flex items-center justify-center gap-2"
@@ -530,6 +667,34 @@ export function DealModal({
               <MaterialOrdersList dealId={deal.id} adminToken={adminToken} />
             </div>
           )}
+
+          {/* Payment Plan (contractor only) */}
+          {localDeal.customer_type === 'contractor' && (
+            <div className="pt-4 border-t border-white/10">
+              <ContractorPaymentPlan
+                profile={localDeal.contractor_payment_profile}
+                totalPrice={localDeal.price}
+                formatCurrency={formatCurrency}
+              />
+            </div>
+          )}
+
+          {/* Payments Widget */}
+          <div className="pt-4 border-t border-white/10">
+            <DealPaymentsWidget
+              dealId={deal.id}
+              dealPrice={localDeal.price}
+              formatCurrency={formatCurrency}
+              translations={{
+                title: t.deals.payments,
+                totalPaid: t.deals.totalPaid,
+                paidThisMonth: t.deals.paidThisMonth,
+                paidLastMonth: t.deals.paidLastMonth,
+                percentOfPrice: t.deals.percentOfPrice,
+                addPayment: t.deals.addPayment,
+              }}
+            />
+          </div>
 
           {/* Profit Widget */}
           <div className="pt-4 border-t border-white/10">

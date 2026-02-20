@@ -5,6 +5,7 @@ import { useCRMTranslations } from './useCRMTranslations'
 
 interface KanbanBoardProps {
   deals: Deal[]
+  paymentsMap?: Record<string, number>
   onDragOver: (e: React.DragEvent) => void
   onDrop: (stage: string) => void
   onDealDragStart: (deal: Deal) => void
@@ -13,6 +14,7 @@ interface KanbanBoardProps {
 
 export function KanbanBoard({
   deals,
+  paymentsMap = {},
   onDragOver,
   onDrop,
   onDealDragStart,
@@ -40,6 +42,7 @@ export function KanbanBoard({
               key={stage.id}
               stage={stage}
               deals={stageDeals}
+              paymentsMap={paymentsMap}
               onDragOver={onDragOver}
               onDrop={() => onDrop(stage.id)}
               onDealDragStart={onDealDragStart}

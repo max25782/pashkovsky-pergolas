@@ -28,10 +28,10 @@ export function useDeals({
     try {
       const supabase = createClient()
       
-      // Start with base query
+      // Start with base query (include deal_railings_details for railings work type)
       let query = supabase
         .from('deals')
-        .select('*')
+        .select('*, deal_railings_details(*)')
         .order('created_at', { ascending: false })
       
       // Apply filters

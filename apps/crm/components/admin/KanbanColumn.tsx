@@ -6,6 +6,7 @@ import { useCRMTranslations } from './useCRMTranslations'
 interface KanbanColumnProps {
   stage: { id: string; label: string; color: string }
   deals: Deal[]
+  paymentsMap?: Record<string, number>
   onDragOver: (e: React.DragEvent) => void
   onDrop: () => void
   onDealDragStart: (deal: Deal) => void
@@ -15,6 +16,7 @@ interface KanbanColumnProps {
 export function KanbanColumn({
   stage,
   deals,
+  paymentsMap = {},
   onDragOver,
   onDrop,
   onDealDragStart,
@@ -41,6 +43,7 @@ export function KanbanColumn({
             <DealCard
               key={deal.id}
               deal={deal}
+              paidToDate={paymentsMap[deal.id]}
               onDragStart={() => onDealDragStart(deal)}
               onClick={() => onDealClick(deal)}
               formatCurrency={formatCurrency}

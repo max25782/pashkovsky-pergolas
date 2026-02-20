@@ -3,6 +3,7 @@ import { useState } from "react"
 import type { Deal } from './deal-types'
 import { getStages } from './deal-types'
 import { useCRMTranslations } from './useCRMTranslations'
+import { RailingsFormFields, type RailingsFormValue } from './RailingsFormFields'
 
 interface CreateDealModalProps {
   onClose: () => void
@@ -15,6 +16,18 @@ export function CreateDealModal({
 }: CreateDealModalProps) {
   const t = useCRMTranslations()
   const stages = getStages(t.deals)
+  const [customerType, setCustomerType] = useState<'private' | 'contractor'>('private')
+  const [workType, setWorkType] = useState<'pergola' | 'railings' | 'gates' | 'facade' | 'other'>('pergola')
+  const [pricingModel, setPricingModel] = useState<'fixed' | 'per_meter' | 'per_sqm' | 'custom'>('fixed')
+  const [railingsForm, setRailingsForm] = useState<RailingsFormValue>({
+    meters_total: null,
+    height_cm: null,
+    profile_type: '',
+    color: '',
+    location_type: 'balcony',
+    glass_type: '',
+    notes: '',
+  })
   const [dealData, setDealData] = useState<Partial<Deal>>({
     stage: 'new',
     project_type: null,
@@ -69,17 +82,44 @@ export function CreateDealModal({
       return
     }
 
+    if (workType === 'railings') {
+      if (!railingsForm.meters_total || railingsForm.meters_total <= 0) {
+        alert(t.deals.metersTotal ? `${t.deals.metersTotal} ${t.deals.required}` : 'Meters total is required')
+        return
+      }
+      if (!railingsForm.profile_type?.trim()) {
+        alert(t.deals.profileType ? `${t.deals.profileType} ${t.deals.required}` : 'Profile type is required')
+        return
+      }
+      if (!railingsForm.color?.trim()) {
+        alert(t.deals.color ? `${t.deals.color} ${t.deals.required}` : 'Color is required')
+        return
+      }
+    }
+
     setSaving(true)
     try {
-      // Преобразуем даты в правильный формат перед отправкой
-      const dealToCreate = {
+      const dealToCreate: Record<string, unknown> = {
         ...dealData,
+        customer_type: customerType,
+        work_type: workType,
+        pricing_model: pricingModel,
+        contractor_payment_profile: customerType === 'contractor' ? { preset: '10_20_30_30_10' } : null,
         order_date: dealData.order_date ? formatDateForDB(dealData.order_date) : null,
         material_order_date: dealData.material_order_date ? formatDateForDB(dealData.material_order_date) : null,
         material_received_date: dealData.material_received_date ? formatDateForDB(dealData.material_received_date) : null,
         installation_date: dealData.installation_date ? formatDateForDB(dealData.installation_date) : null,
       }
-      await onCreate(dealToCreate)
+      if (workType === 'railings') {
+        dealToCreate.meters_total = railingsForm.meters_total
+        dealToCreate.height_cm = railingsForm.height_cm
+        dealToCreate.profile_type = railingsForm.profile_type
+        dealToCreate.color = railingsForm.color
+        dealToCreate.location_type = railingsForm.location_type
+        dealToCreate.glass_type = railingsForm.glass_type || null
+        dealToCreate.railings_notes = railingsForm.notes || null
+      }
+      await onCreate(dealToCreate as Partial<Deal>)
       onClose()
     } catch (e) {
       console.error('Create error:', e)
@@ -108,6 +148,74 @@ export function CreateDealModal({
         </div>
 
         <div className="p-6 space-y-6">
+          {/* Step 1: Customer Type */}
+          <div>
+            <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.customerType}</label>
+            <select
+              value={customerType}
+              onChange={(e) => setCustomerType((e.target.value || 'private') as 'private' | 'contractor')}
+              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
+            >
+              <option value="private">{t.deals.customerTypes.private}</option>
+              <option value="contractor">{t.deals.customerTypes.contractor}</option>
+            </select>
+          </div>
+
+          {/* Step 2: Work Type */}
+          <div>
+            <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.workType}</label>
+            <select
+              value={workType}
+              onChange={(e) => setWorkType((e.target.value || 'pergola') as 'pergola' | 'railings' | 'gates' | 'facade' | 'other')}
+              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
+            >
+              <option value="pergola">{t.deals.workTypes.pergola}</option>
+              <option value="railings">{t.deals.workTypes.railings}</option>
+              <option value="gates">{t.deals.workTypes.gates}</option>
+              <option value="facade">{t.deals.workTypes.facade}</option>
+              <option value="other">{t.deals.workTypes.other}</option>
+            </select>
+          </div>
+
+          {/* Pricing Model (for contractor or railings with per_meter) */}
+          {(customerType === 'contractor' || workType === 'railings') && (
+            <div>
+              <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.pricingModel}</label>
+              <select
+                value={pricingModel}
+                onChange={(e) => setPricingModel((e.target.value || 'fixed') as 'fixed' | 'per_meter' | 'per_sqm' | 'custom')}
+                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
+              >
+                <option value="fixed">{t.deals.pricingModels.fixed}</option>
+                <option value="per_meter">{t.deals.pricingModels.per_meter}</option>
+                <option value="per_sqm">{t.deals.pricingModels.per_sqm}</option>
+                <option value="custom">{t.deals.pricingModels.custom}</option>
+              </select>
+            </div>
+          )}
+
+          {/* Railings Form (when work type is railings) */}
+          {workType === 'railings' && (
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-4">{t.deals.railingsDetails}</h3>
+              <RailingsFormFields
+                value={railingsForm}
+                onChange={setRailingsForm}
+                readOnly={false}
+                translations={{
+                  metersTotal: t.deals.metersTotal,
+                  heightCm: t.deals.heightCm,
+                  profileType: t.deals.profileType,
+                  color: t.deals.color,
+                  locationType: t.deals.locationType,
+                  glassType: t.deals.glassType,
+                  notes: t.deals.notes,
+                  required: t.deals.required,
+                }}
+              />
+            </div>
+          )}
+
           {/* Customer Info */}
           <div>
             <h3 className="text-lg font-semibold text-white mb-4">{t.deals.customerInfo}</h3>
@@ -158,7 +266,7 @@ export function CreateDealModal({
             </div>
           </div>
 
-          {/* Project Info */}
+          {/* Project Info (pergola/other: width, depth, shape, etc.; railings: price, my_cost, dates) */}
           <div>
             <h3 className="text-lg font-semibold text-white mb-4">{t.deals.projectInfo}</h3>
             <div className="grid grid-cols-2 gap-4">
@@ -190,38 +298,42 @@ export function CreateDealModal({
                   ))}
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.width}</label>
-                <input
-                  type="number"
-                  value={dealData.width || ''}
-                  onChange={(e) => updateField('width', e.target.value ? parseFloat(e.target.value) : null)}
-                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.depth}</label>
-                <input
-                  type="number"
-                  value={dealData.depth || ''}
-                  onChange={(e) => updateField('depth', e.target.value ? parseFloat(e.target.value) : null)}
-                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.shape}</label>
-                <select
-                  value={dealData.shape || ''}
-                  onChange={(e) => updateField('shape', (e.target.value || null) as any)}
-                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
-                >
-                  <option value="">-</option>
-                  <option value="прямоугольник">{t.deals.rectangle}</option>
-                  <option value="Г-образная">{t.deals.lShape}</option>
-                </select>
-              </div>
+              {workType !== 'railings' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.width}</label>
+                    <input
+                      type="number"
+                      value={dealData.width || ''}
+                      onChange={(e) => updateField('width', e.target.value ? parseFloat(e.target.value) : null)}
+                      className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.depth}</label>
+                    <input
+                      type="number"
+                      value={dealData.depth || ''}
+                      onChange={(e) => updateField('depth', e.target.value ? parseFloat(e.target.value) : null)}
+                      className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.shape}</label>
+                    <select
+                      value={dealData.shape || ''}
+                      onChange={(e) => updateField('shape', (e.target.value || null) as any)}
+                      className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
+                    >
+                      <option value="">-</option>
+                      <option value="прямоугольник">{t.deals.rectangle}</option>
+                      <option value="Г-образная">{t.deals.lShape}</option>
+                    </select>
+                  </div>
+                </>
+              )}
               <div>
                 <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.price}</label>
                 <input
@@ -278,15 +390,17 @@ export function CreateDealModal({
                   className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.lighting}</label>
-                <input
-                  value={dealData.lighting || ''}
-                  onChange={(e) => updateField('lighting', e.target.value || null)}
-                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
-                  placeholder={t.deals.lighting}
-                />
-              </div>
+              {workType !== 'railings' && (
+                <div>
+                  <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.lighting}</label>
+                  <input
+                    value={dealData.lighting || ''}
+                    onChange={(e) => updateField('lighting', e.target.value || null)}
+                    className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
+                    placeholder={t.deals.lighting}
+                  />
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.material}</label>
                 <input

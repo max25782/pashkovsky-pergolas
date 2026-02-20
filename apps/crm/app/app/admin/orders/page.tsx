@@ -38,6 +38,10 @@ interface Order {
   source: string
   created_at: string
   order_items: OrderItem[]
+  notes?: string
+  customer_notes?: string
+  delivery_date?: string
+  payment_status?: string
 }
 
 export default function OrdersPage() {

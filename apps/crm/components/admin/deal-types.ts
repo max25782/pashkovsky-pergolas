@@ -1,5 +1,35 @@
+export type WorkType = 'pergola' | 'railings' | 'gates' | 'facade' | 'other'
+export type CustomerType = 'private' | 'contractor'
+export type PricingModel = 'fixed' | 'per_meter' | 'per_sqm' | 'custom'
+
+export interface ContractorPaymentProfile {
+  preset?: '10_20_30_30_10' | 'custom'
+  stages?: Array<{ percent: number; label?: string; expected_amount?: number }>
+  notes?: string
+}
+
+export interface DealRailingsDetails {
+  deal_id: string
+  company_id: string
+  meters_total: number
+  height_cm?: number | null
+  profile_type: string
+  color: string
+  location_type: 'balcony' | 'stairs' | 'roof' | 'yard' | 'other'
+  glass_type?: string | null
+  railing_type?: string | null
+  material?: string | null
+  notes?: string | null
+  created_at?: string
+  updated_at?: string
+}
+
 export interface Deal {
   id: string
+  work_type?: WorkType | null
+  customer_type?: CustomerType | null
+  pricing_model?: PricingModel | null
+  contractor_payment_profile?: ContractorPaymentProfile | null
   lead_id?: string | null
   customer_name?: string | null
   customer_phone?: string | null
@@ -30,8 +60,17 @@ export interface Deal {
   manager?: string | null
   sketch_image_url?: string | null
   sketch_json?: any
+  deal_railings_details?: DealRailingsDetails | null
   created_at?: string | null
   updated_at?: string | null
+  // Railings fields (for PATCH payload when work_type is railings)
+  meters_total?: number | null
+  height_cm?: number | null
+  profile_type?: string | null
+  color?: string | null
+  location_type?: DealRailingsDetails['location_type'] | null
+  glass_type?: string | null
+  railings_notes?: string | null
 }
 
 // Base stages with colors (labels will be translated)

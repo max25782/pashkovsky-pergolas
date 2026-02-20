@@ -3,6 +3,7 @@ import { useCRMTranslations } from './useCRMTranslations'
 
 interface DealCardProps {
   deal: Deal
+  paidToDate?: number
   onDragStart: () => void
   onClick: () => void
   formatCurrency: (amount: number | null | undefined) => string
@@ -11,6 +12,7 @@ interface DealCardProps {
 
 export function DealCard({ 
   deal, 
+  paidToDate,
   onDragStart, 
   onClick,
   formatCurrency,
@@ -50,6 +52,12 @@ export function DealCard({
         {deal.price && (
           <div className="text-lg font-bold text-green-400">
             {formatCurrency(deal.price)}
+          </div>
+        )}
+        {deal.customer_type === 'contractor' && (paidToDate != null || deal.price) && (
+          <div className="text-xs text-white/60 space-y-0.5">
+            <div>{t.deals.paidToDate}: {formatCurrency(paidToDate ?? 0)}</div>
+            <div>{t.deals.remaining}: {formatCurrency((deal.price ?? 0) - (paidToDate ?? 0))}</div>
           </div>
         )}
         

@@ -88,13 +88,15 @@ async function collectMonthlyData(companyId: string, dateRange: { start: Date; e
   const startISO = dateRange.start.toISOString()
   const endISO = dateRange.end.toISOString()
   
-  // Fetch deals
+  // Fetch deals by installation_date (revenue attribution by installation month)
   const { data: deals } = await supabase
     .from('deals')
     .select('*')
     .eq('company_id', companyId)
-    .gte('created_at', startISO)
-    .lte('created_at', endISO)
+    .eq('stage', 'done')
+    .not('installation_date', 'is', null)
+    .gte('installation_date', startISO)
+    .lte('installation_date', endISO)
   
   // Fetch leads
   const { data: leads } = await supabase
@@ -128,11 +130,12 @@ async function collectMonthlyData(companyId: string, dateRange: { start: Date; e
     conversion: 0,
   }
   
-  deals?.forEach((deal) => {
-    dealsData.byStatus[deal.status] = (dealsData.byStatus[deal.status] || 0) + 1
-    if (deal.estimated_value) dealsData.totalValue += parseFloat(deal.estimated_value)
-    if (deal.status === 'new') dealsData.new++
-    if (deal.status === 'closed') dealsData.closed++
+  deals?.forEach((deal: { stage?: string; price?: string | number }) => {
+    const stage = deal.stage ?? 'unknown'
+    dealsData.byStatus[stage] = (dealsData.byStatus[stage] || 0) + 1
+    if (deal.price) dealsData.totalValue += parseFloat(String(deal.price))
+    if (stage === 'new') dealsData.new++
+    if (stage === 'done') dealsData.closed++
   })
   
   dealsData.avgValue = dealsData.total > 0 ? dealsData.totalValue / dealsData.total : 0

@@ -23,20 +23,36 @@ export function useDealActions({
       console.log('[useDealActions] Updating deal:', id, updates)
       
       const supabase = createClient()
-      const { data, error } = await supabase
-        .from('deals')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single()
-      
-      if (error) {
-        throw new Error(error.message)
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        throw new Error('User not authenticated')
       }
       
+      const res = await fetch('/admin-api/deals', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ id, ...updates }),
+      })
+      
+      const responseText = await res.text()
+      if (!res.ok) {
+        let errorMessage = `Update failed: ${res.status}`
+        try {
+          const errorData = JSON.parse(responseText)
+          errorMessage = errorData.error || errorData.message || errorMessage
+        } catch {
+          errorMessage = responseText || errorMessage
+        }
+        throw new Error(errorMessage)
+      }
+      
+      const data = JSON.parse(responseText) as Deal
       console.log('[useDealActions] Updated deal:', data)
-      onUpdate?.(data as Deal)
-      return data as Deal
+      onUpdate?.(data)
+      return data
     } catch (e: any) {
       console.error('[useDealActions] Patch error:', e)
       const error = e instanceof Error ? e : new Error(String(e))
@@ -83,42 +99,38 @@ export function useDealActions({
     setCreating(true)
     try {
       console.log('[useDealActions] Creating deal:', dealData)
-      
+
       const supabase = createClient()
-      
-      // Get current user's company_id from company_members
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
         throw new Error('User not authenticated')
       }
-      
-      const { data: membership } = await supabase
-        .from('company_members')
-        .select('company_id')
-        .eq('user_id', user.id)
-        .single()
-      
-      if (!membership?.company_id) {
-        throw new Error('User not associated with a company')
+
+      const res = await fetch('/admin-api/deals', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(dealData),
+      })
+
+      const responseText = await res.text()
+      if (!res.ok) {
+        let errorMessage = `Create failed: ${res.status}`
+        try {
+          const errorData = JSON.parse(responseText)
+          errorMessage = errorData.error || errorData.message || errorMessage
+        } catch {
+          errorMessage = responseText || errorMessage
+        }
+        throw new Error(errorMessage)
       }
-      
-      // Create deal with company_id
-      const { data, error } = await supabase
-        .from('deals')
-        .insert({
-          ...dealData,
-          company_id: membership.company_id
-        })
-        .select()
-        .single()
-      
-      if (error) {
-        throw new Error(error.message)
-      }
-      
+
+      const data = JSON.parse(responseText) as Deal
       console.log('[useDealActions] Created deal:', data)
-      onUpdate?.(data as Deal)
-      return data as Deal
+      onUpdate?.(data)
+      return data
     } catch (e: any) {
       console.error('[useDealActions] Create error:', e)
       const error = e instanceof Error ? e : new Error(String(e))

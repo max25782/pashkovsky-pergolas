@@ -90,7 +90,51 @@ export interface CRMTranslations {
       gates: string
       windows: string
       laundry_closet: string
+    },
+    workType: string
+    workTypes: {
+      pergola: string
+      railings: string
+      gates: string
+      facade: string
+      other: string
     }
+    customerType: string
+    customerTypes: {
+      private: string
+      contractor: string
+    }
+    pricingModel: string
+    pricingModels: {
+      fixed: string
+      per_meter: string
+      per_sqm: string
+      custom: string
+    }
+    paymentPlan: string
+    paymentPlanPreset: string
+    railingsDetails: string
+    metersTotal: string
+    heightCm: string
+    profileType: string
+    color: string
+    locationType: string
+    glassType: string
+    locationTypes: {
+      balcony: string
+      stairs: string
+      roof: string
+      yard: string
+      other: string
+    }
+    payments: string
+    totalPaid: string
+    paidThisMonth: string
+    paidLastMonth: string
+    percentOfPrice: string
+    addPayment: string
+    paidToDate: string
+    remaining: string
     stages: {
       new: string
       measure: string
@@ -264,6 +308,50 @@ export function getCRMTranslations(locale: Locale): CRMTranslations {
           windows: 'Окна',
           laundry_closet: 'Шкаф для стирки',
         },
+        workType: 'Тип работы',
+        workTypes: {
+          pergola: 'Пергола',
+          railings: 'Перила (מעקות)',
+          gates: 'Ворота',
+          facade: 'Фасад',
+          other: 'Другое',
+        },
+        customerType: 'Тип клиента',
+        customerTypes: {
+          private: 'Частный',
+          contractor: 'Подрядчик',
+        },
+        pricingModel: 'Модель ценообразования',
+        pricingModels: {
+          fixed: 'Фиксированная',
+          per_meter: 'За метр',
+          per_sqm: 'За м²',
+          custom: 'Индивидуальная',
+        },
+        paymentPlan: 'План платежей',
+        paymentPlanPreset: '10/20/30/30/10',
+        railingsDetails: 'Детали перил',
+        metersTotal: 'Метров всего',
+        heightCm: 'Высота (см)',
+        profileType: 'Тип профиля',
+        color: 'Цвет',
+        locationType: 'Расположение',
+        glassType: 'Тип стекла',
+        locationTypes: {
+          balcony: 'Балкон',
+          stairs: 'Лестница',
+          roof: 'Крыша',
+          yard: 'Двор',
+          other: 'Другое',
+        },
+        payments: 'Платежи',
+        totalPaid: 'Всего оплачено',
+        paidThisMonth: 'В этом месяце',
+        paidLastMonth: 'В прошлом месяце',
+        percentOfPrice: '% от цены',
+        addPayment: 'Добавить платёж',
+        paidToDate: 'Оплачено',
+        remaining: 'Остаток',
         stages: {
           new: 'Новая',
           measure: 'Замер',
@@ -427,6 +515,50 @@ export function getCRMTranslations(locale: Locale): CRMTranslations {
           windows: 'Windows',
           laundry_closet: 'Laundry Closet',
         },
+        workType: 'Work Type',
+        workTypes: {
+          pergola: 'Pergola',
+          railings: 'Railings',
+          gates: 'Gates',
+          facade: 'Facade',
+          other: 'Other',
+        },
+        customerType: 'Customer Type',
+        customerTypes: {
+          private: 'Private',
+          contractor: 'Contractor',
+        },
+        pricingModel: 'Pricing Model',
+        pricingModels: {
+          fixed: 'Fixed',
+          per_meter: 'Per Meter',
+          per_sqm: 'Per m²',
+          custom: 'Custom',
+        },
+        paymentPlan: 'Payment Plan',
+        paymentPlanPreset: '10/20/30/30/10',
+        railingsDetails: 'Railings Details',
+        metersTotal: 'Meters Total',
+        heightCm: 'Height (cm)',
+        profileType: 'Profile Type',
+        color: 'Color',
+        locationType: 'Location',
+        glassType: 'Glass Type',
+        locationTypes: {
+          balcony: 'Balcony',
+          stairs: 'Stairs',
+          roof: 'Roof',
+          yard: 'Yard',
+          other: 'Other',
+        },
+        payments: 'Payments',
+        totalPaid: 'Total Paid',
+        paidThisMonth: 'This Month',
+        paidLastMonth: 'Last Month',
+        percentOfPrice: '% of Price',
+        addPayment: 'Add Payment',
+        paidToDate: 'Paid to Date',
+        remaining: 'Remaining',
         stages: {
           new: 'New',
           measure: 'Measure',
@@ -583,14 +715,58 @@ export function getCRMTranslations(locale: Locale): CRMTranslations {
       shekel: '₪',
       rectangle: 'מלבן',
       lShape: 'L-צורה',
-      projectTypes: {
-        pergola: 'פרגולה',
-        railing: 'מעקה',
-        gates: 'שערים',
-        windows: 'חלונות',
-        laundry_closet: 'מסתור כביסה',
-      },
-      stages: {
+        projectTypes: {
+          pergola: 'פרגולה',
+          railing: 'מעקה',
+          gates: 'שערים',
+          windows: 'חלונות',
+          laundry_closet: 'מסתור כביסה',
+        },
+        workType: 'סוג עבודה',
+        workTypes: {
+          pergola: 'פרגולה',
+          railings: 'מעקות',
+          gates: 'שערים',
+          facade: 'חזית',
+          other: 'אחר',
+        },
+        customerType: 'סוג לקוח',
+        customerTypes: {
+          private: 'פרטי',
+          contractor: 'קבלן',
+        },
+        pricingModel: 'מודל תמחור',
+        pricingModels: {
+          fixed: 'קבוע',
+          per_meter: 'למטר',
+          per_sqm: 'למ"ר',
+          custom: 'מותאם',
+        },
+        paymentPlan: 'תוכנית תשלומים',
+        paymentPlanPreset: '10/20/30/30/10',
+        railingsDetails: 'פרטי מעקות',
+        metersTotal: 'מטרים סה"כ',
+        heightCm: 'גובה (ס"מ)',
+        profileType: 'סוג פרופיל',
+        color: 'צבע',
+        locationType: 'מיקום',
+        glassType: 'סוג זכוכית',
+        locationTypes: {
+          balcony: 'מרפסת',
+          stairs: 'מדרגות',
+          roof: 'גג',
+          yard: 'חצר',
+          other: 'אחר',
+        },
+        payments: 'תשלומים',
+        totalPaid: 'סה"כ שולם',
+        paidThisMonth: 'החודש',
+        paidLastMonth: 'חודש שעבר',
+        percentOfPrice: '% מהמחיר',
+        addPayment: 'הוסף תשלום',
+        paidToDate: 'שולם עד כה',
+        remaining: 'נותר',
+        stages: {
         new: 'חדש',
         measure: 'מדידה',
         offer: 'הצעת מחיר',

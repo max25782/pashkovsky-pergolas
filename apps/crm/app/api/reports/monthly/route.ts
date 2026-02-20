@@ -35,12 +35,14 @@ export async function GET(req: NextRequest) {
     const startDate = `${year}-${String(monthNum).padStart(2, '0')}-01`
     const endDate = new Date(year, monthNum, 0).toISOString().split('T')[0] // Last day of month
 
-    // Get all deals created in this month
+    // Get completed deals by installation_date (revenue attribution by installation month)
     const { data: dealsData, error: dealsError } = await supabase
       .from('deals')
-      .select('id, customer_name, created_at, price, final_amount, total_amount')
-      .gte('created_at', `${startDate}T00:00:00.000Z`)
-      .lte('created_at', `${endDate}T23:59:59.999Z`)
+      .select('id, customer_name, installation_date, price, final_amount, total_amount')
+      .eq('stage', 'done')
+      .not('installation_date', 'is', null)
+      .gte('installation_date', `${startDate}T00:00:00.000Z`)
+      .lte('installation_date', `${endDate}T23:59:59.999Z`)
 
     if (dealsError) {
       console.error('Error fetching deals:', dealsError)

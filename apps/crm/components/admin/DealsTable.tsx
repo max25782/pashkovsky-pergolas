@@ -12,6 +12,7 @@ import { filterDeals } from './deal-filters'
 import { useDeals } from './hooks/useDeals'
 import { useDealActions } from './hooks/useDealActions'
 import { useDealDragDrop } from './hooks/useDealDragDrop'
+import { useDealPaymentsMap } from './hooks/useDealPaymentsMap'
 
 type ViewMode = 'kanban' | 'table'
 
@@ -59,6 +60,9 @@ export function DealsTable() {
     projectTypeFilter
   })
 
+  const dealIds = deals.map((d) => d.id)
+  const paymentsMap = useDealPaymentsMap(dealIds)
+
   function handleSearchChange(value: string) {
     setQ(value)
     setPage(0)
@@ -105,6 +109,7 @@ export function DealsTable() {
         <KanbanBoard
           key={`kanban-${deals.length}-${deals.map(d => d.id).join(',')}`}
           deals={deals}
+          paymentsMap={paymentsMap}
           onDragOver={handleDragOver}
           onDrop={handleDrop}
           onDealDragStart={handleDragStart}
