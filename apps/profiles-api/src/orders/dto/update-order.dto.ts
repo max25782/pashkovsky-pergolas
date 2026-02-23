@@ -1,8 +1,23 @@
-import { IsString, IsNumber, IsOptional, IsEnum, Min, Max } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsOptional,
+  IsEnum,
+  Min,
+  Max,
+} from "class-validator";
 
 export class UpdateOrderDto {
   @IsOptional()
-  @IsEnum(['pending_price', 'priced', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled'])
+  @IsEnum([
+    "pending_price",
+    "priced",
+    "confirmed",
+    "preparing",
+    "ready",
+    "delivered",
+    "cancelled",
+  ])
   status?: string;
 
   @IsOptional()
@@ -34,7 +49,7 @@ export class UpdateOrderDto {
   delivery_date?: string;
 
   @IsOptional()
-  @IsEnum(['pending', 'paid', 'refunded'])
+  @IsEnum(["pending", "paid", "refunded"])
   payment_status?: string;
 }
 

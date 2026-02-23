@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     const authHeader = req.headers.get('authorization')
     
     // Forward request to NestJS API
-    const response = await fetch(`${PROFILES_API_URL}/orders?company_id=${companyId}`, {
+    const response = await fetch(`${PROFILES_API_URL}/orders`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -58,9 +58,15 @@ export async function GET(req: NextRequest) {
     const data = await response.json()
     return NextResponse.json(data)
   } catch (error: any) {
-    console.error('[Orders API] Error:', error)
+    const msg = error?.message || 'Internal server error'
+    const isConnectionError = /ECONNREFUSED|ENOTFOUND|ETIMEDOUT|fetch failed/i.test(String(msg))
+    console.error('[Orders API] Error:', msg, { url: PROFILES_API_URL, isConnectionError })
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      {
+        error: isConnectionError
+          ? 'Profiles API unreachable. Check PROFILES_API_URL in Vercel env.'
+          : msg,
+      },
       { status: 500 }
     )
   }

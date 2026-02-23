@@ -1,0 +1,9 @@
+
+
+> @alumincrm/app@1.0.0 lint
+> next lint
+
+[1m[36m?[39m How would you like to configure ESLint? https://nextjs.org/docs/basic-features/eslint[22m
+[?25l[36m❯ [39m [1m[4m[36mStrict[39m[24m[22m[1m[33m (recommended)[39m[22m
+   Base
+   Cancel

@@ -61,7 +61,7 @@ export function ChatWidget() {
   
   const loadHistory = async () => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_CRM_API_URL || 'http://localhost:3001'
+      const apiUrl = process.env.NEXT_PUBLIC_CRM_API_URL || 'https://crm.pashkovsky-group.com'
       const siteToken = process.env.NEXT_PUBLIC_CRM_SITE_TOKEN
       
       const res = await fetch(`${apiUrl}/api/public/ai-chat?clientId=${clientId}`, {
@@ -142,7 +142,7 @@ export function ChatWidget() {
     removeImage()
     
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_CRM_API_URL || 'http://localhost:3001'
+      const apiUrl = process.env.NEXT_PUBLIC_CRM_API_URL || 'https://crm.pashkovsky-group.com'
       const siteToken = process.env.NEXT_PUBLIC_CRM_SITE_TOKEN
       
       const formData = new FormData()

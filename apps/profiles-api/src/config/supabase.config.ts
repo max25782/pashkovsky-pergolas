@@ -1,4 +1,4 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 // Service role client (admin operations, bypasses RLS)
 let supabaseAdminClient: SupabaseClient;
@@ -10,7 +10,7 @@ export function getSupabaseAdmin(): SupabaseClient {
 
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error(
-        'Missing Supabase environment variables: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY',
+        "Missing Supabase environment variables: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY",
       );
     }
 
@@ -32,7 +32,7 @@ export function getSupabaseUser(accessToken: string): SupabaseClient {
 
   if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error(
-      'Missing Supabase environment variables: SUPABASE_URL or SUPABASE_ANON_KEY',
+      "Missing Supabase environment variables: SUPABASE_URL or SUPABASE_ANON_KEY",
     );
   }
 
@@ -54,7 +54,9 @@ export function hasProfilesAccess(companyId: string): boolean {
   const pashkovskyCompanyId = process.env.PASHKOVSKY_COMPANY_ID;
 
   if (!pashkovskyCompanyId) {
-    console.warn('PASHKOVSKY_COMPANY_ID not set - profiles access disabled for all');
+    console.warn(
+      "PASHKOVSKY_COMPANY_ID not set - profiles access disabled for all",
+    );
     return false;
   }
 

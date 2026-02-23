@@ -1,6 +1,6 @@
-import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
-import { AppModule } from './app.module';
+import { NestFactory } from "@nestjs/core";
+import { ValidationPipe } from "@nestjs/common";
+import { AppModule } from "./app.module";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -8,11 +8,11 @@ async function bootstrap() {
   // Enable CORS
   app.enableCors({
     origin: [
-      'http://localhost:3000', // CRM local
-      'http://localhost:3001', // Profiles store local (old)
-      'http://localhost:3003', // Profiles store local (new)
-      'https://crm.pashkovsky-group.com',
-      'https://profiles.pashkovsky-group.com',
+      "http://localhost:3000", // CRM local
+      "http://localhost:3001", // Profiles store local (old)
+      "http://localhost:3003", // Profiles store local (new)
+      "https://crm.pashkovsky-group.com",
+      "https://profiles.pashkovsky-group.com",
     ],
     credentials: true,
   });

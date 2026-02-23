@@ -1,66 +1,65 @@
-import { Controller, Post, Get, Patch, Body, Param, Query, BadRequestException } from '@nestjs/common';
-import { OrdersService } from './orders.service';
-import { CreateOrderDto } from './dto/create-order.dto';
-import { UpdateOrderDto, UpdateOrderItemDto } from './dto/update-order.dto';
+import {
+  Controller,
+  Post,
+  Get,
+  Patch,
+  Body,
+  Param,
+  Query,
+  BadRequestException,
+  UseGuards,
+} from "@nestjs/common";
+import { OrdersService } from "./orders.service";
+import { CreateOrderDto } from "./dto/create-order.dto";
+import { UpdateOrderDto, UpdateOrderItemDto } from "./dto/update-order.dto";
+import { AuthGuard } from "../common/guards/auth.guard";
+import { CompanyGuard } from "../common/guards/company.guard";
+import { CurrentUser, CurrentUserData } from "../common/decorators/current-user.decorator";
 
-@Controller('orders')
+@Controller("orders")
+@UseGuards(AuthGuard, CompanyGuard)
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @Get()
-  async findAll(@Query('company_id') companyId?: string) {
-    if (!companyId) {
-      throw new BadRequestException('company_id query parameter is required');
-    }
-
-    return this.ordersService.findAll(companyId);
+  async findAll(@CurrentUser() user: CurrentUserData) {
+    return this.ordersService.findAll(user.company_id);
   }
 
-  @Get(':id')
-  async findOne(@Param('id') id: string, @Query('company_id') companyId?: string) {
-    if (!companyId) {
-      throw new BadRequestException('company_id query parameter is required');
-    }
-
-    return this.ordersService.findOne(id, companyId);
+  @Get(":id")
+  async findOne(@Param("id") id: string, @CurrentUser() user: CurrentUserData) {
+    return this.ordersService.findOne(id, user.company_id);
   }
 
   @Post()
   async create(
     @Body() createOrderDto: CreateOrderDto,
-    @Query('company_id') companyId?: string,
+    @CurrentUser() user: CurrentUserData,
   ) {
-    if (!companyId) {
-      throw new BadRequestException('company_id query parameter is required');
-    }
-
-    return this.ordersService.create(createOrderDto, companyId);
+    return this.ordersService.create(createOrderDto, user.company_id);
   }
 
-  @Patch(':id')
+  @Patch(":id")
   async update(
-    @Param('id') id: string,
+    @Param("id") id: string,
     @Body() updateOrderDto: UpdateOrderDto,
-    @Query('company_id') companyId?: string,
+    @CurrentUser() user: CurrentUserData,
   ) {
-    if (!companyId) {
-      throw new BadRequestException('company_id query parameter is required');
-    }
-
-    return this.ordersService.update(id, updateOrderDto, companyId);
+    return this.ordersService.update(id, updateOrderDto, user.company_id);
   }
 
-  @Patch(':orderId/items/:itemId')
+  @Patch(":orderId/items/:itemId")
   async updateItem(
-    @Param('orderId') orderId: string,
-    @Param('itemId') itemId: string,
+    @Param("orderId") orderId: string,
+    @Param("itemId") itemId: string,
     @Body() updateItemDto: UpdateOrderItemDto,
-    @Query('company_id') companyId?: string,
+    @CurrentUser() user: CurrentUserData,
   ) {
-    if (!companyId) {
-      throw new BadRequestException('company_id query parameter is required');
-    }
-
-    return this.ordersService.updateOrderItem(orderId, itemId, updateItemDto, companyId);
+    return this.ordersService.updateOrderItem(
+      orderId,
+      itemId,
+      updateItemDto,
+      user.company_id,
+    );
   }
 }

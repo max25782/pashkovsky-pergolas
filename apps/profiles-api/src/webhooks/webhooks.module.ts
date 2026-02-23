@@ -1,5 +1,5 @@
-import { Module } from '@nestjs/common';
-import { WebhooksGateway } from './webhooks.gateway';
+import { Module } from "@nestjs/common";
+import { WebhooksGateway } from "./webhooks.gateway";
 
 @Module({
   providers: [WebhooksGateway],

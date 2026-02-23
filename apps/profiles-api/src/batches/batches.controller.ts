@@ -1,7 +1,7 @@
-import { Controller } from '@nestjs/common';
-import { BatchesService } from './batches.service';
+import { Controller } from "@nestjs/common";
+import { BatchesService } from "./batches.service";
 
-@Controller('batches')
+@Controller("batches")
 export class BatchesController {
   constructor(private readonly batchesService: BatchesService) {}
   // TODO: Implement batches endpoints in Phase 2

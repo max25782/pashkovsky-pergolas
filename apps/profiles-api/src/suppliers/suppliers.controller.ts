@@ -1,7 +1,7 @@
-import { Controller } from '@nestjs/common';
-import { SuppliersService } from './suppliers.service';
+import { Controller } from "@nestjs/common";
+import { SuppliersService } from "./suppliers.service";
 
-@Controller('suppliers')
+@Controller("suppliers")
 export class SuppliersController {
   constructor(private readonly suppliersService: SuppliersService) {}
   // TODO: Implement suppliers endpoints in Phase 4

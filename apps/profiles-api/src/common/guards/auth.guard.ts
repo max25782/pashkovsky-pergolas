@@ -3,8 +3,8 @@ import {
   CanActivate,
   ExecutionContext,
   UnauthorizedException,
-} from '@nestjs/common';
-import { getSupabaseAdmin } from '../../config/supabase.config';
+} from "@nestjs/common";
+import { getSupabaseAdmin } from "../../config/supabase.config";
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -12,8 +12,10 @@ export class AuthGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const authHeader = request.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new UnauthorizedException('Missing or invalid authorization header');
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      throw new UnauthorizedException(
+        "Missing or invalid authorization header",
+      );
     }
 
     const token = authHeader.substring(7);
@@ -26,7 +28,7 @@ export class AuthGuard implements CanActivate {
       } = await supabase.auth.getUser(token);
 
       if (error || !user) {
-        throw new UnauthorizedException('Invalid token');
+        throw new UnauthorizedException("Invalid token");
       }
 
       // Get company_id from company_members table (not from user_metadata)
@@ -34,23 +36,29 @@ export class AuthGuard implements CanActivate {
       let role: string | null = null;
 
       const { data: membership, error: memberError } = await supabase
-        .from('company_members')
-        .select('company_id, role')
-        .eq('user_id', user.id)
-        .order('joined_at', { ascending: false })
+        .from("company_members")
+        .select("company_id, role")
+        .eq("user_id", user.id)
+        .order("joined_at", { ascending: false })
         .limit(1)
         .maybeSingle();
 
       if (memberError) {
-        console.warn('[AuthGuard] Error fetching company membership:', memberError.message);
+        console.warn(
+          "[AuthGuard] Error fetching company membership:",
+          memberError.message,
+        );
       }
 
       if (!memberError && membership) {
         company_id = membership.company_id;
         role = membership.role;
-        console.log('[AuthGuard] User company_id:', company_id, 'role:', role);
+        console.log("[AuthGuard] User company_id:", company_id, "role:", role);
       } else {
-        console.warn('[AuthGuard] User not found in company_members table:', user.id);
+        console.warn(
+          "[AuthGuard] User not found in company_members table:",
+          user.id,
+        );
       }
 
       // Attach user to request
@@ -66,8 +74,8 @@ export class AuthGuard implements CanActivate {
       if (error instanceof UnauthorizedException) {
         throw error;
       }
-      console.error('[AuthGuard] Error:', error);
-      throw new UnauthorizedException('Authentication failed');
+      console.error("[AuthGuard] Error:", error);
+      throw new UnauthorizedException("Authentication failed");
     }
   }
 }

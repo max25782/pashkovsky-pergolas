@@ -7,14 +7,14 @@ import {
   IsEnum,
   Min,
   ArrayMinSize,
-} from 'class-validator';
+} from "class-validator";
 
 export enum ProfileCategory {
-  PERGULAS = 'pergulas',
-  FANCY = 'fancy',
-  RAILLING = 'railling',
-  CONCEALED = 'concealed', // מסתורי כביסהת
-  WINDOW = 'window',
+  PERGULAS = "pergulas",
+  FANCY = "fancy",
+  RAILLING = "railling",
+  CONCEALED = "concealed", // מסתורי כביסהת
+  WINDOW = "window",
 }
 
 export class CreateProfileDto {

@@ -1,0 +1,2505 @@
+apps:
+crm             profiles-api    profiles-store  site
+apps/crm:
+AI_FEATURES_TESTING.md          next.config.js
+ENV_SETUP_GUIDE.md              ngrok.yml
+GEMINI_API_SETUP.md             package.json
+INSTALL_REDIS.ps1               postcss.config.js
+INSTALL_REDIS.sh                public
+MULTILANGUAGE.md                scripts
+README.md                       stores
+REDIS_SETUP.md                  supabase
+VERCEL_DEPLOY.md                tailwind.config.ts
+app                             test-ai-endpoint.html
+check-current-user.html         test-gemini.js
+components                      tests
+docs                            tsconfig.json
+hooks                           tsconfig.tsbuildinfo
+jest.config.js                  types
+lib                             vercel-ignore-build-step.sh
+middleware.ts                   vercel.json
+next-env.d.ts
+apps/crm/app:
+[locale]        app             globals.css     login           reset-password
+admin-api       auth            layout.tsx      not-found.tsx   superadmin
+api             error.tsx       loading.tsx     register        verify-email
+apps/crm/app/[locale]:
+layout.tsx      offers
+apps/crm/app/[locale]/offers:
+[id]
+apps/crm/app/[locale]/offers/[id]:
+approve success
+apps/crm/app/[locale]/offers/[id]/approve:
+page.tsx
+apps/crm/app/[locale]/offers/[id]/success:
+page.tsx
+apps/crm/app/admin-api:
+ai-chats                invite-user             users
+deals                   leads
+gallery                 pergola-projects
+apps/crm/app/admin-api/ai-chats:
+route.ts
+apps/crm/app/admin-api/deals:
+[id]                    route.ts
+payments-summary        sketch
+apps/crm/app/admin-api/deals/[id]:
+payments
+apps/crm/app/admin-api/deals/[id]/payments:
+route.ts
+apps/crm/app/admin-api/deals/payments-summary:
+route.ts
+apps/crm/app/admin-api/deals/sketch:
+route.ts
+apps/crm/app/admin-api/gallery:
+categories      images          upload
+apps/crm/app/admin-api/gallery/categories:
+route.ts
+apps/crm/app/admin-api/gallery/images:
+route.ts
+apps/crm/app/admin-api/gallery/upload:
+route.ts
+apps/crm/app/admin-api/invite-user:
+route.ts
+apps/crm/app/admin-api/leads:
+route.ts
+apps/crm/app/admin-api/pergola-projects:
+route.ts
+apps/crm/app/admin-api/users:
+invite          route.ts
+apps/crm/app/admin-api/users/invite:
+route.ts
+apps/crm/app/api:
+admin                   debug                   public
+ai                      gallery                 reports
+ai-chat                 integrations            smm
+ai-director             leads                   subscriptions
+auth                    material-orders         superadmin
+companies               offers                  webhooks
+company                 pergola-projects        work-shifts
+cron                    platform                workers
+apps/crm/app/api/admin:
+articles        leads           orders          profiles
+apps/crm/app/api/admin/articles:
+route.ts
+apps/crm/app/api/admin/leads:
+route.ts
+apps/crm/app/api/admin/orders:
+[id]            route.ts
+apps/crm/app/api/admin/orders/[id]:
+items           pdf             route.ts
+apps/crm/app/api/admin/orders/[id]/items:
+[itemId]
+apps/crm/app/api/admin/orders/[id]/items/[itemId]:
+route.ts
+apps/crm/app/api/admin/orders/[id]/pdf:
+route.ts
+apps/crm/app/api/admin/profiles:
+[id]            route.ts
+apps/crm/app/api/admin/profiles/[id]:
+route.ts
+apps/crm/app/api/ai:
+analytics               improve-offer-text      reports
+apps/crm/app/api/ai/analytics:
+route.ts
+apps/crm/app/api/ai/improve-offer-text:
+route.ts
+apps/crm/app/api/ai/reports:
+monthly weekly
+apps/crm/app/api/ai/reports/monthly:
+route.ts
+apps/crm/app/api/ai/reports/weekly:
+route.ts
+apps/crm/app/api/ai-chat:
+route.ts
+apps/crm/app/api/ai-director:
+chat    data
+apps/crm/app/api/ai-director/chat:
+route.ts
+apps/crm/app/api/ai-director/data:
+analytics       gallery         material-orders workers
+deals           leads           offers
+apps/crm/app/api/ai-director/data/analytics:
+route.ts
+apps/crm/app/api/ai-director/data/deals:
+route.ts
+apps/crm/app/api/ai-director/data/gallery:
+route.ts
+apps/crm/app/api/ai-director/data/leads:
+route.ts
+apps/crm/app/api/ai-director/data/material-orders:
+route.ts
+apps/crm/app/api/ai-director/data/offers:
+route.ts
+apps/crm/app/api/ai-director/data/workers:
+route.ts
+apps/crm/app/api/auth:
+check-phone             password-reset          superadmin-login
+check-superadmin        post-login              superadmin-logout
+companies               refresh                 superadmin-session
+login                   register                verify-email
+logout                  select-company
+oauth                   setup-company
+apps/crm/app/api/auth/check-phone:
+route.ts
+apps/crm/app/api/auth/check-superadmin:
+route.ts
+apps/crm/app/api/auth/companies:
+route.ts
+apps/crm/app/api/auth/login:
+route.ts
+apps/crm/app/api/auth/logout:
+route.ts
+apps/crm/app/api/auth/oauth:
+google
+apps/crm/app/api/auth/oauth/google:
+callback        route.ts
+apps/crm/app/api/auth/oauth/google/callback:
+route.ts
+apps/crm/app/api/auth/password-reset:
+confirm request
+apps/crm/app/api/auth/password-reset/confirm:
+route.ts
+apps/crm/app/api/auth/password-reset/request:
+route.ts
+apps/crm/app/api/auth/post-login:
+route.ts
+apps/crm/app/api/auth/refresh:
+route.ts
+apps/crm/app/api/auth/register:
+route.ts
+apps/crm/app/api/auth/select-company:
+route.ts
+apps/crm/app/api/auth/setup-company:
+route.ts
+apps/crm/app/api/auth/superadmin-login:
+route.ts
+apps/crm/app/api/auth/superadmin-logout:
+route.ts
+apps/crm/app/api/auth/superadmin-session:
+route.ts
+apps/crm/app/api/auth/verify-email:
+confirm send
+apps/crm/app/api/auth/verify-email/confirm:
+route.ts
+apps/crm/app/api/auth/verify-email/send:
+route.ts
+apps/crm/app/api/companies:
+me
+apps/crm/app/api/companies/me:
+route.ts
+apps/crm/app/api/company:
+logo    profile
+apps/crm/app/api/company/logo:
+route.ts
+apps/crm/app/api/company/profile:
+route.ts
+apps/crm/app/api/cron:
+weekly-digest
+apps/crm/app/api/cron/weekly-digest:
+route.ts
+apps/crm/app/api/debug:
+auth            redis           s3-config
+apps/crm/app/api/debug/auth:
+route.ts
+apps/crm/app/api/debug/redis:
+route.ts
+apps/crm/app/api/debug/s3-config:
+route.ts
+apps/crm/app/api/gallery:
+images  models
+apps/crm/app/api/gallery/images:
+route.ts
+apps/crm/app/api/gallery/models:
+route.ts
+apps/crm/app/api/integrations:
+me              request-setup   webhook
+apps/crm/app/api/integrations/me:
+route.ts
+apps/crm/app/api/integrations/request-setup:
+route.ts
+apps/crm/app/api/integrations/webhook:
+leads
+apps/crm/app/api/integrations/webhook/leads:
+route.ts
+apps/crm/app/api/leads:
+[id]            route.ts        score
+apps/crm/app/api/leads/[id]:
+score
+apps/crm/app/api/leads/[id]/score:
+route.ts
+apps/crm/app/api/leads/score:
+batch
+apps/crm/app/api/leads/score/batch:
+route.ts
+apps/crm/app/api/material-orders:
+route.ts
+apps/crm/app/api/offers:
+[id]            route.ts
+apps/crm/app/api/offers/[id]:
+approve         pdf             route.ts        send-email
+apps/crm/app/api/offers/[id]/approve:
+route.ts
+apps/crm/app/api/offers/[id]/pdf:
+route.ts
+apps/crm/app/api/offers/[id]/send-email:
+route.ts
+apps/crm/app/api/pergola-projects:
+route.ts
+apps/crm/app/api/platform:
+activity        integrations    settings
+apps/crm/app/api/platform/activity:
+route.ts
+apps/crm/app/api/platform/integrations:
+activate        list            rotate-secret   suspend
+apps/crm/app/api/platform/integrations/activate:
+route.ts
+apps/crm/app/api/platform/integrations/list:
+route.ts
+apps/crm/app/api/platform/integrations/rotate-secret:
+route.ts
+apps/crm/app/api/platform/integrations/suspend:
+route.ts
+apps/crm/app/api/platform/settings:
+route.ts
+apps/crm/app/api/public:
+ai-chat                 offers                  subscriptions
+leads                   payment-instructions
+apps/crm/app/api/public/ai-chat:
+route.ts
+apps/crm/app/api/public/leads:
+route.ts
+apps/crm/app/api/public/offers:
+[id]
+apps/crm/app/api/public/offers/[id]:
+route.ts
+apps/crm/app/api/public/payment-instructions:
+route.ts
+apps/crm/app/api/public/subscriptions:
+plans
+apps/crm/app/api/public/subscriptions/plans:
+route.ts
+apps/crm/app/api/reports:
+monthly         weekly-digest
+apps/crm/app/api/reports/monthly:
+route.ts
+apps/crm/app/api/reports/weekly-digest:
+generate        route.ts
+apps/crm/app/api/reports/weekly-digest/generate:
+route.ts
+apps/crm/app/api/smm:
+leads
+apps/crm/app/api/smm/leads:
+route.ts
+apps/crm/app/api/subscriptions:
+change-plan     current         history         plans           usage
+apps/crm/app/api/subscriptions/change-plan:
+route.ts
+apps/crm/app/api/subscriptions/current:
+route.ts
+apps/crm/app/api/subscriptions/history:
+route.ts
+apps/crm/app/api/subscriptions/plans:
+route.ts
+apps/crm/app/api/subscriptions/usage:
+route.ts
+apps/crm/app/api/superadmin:
+companies       test-auth       users
+apps/crm/app/api/superadmin/companies:
+[id]    onboard
+apps/crm/app/api/superadmin/companies/[id]:
+route.ts        settings        subscription
+apps/crm/app/api/superadmin/companies/[id]/settings:
+route.ts
+apps/crm/app/api/superadmin/companies/[id]/subscription:
+route.ts
+apps/crm/app/api/superadmin/companies/onboard:
+route.ts
+apps/crm/app/api/superadmin/test-auth:
+route.ts
+apps/crm/app/api/superadmin/users:
+send-magic-link
+apps/crm/app/api/superadmin/users/send-magic-link:
+route.ts
+apps/crm/app/api/webhooks:
+whatsapp
+apps/crm/app/api/webhooks/whatsapp:
+route.ts
+apps/crm/app/api/work-shifts:
+[id]            route.ts
+apps/crm/app/api/work-shifts/[id]:
+route.ts
+apps/crm/app/api/workers:
+[id]            route.ts
+apps/crm/app/api/workers/[id]:
+route.ts
+apps/crm/app/app:
+admin           layout.tsx      onboarding      profiles        settings
+error.tsx       loading.tsx     page.tsx        select-company
+apps/crm/app/app/admin:
+ai-analytics    articles        layout.tsx      page.tsx        statistics
+ai-chats        deals           leads           reports         users
+ai-director     gallery         orders          settings        workers
+apps/crm/app/app/admin/ai-analytics:
+page.tsx
+apps/crm/app/app/admin/ai-chats:
+page.tsx
+apps/crm/app/app/admin/ai-director:
+page.tsx
+apps/crm/app/app/admin/articles:
+page.tsx
+apps/crm/app/app/admin/deals:
+page.tsx
+apps/crm/app/app/admin/gallery:
+page.tsx
+apps/crm/app/app/admin/leads:
+page.tsx
+apps/crm/app/app/admin/orders:
+page.tsx
+apps/crm/app/app/admin/reports:
+monthly weekly
+apps/crm/app/app/admin/reports/monthly:
+page.tsx
+apps/crm/app/app/admin/reports/weekly:
+page.tsx
+apps/crm/app/app/admin/settings:
+page.tsx
+apps/crm/app/app/admin/statistics:
+page.tsx
+apps/crm/app/app/admin/users:
+page.tsx
+apps/crm/app/app/admin/workers:
+page.tsx
+apps/crm/app/app/onboarding:
+page.tsx
+apps/crm/app/app/profiles:
+page.tsx
+apps/crm/app/app/select-company:
+page.tsx
+apps/crm/app/app/settings:
+company         integrations
+apps/crm/app/app/settings/company:
+page.tsx
+apps/crm/app/app/settings/integrations:
+instructions    page.tsx
+apps/crm/app/app/settings/integrations/instructions:
+page.tsx
+apps/crm/app/auth:
+callback
+apps/crm/app/auth/callback:
+route.ts
+apps/crm/app/login:
+layout.tsx      page.tsx
+apps/crm/app/register:
+page.tsx
+apps/crm/app/reset-password:
+page.tsx
+apps/crm/app/superadmin:
+admins          integrations    page.tsx        subscriptions
+companies       layout.tsx      settings
+apps/crm/app/superadmin/admins:
+page.tsx
+apps/crm/app/superadmin/companies:
+[id]            page.tsx
+apps/crm/app/superadmin/companies/[id]:
+page.tsx        settings
+apps/crm/app/superadmin/companies/[id]/settings:
+page.tsx
+apps/crm/app/superadmin/integrations:
+page.tsx
+apps/crm/app/superadmin/settings:
+page.tsx
+apps/crm/app/superadmin/subscriptions:
+page.tsx
+apps/crm/app/verify-email:
+page.tsx
+apps/crm/components:
+admin           crm             offers          superadmin      workers
+ai-chat         generic         providers.tsx   ui
+apps/crm/components/admin:
+AIChatsTable.tsx        KanbanColumn.tsx        RailingsFormFields.tsx
+CategoryModal.tsx       LanguageSwitcher.tsx    SearchBar.tsx
+CreateDealModal.tsx     LaundryClosetModal.tsx  SketchModal.tsx
+DealCard.tsx            LeadCard.tsx            ViewToggle.tsx
+DealModal.tsx           LeadModal.tsx           deal-api.ts
+DealPaymentsWidget.tsx  LeadScore.tsx           deal-filters.ts
+DealsCharts.tsx         LeadsHeader.tsx         deal-types.ts
+DealsFilters.tsx        LeadsTable.tsx          deal-utils.ts
+DealsHeader.tsx         LeadsTableView.tsx      deals
+DealsStatistics.tsx     MaterialOrdersList.tsx  gallery-types.ts
+DealsStatus.tsx         MonthlyDealsModal.tsx   hooks
+DealsTable.tsx          MonthlyReportCharts.tsx lead-api.ts
+DealsTableView.tsx      MonthlyStatsChart.tsx   lead-types.ts
+GalleryImagesList.tsx   PhotoUploadModal.tsx    useCRMTranslations.ts
+KanbanBoard.tsx         ProfilesTable.tsx
+apps/crm/components/admin/deals:
+templates
+apps/crm/components/admin/deals/templates:
+ContractorPaymentPlan.tsx       PergolaDealForm.tsx
+DealTemplateRenderer.tsx        RailingsDealForm.tsx
+apps/crm/components/admin/hooks:
+useDealActions.ts       useDealPaymentsMap.ts   useLeadActions.ts
+useDealDragDrop.ts      useDeals.ts             useLeads.ts
+apps/crm/components/ai-chat:
+ChatWidget.tsx
+apps/crm/components/crm:
+CRMSidebar.tsx
+apps/crm/components/generic:
+MediaGallery.tsx
+apps/crm/components/offers:
+CreateOfferModal.tsx            PergolaShapeSelector.tsx
+OffersList.tsx                  shapes
+apps/crm/components/offers/shapes:
+LShapeInput.tsx         UShapeInput.tsx
+RectangleShapeInput.tsx XShapeInput.tsx
+apps/crm/components/superadmin:
+CompaniesTable.tsx              StatCard.tsx
+CompanyOnboardingForm.tsx       SubscriptionChart.tsx
+CompanySettingsForm.tsx         SubscriptionsTable.tsx
+RecentActivity.tsx              SuperAdminSidebar.tsx
+SendMagicLinkButton.tsx
+apps/crm/components/ui:
+alert.tsx               checkbox.tsx            label.tsx
+button.tsx              dialog.tsx              play-overlay.tsx
+card.tsx                input.tsx
+apps/crm/components/workers:
+AddWorkShiftModal.tsx   ProfitWidget.tsx        WorkLogSection.tsx
+apps/crm/docs:
+API_SUBSCRIPTIONS.md    SUPERADMIN_PANEL.md
+PHONE_LOGIN.md          SUPERADMIN_SETUP.md
+apps/crm/hooks:
+useProjectRevenue.ts
+apps/crm/lib:
+admin-translations.ts   image-props.ts          permissions
+ai                      image-url-client.ts     rate-limit.ts
+ai-chat                 image-url.ts            s3-upload.ts
+analytics               integrations            services
+api                     language-context.tsx    session
+audit                   leads                   supabase
+auth                    locales.ts              translations
+billing                 middleware              utils
+calculations            offer-calculator.ts     validation
+email                   offer-sharing.ts        workers
+email.ts                offers
+features                pdf
+apps/crm/lib/ai:
+analyticsTypes.ts               client.ts
+bedrock-client.ts               prompts.ts
+buildAnalyticsContext.ts
+apps/crm/lib/ai-chat:
+config.ts       xss-filter.ts
+apps/crm/lib/analytics:
+__tests__       aggregators.ts  weeklyDigest.ts
+apps/crm/lib/analytics/__tests__:
+README.md               test-calculations.ts
+aggregators.test.ts     test-data.ts
+apps/crm/lib/api:
+auth-fetch.ts   submit-lead.ts
+apps/crm/lib/audit:
+logger.ts               platform-logs.ts
+apps/crm/lib/auth:
+index.ts                oauth                   runtime-assertions.ts
+isSuperAdmin.ts         password.ts             security.ts
+jwt.ts                  platform-admin.ts       tokens.ts
+apps/crm/lib/auth/oauth:
+google.ts
+apps/crm/lib/billing:
+index.ts        stripe.ts       tranzila.ts
+apps/crm/lib/calculations:
+__tests__               pergola-area.ts         suntuf-sheets.ts
+apps/crm/lib/calculations/__tests__:
+suntuf-sheets.test.ts
+apps/crm/lib/email:
+templates
+apps/crm/lib/email/templates:
+company-branded.ts
+apps/crm/lib/features:
+check.ts
+apps/crm/lib/integrations:
+pricing.ts
+apps/crm/lib/leads:
+__tests__       scoring.ts
+apps/crm/lib/leads/__tests__:
+scoring.test.ts
+apps/crm/lib/middleware:
+ai-director-auth.ts             integration-access.ts
+ai-director-subscription.ts     permissions.ts
+auth-async.ts                   rate-limit.ts
+auth.ts                         subscription.ts
+company-context.ts              superadmin-auth.ts
+apps/crm/lib/offers:
+winter-closure-pricing.ts
+apps/crm/lib/pdf:
+create-browser.ts       generate-offer-pdf.tsx  offer-template.ts
+font-loader.ts          generate-order-pdf.tsx  order-html-template.ts
+font-utils.ts           offer-html-template.ts  render-html-to-pdf.ts
+apps/crm/lib/permissions:
+index.ts
+apps/crm/lib/services:
+company-onboarding-service.ts   subscription-service.ts
+apps/crm/lib/session:
+redis-client.ts
+apps/crm/lib/supabase:
+client.ts       server.ts
+apps/crm/lib/translations:
+ai-director.ts          company-settings.ts     platform-settings.ts
+common.ts               integrations.ts         statistics.ts
+apps/crm/lib/utils:
+company-logo.ts mrr.ts
+apps/crm/lib/validation:
+public-lead.ts
+apps/crm/lib/workers:
+calculations.ts
+apps/crm/public:
+logo-icon.svg   logo.svg
+apps/crm/scripts:
+test-redis.ts
+apps/crm/stores:
+ui-store.ts
+apps/crm/supabase:
+migrations
+apps/crm/supabase/migrations:
+000_create_base_structure.sql
+001_create_companies.sql
+002_add_company_id.sql
+003_migrate_existing_data.sql
+004_create_users_membership.sql
+005_create_plans.sql
+006_create_subscriptions.sql
+007_create_onboarding.sql
+008_create_email_tokens.sql
+009_create_refresh_tokens.sql
+010_create_audit_logs.sql
+011_add_pergola_shapes.sql
+012_fix_pergola_legacy_fields.sql
+013_add_roles_and_permissions.sql
+013_add_roles_and_permissions_MODIFIED.sql
+014_add_company_settings.sql
+015_add_subscription_plans.sql
+016_add_winter_closure_types.sql
+017_add_multiple_pergolas.sql
+017_add_multiple_pergolas_clean.sql
+018_create_profiles_system.sql
+018_create_profiles_system_DROP_OLD.sql
+019_update_profile_categories.sql
+020_add_installation_date_index.sql
+021_add_work_type_railings_payments.sql
+022_add_deal_templates_contractor.sql
+023_extend_work_type.sql
+add_deal_shading_finish.sql
+add_laundry_closet_fields.sql
+add_lead_scoring.sql
+add_pergola_projects.sql
+check_and_create_deals.sql
+create_ai_chat_tables.sql
+create_deals_table.sql
+create_gallery_categories.sql
+create_gallery_images.sql
+create_material_orders_table.sql
+create_offers_table.sql
+create_weekly_digests.sql
+create_workers_work_shifts.sql
+migrate_existing_won_leads.sql
+remove_daily_rate_limit.sql
+update_offers_shading_finish.sql
+update_offers_table.sql
+update_offers_v2.sql
+update_offers_v3_final.sql
+apps/crm/tests:
+integration     security
+apps/crm/tests/integration:
+multi-tenant.test.ts
+apps/crm/tests/security:
+README.md                       multi-tenant-isolation.test.ts
+env.test.example
+apps/crm/types:
+company-settings.ts     integration.ts          platform-settings.ts
+database.ts             material-order.ts       roles.ts
+fabric.d.ts             membership.ts           subscription.ts
+images.ts               offer.ts                workers.ts
+apps/profiles-api:
+Dockerfile      dist            nest-cli.json   package.json    tsconfig.json
+README.md       docs            node_modules    src
+apps/profiles-api/dist:
+app.module.d.ts         main.d.ts               suppliers
+app.module.js           main.js                 tsconfig.tsbuildinfo
+app.module.js.map       main.js.map             usage
+batches                 orders                  webhooks
+common                  profiles
+config                  stock
+apps/profiles-api/dist/batches:
+batches.controller.d.ts         batches.module.js.map
+batches.controller.js           batches.service.d.ts
+batches.controller.js.map       batches.service.js
+batches.module.d.ts             batches.service.js.map
+batches.module.js
+apps/profiles-api/dist/common:
+decorators      guards
+apps/profiles-api/dist/common/decorators:
+current-user.decorator.d.ts     current-user.decorator.js.map
+current-user.decorator.js
+apps/profiles-api/dist/common/guards:
+auth.guard.d.ts         auth.guard.js.map       company.guard.js
+auth.guard.js           company.guard.d.ts      company.guard.js.map
+apps/profiles-api/dist/config:
+supabase.config.d.ts    supabase.config.js      supabase.config.js.map
+apps/profiles-api/dist/orders:
+dto                             orders.module.js
+orders.controller.d.ts          orders.module.js.map
+orders.controller.js            orders.service.d.ts
+orders.controller.js.map        orders.service.js
+orders.module.d.ts              orders.service.js.map
+apps/profiles-api/dist/orders/dto:
+create-order.dto.d.ts   create-order.dto.js.map update-order.dto.js
+create-order.dto.js     update-order.dto.d.ts   update-order.dto.js.map
+apps/profiles-api/dist/profiles:
+dto                             profiles.module.js
+profiles.controller.d.ts        profiles.module.js.map
+profiles.controller.js          profiles.service.d.ts
+profiles.controller.js.map      profiles.service.js
+profiles.module.d.ts            profiles.service.js.map
+apps/profiles-api/dist/profiles/dto:
+create-profile.dto.d.ts         update-profile.dto.d.ts
+create-profile.dto.js           update-profile.dto.js
+create-profile.dto.js.map       update-profile.dto.js.map
+apps/profiles-api/dist/stock:
+stock.controller.d.ts   stock.module.d.ts       stock.service.d.ts
+stock.controller.js     stock.module.js         stock.service.js
+stock.controller.js.map stock.module.js.map     stock.service.js.map
+apps/profiles-api/dist/suppliers:
+suppliers.controller.d.ts       suppliers.module.js.map
+suppliers.controller.js         suppliers.service.d.ts
+suppliers.controller.js.map     suppliers.service.js
+suppliers.module.d.ts           suppliers.service.js.map
+suppliers.module.js
+apps/profiles-api/dist/usage:
+usage.controller.d.ts   usage.module.d.ts       usage.service.d.ts
+usage.controller.js     usage.module.js         usage.service.js
+usage.controller.js.map usage.module.js.map     usage.service.js.map
+apps/profiles-api/dist/webhooks:
+webhooks.gateway.d.ts   webhooks.gateway.js.map webhooks.module.js
+webhooks.gateway.js     webhooks.module.d.ts    webhooks.module.js.map
+apps/profiles-api/docs:
+AWS_DEPLOYMENT.md
+apps/profiles-api/node_modules:
+@jest                           jest-environment-node
+@nestjs                         jest-haste-map
+@sinclair                       jest-leak-detector
+@sinonjs                        jest-matcher-utils
+@types                          jest-message-util
+acorn-walk                      jest-mock
+ansi-styles                     jest-regex-util
+arg                             jest-resolve
+babel-jest                      jest-resolve-dependencies
+babel-plugin-istanbul           jest-runner
+babel-plugin-jest-hoist         jest-runtime
+babel-preset-jest               jest-snapshot
+brace-expansion                 jest-util
+camelcase                       jest-validate
+ci-info                         jest-watcher
+cjs-module-lexer                jest-worker
+eslint-scope                    json5
+estraverse                      minimatch
+expect                          pretty-format
+glob                            pure-rand
+istanbul-lib-source-maps        react-is
+jackspeak                       signal-exit
+jest                            source-map-support
+jest-changed-files              supports-color
+jest-circus                     ts-node
+jest-cli                        tsconfig-paths
+jest-diff                       typescript
+jest-docblock                   webpack
+jest-each                       write-file-atomic
+apps/profiles-api/node_modules/@jest:
+console         expect          globals         source-map      transform
+core            expect-utils    reporters       test-result     types
+environment     fake-timers     schemas         test-sequencer
+apps/profiles-api/node_modules/@jest/console:
+LICENSE         build           package.json
+apps/profiles-api/node_modules/@jest/console/build:
+BufferedConsole.js      getConsoleOutput.js     types.js
+CustomConsole.js        index.d.ts
+NullConsole.js          index.js
+apps/profiles-api/node_modules/@jest/core:
+LICENSE         README.md       build           node_modules    package.json
+apps/profiles-api/node_modules/@jest/core/build:
+FailedTestsCache.js                     getNoTestFoundVerbose.js
+FailedTestsInteractiveMode.js           getNoTestsFoundMessage.js
+ReporterDispatcher.js                   getProjectDisplayName.js
+SearchSource.js                         getProjectNamesMissingWarning.js
+SnapshotInteractiveMode.js              getSelectProjectsMessage.js
+TestNamePatternPrompt.js                index.d.ts
+TestPathPatternPrompt.js                index.js
+TestScheduler.js                        lib
+cli                                     plugins
+collectHandles.js                       runGlobalHook.js
+getChangedFilesPromise.js               runJest.js
+getConfigsOfProjectsToRun.js            testSchedulerHelper.js
+getNoTestFound.js                       types.js
+getNoTestFoundFailed.js                 version.js
+getNoTestFoundPassWithNoTests.js        watch.js
+getNoTestFoundRelatedToChangedFiles.js
+apps/profiles-api/node_modules/@jest/core/build/cli:
+index.js
+apps/profiles-api/node_modules/@jest/core/build/lib:
+activeFiltersMessage.js         logDebugMessages.js
+createContext.js                updateGlobalConfig.js
+handleDeprecationWarnings.js    watchPluginsHelpers.js
+isValidPath.js
+apps/profiles-api/node_modules/@jest/core/build/plugins:
+FailedTestsInteractive.js       TestPathPattern.js
+Quit.js                         UpdateSnapshots.js
+TestNamePattern.js              UpdateSnapshotsInteractive.js
+apps/profiles-api/node_modules/@jest/core/node_modules:
+brace-expansion glob            jest-config     minimatch
+apps/profiles-api/node_modules/@jest/core/node_modules/brace-expansion:
+LICENSE         README.md       index.js        package.json
+apps/profiles-api/node_modules/@jest/core/node_modules/glob:
+LICENSE         common.js       package.json
+README.md       glob.js         sync.js
+apps/profiles-api/node_modules/@jest/core/node_modules/jest-config:
+LICENSE         build           package.json
+apps/profiles-api/node_modules/@jest/core/node_modules/jest-config/build:
+Defaults.js                     index.js
+Deprecated.js                   normalize.js
+Descriptions.js                 parseShardPair.js
+ReporterValidationErrors.js     readConfigFileAndSetRootDir.js
+ValidConfig.js                  resolveConfigPath.js
+color.js                        setFromArgv.js
+constants.js                    stringToBytes.js
+getCacheDirectory.js            utils.js
+getMaxWorkers.js                validatePattern.js
+index.d.ts
+apps/profiles-api/node_modules/@jest/core/node_modules/minimatch:
+LICENSE         README.md       minimatch.js    package.json
+apps/profiles-api/node_modules/@jest/environment:
+LICENSE         build           package.json
+apps/profiles-api/node_modules/@jest/environment/build:
+index.d.ts      index.js
+apps/profiles-api/node_modules/@jest/expect:
+LICENSE         README.md       build           package.json
+apps/profiles-api/node_modules/@jest/expect/build:
+index.d.ts      index.js        types.js
+apps/profiles-api/node_modules/@jest/expect-utils:
+LICENSE         README.md       build           package.json
+apps/profiles-api/node_modules/@jest/expect-utils/build:
+immutableUtils.js       index.js                types.js
+index.d.ts              jasmineUtils.js         utils.js
+apps/profiles-api/node_modules/@jest/fake-timers:
+LICENSE         build           package.json
+apps/profiles-api/node_modules/@jest/fake-timers/build:
+index.d.ts              legacyFakeTimers.js
+index.js                modernFakeTimers.js
+apps/profiles-api/node_modules/@jest/globals:
+LICENSE         build           package.json
+apps/profiles-api/node_modules/@jest/globals/build:
+index.d.ts      index.js
+apps/profiles-api/node_modules/@jest/reporters:
+LICENSE         assets          build           node_modules    package.json
+apps/profiles-api/node_modules/@jest/reporters/assets:
+jest_logo.png
+apps/profiles-api/node_modules/@jest/reporters/build:
+BaseReporter.js                 getSnapshotStatus.js
+CoverageReporter.js             getSnapshotSummary.js
+CoverageWorker.js               getSummary.js
+DefaultReporter.js              getWatermarks.js
+GitHubActionsReporter.js        index.d.ts
+NotifyReporter.js               index.js
+Status.js                       printDisplayName.js
+SummaryReporter.js              relativePath.js
+VerboseReporter.js              trimAndFormatPath.js
+formatTestPath.js               types.js
+generateEmptyCoverage.js        wrapAnsiString.js
+getResultHeader.js
+apps/profiles-api/node_modules/@jest/reporters/node_modules:
+brace-expansion glob            minimatch
+apps/profiles-api/node_modules/@jest/reporters/node_modules/brace-expansion:
+LICENSE         README.md       index.js        package.json
+apps/profiles-api/node_modules/@jest/reporters/node_modules/glob:
+LICENSE         common.js       package.json
+README.md       glob.js         sync.js
+apps/profiles-api/node_modules/@jest/reporters/node_modules/minimatch:
+LICENSE         README.md       minimatch.js    package.json
+apps/profiles-api/node_modules/@jest/schemas:
+LICENSE         README.md       build           package.json
+apps/profiles-api/node_modules/@jest/schemas/build:
+index.d.ts      index.js
+apps/profiles-api/node_modules/@jest/source-map:
+LICENSE         build           package.json
+apps/profiles-api/node_modules/@jest/source-map/build:
+getCallsite.js  index.d.ts      index.js        types.js
+apps/profiles-api/node_modules/@jest/test-result:
+LICENSE         build           package.json
+apps/profiles-api/node_modules/@jest/test-result/build:
+formatTestResults.js    index.d.ts              types.js
+helpers.js              index.js
+apps/profiles-api/node_modules/@jest/test-sequencer:
+LICENSE         build           package.json
+apps/profiles-api/node_modules/@jest/test-sequencer/build:
+index.d.ts      index.js
+apps/profiles-api/node_modules/@jest/transform:
+LICENSE         build           package.json
+apps/profiles-api/node_modules/@jest/transform/build:
+ScriptTransformer.js                    runtimeErrorsAndWarnings.js
+enhanceUnexpectedTokenMessage.js        shouldInstrument.js
+index.d.ts                              types.js
+index.js
+apps/profiles-api/node_modules/@jest/types:
+LICENSE         README.md       build           package.json
+apps/profiles-api/node_modules/@jest/types/build:
+Circus.js       Global.js       Transform.js    index.js
+Config.js       TestResult.js   index.d.ts
+apps/profiles-api/node_modules/@nestjs:
+cli
+apps/profiles-api/node_modules/@nestjs/cli:
+CONTRIBUTING.md README.md       bin             lib             test
+LICENSE         actions         commands        package.json
+apps/profiles-api/node_modules/@nestjs/cli/actions:
+abstract.action.d.ts    generate.action.d.ts    new.action.d.ts
+abstract.action.js      generate.action.js      new.action.js
+add.action.d.ts         index.d.ts              start.action.d.ts
+add.action.js           index.js                start.action.js
+build.action.d.ts       info.action.d.ts
+build.action.js         info.action.js
+apps/profiles-api/node_modules/@nestjs/cli/bin:
+nest.d.ts       nest.js
+apps/profiles-api/node_modules/@nestjs/cli/commands:
+abstract.command.d.ts   command.input.js        info.command.d.ts
+abstract.command.js     command.loader.d.ts     info.command.js
+add.command.d.ts        command.loader.js       new.command.d.ts
+add.command.js          generate.command.d.ts   new.command.js
+build.command.d.ts      generate.command.js     start.command.d.ts
+build.command.js        index.d.ts              start.command.js
+command.input.d.ts      index.js
+apps/profiles-api/node_modules/@nestjs/cli/lib:
+compiler                questions               schematics
+configuration           readers                 ui
+package-managers        runners                 utils
+apps/profiles-api/node_modules/@nestjs/cli/lib/compiler:
+assets-manager.d.ts     defaults                typescript-loader.d.ts
+assets-manager.js       helpers                 typescript-loader.js
+base-compiler.d.ts      hooks                   watch-compiler.d.ts
+base-compiler.js        interfaces              watch-compiler.js
+compiler.d.ts           plugins                 webpack-compiler.d.ts
+compiler.js             swc                     webpack-compiler.js
+apps/profiles-api/node_modules/@nestjs/cli/lib/compiler/defaults:
+swc-defaults.d.ts       webpack-defaults.d.ts
+swc-defaults.js         webpack-defaults.js
+apps/profiles-api/node_modules/@nestjs/cli/lib/compiler/helpers:
+append-extension.d.ts           get-tsc-config.path.js
+append-extension.js             get-value-or-default.d.ts
+copy-path-resolve.d.ts          get-value-or-default.js
+copy-path-resolve.js            get-webpack-config-path.d.ts
+delete-out-dir.d.ts             get-webpack-config-path.js
+delete-out-dir.js               manual-restart.d.ts
+get-builder.d.ts                manual-restart.js
+get-builder.js                  tsconfig-provider.d.ts
+get-tsc-config.path.d.ts        tsconfig-provider.js
+apps/profiles-api/node_modules/@nestjs/cli/lib/compiler/hooks:
+tsconfig-paths.hook.d.ts        tsconfig-paths.hook.js
+apps/profiles-api/node_modules/@nestjs/cli/lib/compiler/interfaces:
+readonly-visitor.interface.d.ts readonly-visitor.interface.js
+apps/profiles-api/node_modules/@nestjs/cli/lib/compiler/plugins:
+plugin-metadata-generator.d.ts  plugin-metadata-printer.js
+plugin-metadata-generator.js    plugins-loader.d.ts
+plugin-metadata-printer.d.ts    plugins-loader.js
+apps/profiles-api/node_modules/@nestjs/cli/lib/compiler/swc:
+constants.d.ts                  swc-compiler.d.ts
+constants.js                    swc-compiler.js
+forked-type-checker.d.ts        type-checker-host.d.ts
+forked-type-checker.js          type-checker-host.js
+apps/profiles-api/node_modules/@nestjs/cli/lib/configuration:
+configuration.d.ts              defaults.js
+configuration.js                index.d.ts
+configuration.loader.d.ts       index.js
+configuration.loader.js         nest-configuration.loader.d.ts
+defaults.d.ts                   nest-configuration.loader.js
+apps/profiles-api/node_modules/@nestjs/cli/lib/package-managers:
+abstract.package-manager.d.ts   package-manager.factory.d.ts
+abstract.package-manager.js     package-manager.factory.js
+index.d.ts                      package-manager.js
+index.js                        pnpm.package-manager.d.ts
+npm.package-manager.d.ts        pnpm.package-manager.js
+npm.package-manager.js          project.dependency.d.ts
+package-manager-commands.d.ts   project.dependency.js
+package-manager-commands.js     yarn.package-manager.d.ts
+package-manager.d.ts            yarn.package-manager.js
+apps/profiles-api/node_modules/@nestjs/cli/lib/questions:
+questions.d.ts  questions.js
+apps/profiles-api/node_modules/@nestjs/cli/lib/readers:
+file-system.reader.d.ts index.d.ts              reader.d.ts
+file-system.reader.js   index.js                reader.js
+apps/profiles-api/node_modules/@nestjs/cli/lib/runners:
+abstract.runner.d.ts    npm.runner.d.ts         runner.factory.js
+abstract.runner.js      npm.runner.js           runner.js
+git.runner.d.ts         pnpm.runner.d.ts        schematic.runner.d.ts
+git.runner.js           pnpm.runner.js          schematic.runner.js
+index.d.ts              runner.d.ts             yarn.runner.d.ts
+index.js                runner.factory.d.ts     yarn.runner.js
+apps/profiles-api/node_modules/@nestjs/cli/lib/schematics:
+abstract.collection.d.ts        custom.collection.js
+abstract.collection.js          index.d.ts
+collection.d.ts                 index.js
+collection.factory.d.ts         nest.collection.d.ts
+collection.factory.js           nest.collection.js
+collection.js                   schematic.option.d.ts
+custom.collection.d.ts          schematic.option.js
+apps/profiles-api/node_modules/@nestjs/cli/lib/ui:
+banner.d.ts     emojis.js       index.d.ts      messages.js
+banner.js       errors.d.ts     index.js        prefixes.d.ts
+emojis.d.ts     errors.js       messages.d.ts   prefixes.js
+apps/profiles-api/node_modules/@nestjs/cli/lib/utils:
+formatting.d.ts                 local-binaries.js
+formatting.js                   os-info.utils.d.ts
+get-default-tsconfig-path.d.ts  os-info.utils.js
+get-default-tsconfig-path.js    project-utils.d.ts
+is-module-available.d.ts        project-utils.js
+is-module-available.js          remaining-flags.d.ts
+load-configuration.d.ts         remaining-flags.js
+load-configuration.js           tree-kill.d.ts
+local-binaries.d.ts             tree-kill.js
+apps/profiles-api/node_modules/@nestjs/cli/test:
+lib
+apps/profiles-api/node_modules/@nestjs/cli/test/lib:
+compiler
+apps/profiles-api/node_modules/@nestjs/cli/test/lib/compiler:
+hooks
+apps/profiles-api/node_modules/@nestjs/cli/test/lib/compiler/hooks:
+__snapshots__   fixtures
+apps/profiles-api/node_modules/@nestjs/cli/test/lib/compiler/hooks/__snapshots__:
+tsconfig-paths.hook.spec.ts.snap
+apps/profiles-api/node_modules/@nestjs/cli/test/lib/compiler/hooks/fixtures:
+aliased-imports
+apps/profiles-api/node_modules/@nestjs/cli/test/lib/compiler/hooks/fixtures/aliased-imports:
+src
+apps/profiles-api/node_modules/@nestjs/cli/test/lib/compiler/hooks/fixtures/aliased-imports/src:
+bar.tsx baz.js  qux.jsx
+apps/profiles-api/node_modules/@sinclair:
+typebox
+apps/profiles-api/node_modules/@sinclair/typebox:
+compiler        license         readme.md       typebox.d.ts    value
+errors          package.json    system          typebox.js
+apps/profiles-api/node_modules/@sinclair/typebox/compiler:
+compiler.d.ts   compiler.js     index.d.ts      index.js
+apps/profiles-api/node_modules/@sinclair/typebox/errors:
+errors.d.ts     errors.js       index.d.ts      index.js
+apps/profiles-api/node_modules/@sinclair/typebox/system:
+index.d.ts      index.js        system.d.ts     system.js
+apps/profiles-api/node_modules/@sinclair/typebox/value:
+cast.d.ts       convert.d.ts    equal.d.ts      is.d.ts         value.d.ts
+cast.js         convert.js      equal.js        is.js           value.js
+check.d.ts      create.d.ts     hash.d.ts       mutate.d.ts
+check.js        create.js       hash.js         mutate.js
+clone.d.ts      delta.d.ts      index.d.ts      pointer.d.ts
+clone.js        delta.js        index.js        pointer.js
+apps/profiles-api/node_modules/@sinonjs:
+fake-timers
+apps/profiles-api/node_modules/@sinonjs/fake-timers:
+LICENSE         README.md       package.json    src
+apps/profiles-api/node_modules/@sinonjs/fake-timers/src:
+fake-timers-src.js
+apps/profiles-api/node_modules/@types:
+jest
+apps/profiles-api/node_modules/@types/jest:
+LICENSE         README.md       index.d.ts      package.json
+apps/profiles-api/node_modules/acorn-walk:
+CHANGELOG.md    LICENSE         README.md       dist            package.json
+apps/profiles-api/node_modules/acorn-walk/dist:
+walk.d.mts      walk.d.ts       walk.js         walk.mjs
+apps/profiles-api/node_modules/ansi-styles:
+index.d.ts      index.js        license         package.json    readme.md
+apps/profiles-api/node_modules/arg:
+LICENSE.md      README.md       index.d.ts      index.js        package.json
+apps/profiles-api/node_modules/babel-jest:
+LICENSE         README.md       build           package.json
+apps/profiles-api/node_modules/babel-jest/build:
+index.d.ts              index.js                loadBabelConfig.js
+apps/profiles-api/node_modules/babel-plugin-istanbul:
+CHANGELOG.md    README.md       node_modules
+LICENSE         lib             package.json
+apps/profiles-api/node_modules/babel-plugin-istanbul/lib:
+index.js                load-nyc-config-sync.js
+apps/profiles-api/node_modules/babel-plugin-istanbul/node_modules:
+istanbul-lib-instrument semver
+apps/profiles-api/node_modules/babel-plugin-istanbul/node_modules/istanbul-lib-instrument:
+CHANGELOG.md    LICENSE         README.md       package.json    src
+apps/profiles-api/node_modules/babel-plugin-istanbul/node_modules/istanbul-lib-instrument/src:
+constants.js            instrumenter.js         source-coverage.js
+index.js                read-coverage.js        visitor.js
+apps/profiles-api/node_modules/babel-plugin-istanbul/node_modules/semver:
+LICENSE         bin             range.bnf
+README.md       package.json    semver.js
+apps/profiles-api/node_modules/babel-plugin-istanbul/node_modules/semver/bin:
+semver.js
+apps/profiles-api/node_modules/babel-plugin-jest-hoist:
+LICENSE         README.md       build           package.json
+apps/profiles-api/node_modules/babel-plugin-jest-hoist/build:
+index.d.ts      index.js
+apps/profiles-api/node_modules/babel-preset-jest:
+LICENSE         README.md       index.js        package.json
+apps/profiles-api/node_modules/brace-expansion:
+LICENSE         README.md       index.js        package.json
+apps/profiles-api/node_modules/camelcase:
+index.d.ts      index.js        license         package.json    readme.md
+apps/profiles-api/node_modules/ci-info:
+CHANGELOG.md    README.md       index.js        vendors.json
+LICENSE         index.d.ts      package.json
+apps/profiles-api/node_modules/cjs-module-lexer:
+LICENSE         dist            lexer.js
+README.md       lexer.d.ts      package.json
+apps/profiles-api/node_modules/cjs-module-lexer/dist:
+lexer.js        lexer.mjs
+apps/profiles-api/node_modules/eslint-scope:
+CHANGELOG.md    LICENSE         README.md       lib             package.json
+apps/profiles-api/node_modules/eslint-scope/lib:
+definition.js           reference.js            scope.js
+index.js                referencer.js           variable.js
+pattern-visitor.js      scope-manager.js
+apps/profiles-api/node_modules/estraverse:
+LICENSE.BSD     README.md       estraverse.js   gulpfile.js     package.json
+apps/profiles-api/node_modules/expect:
+LICENSE         README.md       build           package.json
+apps/profiles-api/node_modules/expect/build:
+asymmetricMatchers.js                   matchers.js
+extractExpectedAssertionsErrors.js      print.js
+index.d.ts                              spyMatchers.js
+index.js                                toThrowMatchers.js
+jestMatchersObject.js                   types.js
+apps/profiles-api/node_modules/glob:
+LICENSE         README.md       dist            package.json
+apps/profiles-api/node_modules/glob/dist:
+commonjs        esm
+apps/profiles-api/node_modules/glob/dist/commonjs:
+glob.d.ts               ignore.js               pattern.js.map
+glob.d.ts.map           ignore.js.map           processor.d.ts
+glob.js                 index.d.ts              processor.d.ts.map
+glob.js.map             index.d.ts.map          processor.js
+has-magic.d.ts          index.js                processor.js.map
+has-magic.d.ts.map      index.js.map            walker.d.ts
+has-magic.js            package.json            walker.d.ts.map
+has-magic.js.map        pattern.d.ts            walker.js
+ignore.d.ts             pattern.d.ts.map        walker.js.map
+ignore.d.ts.map         pattern.js
+apps/profiles-api/node_modules/glob/dist/esm:
+bin.d.mts               has-magic.js.map        pattern.d.ts.map
+bin.d.mts.map           ignore.d.ts             pattern.js
+bin.mjs                 ignore.d.ts.map         pattern.js.map
+bin.mjs.map             ignore.js               processor.d.ts
+glob.d.ts               ignore.js.map           processor.d.ts.map
+glob.d.ts.map           index.d.ts              processor.js
+glob.js                 index.d.ts.map          processor.js.map
+glob.js.map             index.js                walker.d.ts
+has-magic.d.ts          index.js.map            walker.d.ts.map
+has-magic.d.ts.map      package.json            walker.js
+has-magic.js            pattern.d.ts            walker.js.map
+apps/profiles-api/node_modules/istanbul-lib-source-maps:
+CHANGELOG.md    README.md       lib
+LICENSE         index.js        package.json
+apps/profiles-api/node_modules/istanbul-lib-source-maps/lib:
+get-mapping.js          mapped.js               transform-utils.js
+map-store.js            pathutils.js            transformer.js
+apps/profiles-api/node_modules/jackspeak:
+LICENSE.md      README.md       dist            package.json
+apps/profiles-api/node_modules/jackspeak/dist:
+commonjs        esm
+apps/profiles-api/node_modules/jackspeak/dist/commonjs:
+index.d.ts                      parse-args-cjs.cjs.map
+index.d.ts.map                  parse-args-cjs.d.cts.map
+index.js                        parse-args.d.ts
+index.js.map                    parse-args.js
+package.json
+apps/profiles-api/node_modules/jackspeak/dist/esm:
+index.d.ts              index.js.map            parse-args.d.ts.map
+index.d.ts.map          package.json            parse-args.js
+index.js                parse-args.d.ts         parse-args.js.map
+apps/profiles-api/node_modules/jest:
+LICENSE         README.md       bin             build           package.json
+apps/profiles-api/node_modules/jest/bin:
+jest.js
+apps/profiles-api/node_modules/jest/build:
+index.d.ts      index.js
+apps/profiles-api/node_modules/jest-changed-files:
+LICENSE         README.md       build           package.json
+apps/profiles-api/node_modules/jest-changed-files/build:
+git.js          index.d.ts      sl.js
+hg.js           index.js        types.js
+apps/profiles-api/node_modules/jest-circus:
+LICENSE         README.md       build           package.json    runner.js
+apps/profiles-api/node_modules/jest-circus/build:
+eventHandler.js                 run.js
+formatNodeAssertErrors.js       shuffleArray.js
+globalErrorHandlers.js          state.js
+index.d.ts                      testCaseReportHandler.js
+index.js                        types.js
+legacy-code-todo-rewrite        utils.js
+apps/profiles-api/node_modules/jest-circus/build/legacy-code-todo-rewrite:
+jestAdapter.js          jestAdapterInit.js
+apps/profiles-api/node_modules/jest-cli:
+LICENSE         bin             node_modules
+README.md       build           package.json
+apps/profiles-api/node_modules/jest-cli/bin:
+jest.js
+apps/profiles-api/node_modules/jest-cli/build:
+args.js         index.d.ts      index.js        run.js
+apps/profiles-api/node_modules/jest-cli/node_modules:
+brace-expansion glob            jest-config     minimatch
+apps/profiles-api/node_modules/jest-cli/node_modules/brace-expansion:
+LICENSE         README.md       index.js        package.json
+apps/profiles-api/node_modules/jest-cli/node_modules/glob:
+LICENSE         common.js       package.json
+README.md       glob.js         sync.js
+apps/profiles-api/node_modules/jest-cli/node_modules/jest-config:
+LICENSE         build           package.json
+apps/profiles-api/node_modules/jest-cli/node_modules/jest-config/build:
+Defaults.js                     index.js
+Deprecated.js                   normalize.js
+Descriptions.js                 parseShardPair.js
+ReporterValidationErrors.js     readConfigFileAndSetRootDir.js
+ValidConfig.js                  resolveConfigPath.js
+color.js                        setFromArgv.js
+constants.js                    stringToBytes.js
+getCacheDirectory.js            utils.js
+getMaxWorkers.js                validatePattern.js
+index.d.ts
+apps/profiles-api/node_modules/jest-cli/node_modules/minimatch:
+LICENSE         README.md       minimatch.js    package.json
+apps/profiles-api/node_modules/jest-diff:
+LICENSE         README.md       build           package.json
+apps/profiles-api/node_modules/jest-diff/build:
+cleanupSemantic.js      getAlignedDiffs.js      normalizeDiffOptions.js
+constants.js            index.d.ts              printDiffs.js
+diffLines.js            index.js                types.js
+diffStrings.js          joinAlignedDiffs.js
+apps/profiles-api/node_modules/jest-docblock:
+LICENSE         README.md       build           package.json
+apps/profiles-api/node_modules/jest-docblock/build:
+index.d.ts      index.js
+apps/profiles-api/node_modules/jest-each:
+LICENSE         README.md       build           package.json
+apps/profiles-api/node_modules/jest-each/build:
+bind.js         index.d.ts      index.js        table           validation.js
+apps/profiles-api/node_modules/jest-each/build/table:
+array.js                interpolation.js        template.js
+apps/profiles-api/node_modules/jest-environment-node:
+LICENSE         build           package.json
+apps/profiles-api/node_modules/jest-environment-node/build:
+index.d.ts      index.js
+apps/profiles-api/node_modules/jest-haste-map:
+LICENSE         build           package.json
+apps/profiles-api/node_modules/jest-haste-map/build:
+HasteFS.js      constants.js    index.d.ts      types.js
+ModuleMap.js    crawlers        index.js        watchers
+blacklist.js    getMockName.js  lib             worker.js
+apps/profiles-api/node_modules/jest-haste-map/build/crawlers:
+node.js         watchman.js
+apps/profiles-api/node_modules/jest-haste-map/build/lib:
+dependencyExtractor.js  getPlatformExtension.js normalizePathSep.js
+fast_path.js            isWatchmanInstalled.js
+apps/profiles-api/node_modules/jest-haste-map/build/watchers:
+FSEventsWatcher.js      RecrawlWarning.js       common.js
+NodeWatcher.js          WatchmanWatcher.js
+apps/profiles-api/node_modules/jest-leak-detector:
+LICENSE         README.md       build           package.json
+apps/profiles-api/node_modules/jest-leak-detector/build:
+index.d.ts      index.js
+apps/profiles-api/node_modules/jest-matcher-utils:
+LICENSE         README.md       build           package.json
+apps/profiles-api/node_modules/jest-matcher-utils/build:
+Replaceable.js                  index.d.ts
+deepCyclicCopyReplaceable.js    index.js
+apps/profiles-api/node_modules/jest-message-util:
+LICENSE         build           package.json
+apps/profiles-api/node_modules/jest-message-util/build:
+index.d.ts      index.js        types.js
+apps/profiles-api/node_modules/jest-mock:
+LICENSE         README.md       build           package.json
+apps/profiles-api/node_modules/jest-mock/build:
+index.d.ts      index.js
+apps/profiles-api/node_modules/jest-regex-util:
+LICENSE         build           package.json
+apps/profiles-api/node_modules/jest-regex-util/build:
+index.d.ts      index.js
+apps/profiles-api/node_modules/jest-resolve:
+LICENSE         build           package.json
+apps/profiles-api/node_modules/jest-resolve/build:
+ModuleNotFoundError.js  index.js                shouldLoadAsEsm.js
+defaultResolver.js      isBuiltinModule.js      types.js
+fileWalkers.js          nodeModulesPaths.js     utils.js
+index.d.ts              resolver.js
+apps/profiles-api/node_modules/jest-resolve-dependencies:
+LICENSE         build           package.json
+apps/profiles-api/node_modules/jest-resolve-dependencies/build:
+index.d.ts      index.js
+apps/profiles-api/node_modules/jest-runner:
+LICENSE         build           node_modules    package.json
+apps/profiles-api/node_modules/jest-runner/build:
+index.d.ts      index.js        runTest.js      testWorker.js   types.js
+apps/profiles-api/node_modules/jest-runner/node_modules:
+source-map-support
+apps/profiles-api/node_modules/jest-runner/node_modules/source-map-support:
+LICENSE.md                      package.json
+README.md                       register.js
+browser-source-map-support.js   source-map-support.js
+apps/profiles-api/node_modules/jest-runtime:
+LICENSE         build           node_modules    package.json
+apps/profiles-api/node_modules/jest-runtime/build:
+helpers.js      index.d.ts      index.js
+apps/profiles-api/node_modules/jest-runtime/node_modules:
+brace-expansion glob            minimatch       strip-bom
+apps/profiles-api/node_modules/jest-runtime/node_modules/brace-expansion:
+LICENSE         README.md       index.js        package.json
+apps/profiles-api/node_modules/jest-runtime/node_modules/glob:
+LICENSE         common.js       package.json
+README.md       glob.js         sync.js
+apps/profiles-api/node_modules/jest-runtime/node_modules/minimatch:
+LICENSE         README.md       minimatch.js    package.json
+apps/profiles-api/node_modules/jest-runtime/node_modules/strip-bom:
+index.d.ts      index.js        license         package.json    readme.md
+apps/profiles-api/node_modules/jest-snapshot:
+LICENSE         build           package.json
+apps/profiles-api/node_modules/jest-snapshot/build:
+InlineSnapshots.js      dedentLines.js          plugins.js
+SnapshotResolver.js     index.d.ts              printSnapshot.js
+State.js                index.js                types.js
+colors.js               mockSerializer.js       utils.js
+apps/profiles-api/node_modules/jest-util:
+LICENSE         Readme.md       build           package.json
+apps/profiles-api/node_modules/jest-util/build:
+ErrorWithStack.js               invariant.js
+clearLine.js                    isInteractive.js
+convertDescriptorToString.js    isNonNullable.js
+createDirectory.js              isPromise.js
+createProcessObject.js          pluralize.js
+deepCyclicCopy.js               preRunMessage.js
+formatTime.js                   replacePathSepForGlob.js
+globsToMatcher.js               requireOrImportModule.js
+index.d.ts                      setGlobal.js
+index.js                        specialChars.js
+installCommonGlobals.js         testPathPatternToRegExp.js
+interopRequireDefault.js        tryRealpath.js
+apps/profiles-api/node_modules/jest-validate:
+LICENSE         README.md       build           package.json
+apps/profiles-api/node_modules/jest-validate/build:
+condition.js            exampleConfig.js        utils.js
+defaultConfig.js        index.d.ts              validate.js
+deprecated.js           index.js                validateCLIOptions.js
+errors.js               types.js                warnings.js
+apps/profiles-api/node_modules/jest-watcher:
+LICENSE         build           package.json
+apps/profiles-api/node_modules/jest-watcher/build:
+BaseWatchPlugin.js      TestWatcher.js          index.js
+JestHooks.js            constants.js            lib
+PatternPrompt.js        index.d.ts              types.js
+apps/profiles-api/node_modules/jest-watcher/build/lib:
+Prompt.js                       patternModeHelpers.js
+colorize.js                     scroll.js
+formatTestNameByPattern.js
+apps/profiles-api/node_modules/jest-worker:
+LICENSE         README.md       build           package.json
+apps/profiles-api/node_modules/jest-worker/build:
+Farm.js                 WorkerPool.js           index.js
+FifoQueue.js            base                    types.js
+PriorityQueue.js        index.d.ts              workers
+apps/profiles-api/node_modules/jest-worker/build/base:
+BaseWorkerPool.js
+apps/profiles-api/node_modules/jest-worker/build/workers:
+ChildProcessWorker.js   WorkerAbstract.js       processChild.js
+NodeThreadsWorker.js    messageParent.js        threadChild.js
+apps/profiles-api/node_modules/json5:
+LICENSE.md      README.md       dist            lib             package.json
+apps/profiles-api/node_modules/json5/dist:
+index.js        index.min.js    index.min.mjs   index.mjs
+apps/profiles-api/node_modules/json5/lib:
+cli.js          parse.d.ts      require.js      unicode.d.ts    util.js
+index.d.ts      parse.js        stringify.d.ts  unicode.js
+index.js        register.js     stringify.js    util.d.ts
+apps/profiles-api/node_modules/minimatch:
+LICENSE         README.md       dist            package.json
+apps/profiles-api/node_modules/minimatch/dist:
+commonjs        esm
+apps/profiles-api/node_modules/minimatch/dist/commonjs:
+assert-valid-pattern.d.ts       escape.d.ts.map
+assert-valid-pattern.d.ts.map   escape.js
+assert-valid-pattern.js         escape.js.map
+assert-valid-pattern.js.map     index.d.ts
+ast.d.ts                        index.d.ts.map
+ast.d.ts.map                    index.js
+ast.js                          index.js.map
+ast.js.map                      package.json
+brace-expressions.d.ts          unescape.d.ts
+brace-expressions.d.ts.map      unescape.d.ts.map
+brace-expressions.js            unescape.js
+brace-expressions.js.map        unescape.js.map
+escape.d.ts
+apps/profiles-api/node_modules/minimatch/dist/esm:
+assert-valid-pattern.d.ts       escape.d.ts.map
+assert-valid-pattern.d.ts.map   escape.js
+assert-valid-pattern.js         escape.js.map
+assert-valid-pattern.js.map     index.d.ts
+ast.d.ts                        index.d.ts.map
+ast.d.ts.map                    index.js
+ast.js                          index.js.map
+ast.js.map                      package.json
+brace-expressions.d.ts          unescape.d.ts
+brace-expressions.d.ts.map      unescape.d.ts.map
+brace-expressions.js            unescape.js
+brace-expressions.js.map        unescape.js.map
+escape.d.ts
+apps/profiles-api/node_modules/pretty-format:
+LICENSE         README.md       build           package.json
+apps/profiles-api/node_modules/pretty-format/build:
+collections.js  index.d.ts      index.js        plugins         types.js
+apps/profiles-api/node_modules/pretty-format/build/plugins:
+AsymmetricMatcher.js    Immutable.js            lib
+DOMCollection.js        ReactElement.js
+DOMElement.js           ReactTestComponent.js
+apps/profiles-api/node_modules/pretty-format/build/plugins/lib:
+escapeHTML.js   markup.js
+apps/profiles-api/node_modules/pure-rand:
+CHANGELOG.md    LICENSE         README.md       lib             package.json
+apps/profiles-api/node_modules/pure-rand/lib:
+distribution            generator               pure-rand.js
+esm                     pure-rand-default.js    types
+apps/profiles-api/node_modules/pure-rand/lib/distribution:
+Distribution.js                         UnsafeUniformArrayIntDistribution.js
+UniformArrayIntDistribution.js          UnsafeUniformBigIntDistribution.js
+UniformBigIntDistribution.js            UnsafeUniformIntDistribution.js
+UniformIntDistribution.js               internals
+apps/profiles-api/node_modules/pure-rand/lib/distribution/internals:
+ArrayInt.js
+UnsafeUniformArrayIntDistributionInternal.js
+UnsafeUniformIntDistributionInternal.js
+apps/profiles-api/node_modules/pure-rand/lib/esm:
+distribution            package.json            pure-rand.js
+generator               pure-rand-default.js    types
+apps/profiles-api/node_modules/pure-rand/lib/esm/distribution:
+Distribution.js                         UnsafeUniformArrayIntDistribution.js
+UniformArrayIntDistribution.js          UnsafeUniformBigIntDistribution.js
+UniformBigIntDistribution.js            UnsafeUniformIntDistribution.js
+UniformIntDistribution.js               internals
+apps/profiles-api/node_modules/pure-rand/lib/esm/distribution/internals:
+ArrayInt.js
+UnsafeUniformArrayIntDistributionInternal.js
+UnsafeUniformIntDistributionInternal.js
+apps/profiles-api/node_modules/pure-rand/lib/esm/generator:
+LinearCongruential.js   RandomGenerator.js      XoroShiro.js
+MersenneTwister.js      XorShift.js
+apps/profiles-api/node_modules/pure-rand/lib/esm/types:
+distribution            pure-rand-default.d.ts
+generator               pure-rand.d.ts
+apps/profiles-api/node_modules/pure-rand/lib/esm/types/distribution:
+Distribution.d.ts                       UnsafeUniformArrayIntDistribution.d.ts
+UniformArrayIntDistribution.d.ts        UnsafeUniformBigIntDistribution.d.ts
+UniformBigIntDistribution.d.ts          UnsafeUniformIntDistribution.d.ts
+UniformIntDistribution.d.ts             internals
+apps/profiles-api/node_modules/pure-rand/lib/esm/types/distribution/internals:
+ArrayInt.d.ts
+UnsafeUniformArrayIntDistributionInternal.d.ts
+UnsafeUniformIntDistributionInternal.d.ts
+apps/profiles-api/node_modules/pure-rand/lib/esm/types/generator:
+LinearCongruential.d.ts RandomGenerator.d.ts    XoroShiro.d.ts
+MersenneTwister.d.ts    XorShift.d.ts
+apps/profiles-api/node_modules/pure-rand/lib/generator:
+LinearCongruential.js   RandomGenerator.js      XoroShiro.js
+MersenneTwister.js      XorShift.js
+apps/profiles-api/node_modules/pure-rand/lib/types:
+distribution            pure-rand-default.d.ts
+generator               pure-rand.d.ts
+apps/profiles-api/node_modules/pure-rand/lib/types/distribution:
+Distribution.d.ts                       UnsafeUniformArrayIntDistribution.d.ts
+UniformArrayIntDistribution.d.ts        UnsafeUniformBigIntDistribution.d.ts
+UniformBigIntDistribution.d.ts          UnsafeUniformIntDistribution.d.ts
+UniformIntDistribution.d.ts             internals
+apps/profiles-api/node_modules/pure-rand/lib/types/distribution/internals:
+ArrayInt.d.ts
+UnsafeUniformArrayIntDistributionInternal.d.ts
+UnsafeUniformIntDistributionInternal.d.ts
+apps/profiles-api/node_modules/pure-rand/lib/types/generator:
+LinearCongruential.d.ts RandomGenerator.d.ts    XoroShiro.d.ts
+MersenneTwister.d.ts    XorShift.d.ts
+apps/profiles-api/node_modules/react-is:
+LICENSE         cjs             package.json
+README.md       index.js        umd
+apps/profiles-api/node_modules/react-is/cjs:
+react-is.development.js         react-is.production.min.js
+apps/profiles-api/node_modules/react-is/umd:
+react-is.development.js         react-is.production.min.js
+apps/profiles-api/node_modules/signal-exit:
+LICENSE.txt     README.md       index.js        package.json    signals.js
+apps/profiles-api/node_modules/source-map-support:
+LICENSE.md                      register-hook-require.js
+README.md                       register.js
+browser-source-map-support.js   source-map-support.js
+package.json
+apps/profiles-api/node_modules/supports-color:
+browser.js      index.js        license         package.json    readme.md
+apps/profiles-api/node_modules/ts-node:
+LICENSE                                 node12
+README.md                               node14
+child-loader.mjs                        node16
+dist                                    package.json
+dist-raw                                register
+esm                                     transpilers
+esm.mjs                                 tsconfig.schema.json
+node10                                  tsconfig.schemastore-schema.json
+apps/profiles-api/node_modules/ts-node/dist:
+bin-cwd.d.ts                            index.js.map
+bin-cwd.js                              module-type-classifier.d.ts
+bin-cwd.js.map                          module-type-classifier.js
+bin-esm.d.ts                            module-type-classifier.js.map
+bin-esm.js                              node-module-type-classifier.d.ts
+bin-esm.js.map                          node-module-type-classifier.js
+bin-script-deprecated.d.ts              node-module-type-classifier.js.map
+bin-script-deprecated.js                repl.d.ts
+bin-script-deprecated.js.map            repl.js
+bin-script.d.ts                         repl.js.map
+bin-script.js                           resolver-functions.d.ts
+bin-script.js.map                       resolver-functions.js
+bin-transpile.d.ts                      resolver-functions.js.map
+bin-transpile.js                        transpilers
+bin-transpile.js.map                    ts-compiler-types.d.ts
+bin.d.ts                                ts-compiler-types.js
+bin.js                                  ts-compiler-types.js.map
+bin.js.map                              ts-internals.d.ts
+child                                   ts-internals.js
+cjs-resolve-hooks.d.ts                  ts-internals.js.map
+cjs-resolve-hooks.js                    ts-transpile-module.d.ts
+cjs-resolve-hooks.js.map                ts-transpile-module.js
+configuration.d.ts                      ts-transpile-module.js.map
+configuration.js                        tsconfig-schema.d.ts
+configuration.js.map                    tsconfig-schema.js
+esm.d.ts                                tsconfig-schema.js.map
+esm.js                                  tsconfigs.d.ts
+esm.js.map                              tsconfigs.js
+file-extensions.d.ts                    tsconfigs.js.map
+file-extensions.js                      util.d.ts
+file-extensions.js.map                  util.js
+index.d.ts                              util.js.map
+index.js
+apps/profiles-api/node_modules/ts-node/dist/child:
+argv-payload.d.ts       child-entrypoint.js.map child-require.js
+argv-payload.js         child-loader.d.ts       child-require.js.map
+argv-payload.js.map     child-loader.js         spawn-child.d.ts
+child-entrypoint.d.ts   child-loader.js.map     spawn-child.js
+child-entrypoint.js     child-require.d.ts      spawn-child.js.map
+apps/profiles-api/node_modules/ts-node/dist/transpilers:
+swc.d.ts        swc.js.map      types.js
+swc.js          types.d.ts      types.js.map
+apps/profiles-api/node_modules/ts-node/dist-raw:
+NODE-LICENSE.md
+README.md
+node-internal-constants.js
+node-internal-errors.js
+node-internal-modules-cjs-helpers.js
+node-internal-modules-cjs-loader.js
+node-internal-modules-esm-get_format.js
+node-internal-modules-esm-resolve.js
+node-internal-modules-package_json_reader.js
+node-internal-repl-await.js
+node-internalBinding-fs.js
+node-nativemodule.js
+node-options.js
+node-primordials.js
+runmain-hack.js
+apps/profiles-api/node_modules/ts-node/esm:
+transpile-only.mjs
+apps/profiles-api/node_modules/ts-node/node10:
+tsconfig.json
+apps/profiles-api/node_modules/ts-node/node12:
+tsconfig.json
+apps/profiles-api/node_modules/ts-node/node14:
+tsconfig.json
+apps/profiles-api/node_modules/ts-node/node16:
+tsconfig.json
+apps/profiles-api/node_modules/ts-node/register:
+files.js                transpile-only.js
+index.js                type-check.js
+apps/profiles-api/node_modules/ts-node/transpilers:
+swc-experimental.js     swc.js
+apps/profiles-api/node_modules/tsconfig-paths:
+CHANGELOG.md    README.md       package.json    src
+LICENSE         lib             register.js
+apps/profiles-api/node_modules/tsconfig-paths/lib:
+__tests__               mapping-entry.d.ts      register.js
+config-loader.d.ts      mapping-entry.js        register.js.map
+config-loader.js        mapping-entry.js.map    try-path.d.ts
+config-loader.js.map    match-path-async.d.ts   try-path.js
+filesystem.d.ts         match-path-async.js     try-path.js.map
+filesystem.js           match-path-async.js.map tsconfig-loader.d.ts
+filesystem.js.map       match-path-sync.d.ts    tsconfig-loader.js
+index.d.ts              match-path-sync.js      tsconfig-loader.js.map
+index.js                match-path-sync.js.map
+index.js.map            register.d.ts
+apps/profiles-api/node_modules/tsconfig-paths/lib/__tests__:
+config-loader.test.d.ts         match-path-async.test.js
+config-loader.test.js           match-path-async.test.js.map
+config-loader.test.js.map       match-path-sync.test.d.ts
+data                            match-path-sync.test.js
+filesystem.test.d.ts            match-path-sync.test.js.map
+filesystem.test.js              try-path.test.d.ts
+filesystem.test.js.map          try-path.test.js
+mapping-entry.test.d.ts         try-path.test.js.map
+mapping-entry.test.js           tsconfig-loader.test.d.ts
+mapping-entry.test.js.map       tsconfig-loader.test.js
+match-path-async.test.d.ts      tsconfig-loader.test.js.map
+apps/profiles-api/node_modules/tsconfig-paths/lib/__tests__/data:
+match-path-data.d.ts    match-path-data.js      match-path-data.js.map
+apps/profiles-api/node_modules/tsconfig-paths/src:
+__tests__               mapping-entry.ts        try-path.ts
+config-loader.ts        match-path-async.ts     tsconfig-loader.ts
+filesystem.ts           match-path-sync.ts
+index.ts                register.ts
+apps/profiles-api/node_modules/tsconfig-paths/src/__tests__:
+config-loader.test.ts           match-path-sync.test.ts
+data                            try-path.test.ts
+filesystem.test.ts              tsconfig-loader.test.ts
+mapping-entry.test.ts           tsconfig-named.json
+match-path-async.test.ts
+apps/profiles-api/node_modules/tsconfig-paths/src/__tests__/data:
+match-path-data.ts
+apps/profiles-api/node_modules/typescript:
+LICENSE.txt                     bin
+README.md                       lib
+SECURITY.md                     package.json
+ThirdPartyNoticeText.txt
+apps/profiles-api/node_modules/typescript/bin:
+tsc             tsserver
+apps/profiles-api/node_modules/typescript/lib:
+_tsc.js                                 lib.es2020.sharedmemory.d.ts
+_tsserver.js                            lib.es2020.string.d.ts
+_typingsInstaller.js                    lib.es2020.symbol.wellknown.d.ts
+cancellationToken.js                    lib.es2021.d.ts
+cs                                      lib.es2021.full.d.ts
+de                                      lib.es2021.intl.d.ts
+es                                      lib.es2021.promise.d.ts
+fr                                      lib.es2021.string.d.ts
+it                                      lib.es2021.weakref.d.ts
+ja                                      lib.es2022.array.d.ts
+ko                                      lib.es2022.d.ts
+lib.d.ts                                lib.es2022.error.d.ts
+lib.decorators.d.ts                     lib.es2022.full.d.ts
+lib.decorators.legacy.d.ts              lib.es2022.intl.d.ts
+lib.dom.asynciterable.d.ts              lib.es2022.object.d.ts
+lib.dom.d.ts                            lib.es2022.regexp.d.ts
+lib.dom.iterable.d.ts                   lib.es2022.string.d.ts
+lib.es2015.collection.d.ts              lib.es2023.array.d.ts
+lib.es2015.core.d.ts                    lib.es2023.collection.d.ts
+lib.es2015.d.ts                         lib.es2023.d.ts
+lib.es2015.generator.d.ts               lib.es2023.full.d.ts
+lib.es2015.iterable.d.ts                lib.es2023.intl.d.ts
+lib.es2015.promise.d.ts                 lib.es2024.arraybuffer.d.ts
+lib.es2015.proxy.d.ts                   lib.es2024.collection.d.ts
+lib.es2015.reflect.d.ts                 lib.es2024.d.ts
+lib.es2015.symbol.d.ts                  lib.es2024.full.d.ts
+lib.es2015.symbol.wellknown.d.ts        lib.es2024.object.d.ts
+lib.es2016.array.include.d.ts           lib.es2024.promise.d.ts
+lib.es2016.d.ts                         lib.es2024.regexp.d.ts
+lib.es2016.full.d.ts                    lib.es2024.sharedmemory.d.ts
+lib.es2016.intl.d.ts                    lib.es2024.string.d.ts
+lib.es2017.arraybuffer.d.ts             lib.es5.d.ts
+lib.es2017.d.ts                         lib.es6.d.ts
+lib.es2017.date.d.ts                    lib.esnext.array.d.ts
+lib.es2017.full.d.ts                    lib.esnext.collection.d.ts
+lib.es2017.intl.d.ts                    lib.esnext.d.ts
+lib.es2017.object.d.ts                  lib.esnext.decorators.d.ts
+lib.es2017.sharedmemory.d.ts            lib.esnext.disposable.d.ts
+lib.es2017.string.d.ts                  lib.esnext.full.d.ts
+lib.es2017.typedarrays.d.ts             lib.esnext.intl.d.ts
+lib.es2018.asyncgenerator.d.ts          lib.esnext.iterator.d.ts
+lib.es2018.asynciterable.d.ts           lib.scripthost.d.ts
+lib.es2018.d.ts                         lib.webworker.asynciterable.d.ts
+lib.es2018.full.d.ts                    lib.webworker.d.ts
+lib.es2018.intl.d.ts                    lib.webworker.importscripts.d.ts
+lib.es2018.promise.d.ts                 lib.webworker.iterable.d.ts
+lib.es2018.regexp.d.ts                  pl
+lib.es2019.array.d.ts                   pt-br
+lib.es2019.d.ts                         ru
+lib.es2019.full.d.ts                    tr
+lib.es2019.intl.d.ts                    tsc.js
+lib.es2019.object.d.ts                  tsserver.js
+lib.es2019.string.d.ts                  tsserverlibrary.d.ts
+lib.es2019.symbol.d.ts                  tsserverlibrary.js
+lib.es2020.bigint.d.ts                  typesMap.json
+lib.es2020.d.ts                         typescript.d.ts
+lib.es2020.date.d.ts                    typescript.js
+lib.es2020.full.d.ts                    typingsInstaller.js
+lib.es2020.intl.d.ts                    watchGuard.js
+lib.es2020.number.d.ts                  zh-cn
+lib.es2020.promise.d.ts                 zh-tw
+apps/profiles-api/node_modules/typescript/lib/cs:
+diagnosticMessages.generated.json
+apps/profiles-api/node_modules/typescript/lib/de:
+diagnosticMessages.generated.json
+apps/profiles-api/node_modules/typescript/lib/es:
+diagnosticMessages.generated.json
+apps/profiles-api/node_modules/typescript/lib/fr:
+diagnosticMessages.generated.json
+apps/profiles-api/node_modules/typescript/lib/it:
+diagnosticMessages.generated.json
+apps/profiles-api/node_modules/typescript/lib/ja:
+diagnosticMessages.generated.json
+apps/profiles-api/node_modules/typescript/lib/ko:
+diagnosticMessages.generated.json
+apps/profiles-api/node_modules/typescript/lib/pl:
+diagnosticMessages.generated.json
+apps/profiles-api/node_modules/typescript/lib/pt-br:
+diagnosticMessages.generated.json
+apps/profiles-api/node_modules/typescript/lib/ru:
+diagnosticMessages.generated.json
+apps/profiles-api/node_modules/typescript/lib/tr:
+diagnosticMessages.generated.json
+apps/profiles-api/node_modules/typescript/lib/zh-cn:
+diagnosticMessages.generated.json
+apps/profiles-api/node_modules/typescript/lib/zh-tw:
+diagnosticMessages.generated.json
+apps/profiles-api/node_modules/webpack:
+LICENSE         SECURITY.md     hot             module.d.ts     schemas
+README.md       bin             lib             package.json    types.d.ts
+apps/profiles-api/node_modules/webpack/bin:
+webpack.js
+apps/profiles-api/node_modules/webpack/hot:
+dev-server.js                   log.js
+emitter.js                      only-dev-server.js
+lazy-compilation-node.js        poll.js
+lazy-compilation-web.js         signal.js
+log-apply-result.js
+apps/profiles-api/node_modules/webpack/lib:
+APIPlugin.js                            ModuleProfile.js
+AbstractMethodError.js                  ModuleRestoreError.js
+AsyncDependenciesBlock.js               ModuleSourceTypesConstants.js
+AsyncDependencyToInitialChunkError.js   ModuleStoreError.js
+AutomaticPrefetchPlugin.js              ModuleTemplate.js
+BannerPlugin.js                         ModuleTypeConstants.js
+Cache.js                                ModuleWarning.js
+CacheFacade.js                          MultiCompiler.js
+CaseSensitiveModulesWarning.js          MultiStats.js
+Chunk.js                                MultiWatching.js
+ChunkGraph.js                           NoEmitOnErrorsPlugin.js
+ChunkGroup.js                           NoModeWarning.js
+ChunkRenderError.js                     NodeStuffInWebError.js
+ChunkTemplate.js                        NodeStuffPlugin.js
+CleanPlugin.js                          NormalModule.js
+CodeGenerationError.js                  NormalModuleFactory.js
+CodeGenerationResults.js                NormalModuleReplacementPlugin.js
+CommentCompilationWarning.js            NullFactory.js
+CompatibilityPlugin.js                  OptimizationStages.js
+Compilation.js                          OptionsApply.js
+Compiler.js                             Parser.js
+ConcatenationScope.js                   PlatformPlugin.js
+ConcurrentCompilationError.js           PrefetchPlugin.js
+ConditionalInitFragment.js              ProgressPlugin.js
+ConstPlugin.js                          ProvidePlugin.js
+ContextExclusionPlugin.js               RawModule.js
+ContextModule.js                        RecordIdsPlugin.js
+ContextModuleFactory.js                 RequestShortener.js
+ContextReplacementPlugin.js             RequireJsStuffPlugin.js
+CssModule.js                            ResolverFactory.js
+DefinePlugin.js                         RuntimeGlobals.js
+DelegatedModule.js                      RuntimeModule.js
+DelegatedModuleFactoryPlugin.js         RuntimePlugin.js
+DelegatedPlugin.js                      RuntimeTemplate.js
+DependenciesBlock.js                    SelfModuleFactory.js
+Dependency.js                           SingleEntryPlugin.js
+DependencyTemplate.js                   SizeFormatHelpers.js
+DependencyTemplates.js                  SourceMapDevToolModuleOptionsPlugin.js
+DllEntryPlugin.js                       SourceMapDevToolPlugin.js
+DllModule.js                            Stats.js
+DllModuleFactory.js                     Template.js
+DllPlugin.js                            TemplatedPathPlugin.js
+DllReferencePlugin.js                   UnhandledSchemeError.js
+DynamicEntryPlugin.js                   UnsupportedFeatureWarning.js
+EntryOptionPlugin.js                    UseStrictPlugin.js
+EntryPlugin.js                          WarnCaseSensitiveModulesPlugin.js
+Entrypoint.js                           WarnDeprecatedOptionPlugin.js
+EnvironmentNotSupportAsyncWarning.js    WarnNoModeSetPlugin.js
+EnvironmentPlugin.js                    WatchIgnorePlugin.js
+ErrorHelpers.js                         Watching.js
+EvalDevToolModulePlugin.js              WebpackError.js
+EvalSourceMapDevToolPlugin.js           WebpackIsIncludedPlugin.js
+ExportsInfo.js                          WebpackOptionsApply.js
+ExportsInfoApiPlugin.js                 WebpackOptionsDefaulter.js
+ExternalModule.js                       asset
+ExternalModuleFactoryPlugin.js          async-modules
+ExternalsPlugin.js                      buildChunkGraph.js
+FalseIIFEUmdWarning.js                  cache
+FileSystemInfo.js                       cli.js
+FlagAllModulesAsUsedPlugin.js           config
+FlagDependencyExportsPlugin.js          container
+FlagDependencyUsagePlugin.js            css
+FlagEntryExportAsUsedPlugin.js          debug
+Generator.js                            dependencies
+GraphHelpers.js                         electron
+HarmonyLinkingError.js                  errors
+HookWebpackError.js                     esm
+HotModuleReplacementPlugin.js           formatLocation.js
+HotUpdateChunk.js                       hmr
+IgnoreErrorModuleFactory.js             ids
+IgnorePlugin.js                         index.js
+IgnoreWarningsPlugin.js                 javascript
+InitFragment.js                         json
+InvalidDependenciesModuleWarning.js     library
+JavascriptMetaInfoPlugin.js             logging
+LibManifestPlugin.js                    node
+LibraryTemplatePlugin.js                optimize
+LoaderOptionsPlugin.js                  performance
+LoaderTargetPlugin.js                   prefetch
+MainTemplate.js                         rules
+Module.js                               runtime
+ModuleBuildError.js                     schemes
+ModuleDependencyError.js                serialization
+ModuleDependencyWarning.js              sharing
+ModuleError.js                          stats
+ModuleFactory.js                        util
+ModuleFilenameHelpers.js                validateSchema.js
+ModuleGraph.js                          wasm
+ModuleGraphConnection.js                wasm-async
+ModuleHashingError.js                   wasm-sync
+ModuleInfoHeaderPlugin.js               web
+ModuleNotFoundError.js                  webpack.js
+ModuleParseError.js                     webworker
+apps/profiles-api/node_modules/webpack/lib/asset:
+AssetGenerator.js       AssetParser.js          AssetSourceParser.js
+AssetModulesPlugin.js   AssetSourceGenerator.js RawDataUrlModule.js
+apps/profiles-api/node_modules/webpack/lib/async-modules:
+AwaitDependenciesInitFragment.js        InferAsyncModulesPlugin.js
+apps/profiles-api/node_modules/webpack/lib/cache:
+AddBuildDependenciesPlugin.js   PackFileCacheStrategy.js
+AddManagedPathsPlugin.js        ResolverCachePlugin.js
+IdleFileCachePlugin.js          getLazyHashedEtag.js
+MemoryCachePlugin.js            mergeEtags.js
+MemoryWithGcCachePlugin.js
+apps/profiles-api/node_modules/webpack/lib/config:
+browserslistTargetHandler.js    normalization.js
+defaults.js                     target.js
+apps/profiles-api/node_modules/webpack/lib/container:
+ContainerEntryDependency.js             FallbackModule.js
+ContainerEntryModule.js                 FallbackModuleFactory.js
+ContainerEntryModuleFactory.js          HoistContainerReferencesPlugin.js
+ContainerExposedDependency.js           ModuleFederationPlugin.js
+ContainerPlugin.js                      RemoteModule.js
+ContainerReferencePlugin.js             RemoteRuntimeModule.js
+FallbackDependency.js                   RemoteToExternalDependency.js
+FallbackItemDependency.js               options.js
+apps/profiles-api/node_modules/webpack/lib/css:
+CssGenerator.js                 CssParser.js
+CssLoadingRuntimeModule.js      walkCssTokens.js
+CssModulesPlugin.js
+apps/profiles-api/node_modules/webpack/lib/debug:
+ProfilingPlugin.js
+apps/profiles-api/node_modules/webpack/lib/dependencies:
+AMDDefineDependency.js
+AMDDefineDependencyParserPlugin.js
+AMDPlugin.js
+AMDRequireArrayDependency.js
+AMDRequireContextDependency.js
+AMDRequireDependenciesBlock.js
+AMDRequireDependenciesBlockParserPlugin.js
+AMDRequireDependency.js
+AMDRequireItemDependency.js
+AMDRuntimeModules.js
+CachedConstDependency.js
+CommonJsDependencyHelpers.js
+CommonJsExportRequireDependency.js
+CommonJsExportsDependency.js
+CommonJsExportsParserPlugin.js
+CommonJsFullRequireDependency.js
+CommonJsImportsParserPlugin.js
+CommonJsPlugin.js
+CommonJsRequireContextDependency.js
+CommonJsRequireDependency.js
+CommonJsSelfReferenceDependency.js
+ConstDependency.js
+ContextDependency.js
+ContextDependencyHelpers.js
+ContextDependencyTemplateAsId.js
+ContextDependencyTemplateAsRequireCall.js
+ContextElementDependency.js
+CreateScriptUrlDependency.js
+CriticalDependencyWarning.js
+CssIcssExportDependency.js
+CssIcssImportDependency.js
+CssIcssSymbolDependency.js
+CssImportDependency.js
+CssLocalIdentifierDependency.js
+CssSelfLocalIdentifierDependency.js
+CssUrlDependency.js
+DelegatedSourceDependency.js
+DllEntryDependency.js
+DynamicExports.js
+EntryDependency.js
+ExportsInfoDependency.js
+ExternalModuleDependency.js
+ExternalModuleInitFragment.js
+HarmonyAcceptDependency.js
+HarmonyAcceptImportDependency.js
+HarmonyCompatibilityDependency.js
+HarmonyDetectionParserPlugin.js
+HarmonyEvaluatedImportSpecifierDependency.js
+HarmonyExportDependencyParserPlugin.js
+HarmonyExportExpressionDependency.js
+HarmonyExportHeaderDependency.js
+HarmonyExportImportedSpecifierDependency.js
+HarmonyExportInitFragment.js
+HarmonyExportSpecifierDependency.js
+HarmonyExports.js
+HarmonyImportDependency.js
+HarmonyImportDependencyParserPlugin.js
+HarmonyImportSideEffectDependency.js
+HarmonyImportSpecifierDependency.js
+HarmonyModulesPlugin.js
+HarmonyTopLevelThisParserPlugin.js
+ImportContextDependency.js
+ImportDependency.js
+ImportEagerDependency.js
+ImportMetaContextDependency.js
+ImportMetaContextDependencyParserPlugin.js
+ImportMetaContextPlugin.js
+ImportMetaHotAcceptDependency.js
+ImportMetaHotDeclineDependency.js
+ImportMetaPlugin.js
+ImportParserPlugin.js
+ImportPlugin.js
+ImportWeakDependency.js
+JsonExportsDependency.js
+LoaderDependency.js
+LoaderImportDependency.js
+LoaderPlugin.js
+LocalModule.js
+LocalModuleDependency.js
+LocalModulesHelpers.js
+ModuleDecoratorDependency.js
+ModuleDependency.js
+ModuleDependencyTemplateAsId.js
+ModuleDependencyTemplateAsRequireId.js
+ModuleHotAcceptDependency.js
+ModuleHotDeclineDependency.js
+NullDependency.js
+PrefetchDependency.js
+ProvidedDependency.js
+PureExpressionDependency.js
+RequireContextDependency.js
+RequireContextDependencyParserPlugin.js
+RequireContextPlugin.js
+RequireEnsureDependenciesBlock.js
+RequireEnsureDependenciesBlockParserPlugin.js
+RequireEnsureDependency.js
+RequireEnsureItemDependency.js
+RequireEnsurePlugin.js
+RequireHeaderDependency.js
+RequireIncludeDependency.js
+RequireIncludeDependencyParserPlugin.js
+RequireIncludePlugin.js
+RequireResolveContextDependency.js
+RequireResolveDependency.js
+RequireResolveHeaderDependency.js
+RuntimeRequirementsDependency.js
+StaticExportsDependency.js
+SystemPlugin.js
+SystemRuntimeModule.js
+URLDependency.js
+URLPlugin.js
+UnsupportedDependency.js
+WebAssemblyExportImportedDependency.js
+WebAssemblyImportDependency.js
+WebpackIsIncludedDependency.js
+WorkerDependency.js
+WorkerPlugin.js
+getFunctionExpression.js
+processExportInfo.js
+apps/profiles-api/node_modules/webpack/lib/electron:
+ElectronTargetPlugin.js
+apps/profiles-api/node_modules/webpack/lib/errors:
+BuildCycleError.js
+apps/profiles-api/node_modules/webpack/lib/esm:
+ExportWebpackRequireRuntimeModule.js    ModuleChunkLoadingPlugin.js
+ModuleChunkFormatPlugin.js              ModuleChunkLoadingRuntimeModule.js
+apps/profiles-api/node_modules/webpack/lib/hmr:
+HotModuleReplacement.runtime.js
+HotModuleReplacementRuntimeModule.js
+JavascriptHotModuleReplacement.runtime.js
+LazyCompilationPlugin.js
+lazyCompilationBackend.js
+apps/profiles-api/node_modules/webpack/lib/ids:
+ChunkModuleIdRangePlugin.js     NamedModuleIdsPlugin.js
+DeterministicChunkIdsPlugin.js  NaturalChunkIdsPlugin.js
+DeterministicModuleIdsPlugin.js NaturalModuleIdsPlugin.js
+HashedModuleIdsPlugin.js        OccurrenceChunkIdsPlugin.js
+IdHelpers.js                    OccurrenceModuleIdsPlugin.js
+NamedChunkIdsPlugin.js          SyncModuleIdsPlugin.js
+apps/profiles-api/node_modules/webpack/lib/javascript:
+ArrayPushCallbackChunkFormatPlugin.js   JavascriptGenerator.js
+BasicEvaluatedExpression.js             JavascriptModulesPlugin.js
+ChunkHelpers.js                         JavascriptParser.js
+CommonJsChunkFormatPlugin.js            JavascriptParserHelpers.js
+EnableChunkLoadingPlugin.js             StartupHelpers.js
+apps/profiles-api/node_modules/webpack/lib/json:
+JsonData.js             JsonModulesPlugin.js
+JsonGenerator.js        JsonParser.js
+apps/profiles-api/node_modules/webpack/lib/library:
+AbstractLibraryPlugin.js        JsonpLibraryPlugin.js
+AmdLibraryPlugin.js             ModernModuleLibraryPlugin.js
+AssignLibraryPlugin.js          ModuleLibraryPlugin.js
+EnableLibraryPlugin.js          SystemLibraryPlugin.js
+ExportPropertyLibraryPlugin.js  UmdLibraryPlugin.js
+apps/profiles-api/node_modules/webpack/lib/logging:
+Logger.js               runtime.js
+createConsoleLogger.js  truncateArgs.js
+apps/profiles-api/node_modules/webpack/lib/node:
+CommonJsChunkLoadingPlugin.js           ReadFileChunkLoadingRuntimeModule.js
+NodeEnvironmentPlugin.js                ReadFileCompileAsyncWasmPlugin.js
+NodeSourcePlugin.js                     ReadFileCompileWasmPlugin.js
+NodeTargetPlugin.js                     RequireChunkLoadingRuntimeModule.js
+NodeTemplatePlugin.js                   nodeConsole.js
+NodeWatchFileSystem.js
+apps/profiles-api/node_modules/webpack/lib/optimize:
+AggressiveMergingPlugin.js      MinChunkSizePlugin.js
+AggressiveSplittingPlugin.js    MinMaxSizeWarning.js
+ConcatenatedModule.js           ModuleConcatenationPlugin.js
+EnsureChunkConditionsPlugin.js  RealContentHashPlugin.js
+FlagIncludedChunksPlugin.js     RemoveEmptyChunksPlugin.js
+InnerGraph.js                   RemoveParentModulesPlugin.js
+InnerGraphPlugin.js             RuntimeChunkPlugin.js
+LimitChunkCountPlugin.js        SideEffectsFlagPlugin.js
+MangleExportsPlugin.js          SplitChunksPlugin.js
+MergeDuplicateChunksPlugin.js
+apps/profiles-api/node_modules/webpack/lib/performance:
+AssetsOverSizeLimitWarning.js           NoAsyncChunksWarning.js
+EntrypointsOverSizeLimitWarning.js      SizeLimitsPlugin.js
+apps/profiles-api/node_modules/webpack/lib/prefetch:
+ChunkPrefetchFunctionRuntimeModule.js   ChunkPrefetchTriggerRuntimeModule.js
+ChunkPrefetchPreloadPlugin.js           ChunkPreloadTriggerRuntimeModule.js
+ChunkPrefetchStartupRuntimeModule.js
+apps/profiles-api/node_modules/webpack/lib/rules:
+BasicEffectRulePlugin.js        RuleSetCompiler.js
+BasicMatcherRulePlugin.js       UseEffectRulePlugin.js
+ObjectMatcherRulePlugin.js
+apps/profiles-api/node_modules/webpack/lib/runtime:
+AsyncModuleRuntimeModule.js
+AutoPublicPathRuntimeModule.js
+BaseUriRuntimeModule.js
+ChunkNameRuntimeModule.js
+CompatGetDefaultExportRuntimeModule.js
+CompatRuntimeModule.js
+CreateFakeNamespaceObjectRuntimeModule.js
+CreateScriptRuntimeModule.js
+CreateScriptUrlRuntimeModule.js
+DefinePropertyGettersRuntimeModule.js
+EnsureChunkRuntimeModule.js
+GetChunkFilenameRuntimeModule.js
+GetFullHashRuntimeModule.js
+GetMainFilenameRuntimeModule.js
+GetTrustedTypesPolicyRuntimeModule.js
+GlobalRuntimeModule.js
+HasOwnPropertyRuntimeModule.js
+HelperRuntimeModule.js
+LoadScriptRuntimeModule.js
+MakeNamespaceObjectRuntimeModule.js
+NonceRuntimeModule.js
+OnChunksLoadedRuntimeModule.js
+PublicPathRuntimeModule.js
+RelativeUrlRuntimeModule.js
+RuntimeIdRuntimeModule.js
+StartupChunkDependenciesPlugin.js
+StartupChunkDependenciesRuntimeModule.js
+StartupEntrypointRuntimeModule.js
+SystemContextRuntimeModule.js
+apps/profiles-api/node_modules/webpack/lib/schemes:
+DataUriPlugin.js        FileUriPlugin.js        HttpUriPlugin.js
+apps/profiles-api/node_modules/webpack/lib/serialization:
+ArraySerializer.js                      PlainObjectSerializer.js
+BinaryMiddleware.js                     RegExpObjectSerializer.js
+DateObjectSerializer.js                 Serializer.js
+ErrorObjectSerializer.js                SerializerMiddleware.js
+FileMiddleware.js                       SetObjectSerializer.js
+MapObjectSerializer.js                  SingleItemMiddleware.js
+NullPrototypeObjectSerializer.js        types.js
+ObjectMiddleware.js
+apps/profiles-api/node_modules/webpack/lib/sharing:
+ConsumeSharedFallbackDependency.js      ProvideSharedModuleFactory.js
+ConsumeSharedModule.js                  ProvideSharedPlugin.js
+ConsumeSharedPlugin.js                  SharePlugin.js
+ConsumeSharedRuntimeModule.js           ShareRuntimeModule.js
+ProvideForSharedDependency.js           resolveMatchedConfigs.js
+ProvideSharedDependency.js              utils.js
+ProvideSharedModule.js
+apps/profiles-api/node_modules/webpack/lib/stats:
+DefaultStatsFactoryPlugin.js    StatsFactory.js
+DefaultStatsPresetPlugin.js     StatsPrinter.js
+DefaultStatsPrinterPlugin.js
+apps/profiles-api/node_modules/webpack/lib/util:
+ArrayHelpers.js                 create-schema-validation.js
+ArrayQueue.js                   createHash.js
+AsyncQueue.js                   deprecation.js
+Hash.js                         deterministicGrouping.js
+IterableHelpers.js              extractUrlAndGlobal.js
+LazyBucketSortedSet.js          findGraphRoots.js
+LazySet.js                      fs.js
+MapHelpers.js                   generateDebugId.js
+ParallelismFactorCalculator.js  hash
+Queue.js                        identifier.js
+Semaphore.js                    internalSerializables.js
+SetHelpers.js                   magicComment.js
+SortableSet.js                  makeSerializable.js
+StackedCacheMap.js              memoize.js
+StackedMap.js                   nonNumericOnlyHash.js
+StringXor.js                    numberHash.js
+TupleQueue.js                   objectToMap.js
+TupleSet.js                     processAsyncTree.js
+URLAbsoluteSpecifier.js         propertyAccess.js
+WeakTupleMap.js                 propertyName.js
+binarySearchBounds.js           registerExternalSerializer.js
+chainedImports.js               runtime.js
+cleverMerge.js                  semver.js
+comparators.js                  serialization.js
+compileBooleanMatcher.js        smartGrouping.js
+concatenate.js                  source.js
+conventions.js
+apps/profiles-api/node_modules/webpack/lib/util/hash:
+BatchedHash.js  md4.js          wasm-hash.js    xxhash64.js
+apps/profiles-api/node_modules/webpack/lib/wasm:
+EnableWasmLoadingPlugin.js
+apps/profiles-api/node_modules/webpack/lib/wasm-async:
+AsyncWasmLoadingRuntimeModule.js        AsyncWebAssemblyModulesPlugin.js
+AsyncWebAssemblyGenerator.js            AsyncWebAssemblyParser.js
+AsyncWebAssemblyJavascriptGenerator.js  UniversalCompileAsyncWasmPlugin.js
+apps/profiles-api/node_modules/webpack/lib/wasm-sync:
+UnsupportedWebAssemblyFeatureError.js   WebAssemblyJavascriptGenerator.js
+WasmChunkLoadingRuntimeModule.js        WebAssemblyModulesPlugin.js
+WasmFinalizeExportsPlugin.js            WebAssemblyParser.js
+WebAssemblyGenerator.js                 WebAssemblyUtils.js
+WebAssemblyInInitialChunkError.js
+apps/profiles-api/node_modules/webpack/lib/web:
+FetchCompileAsyncWasmPlugin.js          JsonpChunkLoadingRuntimeModule.js
+FetchCompileWasmPlugin.js               JsonpTemplatePlugin.js
+JsonpChunkLoadingPlugin.js
+apps/profiles-api/node_modules/webpack/lib/webworker:
+ImportScriptsChunkLoadingPlugin.js
+ImportScriptsChunkLoadingRuntimeModule.js
+WebWorkerTemplatePlugin.js
+apps/profiles-api/node_modules/webpack/schemas:
+WebpackOptions.check.d.ts       _container.json
+WebpackOptions.check.js         _sharing.json
+WebpackOptions.json             plugins
+apps/profiles-api/node_modules/webpack/schemas/plugins:
+BannerPlugin.check.d.ts                 LoaderOptionsPlugin.check.js
+BannerPlugin.check.js                   LoaderOptionsPlugin.json
+BannerPlugin.json                       ProgressPlugin.check.d.ts
+DllPlugin.check.d.ts                    ProgressPlugin.check.js
+DllPlugin.check.js                      ProgressPlugin.json
+DllPlugin.json                          SourceMapDevToolPlugin.check.d.ts
+DllReferencePlugin.check.d.ts           SourceMapDevToolPlugin.check.js
+DllReferencePlugin.check.js             SourceMapDevToolPlugin.json
+DllReferencePlugin.json                 WatchIgnorePlugin.check.d.ts
+HashedModuleIdsPlugin.check.d.ts        WatchIgnorePlugin.check.js
+HashedModuleIdsPlugin.check.js          WatchIgnorePlugin.json
+HashedModuleIdsPlugin.json              asset
+IgnorePlugin.check.d.ts                 container
+IgnorePlugin.check.js                   css
+IgnorePlugin.json                       debug
+JsonModulesPluginParser.check.d.ts      ids
+JsonModulesPluginParser.check.js        optimize
+JsonModulesPluginParser.json            schemes
+LoaderOptionsPlugin.check.d.ts          sharing
+apps/profiles-api/node_modules/webpack/schemas/plugins/asset:
+AssetGeneratorOptions.check.d.ts
+AssetGeneratorOptions.check.js
+AssetGeneratorOptions.json
+AssetInlineGeneratorOptions.check.d.ts
+AssetInlineGeneratorOptions.check.js
+AssetInlineGeneratorOptions.json
+AssetParserOptions.check.d.ts
+AssetParserOptions.check.js
+AssetParserOptions.json
+AssetResourceGeneratorOptions.check.d.ts
+AssetResourceGeneratorOptions.check.js
+AssetResourceGeneratorOptions.json
+apps/profiles-api/node_modules/webpack/schemas/plugins/container:
+ContainerPlugin.check.d.ts              ExternalsType.check.d.ts
+ContainerPlugin.check.js                ExternalsType.check.js
+ContainerPlugin.json                    ExternalsType.json
+ContainerReferencePlugin.check.d.ts     ModuleFederationPlugin.check.d.ts
+ContainerReferencePlugin.check.js       ModuleFederationPlugin.check.js
+ContainerReferencePlugin.json           ModuleFederationPlugin.json
+apps/profiles-api/node_modules/webpack/schemas/plugins/css:
+CssAutoGeneratorOptions.check.d.ts      CssGlobalParserOptions.check.d.ts
+CssAutoGeneratorOptions.check.js        CssGlobalParserOptions.check.js
+CssAutoGeneratorOptions.json            CssGlobalParserOptions.json
+CssAutoParserOptions.check.d.ts         CssModuleGeneratorOptions.check.d.ts
+CssAutoParserOptions.check.js           CssModuleGeneratorOptions.check.js
+CssAutoParserOptions.json               CssModuleGeneratorOptions.json
+CssGeneratorOptions.check.d.ts          CssModuleParserOptions.check.d.ts
+CssGeneratorOptions.check.js            CssModuleParserOptions.check.js
+CssGeneratorOptions.json                CssModuleParserOptions.json
+CssGlobalGeneratorOptions.check.d.ts    CssParserOptions.check.d.ts
+CssGlobalGeneratorOptions.check.js      CssParserOptions.check.js
+CssGlobalGeneratorOptions.json          CssParserOptions.json
+apps/profiles-api/node_modules/webpack/schemas/plugins/debug:
+ProfilingPlugin.check.d.ts      ProfilingPlugin.json
+ProfilingPlugin.check.js
+apps/profiles-api/node_modules/webpack/schemas/plugins/ids:
+OccurrenceChunkIdsPlugin.check.d.ts     OccurrenceModuleIdsPlugin.check.d.ts
+OccurrenceChunkIdsPlugin.check.js       OccurrenceModuleIdsPlugin.check.js
+OccurrenceChunkIdsPlugin.json           OccurrenceModuleIdsPlugin.json
+apps/profiles-api/node_modules/webpack/schemas/plugins/optimize:
+AggressiveSplittingPlugin.check.d.ts    MergeDuplicateChunksPlugin.check.d.ts
+AggressiveSplittingPlugin.check.js      MergeDuplicateChunksPlugin.check.js
+AggressiveSplittingPlugin.json          MergeDuplicateChunksPlugin.json
+LimitChunkCountPlugin.check.d.ts        MinChunkSizePlugin.check.d.ts
+LimitChunkCountPlugin.check.js          MinChunkSizePlugin.check.js
+LimitChunkCountPlugin.json              MinChunkSizePlugin.json
+apps/profiles-api/node_modules/webpack/schemas/plugins/schemes:
+HttpUriPlugin.check.d.ts        HttpUriPlugin.json
+HttpUriPlugin.check.js
+apps/profiles-api/node_modules/webpack/schemas/plugins/sharing:
+ConsumeSharedPlugin.check.d.ts  ProvideSharedPlugin.json
+ConsumeSharedPlugin.check.js    SharePlugin.check.d.ts
+ConsumeSharedPlugin.json        SharePlugin.check.js
+ProvideSharedPlugin.check.d.ts  SharePlugin.json
+ProvideSharedPlugin.check.js
+apps/profiles-api/node_modules/write-file-atomic:
+LICENSE.md      README.md       lib             package.json
+apps/profiles-api/node_modules/write-file-atomic/lib:
+index.js
+apps/profiles-api/src:
+app.module.ts   config          profiles        usage
+batches         main.ts         stock           webhooks
+common          orders          suppliers
+apps/profiles-api/src/batches:
+batches.controller.ts   batches.module.ts       batches.service.ts
+apps/profiles-api/src/common:
+decorators      guards
+apps/profiles-api/src/common/decorators:
+current-user.decorator.ts
+apps/profiles-api/src/common/guards:
+auth.guard.ts           company.guard.ts
+apps/profiles-api/src/config:
+supabase.config.ts
+apps/profiles-api/src/orders:
+dto                     orders.module.ts
+orders.controller.ts    orders.service.ts
+apps/profiles-api/src/orders/dto:
+create-order.dto.ts     update-order.dto.ts
+apps/profiles-api/src/profiles:
+dto                     profiles.module.ts
+profiles.controller.ts  profiles.service.ts
+apps/profiles-api/src/profiles/dto:
+create-profile.dto.ts   update-profile.dto.ts
+apps/profiles-api/src/stock:
+stock.controller.ts     stock.module.ts         stock.service.ts
+apps/profiles-api/src/suppliers:
+suppliers.controller.ts suppliers.module.ts     suppliers.service.ts
+apps/profiles-api/src/usage:
+usage.controller.ts     usage.module.ts         usage.service.ts
+apps/profiles-api/src/webhooks:
+webhooks.gateway.ts     webhooks.module.ts
+apps/profiles-store:
+README.md               next-env.d.ts           public
+app                     next.config.js          tailwind.config.ts
+components              node_modules            tsconfig.json
+lib                     package.json
+middleware.ts           postcss.config.js
+apps/profiles-store/app:
+[locale]        globals.css     layout.tsx
+apps/profiles-store/app/[locale]:
+[profileId]     checkout        orders
+cart            layout.tsx      page.tsx
+apps/profiles-store/app/[locale]/[profileId]:
+ProductDetailClient.tsx page.tsx
+apps/profiles-store/app/[locale]/cart:
+page.tsx
+apps/profiles-store/app/[locale]/checkout:
+page.tsx
+apps/profiles-store/app/[locale]/orders:
+[id]
+apps/profiles-store/app/[locale]/orders/[id]:
+page.tsx
+apps/profiles-store/components:
+cart            catalog         checkout        layout          product
+apps/profiles-store/components/cart:
+CartItem.tsx    CartSummary.tsx CartWidget.tsx
+apps/profiles-store/components/catalog:
+FilterPanel.tsx ProductCard.tsx ProductGrid.tsx SearchBar.tsx   StockBadge.tsx
+apps/profiles-store/components/checkout:
+CheckoutForm.tsx        OrderSummary.tsx
+apps/profiles-store/components/layout:
+Container.tsx   Header.tsx
+apps/profiles-store/components/product:
+AddToCartButton.tsx     LengthSelector.tsx      QuantityInput.tsx
+ColorSelector.tsx       ProductImage.tsx
+apps/profiles-store/lib:
+api-client.ts   cart-store.ts   cn.ts           format.ts       locales.ts
+apps/profiles-store/node_modules:
+zustand
+apps/profiles-store/node_modules/zustand:
+LICENSE                 middleware.js           traditional.d.ts
+context.d.ts            package.json            traditional.js
+context.js              react                   ts3.4
+esm                     react.d.ts              umd
+index.d.ts              readme.md               vanilla
+index.js                shallow.d.ts            vanilla.d.ts
+middleware              shallow.js              vanilla.js
+middleware.d.ts         system
+apps/profiles-store/node_modules/zustand/esm:
+context.d.mts           middleware.d.ts         traditional.d.mts
+context.d.ts            middleware.js           traditional.d.ts
+context.js              middleware.mjs          traditional.js
+context.mjs             react                   traditional.mjs
+index.d.mts             react.d.mts             vanilla
+index.d.ts              react.d.ts              vanilla.d.mts
+index.js                shallow.d.mts           vanilla.d.ts
+index.mjs               shallow.d.ts            vanilla.js
+middleware              shallow.js              vanilla.mjs
+middleware.d.mts        shallow.mjs
+apps/profiles-store/node_modules/zustand/esm/middleware:
+combine.d.mts                   immer.mjs
+combine.d.ts                    persist.d.mts
+devtools.d.mts                  persist.d.ts
+devtools.d.ts                   redux.d.mts
+immer.d.mts                     redux.d.ts
+immer.d.ts                      subscribeWithSelector.d.mts
+immer.js                        subscribeWithSelector.d.ts
+apps/profiles-store/node_modules/zustand/esm/react:
+shallow.d.mts   shallow.d.ts    shallow.js      shallow.mjs
+apps/profiles-store/node_modules/zustand/esm/vanilla:
+shallow.d.mts   shallow.d.ts    shallow.js      shallow.mjs
+apps/profiles-store/node_modules/zustand/middleware:
+combine.d.ts                    persist.d.ts
+devtools.d.ts                   redux.d.ts
+immer.d.ts                      subscribeWithSelector.d.ts
+immer.js
+apps/profiles-store/node_modules/zustand/react:
+shallow.d.ts    shallow.js
+apps/profiles-store/node_modules/zustand/system:
+context.development.js          shallow.development.js
+context.production.js           shallow.production.js
+index.development.js            traditional.development.js
+index.production.js             traditional.production.js
+middleware                      vanilla
+middleware.development.js       vanilla.development.js
+middleware.production.js        vanilla.production.js
+react
+apps/profiles-store/node_modules/zustand/system/middleware:
+immer.development.js    immer.production.js
+apps/profiles-store/node_modules/zustand/system/react:
+shallow.development.js  shallow.production.js
+apps/profiles-store/node_modules/zustand/system/vanilla:
+shallow.development.js  shallow.production.js
+apps/profiles-store/node_modules/zustand/ts3.4:
+context.d.ts            middleware.d.ts         traditional.d.ts
+esm                     react                   vanilla
+index.d.ts              react.d.ts              vanilla.d.ts
+middleware              shallow.d.ts
+apps/profiles-store/node_modules/zustand/ts3.4/esm:
+context.d.ts            react                   vanilla
+index.d.ts              react.d.ts              vanilla.d.ts
+middleware              shallow.d.ts
+middleware.d.ts         traditional.d.ts
+apps/profiles-store/node_modules/zustand/ts3.4/esm/middleware:
+combine.d.ts                    persist.d.ts
+devtools.d.ts                   redux.d.ts
+immer.d.ts                      subscribeWithSelector.d.ts
+apps/profiles-store/node_modules/zustand/ts3.4/esm/react:
+shallow.d.ts
+apps/profiles-store/node_modules/zustand/ts3.4/esm/vanilla:
+shallow.d.ts
+apps/profiles-store/node_modules/zustand/ts3.4/middleware:
+combine.d.ts                    persist.d.ts
+devtools.d.ts                   redux.d.ts
+immer.d.ts                      subscribeWithSelector.d.ts
+apps/profiles-store/node_modules/zustand/ts3.4/react:
+shallow.d.ts
+apps/profiles-store/node_modules/zustand/ts3.4/vanilla:
+shallow.d.ts
+apps/profiles-store/node_modules/zustand/umd:
+context.development.js          shallow.development.js
+context.production.js           shallow.production.js
+index.development.js            traditional.development.js
+index.production.js             traditional.production.js
+middleware                      vanilla
+middleware.development.js       vanilla.development.js
+middleware.production.js        vanilla.production.js
+react
+apps/profiles-store/node_modules/zustand/umd/middleware:
+immer.development.js    immer.production.js
+apps/profiles-store/node_modules/zustand/umd/react:
+shallow.development.js  shallow.production.js
+apps/profiles-store/node_modules/zustand/umd/vanilla:
+shallow.development.js  shallow.production.js
+apps/profiles-store/node_modules/zustand/vanilla:
+shallow.d.ts    shallow.js
+apps/profiles-store/public:
+favicon.svg
+apps/site:
+README.md                       package.json
+VERCEL_DEPLOY.md                postcss.config.js
+app                             public
+components                      stores
+data                            tailwind.config.ts
+lib                             tsconfig.json
+middleware.ts                   types
+next-env.d.ts                   vercel-ignore-build-step.sh
+next.config.js                  vercel.json
+apps/site/app:
+[locale]        error.tsx       icon.svg        loading.tsx     robots.ts
+api             globals.css     layout.tsx      not-found.tsx   sitemap.ts
+apps/site/app/[locale]:
+about           fromShetah      models          profiles
+blog            layout.tsx      page.tsx        railings
+contact         legal           pergola3d       services
+fences          mistora         pergulas        windows
+apps/site/app/[locale]/about:
+page.tsx
+apps/site/app/[locale]/blog:
+[slug]          page.tsx
+apps/site/app/[locale]/blog/[slug]:
+page.tsx
+apps/site/app/[locale]/contact:
+page.tsx
+apps/site/app/[locale]/fences:
+page.tsx
+apps/site/app/[locale]/fromShetah:
+page.tsx
+apps/site/app/[locale]/legal:
+privacy terms
+apps/site/app/[locale]/legal/privacy:
+page.tsx
+apps/site/app/[locale]/legal/terms:
+page.tsx
+apps/site/app/[locale]/mistora:
+page.tsx
+apps/site/app/[locale]/models:
+page.tsx
+apps/site/app/[locale]/pergola3d:
+page.tsx
+apps/site/app/[locale]/pergulas:
+[id]            page.tsx
+apps/site/app/[locale]/pergulas/[id]:
+page.tsx
+apps/site/app/[locale]/profiles:
+page.tsx
+apps/site/app/[locale]/railings:
+page.tsx
+apps/site/app/[locale]/services:
+page.tsx
+apps/site/app/[locale]/windows:
+page.tsx
+apps/site/app/api:
+gallery                 pergola-projects
+apps/site/app/api/gallery:
+[category]      from-shetah     models          test-s3
+apps/site/app/api/gallery/[category]:
+route.ts
+apps/site/app/api/gallery/from-shetah:
+route.ts
+apps/site/app/api/gallery/models:
+route.ts
+apps/site/app/api/gallery/test-s3:
+route.ts
+apps/site/app/api/pergola-projects:
+route.ts
+apps/site/components:
+ai-chat                 footer                  pergulas
+articleModal.tsx        ga.tsx                  providers.tsx
+carousel.tsx            generic                 seo
+contact                 google-analytics.tsx    ui
+contact-section.tsx     home                    utm-tracker.tsx
+dgamim                  navbar.tsx              video
+fences                  pergola-configurator
+apps/site/components/ai-chat:
+ChatWidget.tsx
+apps/site/components/contact:
+ContactCtaButton.tsx    ContactPageClient.tsx   FloatingWhatsApp.tsx
+apps/site/components/dgamim:
+dgamim-carousel.tsx     model-lightbox.tsx      rotating-image.tsx
+apps/site/components/fences:
+FencesGallery.tsx
+apps/site/components/footer:
+footer.tsx
+apps/site/components/generic:
+MediaGallery.tsx
+apps/site/components/home:
+WhyChooseUs.tsx         hero-section.tsx        services-section.tsx
+gallery-section.tsx     partners-logos.tsx
+apps/site/components/pergola-configurator:
+ControlsPanel.tsx       SceneWithSaveBridge.tsx useSaver.ts
+Pergola3D.tsx           translations.ts         utils.ts
+PergolaMesh.tsx         types.ts
+SceneElements.tsx       useProfiles.ts
+apps/site/components/pergulas:
+ProjectsGallery.tsx     pergula-gallery.tsx
+apps/site/components/seo:
+structured-data.tsx
+apps/site/components/ui:
+button.tsx              dialog.tsx              play-overlay.tsx
+apps/site/components/video:
+VideoGallery.tsx
+apps/site/data:
+dgamim-info.ts          images.ts               pergola-animation.ts
+gallery                 models
+apps/site/data/gallery:
+dgamim.json     fromShetah.json mestor.json     rails.json      windows.json
+fancy.json      index.json      pergulot.json   videos.json
+apps/site/data/models:
+models.json
+apps/site/lib:
+calculations                    image-url.ts
+gallery                         locales.ts
+image-props.ts                  offer-calculator.ts
+image-url-array-client.ts       s3-image-loader.ts
+image-url-array.ts              whatsapp-utils.ts
+image-url-client.ts
+apps/site/lib/calculations:
+pergola-area.ts
+apps/site/lib/gallery:
+get-gallery-images.ts
+apps/site/public:
+data                    logo-preview.png        video
+favicon.svg             logo-transparent.png
+fonts                   logo.png
+apps/site/public/data:
+articles.json   profiles.json
+apps/site/public/fonts:
+Heebo-Bold.woff                 NotoSansHebrew-Bold.ttf
+Heebo-Regular.ttf               NotoSansHebrew-Regular.ttf
+Heebo-Regular.woff              heebo.zip
+Heebo-Regular.woff2
+apps/site/public/video:
+Video-1.mp4                     Video-3.webp
+Video-1.webp                    Video-4.mp4
+Video-2.mp4                     Video-4.webp
+Video-2.webp                    video_2025-10-04_09-44-51.mp4
+Video-3.mp4                     video_2025-10-04_09-44-51.webp
+apps/site/stores:
+ui-store.ts
+apps/site/types:
+images.ts       offer.ts
+packages:
+shared-types
+packages/shared-types:
+package.json    src
+packages/shared-types/src:
+index.ts        lead.ts
+scripts:
+batch-move-s3-images.mjs        generate-gallery.mjs
+check-aws-env.sh                generate-pergulot-i18n.mjs
+check-env.mjs                   generate-profiles-json.mjs
+check-hero-migration.mjs        generate-video-posters.mjs
+check-recent-uploads.mjs        generate-videos-json.mjs
+check-s3-access.mjs             import-gallery-from-s3.js
+check-s3-config.sh              import-s3-images-to-db.mjs
+check-safe-to-delete-images.mjs import-s3-videos-to-db.mjs
+clean-cache.ps1                 migrate-hero-to-s3.mjs
+commit-site-fix.sh              migrate-public-images-to-s3.mjs
+compress-videos.mjs             migrate-to-s3.mjs
+convert-heic.mjs                normalize-profile-images.mjs
+convert-to-webp.mjs             remove-logo-bg.mjs
+copy-aws-keys-safe.sh           reorganize-s3-images.mjs
+copy-aws-keys-to-site.sh        restart-crm.ps1
+delete-images-hero.mjs          rotate-images.mjs
+delete-public-images.mjs        setup-s3-cors.mjs
+export-env-for-vercel.js        setup-site-env.sh
+fix-and-commit-tailwind.sh      test-api-route.sh
+fix-content-disposition.mjs     test-pdf-fonts.mjs
+fix-content-type.mjs            test-s3-config.mjs
+fix-s3-cors-metadata.mjs        test-s3-upload.mjs
+fix-s3-cors-policy.mjs          upload-images-to-s3.sh

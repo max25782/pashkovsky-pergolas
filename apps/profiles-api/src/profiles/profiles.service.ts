@@ -1,7 +1,12 @@
-import { Injectable, NotFoundException, ConflictException, InternalServerErrorException } from '@nestjs/common';
-import { getSupabaseAdmin } from '../config/supabase.config';
-import { CreateProfileDto } from './dto/create-profile.dto';
-import { UpdateProfileDto } from './dto/update-profile.dto';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  InternalServerErrorException,
+} from "@nestjs/common";
+import { getSupabaseAdmin } from "../config/supabase.config";
+import { CreateProfileDto } from "./dto/create-profile.dto";
+import { UpdateProfileDto } from "./dto/update-profile.dto";
 
 @Injectable()
 export class ProfilesService {
@@ -14,34 +19,36 @@ export class ProfilesService {
    */
   async findAll(companyId: string, isPublic = false) {
     let query = this.supabase
-      .from('aluminum_profiles')
-      .select('*')
-      .eq('company_id', companyId)
-      .order('code', { ascending: true });
+      .from("aluminum_profiles")
+      .select("*")
+      .eq("company_id", companyId)
+      .order("code", { ascending: true });
 
     if (isPublic) {
-      query = query.eq('is_active', true);
+      query = query.eq("is_active", true);
     }
 
     const { data, error } = await query;
 
     if (error) {
-      console.error('[ProfilesService] Supabase error:', {
+      console.error("[ProfilesService] Supabase error:", {
         message: error.message,
         code: error.code,
         details: error.details,
         hint: error.hint,
         companyId,
       });
-      
+
       // More helpful error message
-      if (error.code === '42P01') {
+      if (error.code === "42P01") {
         throw new InternalServerErrorException(
-          `Table 'aluminum_profiles' does not exist. Please run the database migration: apps/crm/supabase/migrations/018_create_profiles_system.sql`
+          `Table 'aluminum_profiles' does not exist. Please run the database migration: apps/crm/supabase/migrations/018_create_profiles_system.sql`,
         );
       }
-      
-      throw new InternalServerErrorException(`Failed to fetch profiles: ${error.message}`);
+
+      throw new InternalServerErrorException(
+        `Failed to fetch profiles: ${error.message}`,
+      );
     }
 
     return data || [];
@@ -52,10 +59,10 @@ export class ProfilesService {
    */
   async findOne(id: string, companyId: string) {
     const { data, error } = await this.supabase
-      .from('aluminum_profiles')
-      .select('*')
-      .eq('id', id)
-      .eq('company_id', companyId)
+      .from("aluminum_profiles")
+      .select("*")
+      .eq("id", id)
+      .eq("company_id", companyId)
       .single();
 
     if (error || !data) {
@@ -71,10 +78,10 @@ export class ProfilesService {
   async create(dto: CreateProfileDto, companyId: string) {
     // Check if code already exists for this company
     const { data: existing } = await this.supabase
-      .from('aluminum_profiles')
-      .select('id')
-      .eq('company_id', companyId)
-      .eq('code', dto.code)
+      .from("aluminum_profiles")
+      .select("id")
+      .eq("company_id", companyId)
+      .eq("code", dto.code)
       .single();
 
     if (existing) {
@@ -84,7 +91,7 @@ export class ProfilesService {
     }
 
     const { data, error } = await this.supabase
-      .from('aluminum_profiles')
+      .from("aluminum_profiles")
       .insert({
         ...dto,
         company_id: companyId,
@@ -107,13 +114,13 @@ export class ProfilesService {
     await this.findOne(id, companyId);
 
     // If updating code, check uniqueness
-    if ('code' in dto && dto.code) {
+    if ("code" in dto && dto.code) {
       const { data: existing } = await this.supabase
-        .from('aluminum_profiles')
-        .select('id')
-        .eq('company_id', companyId)
-        .eq('code', dto.code)
-        .neq('id', id)
+        .from("aluminum_profiles")
+        .select("id")
+        .eq("company_id", companyId)
+        .eq("code", dto.code)
+        .neq("id", id)
         .single();
 
       if (existing) {
@@ -124,10 +131,10 @@ export class ProfilesService {
     }
 
     const { data, error } = await this.supabase
-      .from('aluminum_profiles')
+      .from("aluminum_profiles")
       .update(dto)
-      .eq('id', id)
-      .eq('company_id', companyId)
+      .eq("id", id)
+      .eq("company_id", companyId)
       .select()
       .single();
 
@@ -145,16 +152,16 @@ export class ProfilesService {
     await this.findOne(id, companyId);
 
     const { error } = await this.supabase
-      .from('aluminum_profiles')
+      .from("aluminum_profiles")
       .update({ is_active: false })
-      .eq('id', id)
-      .eq('company_id', companyId);
+      .eq("id", id)
+      .eq("company_id", companyId);
 
     if (error) {
       throw new Error(`Failed to deactivate profile: ${error.message}`);
     }
 
-    return { message: 'Profile deactivated successfully' };
+    return { message: "Profile deactivated successfully" };
   }
 
   /**
@@ -167,11 +174,11 @@ export class ProfilesService {
     const profilesWithStock = await Promise.all(
       profiles.map(async (profile) => {
         const { data: stockData } = await this.supabase
-          .from('stock')
-          .select('color, length_meters, qty_available, qty_reserved')
-          .eq('company_id', companyId)
-          .eq('profile_id', profile.id)
-          .gt('qty_available', 0);
+          .from("stock")
+          .select("color, length_meters, qty_available, qty_reserved")
+          .eq("company_id", companyId)
+          .eq("profile_id", profile.id)
+          .gt("qty_available", 0);
 
         return {
           ...profile,

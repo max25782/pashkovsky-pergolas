@@ -1,7 +1,7 @@
-import { Controller } from '@nestjs/common';
-import { StockService } from './stock.service';
+import { Controller } from "@nestjs/common";
+import { StockService } from "./stock.service";
 
-@Controller('stock')
+@Controller("stock")
 export class StockController {
   constructor(private readonly stockService: StockService) {}
   // TODO: Implement stock endpoints in Phase 2

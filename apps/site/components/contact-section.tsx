@@ -84,7 +84,7 @@ export default function ContactSection({ locale = 'he' }: ContactSectionProps) {
     const utmSource = typeof window !== 'undefined' ? localStorage.getItem('lead_source') : null
 
     // Отправляем на CRM Public Leads API
-    const crmUrl = process.env.NEXT_PUBLIC_CRM_API_URL || 'http://localhost:3001'
+    const crmUrl = process.env.NEXT_PUBLIC_CRM_API_URL || 'https://crm.pashkovsky-group.com'
     const siteToken = process.env.NEXT_PUBLIC_CRM_SITE_TOKEN || 'dev-token'
     
     try {

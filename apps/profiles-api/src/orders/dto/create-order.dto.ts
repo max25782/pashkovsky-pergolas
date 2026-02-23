@@ -1,5 +1,14 @@
-import { IsString, IsEmail, IsArray, ValidateNested, IsNotEmpty, IsUUID, IsNumber, Min } from 'class-validator';
-import { Type } from 'class-transformer';
+import {
+  IsString,
+  IsEmail,
+  IsArray,
+  ValidateNested,
+  IsNotEmpty,
+  IsUUID,
+  IsNumber,
+  Min,
+} from "class-validator";
+import { Type } from "class-transformer";
 
 class CustomerDto {
   @IsString()
