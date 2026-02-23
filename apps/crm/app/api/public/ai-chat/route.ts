@@ -190,12 +190,20 @@ async function* streamGeminiResponse(
   }
 }
 
-// CORS: allow production site and localhost (same logic as /api/public/leads)
+// CORS: allow production site and localhost (never use env fallback - it may be localhost in prod)
+const ALLOWED_ORIGINS = [
+  'https://www.pashkovsky-group.com',
+  'https://pashkovsky-group.com',
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:3001',
+]
 function getAllowedOrigin(origin: string | null): string {
-  if (!origin) return process.env.NEXT_PUBLIC_SITE_URL || '*'
-  if (origin === 'https://www.pashkovsky-group.com' || origin === 'https://pashkovsky-group.com') return origin
+  if (!origin) return '*' // Preflight may not always send Origin; allow for token-protected API
+  if (ALLOWED_ORIGINS.includes(origin)) return origin
   if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) return origin
-  return process.env.NEXT_PUBLIC_SITE_URL || '*'
+  return '*'
 }
 
 function corsHeaders(origin: string | null) {
