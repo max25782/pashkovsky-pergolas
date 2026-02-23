@@ -190,48 +190,60 @@ async function* streamGeminiResponse(
   }
 }
 
-// CORS helper
-function jsonResponse(data: any, options: ResponseInit = {}) {
+// CORS: allow production site and localhost (same logic as /api/public/leads)
+function getAllowedOrigin(origin: string | null): string {
+  if (!origin) return process.env.NEXT_PUBLIC_SITE_URL || '*'
+  if (origin === 'https://www.pashkovsky-group.com' || origin === 'https://pashkovsky-group.com') return origin
+  if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) return origin
+  return process.env.NEXT_PUBLIC_SITE_URL || '*'
+}
+
+function corsHeaders(origin: string | null) {
+  return {
+    'Access-Control-Allow-Origin': getAllowedOrigin(origin),
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, x-site-token',
+  }
+}
+
+function jsonResponse(data: any, options: ResponseInit = {}, req?: NextRequest | null) {
+  const origin = req?.headers.get('origin') || null
   return new Response(JSON.stringify(data), {
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': process.env.NEXT_PUBLIC_SITE_URL || '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, x-site-token',
-      ...options.headers,
+      ...corsHeaders(origin),
+      ...(options.headers as Record<string, string>),
     },
   })
 }
 
-export async function OPTIONS() {
-  return jsonResponse({}, { status: 200 })
+export async function OPTIONS(req: NextRequest) {
+  const origin = req.headers.get('origin') || null
+  return new Response(null, { status: 200, headers: corsHeaders(origin) })
 }
 
 export async function GET(req: NextRequest) {
   // Validate site token
   const siteToken = req.headers.get('x-site-token')
   if (!siteToken || siteToken !== SITE_TOKEN) {
-    return jsonResponse({ error: 'Unauthorized' }, { status: 401 })
+    return jsonResponse({ error: 'Unauthorized' }, { status: 401 }, req)
   }
   
   // Get client ID from query
   const clientId = req.nextUrl.searchParams.get('clientId')
   if (!clientId) {
-    return jsonResponse({ error: 'clientId required' }, { status: 400 })
+    return jsonResponse({ error: 'clientId required' }, { status: 400 }, req)
   }
   
   try {
     const sessionId = await getOrCreateSession(clientId)
     const messages = await getChatHistory(sessionId)
     
-    return jsonResponse({
-      messages,
-      sessionId,
-    })
+    return jsonResponse({ messages, sessionId }, {}, req)
   } catch (error: any) {
     console.error('[Public AI Chat] GET error:', error)
-    return jsonResponse({ error: 'Failed to load chat history' }, { status: 500 })
+    return jsonResponse({ error: 'Failed to load chat history' }, { status: 500 }, req)
   }
 }
 
@@ -240,11 +252,11 @@ export async function POST(req: NextRequest) {
     // 1. Validate site token
     const siteToken = req.headers.get('x-site-token')
     if (!siteToken || siteToken !== SITE_TOKEN) {
-      return jsonResponse({ error: 'Unauthorized' }, { status: 401 })
+      return jsonResponse({ error: 'Unauthorized' }, { status: 401 }, req)
     }
     
     if (!supabase || !GEMINI_API_KEY) {
-      return jsonResponse({ error: 'Service not configured' }, { status: 500 })
+      return jsonResponse({ error: 'Service not configured' }, { status: 500 }, req)
     }
     
     // 2. Parse request
@@ -276,11 +288,11 @@ export async function POST(req: NextRequest) {
     }
     
     if (!clientId) {
-      return jsonResponse({ error: 'clientId required' }, { status: 400 })
+      return jsonResponse({ error: 'clientId required' }, { status: 400 }, req)
     }
     
     if (!message.trim() && !imageData) {
-      return jsonResponse({ error: 'Message or image required' }, { status: 400 })
+      return jsonResponse({ error: 'Message or image required' }, { status: 400 }, req)
     }
     
     // 3. Rate limiting
@@ -288,7 +300,8 @@ export async function POST(req: NextRequest) {
     if (!rateLimit.allowed) {
       return jsonResponse(
         { error: 'Rate limit exceeded', remaining: 0 },
-        { status: 429 }
+        { status: 429 },
+        req
       )
     }
     
@@ -334,19 +347,18 @@ export async function POST(req: NextRequest) {
       },
     })
     
+    const origin = req.headers.get('origin') || null
     return new Response(stream, {
       headers: {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
-        'Access-Control-Allow-Origin': process.env.NEXT_PUBLIC_SITE_URL || '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, x-site-token',
+        ...corsHeaders(origin),
       },
     })
   } catch (error: any) {
     console.error('[Public AI Chat] POST error:', error)
-    return jsonResponse({ error: 'Internal server error' }, { status: 500 })
+    return jsonResponse({ error: 'Internal server error' }, { status: 500 }, req)
   }
 }
 
