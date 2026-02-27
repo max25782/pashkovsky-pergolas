@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
-import type { Worker, WorkShiftDraft } from '@/types/workers'
+import type { Worker } from '@/types/workers'
 import { authFetch } from '@/lib/api/auth-fetch'
 
 interface AddWorkShiftModalProps {
@@ -23,85 +23,65 @@ export function AddWorkShiftModal({
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const [formData, setFormData] = useState<WorkShiftDraft>({
-    projectId,
+  const [formData, setFormData] = useState({
     workerId: '',
-    date: new Date().toISOString().split('T')[0], // Today's date
-    payType: 'daily',
-    dailyRateSnapshot: 0,
+    date: new Date().toISOString().split('T')[0],
+    startTime: '08:00',
+    endTime: '17:00',
     notes: '',
   })
 
-  // Fetch workers
   useEffect(() => {
     if (isOpen) {
-      fetchWorkers()
+      authFetch('/api/workers')
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error('Failed to fetch'))))
+        .then((d) => setWorkers(d.workers ?? []))
+        .catch(() => setWorkers([]))
+        .finally(() => setLoading(false))
+      setLoading(true)
     }
   }, [isOpen])
-
-  const fetchWorkers = async () => {
-    try {
-      setLoading(true)
-      const response = await authFetch('/api/workers')
-      if (!response.ok) throw new Error('Failed to fetch workers')
-      const { workers: workersData } = await response.json()
-      setWorkers(workersData || [])
-    } catch (err: any) {
-      setError(err.message || 'Failed to load workers')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Update dailyRateSnapshot when worker is selected
-  useEffect(() => {
-    if (formData.workerId) {
-      const worker = workers.find((w) => w.id === formData.workerId)
-      if (worker) {
-        setFormData((prev) => ({
-          ...prev,
-          dailyRateSnapshot: worker.dailyRate,
-        }))
-      }
-    }
-  }, [formData.workerId, workers])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
 
-    if (!formData.workerId || !formData.date || !formData.dailyRateSnapshot) {
-      setError('Please fill all required fields')
+    if (!formData.workerId || !formData.date) {
+      setError('Please select worker and date')
       return
     }
 
     try {
       setSubmitting(true)
-      const response = await authFetch('/api/work-shifts', {
+      const response = await authFetch(`/api/workers/${formData.workerId}/shifts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          date: formData.date,
+          dealId: projectId,
+          startTime: formData.startTime,
+          endTime: formData.endTime,
+          note: formData.notes || null,
+        }),
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
+        const errorData = await response.json().catch(() => ({}))
         throw new Error(errorData.error || 'Failed to create work shift')
       }
 
-      // Reset form
       setFormData({
-        projectId,
         workerId: '',
         date: new Date().toISOString().split('T')[0],
-        payType: 'daily',
-        dailyRateSnapshot: 0,
+        startTime: '08:00',
+        endTime: '17:00',
         notes: '',
       })
 
       onShiftAdded()
       onClose()
-    } catch (err: any) {
-      setError(err.message || 'Failed to create work shift')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to create work shift')
     } finally {
       setSubmitting(false)
     }
@@ -183,28 +163,36 @@ export function AddWorkShiftModal({
             />
           </div>
 
-          {/* Daily Rate Snapshot */}
-          <div>
-            <label className="block text-sm font-medium text-white/80 mb-2">
-              תעריף יומי (₪) *
-            </label>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={formData.dailyRateSnapshot || ''}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  dailyRateSnapshot: parseFloat(e.target.value) || 0,
-                }))
-              }
-              className="w-full px-3 py-2 rounded bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
-            <p className="text-xs text-white/60 mt-1">
-              ברירת מחדל: תעריף העובד. ניתן לשנות רק עבור משמרת זו (כל סכום חיובי).
-            </p>
+          {/* Start / End time */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">
+                התחלה
+              </label>
+              <input
+                type="time"
+                value={formData.startTime}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, startTime: e.target.value }))
+                }
+                step={300}
+                className="w-full px-3 py-2 rounded bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">
+                סיום
+              </label>
+              <input
+                type="time"
+                value={formData.endTime}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, endTime: e.target.value }))
+                }
+                step={300}
+                className="w-full px-3 py-2 rounded bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
           </div>
 
           {/* Notes */}
@@ -234,7 +222,7 @@ export function AddWorkShiftModal({
             </button>
             <button
               type="submit"
-              disabled={submitting || !formData.workerId || !formData.date}
+              disabled={submitting || !formData.workerId || !formData.date || !formData.startTime || !formData.endTime}
               className="flex-1 px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? 'שומר...' : 'שמור'}

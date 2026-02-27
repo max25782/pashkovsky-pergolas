@@ -3,17 +3,40 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { AddWorkShiftModal } from './AddWorkShiftModal'
-import { groupShiftsByDate, formatCurrencyILS } from '@/lib/workers/calculations'
-import type { WorkShift, WorkShiftGroupedByDate } from '@/types/workers'
+import { formatCurrencyILS } from '@/lib/workers/calculations'
 import { authFetch } from '@/lib/api/auth-fetch'
+
+interface DealShift {
+  id: string
+  workerId: string
+  shiftDate: string
+  startTime: string | null
+  endTime: string | null
+  minutesWorked: number | null
+  computedCost: number | null
+  note: string | null
+  worker?: { id: string; firstName: string; lastName: string; role?: string }
+}
 
 interface WorkLogSectionProps {
   projectId: string
   onShiftAdded?: () => void
 }
 
+function groupByDate(shifts: DealShift[]) {
+  const map = new Map<string, DealShift[]>()
+  for (const s of shifts) {
+    const d = s.shiftDate
+    if (!map.has(d)) map.set(d, [])
+    map.get(d)!.push(s)
+  }
+  return Array.from(map.entries())
+    .map(([date, items]) => ({ date, shifts: items }))
+    .sort((a, b) => b.date.localeCompare(a.date))
+}
+
 export function WorkLogSection({ projectId, onShiftAdded }: WorkLogSectionProps) {
-  const [shifts, setShifts] = useState<WorkShift[]>([])
+  const [shifts, setShifts] = useState<DealShift[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -22,12 +45,12 @@ export function WorkLogSection({ projectId, onShiftAdded }: WorkLogSectionProps)
     try {
       setLoading(true)
       setError(null)
-      const response = await authFetch(`/api/work-shifts?projectId=${projectId}`)
+      const response = await authFetch(`/api/deals/${projectId}/labor?includeShifts=true`)
       if (!response.ok) throw new Error('Failed to fetch work shifts')
-      const { shifts: shiftsData } = await response.json()
-      setShifts(shiftsData || [])
-    } catch (err: any) {
-      setError(err.message || 'Failed to load work shifts')
+      const data = await response.json()
+      setShifts(data.shifts || [])
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to load work shifts')
     } finally {
       setLoading(false)
     }
@@ -37,24 +60,24 @@ export function WorkLogSection({ projectId, onShiftAdded }: WorkLogSectionProps)
     fetchShifts()
   }, [fetchShifts])
 
-  const handleDeleteShift = async (shiftId: string) => {
+  const handleDeleteShift = async (shiftId: string, workerId: string) => {
     if (!confirm('האם אתה בטוח שברצונך למחוק משמרת זו?')) return
 
     try {
-      const response = await authFetch(`/api/work-shifts/${shiftId}`, {
+      const response = await authFetch(`/api/workers/${workerId}/shifts/${shiftId}`, {
         method: 'DELETE',
       })
 
       if (!response.ok) throw new Error('Failed to delete work shift')
 
       fetchShifts()
-      onShiftAdded?.() // Trigger refresh of ProfitWidget
-    } catch (err: any) {
-      alert('שגיאה במחיקת משמרת: ' + err.message)
+      onShiftAdded?.()
+    } catch (err: unknown) {
+      alert('שגיאה במחיקת משמרת: ' + (err instanceof Error ? err.message : 'Unknown'))
     }
   }
 
-  const groupedShifts: WorkShiftGroupedByDate[] = groupShiftsByDate(shifts)
+  const groupedShifts = groupByDate(shifts)
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr + 'T00:00:00')
@@ -85,7 +108,7 @@ export function WorkLogSection({ projectId, onShiftAdded }: WorkLogSectionProps)
         <div className="text-red-400 text-center py-8">{error}</div>
       ) : groupedShifts.length === 0 ? (
         <div className="text-white/60 text-center py-8">
-          אין משמרות. לחץ על "הוסף משמרת" כדי להתחיל.
+          אין משמרות. לחץ על &quot;הוסף משמרת&quot; כדי להתחיל.
         </div>
       ) : (
         <div className="space-y-4">
@@ -104,7 +127,9 @@ export function WorkLogSection({ projectId, onShiftAdded }: WorkLogSectionProps)
                   </span>
                 </div>
                 <span className="text-lg font-bold text-green-400">
-                  {formatCurrencyILS(group.totalDailyRate)}
+                  {formatCurrencyILS(
+                    group.shifts.reduce((s, x) => s + (x.computedCost ?? 0), 0)
+                  )}
                 </span>
               </div>
 
@@ -124,17 +149,24 @@ export function WorkLogSection({ projectId, onShiftAdded }: WorkLogSectionProps)
                             ({shift.worker.role})
                           </span>
                         )}
+                        {(shift.startTime || shift.endTime) && (
+                          <span className="text-white/60 text-sm mr-2">
+                            {shift.startTime ?? '—'}–{shift.endTime ?? '—'}
+                          </span>
+                        )}
                       </div>
-                      {shift.notes && (
-                        <div className="text-white/60 text-sm mt-1">{shift.notes}</div>
+                      {shift.note && (
+                        <div className="text-white/60 text-sm mt-1">{shift.note}</div>
                       )}
                     </div>
                     <div className="flex items-center gap-4">
                       <span className="text-white font-semibold">
-                        {formatCurrencyILS(shift.dailyRateSnapshot)}
+                        {shift.computedCost != null
+                          ? formatCurrencyILS(shift.computedCost)
+                          : '—'}
                       </span>
                       <button
-                        onClick={() => handleDeleteShift(shift.id)}
+                        onClick={() => handleDeleteShift(shift.id, shift.workerId)}
                         className="p-2 rounded hover:bg-red-500/20 text-red-400 hover:text-red-300 transition"
                         type="button"
                         title="מחק משמרת"

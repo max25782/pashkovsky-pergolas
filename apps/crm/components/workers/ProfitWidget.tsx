@@ -1,8 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
-import { formatCurrencyILS, calculateProjectProfit } from '@/lib/workers/calculations'
-import type { WorkShift } from '@/types/workers'
+import { formatCurrencyILS, calcProfit } from '@/lib/workers/calculations'
 import { authFetch } from '@/lib/api/auth-fetch'
 
 interface ProfitWidgetProps {
@@ -13,28 +12,29 @@ interface ProfitWidgetProps {
 }
 
 export function ProfitWidget({ projectId, revenue, materialCost = 0, refreshTrigger = 0 }: ProfitWidgetProps) {
-  const [shifts, setShifts] = useState<WorkShift[]>([])
+  const [laborCost, setLaborCost] = useState(0)
   const [loading, setLoading] = useState(false)
 
-  const fetchShifts = useCallback(async () => {
+  const fetchLabor = useCallback(async () => {
     try {
       setLoading(true)
-      const response = await authFetch(`/api/work-shifts?projectId=${projectId}`)
+      const response = await authFetch(`/api/deals/${projectId}/labor`)
       if (!response.ok) return
-      const { shifts: shiftsData } = await response.json()
-      setShifts(shiftsData || [])
+      const { totalCost } = await response.json()
+      setLaborCost(totalCost ?? 0)
     } catch (err) {
-      console.error('Error fetching shifts for profit:', err)
+      console.error('Error fetching labor for profit:', err)
     } finally {
       setLoading(false)
     }
   }, [projectId])
 
   useEffect(() => {
-    fetchShifts()
-  }, [fetchShifts, refreshTrigger])
+    fetchLabor()
+  }, [fetchLabor, refreshTrigger])
 
-  const profit = calculateProjectProfit(revenue, shifts, materialCost)
+  const profit = calcProfit(revenue, laborCost, materialCost)
+  const laborCostPercent = revenue > 0 ? (laborCost / revenue) * 100 : 0
 
   return (
     <div className="bg-gradient-to-br from-green-900/20 to-blue-900/20 rounded-lg p-6 border border-green-500/20">
@@ -64,7 +64,7 @@ export function ProfitWidget({ projectId, revenue, materialCost = 0, refreshTrig
           <div className="flex items-center justify-between">
             <span className="text-white/80">עלות עובדים:</span>
             <span className="text-white font-semibold">
-              {formatCurrencyILS(profit.laborCost)}
+              {formatCurrencyILS(laborCost)}
             </span>
           </div>
 
@@ -72,7 +72,7 @@ export function ProfitWidget({ projectId, revenue, materialCost = 0, refreshTrig
           <div className="flex items-center justify-between">
             <span className="text-white/80">סה"כ עלויות:</span>
             <span className="text-white font-semibold">
-              {formatCurrencyILS(materialCost + profit.laborCost)}
+              {formatCurrencyILS(materialCost + laborCost)}
             </span>
           </div>
 
@@ -81,7 +81,7 @@ export function ProfitWidget({ projectId, revenue, materialCost = 0, refreshTrig
             <div className="flex items-center justify-between text-sm">
               <span className="text-white/60">עלויות (% מההכנסות):</span>
               <span className="text-white/60">
-                {(((materialCost + profit.laborCost) / revenue) * 100).toFixed(1)}%
+                {(((materialCost + laborCost) / revenue) * 100).toFixed(1)}%
               </span>
             </div>
           )}
@@ -94,10 +94,10 @@ export function ProfitWidget({ projectId, revenue, materialCost = 0, refreshTrig
             <span className="text-white font-semibold text-lg">רווח נקי:</span>
             <span
               className={`text-2xl font-bold ${
-                profit.profit >= 0 ? 'text-green-400' : 'text-red-400'
+                profit >= 0 ? 'text-green-400' : 'text-red-400'
               }`}
             >
-              {formatCurrencyILS(profit.profit)}
+              {formatCurrencyILS(profit)}
             </span>
           </div>
 
@@ -107,10 +107,10 @@ export function ProfitWidget({ projectId, revenue, materialCost = 0, refreshTrig
               שולי רווח:{' '}
               <span
                 className={`font-semibold ${
-                  profit.profit >= 0 ? 'text-green-400' : 'text-red-400'
+                  profit >= 0 ? 'text-green-400' : 'text-red-400'
                 }`}
               >
-                {((profit.profit / revenue) * 100).toFixed(1)}%
+                {((profit / revenue) * 100).toFixed(1)}%
               </span>
             </div>
           )}

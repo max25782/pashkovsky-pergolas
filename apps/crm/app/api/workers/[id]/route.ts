@@ -23,6 +23,7 @@ function transformWorkerFromDB(row: any): Worker {
     phone: row.phone,
     role: row.role,
     dailyRate: parseFloat(row.daily_rate),
+    hourlyRate: row.hourly_rate != null ? parseFloat(row.hourly_rate) : null,
     isActive: row.is_active,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

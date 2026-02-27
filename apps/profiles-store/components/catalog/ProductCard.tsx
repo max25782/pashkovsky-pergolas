@@ -120,7 +120,7 @@ export function ProductCard({ profile, locale, companyId }: ProductCardProps) {
           </h3>
           {profile.sku && (
             <p className="text-sm text-gray-600 mt-1">
-              {profile.sku} :מק"ט
+              {profile.sku} :מק&quot;ט
             </p>
           )}
         </div>

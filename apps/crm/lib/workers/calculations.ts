@@ -5,6 +5,43 @@
 import type { WorkShift, WorkShiftGroupedByDate, ProjectProfit } from '@/types/workers'
 
 /**
+ * Parse HH:mm to minutes since midnight
+ */
+function timeToMinutes(timeStr: string | null): number | null {
+  if (!timeStr || typeof timeStr !== 'string') return null
+  const [h, m] = timeStr.split(':').map(Number)
+  if (Number.isNaN(h) || Number.isNaN(m)) return null
+  return h * 60 + m
+}
+
+/**
+ * Compute minutes worked from start/end time
+ */
+export function computeMinutesWorked(startTime: string | null, endTime: string | null): number | null {
+  const start = timeToMinutes(startTime)
+  const end = timeToMinutes(endTime)
+  if (start === null || end === null) return null
+  if (end < start) return null // overnight not supported
+  return end - start
+}
+
+/**
+ * Compute cost for a worker shift
+ * If hourly_rate: cost = hourly_rate * (minutes / 60)
+ * Else: cost = full daily_rate (no proration by hours)
+ */
+export function computeShiftCost(
+  minutesWorked: number,
+  dailyRate: number,
+  hourlyRate?: number | null
+): number {
+  if (hourlyRate != null && hourlyRate > 0) {
+    return (hourlyRate * minutesWorked) / 60
+  }
+  return dailyRate
+}
+
+/**
  * Calculate total labor cost from work shifts
  */
 export function calcLaborCost(shifts: WorkShift[]): number {
