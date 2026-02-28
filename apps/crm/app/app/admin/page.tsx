@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { authFetch } from '@/lib/api/auth-fetch'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
 import { LanguageSwitcher } from '@/components/admin/LanguageSwitcher'
 import { useLanguage } from '@/lib/language-context'
@@ -51,76 +52,24 @@ export default function AdminPage() {
 
   async function loadStats() {
     try {
-      const supabase = createClient()
-      
-      // Get user's company
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        console.log('[AdminPage] No user in loadStats, skipping')
+      const res = await authFetch('/api/admin/dashboard-stats')
+      if (!res.ok) {
+        if (res.status === 401) {
+          window.location.href = '/login?error=authentication_required'
+          return
+        }
+        if (res.status === 404) {
+          window.location.href = '/app/onboarding?error=no_company'
+          return
+        }
+        console.error('[AdminPage] dashboard-stats error:', res.status)
         return
       }
-
-      // IMPORTANT: user can have multiple memberships -> avoid .single() (406).
-      // Use server-selected active company.
-      const companyRes = await fetch('/api/companies/me', { credentials: 'include' })
-      
-      console.log('[AdminPage] /api/companies/me status:', companyRes.status)
-      
-      if (companyRes.status === 401) {
-        console.log('[AdminPage] Unauthorized, redirecting to login')
-        window.location.href = '/login?error=authentication_required'
-        return
-      }
-      
-      if (companyRes.status === 404) {
-        console.log('[AdminPage] No company found, redirecting to onboarding')
-        window.location.href = '/app/onboarding?error=no_company'
-        return
-      }
-      
-      if (!companyRes.ok) {
-        console.error('[AdminPage] /api/companies/me error:', companyRes.status)
-        return
-      }
-      
-      const companyData = await companyRes.json()
-      const companyId = companyData.company_id as string | undefined
-      if (!companyId) {
-        console.log('[AdminPage] No company_id in response')
-        return
-      }
-      
-      console.log('[AdminPage] Company ID:', companyId)
-
-      // Get active deals count - ALL stages except 'done'
-      // Stages: new, measure, offer, offer_approved, material_ordered, approved, production, install
-      const { count: activeDealsCount } = await supabase
-        .from('deals')
-        .select('*', { count: 'exact', head: true })
-        .eq('company_id', companyId)
-        .neq('stage', 'done') // Count all except completed
-
-      // Get new leads (last 30 days)
-      const thirtyDaysAgo = new Date()
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-      const { count: newLeadsCount } = await supabase
-        .from('deals')
-        .select('*', { count: 'exact', head: true })
-        .eq('company_id', companyId)
-        .eq('stage', 'new')
-        .gte('created_at', thirtyDaysAgo.toISOString())
-
-      // Get active workers count
-      const { count: activeWorkersCount } = await supabase
-        .from('workers')
-        .select('*', { count: 'exact', head: true })
-        .eq('company_id', companyId)
-        .eq('is_active', true)
-
+      const data = await res.json()
       setStats({
-        activeDeals: activeDealsCount || 0,
-        newLeads: newLeadsCount || 0,
-        activeWorkers: activeWorkersCount || 0
+        activeDeals: data.activeDeals ?? 0,
+        newLeads: data.newLeads ?? 0,
+        activeWorkers: data.activeWorkers ?? 0,
       })
     } catch (error) {
       console.error('[AdminPage] Error loading stats:', error)
