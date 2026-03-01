@@ -164,7 +164,7 @@ export function renderOfferHtml(offer: Offer): string {
   const fontsCss = getHebrewFontsCss()
   
   // Get logo as base64 data URI
-  const logoDataUri = getLogoDataUri('public/logo-transparent.png')
+  const logoDataUri = getLogoDataUri()
   const notesText = offer.options?.notes?.trim() || ''
   const safeNotes = notesText ? escapeHtml(notesText) : ''
 

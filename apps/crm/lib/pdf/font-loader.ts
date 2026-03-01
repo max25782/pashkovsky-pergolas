@@ -89,44 +89,17 @@ export function getHebrewFontsCss(): string {
   return css
 }
 
-/**
- * Load logo image and convert to base64 data URI
- * @param logoPath - Path to logo file relative to project root
- * @returns data:image/png;base64,... string or empty string if not found
- */
-export function getLogoDataUri(logoPath: string = 'public/logo-transparent.png'): string {
-  try {
-    const fullPath = path.join(process.cwd(), logoPath)
-    
-    console.log(`[Logo] Loading logo: ${logoPath}`)
-    
-    if (!fs.existsSync(fullPath)) {
-      console.warn(`[Logo] ⚠️ Logo file not found: ${fullPath}, trying fallback...`)
-      // Try logo.png as fallback
-      const fallbackPath = path.join(process.cwd(), 'public/logo.png')
-      if (fs.existsSync(fallbackPath)) {
-        const logoBuffer = fs.readFileSync(fallbackPath)
-        const base64Logo = logoBuffer.toString('base64')
-        console.log(`[Logo] ✅ Fallback logo loaded: logo.png (${(logoBuffer.length / 1024).toFixed(2)} KB)`)
-        return `data:image/png;base64,${base64Logo}`
-      }
-      console.error(`[Logo] ❌ No logo found`)
-      return ''
-    }
+// Logo embedded as base64 so it's always available in Vercel serverless
+// (public/ directory files are NOT accessible in API route filesystem at runtime).
+// To update: node -e "const fs=require('fs'); console.log(Buffer.from(fs.readFileSync('apps/crm/public/logo.svg')).toString('base64'))"
+const LOGO_BASE64 = 'PHN2ZyB2aWV3Qm94PSIwIDAgMjAwIDYwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPg0KICA8IS0tIEEgaWNvbjogYWx1bWludW0gcGFuZWxzIGZvcm1pbmcgQSBzaGFwZSAtLT4NCiAgPGcgaWQ9Imljb24iPg0KICAgIDwhLS0gTWFpbiBBIHNoYXBlIGluIGJsdWUgLS0+DQogICAgPHBhdGggZD0iTSAyMCA1MCBMIDMwIDE1IEwgNDAgMTUgTCA1MCA1MCBaIiBmaWxsPSIjMjU2M0VCIiBvcGFjaXR5PSIwLjkiLz4NCiAgICA8IS0tIFNpbHZlciBhbHVtaW51bSBiYXIgYWNyb3NzIG1pZGRsZSAtLT4NCiAgICA8cmVjdCB4PSIyNyIgeT0iMzIiIHdpZHRoPSIxNiIgaGVpZ2h0PSI1IiBmaWxsPSIjOTRBM0I4Ii8+DQogICAgPCEtLSBTbWFsbCBhbHVtaW51bSBkZXRhaWwgYXQgdG9wIC0tPg0KICAgIDxjaXJjbGUgY3g9IjM1IiBjeT0iMTIiIHI9IjMiIGZpbGw9IiM5NEEzQjgiLz4NCiAgPC9nPg0KICANCiAgPCEtLSBUZXh0OiBBbHVtaW5DUk0gLS0+DQogIDx0ZXh0IHg9IjYwIiB5PSI0MCIgZm9udC1mYW1pbHk9InN5c3RlbS11aSwgLWFwcGxlLXN5c3RlbSwgQmxpbmtNYWNTeXN0ZW1Gb250LCAnU2Vnb2UgVUknLCBzYW5zLXNlcmlmIiBmb250LXdlaWdodD0iNzAwIiBmb250LXNpemU9IjI2IiBmaWxsPSIjMUUyOTNCIj4NCiAgICBBbHVtaW48dHNwYW4gZmlsbD0iIzI1NjNFQiI+Q1JNPC90c3Bhbj4NCiAgPC90ZXh0Pg0KPC9zdmc+DQoNCg=='
 
-    const logoBuffer = fs.readFileSync(fullPath)
-    const base64Logo = logoBuffer.toString('base64')
-    
-    // Detect image type from extension
-    const ext = path.extname(logoPath).toLowerCase()
-    const mimeType = ext === '.png' ? 'image/png' : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : 'image/png'
-    
-    console.log(`[Logo] ✅ Logo loaded: ${path.basename(logoPath)} (${(logoBuffer.length / 1024).toFixed(2)} KB)`)
-    
-    return `data:${mimeType};base64,${base64Logo}`
-  } catch (error) {
-    console.error(`[Logo] ❌ Error loading logo ${logoPath}:`, error)
-    return ''
-  }
+/**
+ * Returns the company logo as a base64 data URI.
+ * The logo is embedded directly in the bundle (not read from the filesystem)
+ * to ensure it works in Vercel serverless functions.
+ */
+export function getLogoDataUri(): string {
+  return `data:image/svg+xml;base64,${LOGO_BASE64}`
 }
 
