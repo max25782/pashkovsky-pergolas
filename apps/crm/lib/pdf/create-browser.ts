@@ -4,10 +4,11 @@ import puppeteerCore, { type Browser } from 'puppeteer-core'
 // In Vercel monorepo deployments the local bin/ directory inside
 // @sparticuz/chromium is not included in the build output, so we
 // download the Chromium binary at runtime from GitHub Releases.
+// Starting from v143, releases are split by arch: use .x64.tar for Vercel (x64 Linux).
 // The file is cached in /tmp between warm invocations.
 const CHROMIUM_PACK_URL =
   process.env.CHROMIUM_PACK_URL ||
-  'https://github.com/Sparticuz/chromium/releases/download/v143.0.0/chromium-v143.0.0-pack.tar'
+  'https://github.com/Sparticuz/chromium/releases/download/v143.0.0/chromium-v143.0.0-pack.x64.tar'
 
 let browserInstance: Browser | null = null
 
