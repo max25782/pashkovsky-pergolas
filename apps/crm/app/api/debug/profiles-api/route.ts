@@ -1,9 +1,18 @@
 import { NextResponse } from 'next/server'
 
-// Runtime env var — set PROFILES_API_URL in Vercel dashboard (Settings → Env Vars)
-const PROFILES_API_URL = process.env.PROFILES_API_URL || 'http://localhost:3002'
-
 export async function GET() {
+  // Read env var INSIDE the handler to guarantee runtime evaluation
+  const PROFILES_API_URL = process.env.PROFILES_API_URL || 'http://localhost:3002'
+
+  // Collect all env var keys that look related (for diagnostics)
+  const relatedEnvKeys = Object.keys(process.env).filter(
+    (k) => k.includes('PROFILES') || k.includes('API_URL') || k.includes('NEST'),
+  )
+  const relatedEnvValues: Record<string, string> = {}
+  for (const key of relatedEnvKeys) {
+    relatedEnvValues[key] = process.env[key] ?? '(undefined)'
+  }
+
   const healthUrl = `${PROFILES_API_URL.replace(/\/$/, '')}/health`
   const companyId = process.env.DEFAULT_COMPANY_ID || '6998295e-89ae-4e3d-afd2-8c2b0333eac2'
   const profilesUrl = `${PROFILES_API_URL.replace(/\/$/, '')}/profiles?company_id=${companyId}`
@@ -30,6 +39,7 @@ export async function GET() {
     PROFILES_API_URL,
     healthUrl,
     profilesUrl,
+    relatedEnvKeys: relatedEnvValues,
     health: healthResult,
     profiles: profilesResult,
   })
