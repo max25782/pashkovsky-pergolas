@@ -6,9 +6,54 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
 
-const PROFILES_API_URL = process.env.PROFILES_API_URL || 'http://localhost:3002'
-
 export const dynamic = 'force-dynamic'
+export const maxDuration = 60
+
+/**
+ * GET /api/admin/orders/[id]
+ * Fetch a single order by ID
+ */
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const PROFILES_API_URL = process.env.PROFILES_API_URL || 'http://localhost:3002'
+
+  const authCheck = await requireAuthAsync(req)
+  if (!authCheck.authorized) return authCheck.error
+
+  const companyId = authCheck.context?.companyId
+  if (!companyId) {
+    return NextResponse.json({ error: 'Company ID not found' }, { status: 400 })
+  }
+
+  try {
+    const { id } = params
+
+    const response = await fetch(
+      `${PROFILES_API_URL}/orders/${id}?company_id=${companyId}`,
+      { signal: AbortSignal.timeout(30000) }
+    )
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Order not found' }))
+      return NextResponse.json(
+        { error: error.message || 'Order not found' },
+        { status: response.status }
+      )
+    }
+
+    const data = await response.json()
+    return NextResponse.json(data)
+  } catch (error: any) {
+    console.error('[Orders API GET] Error:', error)
+    const isTimeout = error?.name === 'TimeoutError' || error?.name === 'AbortError'
+    return NextResponse.json(
+      { error: isTimeout ? 'Request to Profiles API timed out' : error.message || 'Internal server error' },
+      { status: isTimeout ? 504 : 500 }
+    )
+  }
+}
 
 /**
  * PATCH /api/admin/orders/[id]
@@ -18,6 +63,8 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const PROFILES_API_URL = process.env.PROFILES_API_URL || 'http://localhost:3002'
+
   const authCheck = await requireAuthAsync(req)
   if (!authCheck.authorized) return authCheck.error
 
@@ -31,7 +78,6 @@ export async function PATCH(
     const body = await req.json()
     const authHeader = req.headers.get('authorization')
 
-    // Forward request to NestJS API
     const response = await fetch(`${PROFILES_API_URL}/orders/${id}?company_id=${companyId}`, {
       method: 'PATCH',
       headers: {
@@ -39,6 +85,7 @@ export async function PATCH(
         ...(authHeader ? { Authorization: authHeader } : {}),
       },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(30000),
     })
 
     if (!response.ok) {
@@ -52,10 +99,11 @@ export async function PATCH(
     const data = await response.json()
     return NextResponse.json(data)
   } catch (error: any) {
-    console.error('[Orders API] Error:', error)
+    console.error('[Orders API PATCH] Error:', error)
+    const isTimeout = error?.name === 'TimeoutError' || error?.name === 'AbortError'
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
+      { error: isTimeout ? 'Request to Profiles API timed out' : error.message || 'Internal server error' },
+      { status: isTimeout ? 504 : 500 }
     )
   }
 }
