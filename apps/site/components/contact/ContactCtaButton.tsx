@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { FaWhatsapp } from 'react-icons/fa'
 import type { Locale } from '@/lib/locales'
+import { trackFormSubmit, trackWhatsApp, trackClick } from '@/lib/gtag-events'
 
 interface ContactCtaButtonProps {
   locale?: Locale
@@ -102,6 +103,7 @@ export default function ContactCtaButton({ locale = 'he', className, buttonText 
         setLoading(false)
         return
       }
+      trackFormSubmit('cta_popup_form')
       setLoading(false)
       setStep(2)
     } catch (err) {
@@ -111,6 +113,7 @@ export default function ContactCtaButton({ locale = 'he', className, buttonText 
   }
 
   const handleWhatsApp = () => {
+    trackWhatsApp('cta_popup_step2')
     const message = encodeURIComponent(copy.whatsappMessage(form.name, form.phone, form.city))
     window.open(`https://wa.me/972524494848?text=${message}`, '_blank')
     setIsOpen(false)
@@ -127,7 +130,7 @@ export default function ContactCtaButton({ locale = 'he', className, buttonText 
   return (
     <>
       <button
-        onClick={() => setIsOpen(true)}
+        onClick={() => { setIsOpen(true); trackClick('cta_button_open') }}
         className={`inline-flex items-center justify-center gap-3 px-12 py-4 rounded-full text-lg font-semibold text-white bg-gradient-to-r from-green-700 to-green-600 hover:from-green-600 hover:to-green-500 shadow-lg shadow-green-600/20 transition-all duration-300 ${className || ''}`}
       >
         {buttonText ? buttonText : (

@@ -195,7 +195,7 @@ export default async function ProfilesPage({ params }: ProfilesPageProps) {
             </div>
           ))}
         </div>
-        <ContactSection locale={locale} />
+        <ContactSection locale={locale} pageName="profiles" />
       </div>
     </main>
   )

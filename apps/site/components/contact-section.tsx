@@ -3,9 +3,11 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FaWhatsapp } from 'react-icons/fa'
 import type { Locale } from '@/lib/locales'
+import { trackFormSubmit, trackWhatsApp, trackClick } from '@/lib/gtag-events'
 
 interface ContactSectionProps {
   locale?: Locale
+  pageName?: string
 }
 
 function getCopy(locale: Locale) {
@@ -66,7 +68,7 @@ function getCopy(locale: Locale) {
   }
 }
 
-export default function ContactSection({ locale = 'he' }: ContactSectionProps) {
+export default function ContactSection({ locale = 'he', pageName = 'unknown' }: ContactSectionProps) {
   const copy = getCopy(locale)
   const [isOpen, setIsOpen] = useState(false)
   const [step, setStep] = useState(1)
@@ -111,6 +113,7 @@ export default function ContactSection({ locale = 'he' }: ContactSectionProps) {
         return
       }
 
+      trackFormSubmit(`contact_section_form_${pageName}`)
       setLoading(false)
       setStep(2)
     } catch (err) {
@@ -121,6 +124,7 @@ export default function ContactSection({ locale = 'he' }: ContactSectionProps) {
   }
 
   const handleWhatsApp = () => {
+    trackWhatsApp(`contact_section_${pageName}`)
     const message = encodeURIComponent(copy.whatsappMessage(form.name, form.phone, form.city))
     window.open(`https://wa.me/972524494848?text=${message}`, '_blank')
     setIsOpen(false)
@@ -146,7 +150,7 @@ export default function ContactSection({ locale = 'he' }: ContactSectionProps) {
 
         {/* Кнопка "Свяжитесь с нами" */}
         <button
-          onClick={() => setIsOpen(true)}
+          onClick={() => { setIsOpen(true); trackClick(`contact_section_open_${pageName}`) }}
           className="inline-flex items-center justify-center gap-3 px-12 py-4 rounded-full text-lg font-semibold text-white bg-gradient-to-r from-green-700 to-green-600 hover:from-green-600 hover:to-green-500 shadow-lg shadow-green-600/20 transition-all duration-300"
         >
           <FaWhatsapp size={26} />

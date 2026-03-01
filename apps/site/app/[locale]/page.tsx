@@ -13,7 +13,7 @@ export default function Page({ params: { locale } } : { params: { locale: Locale
       <HeroSection />
       <WhyChooseUs locale={locale} />
       <ServicesSection locale={locale} />
-      <ContactSection locale={locale} />
+      <ContactSection locale={locale} pageName="home" />
       <PartnersLogos locale={locale} />
       <Footer locale={locale} />
     </main>

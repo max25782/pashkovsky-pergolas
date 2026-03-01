@@ -105,7 +105,7 @@ export default async function Page({ params: { locale } }: { params: { locale: L
     <main className="container py-16">
       <ArticleModal articleSlug="glass-railings" lang={locale} />
       <h1 className="text-3xl font-extrabold">{t('מעקות אלומיניום בשלוב זכוכית', 'Перила из алюминия в сочетании с стеклом', 'Aluminum & Glass Railings')}</h1>
-      <ContactSection locale={locale}/>
+      <ContactSection locale={locale} pageName="railings" />
      <MediaGallery title={t('מעקות אלומיניום בשלוב זכוכית', 'Перила из алюминия в сочетании с стеклом', 'Aluminum & Glass Railings')} items={items} />
     </main>
   )

@@ -3,6 +3,7 @@ import Link from 'next/link'
 import type { Locale } from '@/lib/locales'
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { trackFormSubmit, trackWhatsApp, trackPhoneCall } from '@/lib/gtag-events'
 
 interface Props { locale: Locale }
 
@@ -39,6 +40,7 @@ export default function ContactPageClient({ locale }: Props){
         }),
       })
       if (!resp.ok) throw new Error('Failed to save')
+      trackFormSubmit('contact_page_form')
       form.reset()
       setShowSuccess(true)
     } catch (err) {
@@ -92,18 +94,18 @@ export default function ContactPageClient({ locale }: Props){
                 <div>
                   <div className="text-sm text-white/60">{t('טלפון','Телефон','Phone')}</div>
                   <div className="space-x-reverse space-x-3">
-                    <Link href="tel:0524494848" className="underline hover:opacity-90">052-449-4848</Link>
+                    <Link href="tel:0524494848" className="underline hover:opacity-90" onClick={() => trackPhoneCall('052-449-4848')}>052-449-4848</Link>
                     <span className="text-white/40">|</span>
-                    <Link href="tel:0527062995" className="underline hover:opacity-90">052-706-2995</Link>
+                    <Link href="tel:0527062995" className="underline hover:opacity-90" onClick={() => trackPhoneCall('052-706-2995')}>052-706-2995</Link>
                   </div>
                 </div>
                 <div>
                   <div className="text-sm text-white/60">WhatsApp</div>
                   <div className="flex flex-wrap gap-3 mt-1">
-                    <Link className="inline-flex items-center px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-500 transition" href={`https://wa.me/972524494848?text=${whatsappText}`} target="_blank">
+                    <Link className="inline-flex items-center px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-500 transition" href={`https://wa.me/972524494848?text=${whatsappText}`} target="_blank" onClick={() => trackWhatsApp('contact_page_052-449-4848')}>
                       {t('שלח הודעה ל-WhatsApp (052-449-4848)','Написать в WhatsApp (052-449-4848)','Message on WhatsApp (052-449-4848)')}
                     </Link>
-                    <Link className="inline-flex items-center px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-500 transition" href={`https://wa.me/972527062995?text=${whatsappText}`} target="_blank">
+                    <Link className="inline-flex items-center px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-500 transition" href={`https://wa.me/972527062995?text=${whatsappText}`} target="_blank" onClick={() => trackWhatsApp('contact_page_052-706-2995')}>
                       {t('שלח הודעה ל-WhatsApp (052-706-2995)','Написать в WhatsApp (052-706-2995)','Message on WhatsApp (052-706-2995)')}
                     </Link>
                   </div>
@@ -143,7 +145,7 @@ export default function ContactPageClient({ locale }: Props){
                 <button type="submit" className="inline-flex items-center px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-500 transition font-semibold">
                   {t('שליחת פרטים','Отправить данные','Send details')}
                 </button>
-                <Link href={`https://wa.me/972524494848?text=${whatsappText}`} target="_blank" className="inline-flex items-center px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 transition font-semibold">
+                <Link href={`https://wa.me/972524494848?text=${whatsappText}`} target="_blank" className="inline-flex items-center px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 transition font-semibold" onClick={() => trackWhatsApp('contact_page_form_button')}>
                   {t('פתיחת WhatsApp עכשיו','Открыть WhatsApp','Open WhatsApp')}
                 </Link>
               </div>

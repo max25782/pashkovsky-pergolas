@@ -21,7 +21,7 @@ export default function Page({ params: { locale } }: { params: { locale: Locale 
         <ProjectsGallery locale={locale} />
       </Suspense>
       <Suspense fallback={<div className="mt-12 h-[80vh] w-full rounded-2xl bg-white/5 border border-white/10" />}> 
-        <ContactSection locale={locale} />
+        <ContactSection locale={locale} pageName="pergulas" />
       </Suspense>
     </main>
   )
