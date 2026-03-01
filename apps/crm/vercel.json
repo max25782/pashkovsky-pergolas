@@ -4,6 +4,7 @@
   "buildCommand": "cd ../.. && npm install --include=dev && npx turbo run build --filter=@alumincrm/app",
   "outputDirectory": ".next",
   "installCommand": "cd ../.. && npm install --include=dev",
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "buildTimestamp": "2026-03-01"
 }
 
