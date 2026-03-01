@@ -13,6 +13,7 @@ interface OrderItem {
   aluminum_profiles?: {
     code: string
     name_he: string
+    image_url?: string
   }
 }
 
@@ -88,7 +89,8 @@ function groupByColor(items: OrderItem[]): Array<{ name: string; qty: string; am
   return result
 }
 
-export function renderOrderHtml(order: Order): string {
+// imageMap: image_url → base64 data URI, prefetched by generate-order-pdf.tsx
+export function renderOrderHtml(order: Order, imageMap: Record<string, string> = {}): string {
   const fonts = getHebrewFontsCss()
   const logoUri = getLogoDataUri()
 
@@ -264,6 +266,9 @@ export function renderOrderHtml(order: Order): string {
     .td-code { font-weight: bold; font-size: 9px; }
     .td-name { text-align: right; font-size: 10px; }
     .td-amt  { font-weight: bold; color: #1e3a5f; }
+    .td-img  { width: 44px; padding: 3px !important; }
+    .td-img img { width: 40px; height: 40px; object-fit: contain; display: block; margin: 0 auto; border-radius: 2px; }
+    .td-img .no-img { width: 40px; height: 40px; background: #f0f0f0; border-radius: 2px; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #aaa; margin: 0 auto; }
 
     /* ── Totals ── */
     .totals-wrap {
@@ -379,6 +384,7 @@ export function renderOrderHtml(order: Order): string {
       <thead>
         <tr>
           <th style="width:22px">#</th>
+          <th style="width:46px">תמונה</th>
           <th>מק"ט</th>
           <th>שם מוצר</th>
           <th>אורך</th>
@@ -390,9 +396,16 @@ export function renderOrderHtml(order: Order): string {
         </tr>
       </thead>
       <tbody>
-        ${items.map((item, i) => `
+        ${items.map((item, i) => {
+          const imgUrl = item.aluminum_profiles?.image_url
+          const imgSrc = imgUrl ? imageMap[imgUrl] : ''
+          const imgCell = imgSrc
+            ? `<img src="${imgSrc}" alt="תמונת מוצר">`
+            : `<div class="no-img">—</div>`
+          return `
         <tr>
           <td>${i + 1}</td>
+          <td class="td-img">${imgCell}</td>
           <td class="td-code">${item.aluminum_profiles?.code || item.profile_id?.slice(0, 8) || '-'}</td>
           <td class="td-name">${item.aluminum_profiles?.name_he || '-'}</td>
           <td>${(item.length_meters ?? 0).toFixed(2)} מ'</td>
@@ -401,7 +414,7 @@ export function renderOrderHtml(order: Order): string {
           <td>${(item.total_weight_kg ?? 0).toFixed(2)} ק"ג</td>
           <td>${(item.price_per_piece ?? 0).toFixed(2)} ₪</td>
           <td class="td-amt">${formatCurrency(item.subtotal ?? 0)}</td>
-        </tr>`).join('')}
+        </tr>`}).join('')}
       </tbody>
     </table>
   </div>

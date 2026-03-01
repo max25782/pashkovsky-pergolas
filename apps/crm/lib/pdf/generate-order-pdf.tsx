@@ -32,46 +32,74 @@ interface Order {
     aluminum_profiles?: {
       code: string
       name_he: string
+      image_url?: string
     }
   }>
 }
 
 /**
+ * Fetch a remote image URL and return a base64 data URI.
+ * Returns empty string on any error so the PDF generation never fails.
+ */
+async function fetchImageBase64(url: string): Promise<string> {
+  try {
+    const response = await fetch(url, { signal: AbortSignal.timeout(5000) })
+    if (!response.ok) return ''
+    const buffer = await response.arrayBuffer()
+    const base64 = Buffer.from(buffer).toString('base64')
+    const contentType = response.headers.get('content-type') || 'image/jpeg'
+    return `data:${contentType};base64,${base64}`
+  } catch {
+    return ''
+  }
+}
+
+/**
+ * Prefetch all unique product images from order items in parallel.
+ * Returns a map of image_url → base64 data URI.
+ */
+async function prefetchImages(order: Order): Promise<Record<string, string>> {
+  const urls = new Set<string>()
+  for (const item of order.order_items ?? []) {
+    const url = item.aluminum_profiles?.image_url
+    if (url) urls.add(url)
+  }
+
+  const entries = await Promise.all(
+    Array.from(urls).map(async (url) => [url, await fetchImageBase64(url)] as const)
+  )
+
+  return Object.fromEntries(entries.filter(([, b64]) => b64))
+}
+
+/**
  * Generates a PDF buffer for the given order using Puppeteer + Chromium
- * with proper Hebrew RTL support
- * @param order - The order to generate PDF for
- * @returns PDF as Buffer
+ * with proper Hebrew RTL support and embedded product images.
  */
 export async function generateOrderPdf(order: Order): Promise<Buffer> {
   try {
     console.log('[PDF Generator] Starting PDF generation for order:', order.id)
     console.log('[PDF Generator] Order number:', order.order_number)
-    console.log('[PDF Generator] Customer:', order.customer_name)
-    
-    // Render HTML template
-    console.log('[PDF Generator] Step 1: Rendering HTML template...')
-    const html = renderOrderHtml(order)
-    console.log('[PDF Generator] ✅ HTML template rendered, length:', html.length)
-    
-    // Convert HTML to PDF
-    console.log('[PDF Generator] Step 2: Converting HTML to PDF...')
+
+    console.log('[PDF Generator] Step 1: Prefetching product images...')
+    const imageMap = await prefetchImages(order)
+    console.log('[PDF Generator] ✅ Images prefetched:', Object.keys(imageMap).length)
+
+    console.log('[PDF Generator] Step 2: Rendering HTML template...')
+    const html = renderOrderHtml(order, imageMap)
+    console.log('[PDF Generator] ✅ HTML rendered, length:', html.length)
+
+    console.log('[PDF Generator] Step 3: Converting HTML to PDF...')
     const pdfBuffer = await renderHtmlToPdfBuffer(html)
-    console.log('[PDF Generator] ✅ PDF generated successfully, size:', pdfBuffer.length, 'bytes')
-    
+    console.log('[PDF Generator] ✅ PDF generated, size:', pdfBuffer.length, 'bytes')
+
     return pdfBuffer
   } catch (error: any) {
-    console.error('[PDF Generator] ❌ ERROR generating PDF:')
-    console.error('[PDF Generator] Message:', error?.message)
-    console.error('[PDF Generator] Stack:', error?.stack)
+    console.error('[PDF Generator] ❌ ERROR:', error?.message)
     throw new Error(`Failed to generate PDF: ${error.message || 'Unknown error'}`)
   }
 }
 
-/**
- * Generate filename for order PDF
- * @param order - The order object
- * @returns string - formatted filename
- */
 export function generateOrderPdfFilename(order: Order): string {
   const customerName = order.customer_name.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 20)
   const date = new Date().toISOString().split('T')[0]

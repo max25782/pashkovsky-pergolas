@@ -34,7 +34,8 @@ export class OrdersService {
             code,
             name_he,
             name_ru,
-            name_en
+            name_en,
+            image_url
           )
         )
       `,
@@ -73,7 +74,8 @@ export class OrdersService {
             code,
             name_he,
             name_ru,
-            name_en
+            name_en,
+            image_url
           )
         )
       `,
