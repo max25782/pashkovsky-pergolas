@@ -1,80 +1,58 @@
 import chromium from '@sparticuz/chromium'
 import puppeteerCore, { type Browser } from 'puppeteer-core'
 
+// In Vercel monorepo deployments the local bin/ directory inside
+// @sparticuz/chromium is not included in the build output, so we
+// download the Chromium binary at runtime from GitHub Releases.
+// The file is cached in /tmp between warm invocations.
+const CHROMIUM_PACK_URL =
+  process.env.CHROMIUM_PACK_URL ||
+  'https://github.com/Sparticuz/chromium/releases/download/v143.0.0/chromium-v143.0.0-pack.tar'
+
 let browserInstance: Browser | null = null
 
 /**
- * Create a Chromium browser instance compatible with Vercel serverless
- * Reuses existing instance if available
+ * Create a Chromium browser instance compatible with Vercel serverless.
+ * Reuses existing instance if available (same warm function invocation).
  */
 export async function createBrowser(): Promise<Browser> {
-  // Reuse existing browser if available
   if (browserInstance && browserInstance.isConnected()) {
     console.log('[Browser] Reusing existing browser instance')
     return browserInstance
   }
 
-  console.log('[Browser] Creating new Chromium instance...')
-  console.log('[Browser] Environment:', process.env.NODE_ENV)
-  console.log('[Browser] Vercel:', !!process.env.VERCEL)
+  console.log('[Browser] Creating new Chromium instance, env:', process.env.NODE_ENV, 'vercel:', !!process.env.VERCEL)
 
-  try {
-    // On localhost, use full puppeteer (includes Chromium)
-    if (process.env.NODE_ENV === 'development' && !process.env.VERCEL) {
-      console.log('[Browser] Development mode: using full puppeteer...')
-      try {
-        // Dynamic import to avoid bundling puppeteer in production
-        console.log('[Browser] Importing puppeteer module...')
-        const puppeteer = await import('puppeteer')
-        console.log('[Browser] Puppeteer imported, launching browser...')
-        
-        browserInstance = await puppeteer.default.launch({
-          headless: true,
-          args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-        })
-        console.log('[Browser] ✅ Puppeteer (with Chromium) launched successfully')
-        return browserInstance
-      } catch (localError: any) {
-        console.error('[Browser] ❌ Puppeteer launch failed:')
-        console.error('[Browser] Error type:', localError?.constructor?.name || typeof localError)
-        console.error('[Browser] Error message:', localError?.message || String(localError))
-        console.error('[Browser] Error stack:', localError?.stack || 'No stack trace')
-        throw new Error(`Failed to launch Puppeteer: ${localError?.message || 'Unknown error'}`)
-      }
-    }
-
-    // Use @sparticuz/chromium for Vercel production
-    console.log('[Browser] Production mode: using @sparticuz/chromium...')
-    try {
-      const executablePath = await chromium.executablePath()
-      console.log('[Browser] Chromium executable path:', executablePath)
-      
-      browserInstance = await puppeteerCore.launch({
-        args: chromium.args,
-        defaultViewport: {
-          width: 1920,
-          height: 1080,
-        },
-        executablePath,
-        headless: true, // Always headless for serverless PDF generation
-      })
-
-      console.log('[Browser] ✅ Chromium instance created successfully')
-      return browserInstance
-    } catch (chromiumError: any) {
-      console.error('[Browser] ❌ Chromium launch failed:')
-      console.error('[Browser] Error type:', chromiumError?.constructor?.name || typeof chromiumError)
-      console.error('[Browser] Error message:', chromiumError?.message || String(chromiumError))
-      console.error('[Browser] Error stack:', chromiumError?.stack || 'No stack trace')
-      throw new Error(`Failed to launch Chromium: ${chromiumError?.message || 'Unknown error'}`)
-    }
-  } catch (error) {
-    console.error('[Browser] ❌ Failed to create browser instance:')
-    console.error('[Browser] Error type:', error instanceof Error ? error.constructor.name : typeof error)
-    console.error('[Browser] Error message:', error instanceof Error ? error.message : String(error))
-    console.error('[Browser] Error stack:', error instanceof Error ? error.stack : 'No stack trace')
-    throw error instanceof Error ? error : new Error(`Failed to launch browser: ${String(error)}`)
+  // Local development: use full puppeteer (bundles its own Chromium)
+  if (process.env.NODE_ENV === 'development' && !process.env.VERCEL) {
+    console.log('[Browser] Dev mode: launching puppeteer...')
+    const puppeteer = await import('puppeteer')
+    browserInstance = await puppeteer.default.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+    })
+    console.log('[Browser] ✅ Puppeteer launched')
+    return browserInstance
   }
+
+  // Production / Vercel: download Chromium binary at runtime to /tmp.
+  // setGraphicsMode=false disables WebGL/SwiftShader (not needed for PDF).
+  // v143 has no setHeadlessMode — headless is always on.
+  console.log('[Browser] Production mode: downloading Chromium from:', CHROMIUM_PACK_URL)
+  chromium.setGraphicsMode = false
+
+  const executablePath = await chromium.executablePath(CHROMIUM_PACK_URL)
+  console.log('[Browser] Chromium executable:', executablePath)
+
+  browserInstance = await puppeteerCore.launch({
+    args: chromium.args,
+    defaultViewport: { width: 1920, height: 1080 },
+    executablePath,
+    headless: true,
+  })
+
+  console.log('[Browser] ✅ Chromium launched successfully')
+  return browserInstance
 }
 
 /**
