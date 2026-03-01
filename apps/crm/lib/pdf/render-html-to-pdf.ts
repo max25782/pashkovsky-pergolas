@@ -31,10 +31,12 @@ export async function renderHtmlToPdfBuffer(html: string): Promise<Buffer> {
 
     console.log('[PDF Render] Step 3: Loading HTML content with embedded fonts...')
 
-    // Set content - fonts are embedded as base64, no external requests needed
+    // Use domcontentloaded: 'load' causes "Unexpected status code: 404" in
+    // chrome-headless-shell when network resource events don't settle cleanly.
+    // Fonts are embedded as base64 so no real network requests are needed.
     await page.setContent(html, {
-      waitUntil: 'load', // Just wait for DOM, no network requests
-      timeout: 30000, // 30 seconds
+      waitUntil: 'domcontentloaded',
+      timeout: 30000,
     })
     console.log('[PDF Render] ✅ HTML content loaded')
 

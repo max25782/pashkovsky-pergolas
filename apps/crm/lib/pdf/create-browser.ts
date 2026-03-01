@@ -44,11 +44,14 @@ export async function createBrowser(): Promise<Browser> {
   const executablePath = await chromium.executablePath(CHROMIUM_PACK_URL)
   console.log('[Browser] Chromium executable:', executablePath)
 
+  // headless: 'shell' tells Puppeteer v21+ to use chrome-headless-shell mode.
+  // Passing headless: true would inject --headless=new which conflicts with
+  // --headless='shell' already present in chromium.args.
   browserInstance = await puppeteerCore.launch({
     args: chromium.args,
     defaultViewport: { width: 1920, height: 1080 },
     executablePath,
-    headless: true,
+    headless: 'shell',
   })
 
   console.log('[Browser] ✅ Chromium launched successfully')
