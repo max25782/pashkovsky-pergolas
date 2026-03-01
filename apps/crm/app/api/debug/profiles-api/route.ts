@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 
+// Runtime env var — set PROFILES_API_URL in Vercel dashboard (Settings → Env Vars)
 const PROFILES_API_URL = process.env.PROFILES_API_URL || 'http://localhost:3002'
 
 export async function GET() {
