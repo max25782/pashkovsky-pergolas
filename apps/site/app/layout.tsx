@@ -1,5 +1,6 @@
 import './globals.css'
 import type { Metadata } from 'next'
+import Script from 'next/script'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://pashkovsky-group.com'),
@@ -18,6 +19,19 @@ export default function RootLayout({
     <html lang="he" dir="rtl" suppressHydrationWarning>
       <head>
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+        <Script
+          async
+          src="https://www.googletagmanager.com/gtag/js?id=AW-17964444824"
+          strategy="afterInteractive"
+        />
+        <Script id="google-ads" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'AW-17964444824');
+          `}
+        </Script>
       </head>
       <body suppressHydrationWarning>
         {children}

@@ -1,0 +1,549 @@
+{
+ "Description": "NestJS Profiles API on ECS Fargate",
+ "Resources": {
+  "ProfilesApiServiceLBCDC52A68": {
+   "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
+   "Properties": {
+    "LoadBalancerAttributes": [
+     {
+      "Key": "deletion_protection.enabled",
+      "Value": "false"
+     }
+    ],
+    "Scheme": "internet-facing",
+    "SecurityGroups": [
+     {
+      "Fn::GetAtt": [
+       "ProfilesApiServiceLBSecurityGroup55F69058",
+       "GroupId"
+      ]
+     }
+    ],
+    "Subnets": [
+     "subnet-0a48c1ac1e2125f8b",
+     "subnet-0bb93b087c2d5483b",
+     "subnet-0ca70eed5d2d18c9d"
+    ],
+    "Type": "application"
+   },
+   "Metadata": {
+    "aws:cdk:path": "ProfilesApiStack/ProfilesApiService/LB/Resource"
+   }
+  },
+  "ProfilesApiServiceLBSecurityGroup55F69058": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "Automatically created Security Group for ELB ProfilesApiStackProfilesApiServiceLB6ED46EE4",
+    "SecurityGroupIngress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow from anyone on port 80",
+      "FromPort": 80,
+      "IpProtocol": "tcp",
+      "ToPort": 80
+     }
+    ],
+    "VpcId": "vpc-0618dba40acea4415"
+   },
+   "Metadata": {
+    "aws:cdk:path": "ProfilesApiStack/ProfilesApiService/LB/SecurityGroup/Resource"
+   }
+  },
+  "ProfilesApiServiceLBSecurityGrouptoProfilesApiStackProfilesApiServiceSecurityGroupA33948323002D63448A7": {
+   "Type": "AWS::EC2::SecurityGroupEgress",
+   "Properties": {
+    "Description": "Load balancer to target",
+    "DestinationSecurityGroupId": {
+     "Fn::GetAtt": [
+      "ProfilesApiServiceSecurityGroup1396DB99",
+      "GroupId"
+     ]
+    },
+    "FromPort": 3002,
+    "GroupId": {
+     "Fn::GetAtt": [
+      "ProfilesApiServiceLBSecurityGroup55F69058",
+      "GroupId"
+     ]
+    },
+    "IpProtocol": "tcp",
+    "ToPort": 3002
+   },
+   "Metadata": {
+    "aws:cdk:path": "ProfilesApiStack/ProfilesApiService/LB/SecurityGroup/to ProfilesApiStackProfilesApiServiceSecurityGroupA3394832:3002"
+   }
+  },
+  "ProfilesApiServiceLBPublicListener2DD46C58": {
+   "Type": "AWS::ElasticLoadBalancingV2::Listener",
+   "Properties": {
+    "DefaultActions": [
+     {
+      "TargetGroupArn": {
+       "Ref": "ProfilesApiServiceLBPublicListenerECSGroupCD720B15"
+      },
+      "Type": "forward"
+     }
+    ],
+    "LoadBalancerArn": {
+     "Ref": "ProfilesApiServiceLBCDC52A68"
+    },
+    "Port": 80,
+    "Protocol": "HTTP"
+   },
+   "Metadata": {
+    "aws:cdk:path": "ProfilesApiStack/ProfilesApiService/LB/PublicListener/Resource"
+   }
+  },
+  "ProfilesApiServiceLBPublicListenerECSGroupCD720B15": {
+   "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+   "Properties": {
+    "HealthCheckIntervalSeconds": 30,
+    "HealthCheckPath": "/health",
+    "HealthCheckTimeoutSeconds": 5,
+    "Matcher": {
+     "HttpCode": "200"
+    },
+    "Port": 80,
+    "Protocol": "HTTP",
+    "TargetGroupAttributes": [
+     {
+      "Key": "stickiness.enabled",
+      "Value": "false"
+     }
+    ],
+    "TargetType": "ip",
+    "VpcId": "vpc-0618dba40acea4415"
+   },
+   "Metadata": {
+    "aws:cdk:path": "ProfilesApiStack/ProfilesApiService/LB/PublicListener/ECSGroup/Resource"
+   }
+  },
+  "ProfilesApiServiceTaskDefTaskRoleAFCBB9DF": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "ecs-tasks.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ProfilesApiStack/ProfilesApiService/TaskDef/TaskRole/Resource"
+   }
+  },
+  "ProfilesApiServiceTaskDefD2B501BC": {
+   "Type": "AWS::ECS::TaskDefinition",
+   "Properties": {
+    "ContainerDefinitions": [
+     {
+      "Environment": [
+       {
+        "Name": "NODE_ENV",
+        "Value": "production"
+       },
+       {
+        "Name": "PORT",
+        "Value": "3002"
+       }
+      ],
+      "Essential": true,
+      "Image": {
+       "Fn::Sub": "857235179864.dkr.ecr.eu-north-1.${AWS::URLSuffix}/cdk-hnb659fds-container-assets-857235179864-eu-north-1:8a205cf1b6bf24bf8222a7e0faa832d348e36cef36c18bcf7f049ac699c40b71"
+      },
+      "LogConfiguration": {
+       "LogDriver": "awslogs",
+       "Options": {
+        "awslogs-group": {
+         "Ref": "ProfilesApiServiceTaskDefwebLogGroupC856D575"
+        },
+        "awslogs-stream-prefix": "profiles-api",
+        "awslogs-region": "eu-north-1"
+       }
+      },
+      "Name": "web",
+      "PortMappings": [
+       {
+        "ContainerPort": 3002,
+        "Protocol": "tcp"
+       }
+      ],
+      "Secrets": [
+       {
+        "Name": "SUPABASE_URL",
+        "ValueFrom": "arn:aws:secretsmanager:eu-north-1:857235179864:secret:pashkovsky-profiles-api-secrets-kcRhsk:SUPABASE_URL::"
+       },
+       {
+        "Name": "SUPABASE_SERVICE_ROLE_KEY",
+        "ValueFrom": "arn:aws:secretsmanager:eu-north-1:857235179864:secret:pashkovsky-profiles-api-secrets-kcRhsk:SUPABASE_SERVICE_ROLE_KEY::"
+       },
+       {
+        "Name": "SUPABASE_ANON_KEY",
+        "ValueFrom": "arn:aws:secretsmanager:eu-north-1:857235179864:secret:pashkovsky-profiles-api-secrets-kcRhsk:SUPABASE_ANON_KEY::"
+       },
+       {
+        "Name": "JWT_SECRET",
+        "ValueFrom": "arn:aws:secretsmanager:eu-north-1:857235179864:secret:pashkovsky-profiles-api-secrets-kcRhsk:JWT_SECRET::"
+       },
+       {
+        "Name": "PASHKOVSKY_COMPANY_ID",
+        "ValueFrom": "arn:aws:secretsmanager:eu-north-1:857235179864:secret:pashkovsky-profiles-api-secrets-kcRhsk:PASHKOVSKY_COMPANY_ID::"
+       },
+       {
+        "Name": "AWS_S3_BUCKET_NAME",
+        "ValueFrom": "arn:aws:secretsmanager:eu-north-1:857235179864:secret:pashkovsky-profiles-api-secrets-kcRhsk:AWS_S3_BUCKET_NAME::"
+       },
+       {
+        "Name": "AWS_S3_REGION",
+        "ValueFrom": "arn:aws:secretsmanager:eu-north-1:857235179864:secret:pashkovsky-profiles-api-secrets-kcRhsk:AWS_S3_REGION::"
+       },
+       {
+        "Name": "AWS_ACCESS_KEY_ID",
+        "ValueFrom": "arn:aws:secretsmanager:eu-north-1:857235179864:secret:pashkovsky-profiles-api-secrets-kcRhsk:AWS_ACCESS_KEY_ID::"
+       },
+       {
+        "Name": "AWS_SECRET_ACCESS_KEY",
+        "ValueFrom": "arn:aws:secretsmanager:eu-north-1:857235179864:secret:pashkovsky-profiles-api-secrets-kcRhsk:AWS_SECRET_ACCESS_KEY::"
+       }
+      ]
+     }
+    ],
+    "Cpu": "256",
+    "ExecutionRoleArn": {
+     "Fn::GetAtt": [
+      "ProfilesApiServiceTaskDefExecutionRole8A24970B",
+      "Arn"
+     ]
+    },
+    "Family": "ProfilesApiStackProfilesApiServiceTaskDefCA4A9826",
+    "Memory": "512",
+    "NetworkMode": "awsvpc",
+    "RequiresCompatibilities": [
+     "FARGATE"
+    ],
+    "TaskRoleArn": {
+     "Fn::GetAtt": [
+      "ProfilesApiServiceTaskDefTaskRoleAFCBB9DF",
+      "Arn"
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ProfilesApiStack/ProfilesApiService/TaskDef/Resource"
+   }
+  },
+  "ProfilesApiServiceTaskDefwebLogGroupC856D575": {
+   "Type": "AWS::Logs::LogGroup",
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "ProfilesApiStack/ProfilesApiService/TaskDef/web/LogGroup/Resource"
+   }
+  },
+  "ProfilesApiServiceTaskDefExecutionRole8A24970B": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "ecs-tasks.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "ProfilesApiStack/ProfilesApiService/TaskDef/ExecutionRole/Resource"
+   }
+  },
+  "ProfilesApiServiceTaskDefExecutionRoleDefaultPolicyA83725DF": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:BatchGetImage"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          "arn:",
+          {
+           "Ref": "AWS::Partition"
+          },
+          ":ecr:eu-north-1:857235179864:repository/cdk-hnb659fds-container-assets-857235179864-eu-north-1"
+         ]
+        ]
+       }
+      },
+      {
+       "Action": "ecr:GetAuthorizationToken",
+       "Effect": "Allow",
+       "Resource": "*"
+      },
+      {
+       "Action": [
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "ProfilesApiServiceTaskDefwebLogGroupC856D575",
+         "Arn"
+        ]
+       }
+      },
+      {
+       "Action": [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret"
+       ],
+       "Effect": "Allow",
+       "Resource": "arn:aws:secretsmanager:eu-north-1:857235179864:secret:pashkovsky-profiles-api-secrets-kcRhsk"
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "ProfilesApiServiceTaskDefExecutionRoleDefaultPolicyA83725DF",
+    "Roles": [
+     {
+      "Ref": "ProfilesApiServiceTaskDefExecutionRole8A24970B"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "ProfilesApiStack/ProfilesApiService/TaskDef/ExecutionRole/DefaultPolicy/Resource"
+   }
+  },
+  "ProfilesApiServiceC46F0D39": {
+   "Type": "AWS::ECS::Service",
+   "Properties": {
+    "Cluster": {
+     "Ref": "EcsDefaultClusterMnL3mNNYNDefaultVpc61366A98"
+    },
+    "DeploymentConfiguration": {
+     "Alarms": {
+      "AlarmNames": [],
+      "Enable": false,
+      "Rollback": false
+     },
+     "MaximumPercent": 200,
+     "MinimumHealthyPercent": 0
+    },
+    "DesiredCount": 1,
+    "EnableECSManagedTags": false,
+    "HealthCheckGracePeriodSeconds": 60,
+    "LaunchType": "FARGATE",
+    "LoadBalancers": [
+     {
+      "ContainerName": "web",
+      "ContainerPort": 3002,
+      "TargetGroupArn": {
+       "Ref": "ProfilesApiServiceLBPublicListenerECSGroupCD720B15"
+      }
+     }
+    ],
+    "NetworkConfiguration": {
+     "AwsvpcConfiguration": {
+      "AssignPublicIp": "ENABLED",
+      "SecurityGroups": [
+       {
+        "Fn::GetAtt": [
+         "ProfilesApiServiceSecurityGroup1396DB99",
+         "GroupId"
+        ]
+       }
+      ],
+      "Subnets": [
+       "subnet-0a48c1ac1e2125f8b",
+       "subnet-0bb93b087c2d5483b",
+       "subnet-0ca70eed5d2d18c9d"
+      ]
+     }
+    },
+    "ServiceName": "profiles-api",
+    "TaskDefinition": {
+     "Ref": "ProfilesApiServiceTaskDefD2B501BC"
+    }
+   },
+   "DependsOn": [
+    "ProfilesApiServiceLBPublicListenerECSGroupCD720B15",
+    "ProfilesApiServiceLBPublicListener2DD46C58",
+    "ProfilesApiServiceTaskDefTaskRoleAFCBB9DF"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "ProfilesApiStack/ProfilesApiService/Service/Service"
+   }
+  },
+  "ProfilesApiServiceSecurityGroup1396DB99": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "ProfilesApiStack/ProfilesApiService/Service/SecurityGroup",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow all outbound traffic by default",
+      "IpProtocol": "-1"
+     }
+    ],
+    "VpcId": "vpc-0618dba40acea4415"
+   },
+   "DependsOn": [
+    "ProfilesApiServiceTaskDefTaskRoleAFCBB9DF"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "ProfilesApiStack/ProfilesApiService/Service/SecurityGroup/Resource"
+   }
+  },
+  "ProfilesApiServiceSecurityGroupfromProfilesApiStackProfilesApiServiceLBSecurityGroupA570BC98300264B20F78": {
+   "Type": "AWS::EC2::SecurityGroupIngress",
+   "Properties": {
+    "Description": "Load balancer to target",
+    "FromPort": 3002,
+    "GroupId": {
+     "Fn::GetAtt": [
+      "ProfilesApiServiceSecurityGroup1396DB99",
+      "GroupId"
+     ]
+    },
+    "IpProtocol": "tcp",
+    "SourceSecurityGroupId": {
+     "Fn::GetAtt": [
+      "ProfilesApiServiceLBSecurityGroup55F69058",
+      "GroupId"
+     ]
+    },
+    "ToPort": 3002
+   },
+   "DependsOn": [
+    "ProfilesApiServiceTaskDefTaskRoleAFCBB9DF"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "ProfilesApiStack/ProfilesApiService/Service/SecurityGroup/from ProfilesApiStackProfilesApiServiceLBSecurityGroupA570BC98:3002"
+   }
+  },
+  "EcsDefaultClusterMnL3mNNYNDefaultVpc61366A98": {
+   "Type": "AWS::ECS::Cluster",
+   "Metadata": {
+    "aws:cdk:path": "ProfilesApiStack/EcsDefaultClusterMnL3mNNYNDefaultVpc/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/31RXW/CMAz8LbyHjFX8ARgbQkLa1PKOTGoi05BUsQtCVf/71A9Q2aY9+e58sXNJopP5TM8mcOWpyYupo4OuMwFTqBQ5VNGggivvazRxD8worFfBFBg3Z7C4aBWFJuoUy8AkId6WwKjQ8L4EEYye9aIsHRkQCn4bIF+CA28w/4BoQTDDeCGDCh2wkHEB8kPnIG8via7/Ph3V2/GZj33Egn7w3PGov4NoUdYxVGVrGdFGoUl0naGpIsntYflfeLcRmX/JG9/p7UzW9RB3B1ys8Eie2pv065+V4AXIYxxpP56qWzRAV7H0SQfYKIKzrtPgOmNXv4Ijc2tpjxrlgmVdb4N9JLrjplHdt2YClrxtW5+VlJU0yocc9YlfLslcvyZ6Njkx0TRWXuiMOu3rNwF2DlpTAgAA"
+   },
+   "Metadata": {
+    "aws:cdk:path": "ProfilesApiStack/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "ProfilesApiServiceLoadBalancerDNS272C76F7": {
+   "Value": {
+    "Fn::GetAtt": [
+     "ProfilesApiServiceLBCDC52A68",
+     "DNSName"
+    ]
+   }
+  },
+  "ProfilesApiServiceServiceURLB9A454E2": {
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "http://",
+      {
+       "Fn::GetAtt": [
+        "ProfilesApiServiceLBCDC52A68",
+        "DNSName"
+       ]
+      }
+     ]
+    ]
+   }
+  },
+  "LoadBalancerDNS": {
+   "Description": "ALB DNS name for Profiles API",
+   "Value": {
+    "Fn::GetAtt": [
+     "ProfilesApiServiceLBCDC52A68",
+     "DNSName"
+    ]
+   },
+   "Export": {
+    "Name": "ProfilesApiAlbDns"
+   }
+  },
+  "ServiceURL": {
+   "Description": "Profiles API URL (use HTTPS with ACM certificate for production)",
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "http://",
+      {
+       "Fn::GetAtt": [
+        "ProfilesApiServiceLBCDC52A68",
+        "DNSName"
+       ]
+      }
+     ]
+    ]
+   },
+   "Export": {
+    "Name": "ProfilesApiUrl"
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

@@ -19,6 +19,9 @@
 - **ECR**: Amazon Elastic Container Registry для хранения Docker образов
 - **RLS**: Row Level Security политики в Supabase для изоляции данных по компаниям
 - **CORS**: Cross-Origin Resource Sharing настройки для взаимодействия с фронтенд приложениями
+- **CDK_Bootstrap**: Процесс инициализации AWS CDK в AWS аккаунте, создающий необходимые ресурсы (S3 bucket, ECR repo, IAM roles)
+- **IAM_Policy**: Документ определяющий разрешения для AWS ресурсов
+- **SSM_Parameter_Store**: AWS Systems Manager Parameter Store для хранения конфигурационных данных
 
 ## Требования
 
@@ -252,3 +255,23 @@
 8. THE System SHALL предоставить диаграмму архитектуры с указанием всех компонентов (Profiles_API, ECR, Load Balancer, Supabase, S3, CloudWatch)
 9. THE System SHALL предоставить список всех AWS ресурсов с их назначением и стоимостью
 10. THE System SHALL предоставить контакты и ссылки на AWS документацию для дополнительной информации
+
+### Требование 16: Настройка IAM прав для CDK деплоя
+
+**User Story:** Как DevOps инженер, я хочу иметь правильно настроенные IAM права для CDK деплоя, чтобы успешно создавать и управлять инфраструктурой через AWS CDK.
+
+#### Acceptance Criteria
+
+1. THE System SHALL предоставить IAM_Policy для CDK деплоя с минимальными необходимыми правами
+2. THE IAM User или Role SHALL иметь права на ssm:GetParameter для проверки CDK_Bootstrap версии
+3. THE IAM User или Role SHALL иметь права на sts:AssumeRole для CDK deploy role
+4. THE IAM User или Role SHALL иметь права на CloudFormation операции (CreateStack, UpdateStack, DeleteStack, DescribeStacks)
+5. THE IAM User или Role SHALL иметь права на создание и управление ECR репозиториями
+6. THE IAM User или Role SHALL иметь права на создание и управление App Runner сервисами
+7. THE IAM User или Role SHALL иметь права на создание и управление IAM ролями для App Runner
+8. THE IAM User или Role SHALL иметь права на создание и управление Secrets Manager секретами
+9. THE IAM User или Role SHALL иметь права на создание и управление CloudWatch ресурсами
+10. THE System SHALL предоставить команды для проверки текущих IAM прав пользователя
+11. THE System SHALL предоставить инструкцию по созданию нового IAM пользователя с правильными правами
+12. IF IAM права недостаточны, THEN THE System SHALL вернуть понятное сообщение об ошибке с указанием недостающих прав
+13. THE System SHALL предоставить альтернативный способ деплоя без CDK (через AWS CLI) для случаев когда CDK права недоступны

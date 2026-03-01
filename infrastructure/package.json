@@ -1,0 +1,24 @@
+{
+  "name": "pashkovsky-infrastructure",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "cdk": "cdk",
+    "deploy": "cdk deploy --require-approval never",
+    "deploy:profiles-api": "cdk deploy ProfilesApiStack --require-approval never",
+    "diff": "cdk diff",
+    "synth": "cdk synth"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "aws-cdk": "^2.170.0",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.170.0",
+    "constructs": "^10.0.0",
+    "source-map-support": "^0.5.21"
+  }
+}
