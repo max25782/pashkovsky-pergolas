@@ -53,7 +53,8 @@ export function ProfilesTable() {
       const response = await authFetch('/api/admin/profiles')
       
       if (!response.ok) {
-        throw new Error(`Failed to load profiles: ${response.statusText}`)
+        const body = await response.json().catch(() => ({}))
+        throw new Error(body?.error || `Failed to load profiles (${response.status})`)
       }
       
       const data = await response.json()
