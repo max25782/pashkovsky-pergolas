@@ -1,18 +1,18 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-// Inlined to avoid Node.js imports in Edge Runtime
 const locales = ['he', 'ru', 'en'] as const
 const defaultLocale = 'he'
 
 export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
-  
+
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api') ||
-    (pathname.includes('.') && pathname !== '/favicon.ico') ||
-    pathname === '/favicon.ico'
+    pathname.startsWith('/static') ||
+    pathname === '/favicon.ico' ||
+    pathname.includes('.')
   ) {
     return NextResponse.next()
   }
@@ -25,20 +25,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  const newPath = pathname === '/' ? `/${defaultLocale}` : `/${defaultLocale}${pathname}`
-  return NextResponse.redirect(new URL(newPath, request.url))
+  const url = request.nextUrl.clone()
+  url.pathname = pathname === '/' ? `/${defaultLocale}` : `/${defaultLocale}${pathname}`
+  return NextResponse.redirect(url)
 }
 
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next (Next.js internal)
-     * - favicon.ico (favicon file)
-     * - files with extensions (images, etc.)
-     */
-    '/',
-    '/((?!api|_next|favicon\\.ico|.*\\..*).+)',
-  ],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\..*|api).*)'],
 }
