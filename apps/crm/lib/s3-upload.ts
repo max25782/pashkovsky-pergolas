@@ -1,3 +1,4 @@
+// S3 upload utility for CRM (orders PDF, etc.)
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
 
 const S3_BUCKET = process.env.AWS_S3_BUCKET_NAME
