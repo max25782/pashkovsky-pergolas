@@ -31,13 +31,16 @@ export async function renderHtmlToPdfBuffer(html: string): Promise<Buffer> {
 
     console.log('[PDF Render] Step 3: Loading HTML content with embedded fonts...')
 
-    // Use domcontentloaded: 'load' causes "Unexpected status code: 404" in
-    // chrome-headless-shell when network resource events don't settle cleanly.
-    // Fonts are embedded as base64 so no real network requests are needed.
-    await page.setContent(html, {
-      waitUntil: 'domcontentloaded',
-      timeout: 30000,
-    })
+    // Use document.write instead of setContent: chrome-headless-shell throws
+    // "Unexpected status code: 404" for setContent (even with domcontentloaded),
+    // likely due to data-URL or navigation handling. document.write bypasses
+    // navigation entirely and has no URL length limits for large base64 fonts.
+    await page.goto('about:blank', { waitUntil: 'domcontentloaded', timeout: 10000 })
+    await page.evaluate((content: string) => {
+      document.open()
+      document.write(content)
+      document.close()
+    }, html)
     console.log('[PDF Render] ✅ HTML content loaded')
 
     // Wait for fonts to be loaded and ready
