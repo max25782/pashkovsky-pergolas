@@ -1,14 +1,5 @@
 /** @type {import('next').NextConfig} */
-const path = require('path')
-
 const nextConfig = {
-  webpack: (config) => {
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      '@': path.resolve(__dirname),
-    }
-    return config
-  },
   images: {
     formats: ['image/webp', 'image/avif'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
