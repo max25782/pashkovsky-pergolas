@@ -9,10 +9,12 @@ import { generateOrderPdf, generateOrderPdfFilename } from '@/lib/pdf/generate-o
 import { uploadToS3 } from '@/lib/s3-upload'
 
 const PROFILES_API_URL = process.env.PROFILES_API_URL || 'http://localhost:3002'
+const UPSTREAM_TIMEOUT_MS = 8000
 
 // Force Node.js runtime (not Edge) for Puppeteer/Chromium compatibility
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+export const maxDuration = 60
 
 /**
  * POST /api/admin/orders/[id]/pdf
@@ -35,27 +37,50 @@ export async function POST(
     const authHeader = req.headers.get('authorization')
 
     // Fetch order from Profiles API
-    const response = await fetch(`${PROFILES_API_URL}/orders/${id}?company_id=${companyId}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(authHeader ? { Authorization: authHeader } : {}),
-      },
-    })
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Failed to fetch order' }))
+    let orderResponse: Response
+    const orderUrl = `${PROFILES_API_URL}/orders/${id}?company_id=${companyId}`
+    try {
+      orderResponse = await fetch(orderUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authHeader ? { Authorization: authHeader } : {}),
+        },
+        signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+      })
+    } catch (fetchErr: any) {
+      const msg = fetchErr?.message || 'fetch failed'
+      console.error('[PDF API] Failed to reach Profiles API:', msg, { url: orderUrl })
       return NextResponse.json(
-        { error: error.message || 'Failed to fetch order' },
-        { status: response.status }
+        { error: `Cannot reach Profiles API (${msg}). Check PROFILES_API_URL in Vercel env.` },
+        { status: 502 }
       )
     }
 
-    const order = await response.json()
+    if (!orderResponse.ok) {
+      const body = await orderResponse.json().catch(() => ({ message: 'Failed to fetch order' }))
+      console.error('[PDF API] Profiles API returned error:', orderResponse.status, body)
+      return NextResponse.json(
+        { error: body.message || `Profiles API error ${orderResponse.status}` },
+        { status: orderResponse.status }
+      )
+    }
 
-    console.log('[PDF API] Generating PDF buffer...')
-    const pdfBuffer = await generateOrderPdf(order)
-    console.log('[PDF API] PDF buffer generated, size:', pdfBuffer.length)
+    const order = await orderResponse.json()
+    console.log('[PDF API] Order fetched, generating PDF...')
+
+    let pdfBuffer: Buffer
+    try {
+      pdfBuffer = await generateOrderPdf(order)
+      console.log('[PDF API] PDF buffer generated, size:', pdfBuffer.length)
+    } catch (pdfErr: any) {
+      const msg = pdfErr?.message || 'Unknown PDF error'
+      console.error('[PDF API] PDF generation failed:', msg)
+      return NextResponse.json(
+        { error: `PDF generation failed: ${msg}` },
+        { status: 500 }
+      )
+    }
 
     const filename = generateOrderPdfFilename(order)
     const key = `orders/${order.id}/${filename}`
@@ -66,18 +91,10 @@ export async function POST(
 
     return NextResponse.json({ pdfUrl, cached: false })
   } catch (error: any) {
-    console.error('[PDF API] ❌ ERROR generating PDF:')
-    console.error('[PDF API] Error:', error)
-    
-    let errorMessage = error.message || 'Failed to generate PDF'
-    if (errorMessage.includes('Failed to launch')) {
-      errorMessage = 'Failed to launch browser for PDF generation. Make sure Puppeteer is installed correctly.'
-    } else if (errorMessage.includes('Failed to render PDF')) {
-      errorMessage = 'Failed to convert HTML to PDF. Check order content.'
-    }
-
+    const msg = error?.message || 'Internal server error'
+    console.error('[PDF API] Unexpected error:', msg)
     return NextResponse.json(
-      { error: 'Failed to generate PDF', details: errorMessage },
+      { error: msg },
       { status: 500 }
     )
   }
