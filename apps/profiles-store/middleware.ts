@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { locales, defaultLocale, type Locale } from './lib/locales'
+
+// Inlined to avoid Node.js imports in Edge Runtime
+const locales = ['he', 'ru', 'en'] as const
+const defaultLocale = 'he'
 
 export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   
-  // Skip middleware for static files and API routes
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api') ||
@@ -23,11 +25,8 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Redirect root and other paths to default locale
-  const locale = defaultLocale
-  const newPath = pathname === '/' ? `/${locale}` : `/${locale}${pathname}`
-  const newUrl = new URL(newPath, request.url)
-  return NextResponse.redirect(newUrl)
+  const newPath = pathname === '/' ? `/${defaultLocale}` : `/${defaultLocale}${pathname}`
+  return NextResponse.redirect(new URL(newPath, request.url))
 }
 
 export const config = {
