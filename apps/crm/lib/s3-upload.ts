@@ -57,8 +57,8 @@ export async function uploadToS3(
     Key: key,
     Body: buffer,
     ContentType: mimeType,
-    // Set metadata to ensure CORS headers are applied
-    CacheControl: 'public, max-age=31536000, immutable',
+    // PDFs are regenerated on demand — don't cache them in browsers
+    CacheControl: 'no-cache, no-store, must-revalidate',
     ContentDisposition: 'inline',
     // Removed ACL - use Bucket Policy for public access instead
     // Modern S3 buckets use Bucket Policy, not ACLs
