@@ -7,6 +7,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
 
 const PROFILES_API_URL = process.env.PROFILES_API_URL || 'http://localhost:3002'
+const UPSTREAM_TIMEOUT_MS = 8000
+
+export const maxDuration = 60
+
+function buildProfilesListUrl(companyId: string): string {
+  const base = PROFILES_API_URL.endsWith('/')
+    ? PROFILES_API_URL.slice(0, -1)
+    : PROFILES_API_URL
+  const url = new URL(`${base}/profiles`)
+  url.searchParams.set('company_id', companyId)
+  return url.toString()
+}
 
 /**
  * GET /api/admin/profiles
@@ -24,14 +36,16 @@ export async function GET(req: NextRequest) {
   try {
     // Get JWT token from request
     const authHeader = req.headers.get('authorization')
+    const upstreamUrl = buildProfilesListUrl(companyId)
     
     // Forward request to NestJS API
-    const response = await fetch(`${PROFILES_API_URL}/profiles`, {
+    const response = await fetch(upstreamUrl, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
         ...(authHeader ? { Authorization: authHeader } : {}),
       },
+      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
     })
 
     if (!response.ok) {
@@ -46,7 +60,7 @@ export async function GET(req: NextRequest) {
       console.error('[Profiles API Proxy] NestJS error:', {
         status: response.status,
         error: error.message || error,
-        url: `${PROFILES_API_URL}/profiles?company_id=${companyId}`
+        url: upstreamUrl,
       })
       
       return NextResponse.json(
@@ -59,12 +73,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(data)
   } catch (error: any) {
     const msg = error?.message || 'Internal server error'
-    const isConnectionError = /ECONNREFUSED|ENOTFOUND|ETIMEDOUT|fetch failed/i.test(String(msg))
+    const isConnectionError =
+      /ECONNREFUSED|ENOTFOUND|ETIMEDOUT|fetch failed|aborted|timeout/i.test(String(msg))
     console.error('[Profiles API] Error:', msg, { url: PROFILES_API_URL, isConnectionError })
     return NextResponse.json(
       {
         error: isConnectionError
-          ? 'Profiles API unreachable. Check PROFILES_API_URL in Vercel env.'
+          ? 'Profiles API unreachable or timed out. Check PROFILES_API_URL in Vercel env.'
           : msg,
       },
       { status: 500 }
@@ -97,6 +112,7 @@ export async function POST(req: NextRequest) {
         ...(authHeader ? { Authorization: authHeader } : {}),
       },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
     })
 
     if (!response.ok) {
@@ -111,12 +127,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(data)
   } catch (error: any) {
     const msg = error?.message || 'Internal server error'
-    const isConnectionError = /ECONNREFUSED|ENOTFOUND|ETIMEDOUT|fetch failed/i.test(String(msg))
+    const isConnectionError =
+      /ECONNREFUSED|ENOTFOUND|ETIMEDOUT|fetch failed|aborted|timeout/i.test(String(msg))
     console.error('[Profiles API] Error:', msg, { url: PROFILES_API_URL, isConnectionError })
     return NextResponse.json(
       {
         error: isConnectionError
-          ? 'Profiles API unreachable. Check PROFILES_API_URL in Vercel env.'
+          ? 'Profiles API unreachable or timed out. Check PROFILES_API_URL in Vercel env.'
           : msg,
       },
       { status: 500 }
