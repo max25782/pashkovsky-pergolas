@@ -1,5 +1,7 @@
-// S3 upload utility for CRM (orders PDF, etc.)
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
+// S3 upload utility for CRM (orders PDF, gallery, media assets, etc.)
+import { S3Client, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3'
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
+import { GetObjectCommand } from '@aws-sdk/client-s3'
 
 const S3_BUCKET = process.env.AWS_S3_BUCKET_NAME
 const S3_REGION = process.env.AWS_S3_REGION || 'us-east-1'
@@ -120,5 +122,78 @@ export function getS3Url(key: string): string {
     throw new Error('S3 bucket not configured')
   }
   return `https://${S3_BUCKET}.s3.${S3_REGION}.amazonaws.com/${key}`
+}
+
+/**
+ * Generate a short-lived presigned GET URL for a private S3 object.
+ * Default expiry: 15 minutes (900 seconds).
+ * All S3 credentials stay server-side — never call this from the browser.
+ */
+export async function presignGetObject(key: string, expiresSec = 900): Promise<string> {
+  if (!s3Client || !S3_BUCKET) {
+    throw new Error('S3 not configured. Check AWS environment variables.')
+  }
+  const command = new GetObjectCommand({ Bucket: S3_BUCKET, Key: key })
+  return getSignedUrl(s3Client, command, { expiresIn: expiresSec })
+}
+
+export interface S3ListItem {
+  key: string
+  size: number
+  lastModified: Date
+  mimeType: string
+}
+
+export interface S3ListResult {
+  items: S3ListItem[]
+  nextToken: string | undefined
+}
+
+/** Infer MIME type from S3 key extension */
+function inferMimeType(key: string): string {
+  const ext = key.split('.').pop()?.toLowerCase() ?? ''
+  const map: Record<string, string> = {
+    jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png',
+    webp: 'image/webp', gif: 'image/gif', avif: 'image/avif',
+    mp4: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime',
+  }
+  return map[ext] ?? 'application/octet-stream'
+}
+
+/**
+ * List objects under a prefix (paged, up to 100 per call).
+ * Returns keys + basic metadata. Credentials stay server-side.
+ */
+export async function listS3Objects(
+  prefix: string,
+  continuationToken?: string,
+  maxKeys = 100,
+): Promise<S3ListResult> {
+  if (!s3Client || !S3_BUCKET) {
+    throw new Error('S3 not configured. Check AWS environment variables.')
+  }
+
+  const command = new ListObjectsV2Command({
+    Bucket: S3_BUCKET,
+    Prefix: prefix,
+    MaxKeys: maxKeys,
+    ContinuationToken: continuationToken,
+  })
+
+  const res = await s3Client.send(command)
+
+  const items: S3ListItem[] = (res.Contents ?? [])
+    .filter((obj) => obj.Key && !obj.Key.endsWith('/')) // skip folder pseudo-keys
+    .map((obj) => ({
+      key: obj.Key!,
+      size: obj.Size ?? 0,
+      lastModified: obj.LastModified ?? new Date(0),
+      mimeType: inferMimeType(obj.Key!),
+    }))
+
+  return {
+    items,
+    nextToken: res.NextContinuationToken,
+  }
 }
 

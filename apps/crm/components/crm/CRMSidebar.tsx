@@ -12,7 +12,8 @@ import {
   Menu,
   X,
   LogOut,
-  Brain
+  Brain,
+  Images,
 } from 'lucide-react'
 import { useState } from 'react'
 import clsx from 'clsx'
@@ -42,6 +43,7 @@ export default function CRMSidebar() {
     { href: '/app/admin/users', label: language === 'ru' ? 'Пользователи' : language === 'en' ? 'Users' : 'משתמשים', icon: Users },
     { href: '/app/admin/statistics', label: t.nav.statistic, icon: BarChart3 },
     { href: '/app/admin/workers', label: t.nav.workers, icon: Users },
+    { href: '/app/admin/media', label: language === 'ru' ? 'Медиа AI' : language === 'en' ? 'AI Media' : 'מדיה AI', icon: Images },
   ]
 
   const handleLogout = async () => {

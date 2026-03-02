@@ -163,6 +163,58 @@ async function imageToBase64(file: File): Promise<{ mimeType: string; data: stri
   }
 }
 
+// Tag keywords → media_assets tag mapping
+const TAG_KEYWORDS: Array<{ keywords: string[]; tag: string }> = [
+  { keywords: ['קלאסי', 'קלאסית', 'classic'], tag: 'פרגולה קלאסית' },
+  { keywords: ['היי-טק', 'היטק', 'high tech', 'hightech'], tag: 'פרגולה היי-טק' },
+  { keywords: ['מטבח חוץ', 'מטבח', 'kitchen'], tag: 'פרגולה למטבח חוץ' },
+  { keywords: ['ביוקלמטיק', 'bioclimatic'], tag: 'פרגולה ביוקלמטיק' },
+  { keywords: ['pvc', 'פי וי סי'], tag: 'פרגולה pvc' },
+  { keywords: ['תלויה', 'hanging', 'suspended'], tag: 'פרגולה תלויה' },
+  { keywords: ['עץ', 'wood', 'wooden'], tag: 'פרגולה דמוי עץ' },
+  { keywords: ['זכוכית', 'glass', 'יוקרה'], tag: 'פרגולה יוקרה עם כיסוי זכוכית' },
+]
+
+/**
+ * Detect which pergola tags appear in the AI response text and fetch
+ * matching presigned image URLs from media_assets.
+ * Falls back to "פרגולה קלאסית" (most common) if nothing matches.
+ */
+async function fetchImagesByContext(text: string): Promise<string[]> {
+  const lower = text.toLowerCase()
+  const detectedTags = TAG_KEYWORDS
+    .filter(({ keywords }) => keywords.some((kw) => lower.includes(kw.toLowerCase())))
+    .map(({ tag }) => tag)
+
+  const tagsToQuery = detectedTags.length > 0 ? [detectedTags[0]] : ['פרגולה קלאסית']
+
+  try {
+    const host = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3001'
+
+    const res = await fetch(`${host}/api/media/query`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tags: tagsToQuery, limit: 3, random: true }),
+      signal: AbortSignal.timeout(5000),
+    })
+
+    if (res.ok) {
+      const data: { items: Array<{ url: string }> } = await res.json()
+      const urls = data.items.map((i) => i.url).filter(Boolean)
+      console.log(`[AI Chat] Media query (${tagsToQuery[0]}): ${urls.length} images`)
+      if (urls.length > 0) return urls
+    } else {
+      console.warn('[AI Chat] Media query returned', res.status)
+    }
+  } catch (e) {
+    console.warn('[AI Chat] Media query failed, no images returned:', e)
+  }
+
+  return []
+}
+
 // Call Gemini API (non-streaming under the hood, streamed to client)
 async function* streamGeminiResponse(
   messages: Array<{ role: string; content: string }>,
@@ -300,28 +352,9 @@ async function* streamGeminiResponse(
     // Remove image tag from text
     textWithoutImageTag = fullText.replace(/\[IMAGE:[^\]]+\]/g, '').trim()
     
-    // If AI requested images but didn't provide URLs, fetch from gallery
+    // If AI requested images but didn't provide URLs, query media_assets by detected tags
     if (imageUrls.length === 0 || imageUrls[0].startsWith('placeholder')) {
-      try {
-        // Get base URL from request headers or use default
-        const host = process.env.VERCEL_URL 
-          ? `https://${process.env.VERCEL_URL}`
-          : process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
-        
-        const galleryUrl = `${host}/api/gallery/images?category_key=pergulot&limit=3&random=true`
-        console.log('[AI Chat] Fetching gallery images from:', galleryUrl.replace(/https?:\/\/[^\/]+/, '***'))
-        
-        const galleryRes = await fetch(galleryUrl)
-        if (galleryRes.ok) {
-          const galleryData = await galleryRes.json()
-          imageUrls = galleryData.images || []
-          console.log(`[AI Chat] Fetched ${imageUrls.length} images from gallery`)
-        } else {
-          console.error('[AI Chat] Gallery API returned error:', galleryRes.status, galleryRes.statusText)
-        }
-      } catch (error) {
-        console.error('[AI Chat] Failed to fetch gallery images:', error)
-      }
+      imageUrls = await fetchImagesByContext(fullText)
     }
   }
 
