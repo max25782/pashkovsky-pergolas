@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
-import { SYSTEM_PROMPT, AI_CONFIG, COOKIE_NAME, COOKIE_MAX_AGE } from '@/lib/ai-chat/config'
+import { SYSTEM_PROMPT, AI_CONFIG, COOKIE_NAME, COOKIE_MAX_AGE, fewShotExamples } from '@/lib/ai-chat/config'
 import { sanitizeInput } from '@/lib/ai-chat/xss-filter'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
@@ -179,6 +179,9 @@ async function* streamGeminiResponse(
       role: 'user',
       parts: [{ text: SYSTEM_PROMPT }],
     },
+    // Few-shot examples teach the model the correct tone and response style
+    // before any real conversation history
+    ...fewShotExamples,
   ]
 
   // Full history from Supabase
