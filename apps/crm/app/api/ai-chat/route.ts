@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { SYSTEM_PROMPT, AI_CONFIG, COOKIE_NAME, COOKIE_MAX_AGE, fewShotExamples } from '@/lib/ai-chat/config'
+import { isAppointmentConfirmation, extractAppointment } from '@/lib/ai-chat/appointment-detector'
+import { sendCalendarInvite } from '@/lib/ai-chat/calendar-invite'
 import { sanitizeInput } from '@/lib/ai-chat/xss-filter'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
@@ -569,6 +571,17 @@ export async function POST(req: NextRequest) {
               console.log('[AI Chat] Assistant message saved')
             } catch (error) {
               console.error('[AI Chat] Failed to save assistant message:', error)
+            }
+
+            // Detect appointment confirmation and send calendar invite (fire-and-forget)
+            if (isAppointmentConfirmation(fullResponse)) {
+              console.log('[AI Chat] Appointment confirmation detected — sending calendar invite')
+              const allMessages = [...history, { role: 'assistant', content: fullResponse }]
+              extractAppointment(allMessages)
+                .then((appt) => {
+                  if (appt) return sendCalendarInvite(appt)
+                })
+                .catch((e) => console.error('[AI Chat] Calendar invite failed:', e))
             }
           } else {
             console.warn('[AI Chat] No response received from Gemini')
