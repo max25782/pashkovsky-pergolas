@@ -48,6 +48,7 @@ export default function MediaAdminPage() {
 
   const [nextToken, setNextToken] = useState<string | undefined>()
   const [hasMore, setHasMore] = useState(false)
+  const [presignedUrls, setPresignedUrls] = useState<Record<string, string>>({})
 
   // Selection & bulk-tag state
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -111,7 +112,7 @@ export default function MediaAdminPage() {
         ...item,
         tags: db?.tags ?? [],
         caption: db?.caption ?? null,
-        presignedUrl: db?.presignedUrl ?? '',
+        presignedUrl: presignedUrls[item.key] ?? db?.presignedUrl ?? '',
         indexed: !!db,
       }
     })
@@ -125,15 +126,16 @@ export default function MediaAdminPage() {
     }
 
     setDisplayItems(merged)
-  }, [s3Items, dbAssets, showUntaggedFirst])
+  }, [s3Items, dbAssets, showUntaggedFirst, presignedUrls])
 
   // Initial load
   useEffect(() => {
+    setPresignedUrls({})
     loadS3()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefix])
 
-  // ── Presign thumbnails lazily (first 30) ──────────────────────────────────
+  // ── Presign thumbnails lazily in batches of 30 ───────────────────────────
   useEffect(() => {
     const unresolved = displayItems
       .filter((i) => !i.presignedUrl && i.mimeType.startsWith('image/'))
@@ -142,22 +144,30 @@ export default function MediaAdminPage() {
     if (unresolved.length === 0) return
 
     ;(async () => {
-      const results = await Promise.allSettled(
-        unresolved.map(async (item) => {
-          const res = await authFetch('/api/media/query', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            // Query by a tag that every image has — workaround: we call
-            // a dedicated presign endpoint. Until then, use query with first tag
-            // or show placeholder.
-            body: JSON.stringify({ tags: item.tags.length ? item.tags : [MEDIA_TAGS[0]], limit: 1 }),
-          })
-          return { key: item.key }
-        }),
-      )
-      void results // presign URLs come via query — for unindexed items, show placeholder
+      try {
+        const res = await authFetch('/api/media/presign', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ keys: unresolved.map((i) => i.key) }),
+        })
+        if (!res.ok) return
+        const data: { urls: Record<string, string> } = await res.json()
+
+        setS3Items((prev) =>
+          prev.map((item) =>
+            data.urls[item.key]
+              ? { ...item, _presignedUrl: data.urls[item.key] }
+              : item,
+          ),
+        )
+        // Store presigned URLs in a separate state so they survive re-renders
+        setPresignedUrls((prev) => ({ ...prev, ...data.urls }))
+      } catch (e) {
+        console.error('[Media] Presign batch failed:', e)
+      }
     })()
-  }, [displayItems])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [displayItems.length])
 
   // ── Import from S3 ─────────────────────────────────────────────────────────
   async function handleImport() {
