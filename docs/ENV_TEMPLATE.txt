@@ -30,9 +30,10 @@ SMTP_PORT=587
 SMTP_USER=your-email@gmail.com
 SMTP_PASSWORD=your-app-password
 
-## OPTIONAL
-WHATSAPP_API_KEY=your-whatsapp-api-key
-WHATSAPP_PHONE=+972XXXXXXXXX
+## OPTIONAL - WhatsApp (lead auto-reply)
+WHATSAPP_ACCESS_TOKEN=your-meta-access-token
+WHATSAPP_PHONE_NUMBER_ID=your-phone-number-id
+WHATSAPP_TEMPLATE_NAME=hi
 
 ## IMPORTANT: Token Generation
 # Generate site token: openssl rand -base64 32

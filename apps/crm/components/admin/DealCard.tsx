@@ -45,7 +45,14 @@ export function DealCard({
         
         {deal.customer_phone && (
           <div className="text-sm text-white/70">
-            📞 {deal.customer_phone}
+            📞{' '}
+            <a
+              href={`tel:${deal.customer_phone}`}
+              onClick={(e) => e.stopPropagation()}
+              className="hover:text-white underline"
+            >
+              {deal.customer_phone}
+            </a>
           </div>
         )}
         

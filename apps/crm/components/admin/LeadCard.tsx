@@ -31,7 +31,14 @@ export function LeadCard({ lead, onClick }: LeadCardProps) {
         </div>
         
         <div className="text-sm text-white/70">
-          📞 {lead.phone}
+          📞{' '}
+          <a
+            href={`tel:${lead.phone}`}
+            onClick={(e) => e.stopPropagation()}
+            className="hover:text-white underline"
+          >
+            {lead.phone}
+          </a>
         </div>
         
         {lead.email && (

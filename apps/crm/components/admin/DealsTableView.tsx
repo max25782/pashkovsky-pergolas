@@ -80,7 +80,15 @@ function DealTableRow({
           <div className="text-xs text-white/50">{deal.customer_city}</div>
         )}
       </td>
-      <td className="p-3 text-white/70">{deal.customer_phone || '-'}</td>
+      <td className="p-3 text-white/70">
+        {deal.customer_phone ? (
+          <a href={`tel:${deal.customer_phone}`} className="hover:text-white underline">
+            {deal.customer_phone}
+          </a>
+        ) : (
+          '-'
+        )}
+      </td>
       <td className="p-3">
         <span className="px-2 py-1 rounded bg-blue-500/20 text-blue-200 text-xs">
           {deal.project_type ? (t.deals.projectTypes[deal.project_type as keyof typeof t.deals.projectTypes] || deal.project_type) : '-'}

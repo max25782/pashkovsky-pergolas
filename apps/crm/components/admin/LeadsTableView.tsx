@@ -93,7 +93,15 @@ function LeadTableRow({
           <div className="text-xs text-white/50">{lead.city}</div>
         )}
       </td>
-      <td className="p-3 text-white/70 cursor-pointer" onClick={onClick}>{lead.phone}</td>
+      <td className="p-3 text-white/70" onClick={onClick}>
+        <a
+          href={`tel:${lead.phone}`}
+          onClick={(e) => e.stopPropagation()}
+          className="hover:text-white underline"
+        >
+          {lead.phone}
+        </a>
+      </td>
       <td className="p-3 text-white/70 cursor-pointer" onClick={onClick}>{lead.email || '-'}</td>
       <td className="p-3 text-white/70 cursor-pointer" onClick={onClick}>{lead.source || '-'}</td>
       <td className="p-3">

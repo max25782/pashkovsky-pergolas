@@ -83,7 +83,12 @@ export function MaterialOrdersList({ dealId, adminToken = '' }: MaterialOrdersLi
                 <td className="p-2 text-white">
                   <div>{order.supplier_name || '-'}</div>
                   {order.supplier_phone && (
-                    <div className="text-sm text-white/60">{order.supplier_phone}</div>
+                    <a
+                      href={`tel:${order.supplier_phone}`}
+                      className="text-sm text-white/60 hover:text-white underline"
+                    >
+                      {order.supplier_phone}
+                    </a>
                   )}
                 </td>
                 <td className="p-2 text-white text-sm">

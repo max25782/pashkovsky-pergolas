@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { PublicLeadSchema } from '@/lib/validation/public-lead'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
+import { sendWhatsAppTemplate } from '@/lib/whatsapp-send'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -222,6 +223,14 @@ export async function POST(request: NextRequest) {
       ip: clientIp,
       duration: `${duration}ms`,
     })
+
+    // 9. Send WhatsApp welcome message (fire-and-forget)
+    const templateName = process.env.WHATSAPP_TEMPLATE_NAME || 'hi'
+    sendWhatsAppTemplate(leadData.phone, templateName, [leadData.name])
+      .then((r) => {
+        if (!r.ok) console.warn('[Public Leads] WhatsApp send failed:', r.error)
+      })
+      .catch((e) => console.warn('[Public Leads] WhatsApp send error:', e))
 
     return jsonResponse(
       { 

@@ -149,7 +149,17 @@ export function MonthlyDealsModal({
                           {deal.customer_name || '—'}
                         </td>
                         <td className="p-3 text-white/70">
-                          {deal.customer_phone || '—'}
+                          {deal.customer_phone ? (
+                            <a
+                              href={`tel:${deal.customer_phone}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="hover:text-white underline"
+                            >
+                              {deal.customer_phone}
+                            </a>
+                          ) : (
+                            '—'
+                          )}
                         </td>
                         <td className="p-3 text-white/70">
                           {deal.project_type || '—'}
