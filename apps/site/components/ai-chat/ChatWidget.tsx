@@ -377,7 +377,9 @@ export function ChatWidget() {
                   </div>
                 )}
                 {msg.content && (
-                  <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                  <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                    {msg.content.replace(/\[IMAGE:[^\]]*\]/g, '').trim()}
+                  </p>
                 )}
               </div>
             </div>

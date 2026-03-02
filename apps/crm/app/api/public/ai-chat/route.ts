@@ -10,7 +10,10 @@
 
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { SYSTEM_PROMPT, AI_CONFIG } from '@/lib/ai-chat/config'
+import { SYSTEM_PROMPT, AI_CONFIG, fewShotExamples } from '@/lib/ai-chat/config'
+import { isAppointmentConfirmation, extractAppointment } from '@/lib/ai-chat/appointment-detector'
+import { sendCalendarInvite } from '@/lib/ai-chat/calendar-invite'
+import { fetchImagesByContext } from '@/lib/ai-chat/image-fetcher'
 
 // Environment variables
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -126,10 +129,8 @@ async function* streamGeminiResponse(
   if (!GEMINI_API_KEY) throw new Error('Gemini API key not configured')
 
   const geminiContents: any[] = [
-    {
-      role: 'user',
-      parts: [{ text: SYSTEM_PROMPT }],
-    },
+    { role: 'user', parts: [{ text: SYSTEM_PROMPT }] },
+    ...fewShotExamples,
   ]
 
   messages.forEach((m) => {
@@ -140,36 +141,18 @@ async function* streamGeminiResponse(
   })
 
   const userParts: any[] = []
-  if (userMessage) {
-    userParts.push({ text: userMessage })
-  }
-  if (imageData) {
-    userParts.push({
-      inlineData: {
-        mimeType: imageData.mimeType,
-        data: imageData.data,
-      },
-    })
-  }
-  
-  geminiContents.push({
-    role: 'user',
-    parts: userParts,
-  })
+  if (userMessage) userParts.push({ text: userMessage })
+  if (imageData) userParts.push({ inlineData: { mimeType: imageData.mimeType, data: imageData.data } })
+  geminiContents.push({ role: 'user', parts: userParts })
 
   const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${AI_CONFIG.model}:generateContent?key=${GEMINI_API_KEY}`
 
   const response = await fetch(apiUrl, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: geminiContents,
-      generationConfig: {
-        temperature: AI_CONFIG.temperature,
-        maxOutputTokens: AI_CONFIG.maxTokens,
-      },
+      generationConfig: { temperature: AI_CONFIG.temperature, maxOutputTokens: AI_CONFIG.maxTokens },
     }),
   })
 
@@ -180,13 +163,28 @@ async function* streamGeminiResponse(
   }
 
   const data = await response.json()
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
-  
-  // Stream the text word by word
-  const words = text.split(' ')
-  for (const word of words) {
-    yield word + ' '
-    await new Promise(resolve => setTimeout(resolve, 30))
+  const fullText: string = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || ''
+
+  // Strip [IMAGE:...] tag and fetch real presigned images
+  const imageMatch = fullText.match(/\[IMAGE:([^\]]+)\]/)
+  let imageUrls: string[] = []
+  let cleanText = fullText.replace(/\[IMAGE:[^\]]+\]/g, '').trim()
+
+  if (imageMatch) {
+    const raw = imageMatch[1].split(',').map((s) => s.trim()).filter((s) => s && !s.startsWith('placeholder'))
+    imageUrls = raw.length > 0 ? raw : await fetchImagesByContext(fullText)
+    if (imageUrls.length === 0) imageUrls = await fetchImagesByContext(fullText)
+  }
+
+  // Stream cleaned text in chunks
+  const chunkSize = 120
+  for (let i = 0; i < cleanText.length; i += chunkSize) {
+    yield cleanText.slice(i, i + chunkSize)
+  }
+
+  // Yield image URLs separately so the client can render them below the text
+  if (imageUrls.length > 0) {
+    yield `\n\n[IMAGES:${imageUrls.join(',')}]`
   }
 }
 
@@ -330,26 +328,40 @@ export async function POST(req: NextRequest) {
       async start(controller) {
         try {
           for await (const chunk of streamGeminiResponse(history, message, imageData)) {
-            fullResponse += chunk
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: chunk })}\n\n`))
+            // Intercept [IMAGES:...] marker and send as separate event
+            const imgMatch = chunk.match(/\[IMAGES:([^\]]+)\]/)
+            if (imgMatch) {
+              const urls = imgMatch[1].split(',').map((u) => u.trim()).filter(Boolean)
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ images: urls })}\n\n`))
+              const textPart = chunk.replace(/\[IMAGES:[^\]]+\]/g, '').trim()
+              if (textPart) {
+                fullResponse += textPart
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: textPart })}\n\n`))
+              }
+            } else {
+              fullResponse += chunk
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: chunk })}\n\n`))
+            }
           }
-          
-          // Send done signal
-          controller.enqueue(
-            encoder.encode(
-              `data: ${JSON.stringify({ done: true, remaining: rateLimit.remaining })}\n\n`
-            )
-          )
-          
-          // Save assistant message
+
+          // Save assistant message (text only, no image markers)
           await saveMessage(sessionId, 'assistant', fullResponse)
-          
+
+          // Detect appointment confirmation and send calendar invite (fire-and-forget)
+          if (isAppointmentConfirmation(fullResponse)) {
+            const allMessages = [...history, { role: 'assistant', content: fullResponse }]
+            extractAppointment(allMessages)
+              .then((appt) => { if (appt) return sendCalendarInvite(appt) })
+              .catch((e) => console.error('[Public AI Chat] Calendar invite failed:', e))
+          }
+
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify({ done: true, remaining: rateLimit.remaining })}\n\n`)
+          )
           controller.close()
         } catch (error: any) {
           console.error('[Public AI Chat] Stream error:', error)
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ error: error.message })}\n\n`)
-          )
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: error.message })}\n\n`))
           controller.close()
         }
       },
