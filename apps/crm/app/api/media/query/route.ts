@@ -20,7 +20,7 @@ const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 // Default Pashkovsky company ID (single-tenant v1).
 // TODO (multi-tenant v2): remove this fallback; always require company_id from JWT.
-const DEFAULT_COMPANY_ID = process.env.DEFAULT_COMPANY_ID ?? ''
+const DEFAULT_COMPANY_ID = process.env.DEFAULT_COMPANY_ID ?? '6998295e-89ae-4e3d-afd2-8c2b0333eac2'
 
 export const dynamic = 'force-dynamic'
 
