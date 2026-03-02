@@ -96,13 +96,22 @@ export default function MediaAdminPage() {
     }
   }, [prefix, s3Items])
 
-  // ── Load DB assets (query with all tags = wildcard via empty query workaround) ─
+  // ── Load DB assets for current prefix ─────────────────────────────────────
   const loadDbForPrefix = useCallback(async () => {
-    // Query each tag group individually is expensive;
-    // Instead we use an internal list endpoint to get all indexed assets for prefix.
-    // We call /api/media/query with each tag, but simpler: just import to get db rows.
-    // For now, the display merges s3 list with known db state (updated on save).
-  }, [])
+    try {
+      const res = await authFetch(`/api/media/db/list?prefix=${encodeURIComponent(prefix)}`)
+      if (!res.ok) return
+      const data: { assets: Array<{ s3_key: string; tags: string[]; caption: string | null }> } =
+        await res.json()
+      const map = new Map<string, AssetRow>()
+      for (const row of data.assets) {
+        map.set(row.s3_key, { s3_key: row.s3_key, tags: row.tags, caption: row.caption })
+      }
+      setDbAssets(map)
+    } catch (e) {
+      console.error('[Media] Failed to load DB assets:', e)
+    }
+  }, [prefix])
 
   // ── Merge S3 + DB into display list ───────────────────────────────────────
   useEffect(() => {
@@ -128,10 +137,12 @@ export default function MediaAdminPage() {
     setDisplayItems(merged)
   }, [s3Items, dbAssets, showUntaggedFirst, presignedUrls])
 
-  // Initial load
+  // Initial load: fetch S3 list and existing DB tags together
   useEffect(() => {
     setPresignedUrls({})
+    setDbAssets(new Map())
     loadS3()
+    loadDbForPrefix()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefix])
 
