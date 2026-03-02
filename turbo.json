@@ -33,11 +33,6 @@
         "NEXT_PUBLIC_AWS_S3_REGION",
         "WHATSAPP_VERIFY_TOKEN",
         "WHATSAPP_APP_SECRET",
-        "EMAIL_HOST",
-        "EMAIL_PORT",
-        "EMAIL_USER",
-        "EMAIL_PASS",
-        "EMAIL_FROM",
         "JWT_SECRET",
         "CRON_SECRET_TOKEN",
         "CRM_SITE_TOKEN",
@@ -55,7 +50,9 @@
         "EMAIL_PORT",
         "EMAIL_USER",
         "EMAIL_PASS",
-        "EMAIL_FROM"
+        "EMAIL_FROM",
+        "PROFILES_API_URL",
+        "CHROMIUM_PACK_URL"
       ]
     },
     "dev": {
