@@ -19,9 +19,12 @@ export const PublicLeadSchema = z.object({
   
   // Honeypot (should be empty)
   website: z.string().optional(),
-  
+
   // Additional data (e.g., from calculator)
   metadata: z.record(z.any()).optional(),
+
+  // Google Ads click ID for offline conversion tracking
+  gclid: z.string().max(200).optional(),
 })
 
 export type PublicLeadInput = z.infer<typeof PublicLeadSchema>
