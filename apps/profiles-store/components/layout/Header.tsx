@@ -17,7 +17,7 @@ export function Header({ locale }: HeaderProps) {
   const isRtl = locale === 'he'
 
   return (
-    <header className="bg-gray-900 border-b-2 border-brand sticky top-0 z-50" dir={isRtl ? 'rtl' : 'ltr'}>
+    <header className="bg-gray-900 border-b-2 border-orange-400 sticky top-0 z-50" dir={isRtl ? 'rtl' : 'ltr'}>
       <Container>
         <div className="py-3 flex items-center justify-between gap-4">
           <Link href={`/${locale}`} className="flex items-center gap-2">
@@ -32,7 +32,7 @@ export function Header({ locale }: HeaderProps) {
               className={cn(
                 'text-sm font-medium transition-colors',
                 pathname === `/${locale}` || pathname === `/${locale}/`
-                  ? 'text-brand'
+                  ? 'text-orange-400'
                   : 'text-white/70 hover:text-white'
               )}
             >

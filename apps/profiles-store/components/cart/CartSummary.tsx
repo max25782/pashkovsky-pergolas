@@ -20,7 +20,7 @@ export function CartSummary({ items, locale }: CartSummaryProps) {
       dir={isRtl ? 'rtl' : 'ltr'}
     >
       {/* Header */}
-      <div className="bg-gray-800 px-4 py-3 border-b-2 border-brand">
+      <div className="bg-gray-800 px-4 py-3 border-b-2 border-orange-400">
         <h2 className="text-base font-bold text-white">
           {getTranslation(locale, 'cart.total')}
         </h2>
@@ -59,7 +59,7 @@ export function CartSummary({ items, locale }: CartSummaryProps) {
           {hasPrices && (
             <div className="flex justify-between text-base font-bold mt-1">
               <span className="text-gray-800">{isRtl ? 'סה"כ לתשלום:' : 'Total:'}</span>
-              <span className="text-brand text-lg">₪{totalPrice.toFixed(2)}</span>
+              <span className="text-orange-500 text-lg">₪{totalPrice.toFixed(2)}</span>
             </div>
           )}
         </div>

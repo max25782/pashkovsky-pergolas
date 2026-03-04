@@ -15,7 +15,7 @@ export function CartWidget({ locale }: CartWidgetProps) {
   return (
     <Link
       href={`/${locale}/cart`}
-      className="relative inline-flex items-center gap-2 px-4 py-2 bg-brand hover:bg-brand-dark text-white rounded-full font-bold text-sm transition-colors shadow"
+      className="relative inline-flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-full font-bold text-sm transition-colors shadow border border-orange-400"
     >
       {/* Cart icon */}
       <svg
@@ -34,7 +34,7 @@ export function CartWidget({ locale }: CartWidgetProps) {
       </svg>
       <span>{locale === 'he' ? 'הצעת מחיר' : 'Cart'}</span>
       {itemCount > 0 && (
-        <span className="bg-white text-brand font-bold rounded-full w-5 h-5 flex items-center justify-center text-xs leading-none">
+        <span className="bg-orange-400 text-white font-bold rounded-full w-5 h-5 flex items-center justify-center text-xs leading-none">
           {itemCount}
         </span>
       )}

@@ -163,8 +163,8 @@ export function ProductCard({ profile, locale, companyId }: ProductCardProps) {
         </div>
       </div>
 
-      {/* Action bar — orange brand style matching reference image */}
-      <div className="bg-gray-800 border-t-2 border-brand px-3 py-2.5 flex items-center gap-2">
+      {/* Action bar — original site colors: dark bg + orange-400 top border */}
+      <div className="bg-gray-800 border-t-2 border-orange-400 px-3 py-2.5 flex items-center gap-2">
         {/* Add to cart button */}
         <button
           type="button"
@@ -173,7 +173,7 @@ export function ProductCard({ profile, locale, companyId }: ProductCardProps) {
             'flex-1 py-2 px-3 rounded-full text-sm font-bold transition-all duration-150 shadow',
             added
               ? 'bg-green-500 text-white'
-              : 'bg-brand hover:bg-brand-dark text-white'
+              : 'bg-gray-600 hover:bg-gray-700 text-white'
           )}
         >
           {added
