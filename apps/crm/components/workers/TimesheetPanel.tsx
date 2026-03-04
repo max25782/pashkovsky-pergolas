@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useCallback } from 'react'
-import { Plus, Edit2, Trash2, Copy } from 'lucide-react'
+import { Plus, Edit2, Trash2, Copy, FileText, Loader2 } from 'lucide-react'
 import type { WorkerShift, WorkerShiftSummary } from '@/types/workers'
 import { authFetch } from '@/lib/api/auth-fetch'
 import { formatCurrencyILS } from '@/lib/workers/calculations'
@@ -48,6 +48,8 @@ export function TimesheetPanel({ workerId, workerName, month }: TimesheetPanelPr
   const [editingShift, setEditingShift] = useState<WorkerShift | null>(null)
   const [duplicateFrom, setDuplicateFrom] = useState<WorkerShift | null>(null)
   const [showAllDays, setShowAllDays] = useState(false)
+  const [pdfLoading, setPdfLoading] = useState(false)
+  const [pdfError, setPdfError] = useState<string | null>(null)
 
   const fetchShifts = useCallback(async () => {
     setLoading(true)
@@ -108,6 +110,21 @@ export function TimesheetPanel({ workerId, workerName, month }: TimesheetPanelPr
     setDuplicateFrom(shift)
     setEditingShift(null)
     setShowForm(true)
+  }
+
+  const handleExportPdf = async () => {
+    setPdfLoading(true)
+    setPdfError(null)
+    try {
+      const r = await authFetch(`/api/workers/${workerId}/pdf?month=${month}`, { method: 'POST' })
+      const data = await r.json()
+      if (!r.ok) throw new Error(data.error ?? 'Failed to generate PDF')
+      window.open(data.pdfUrl, '_blank')
+    } catch (err: unknown) {
+      setPdfError(err instanceof Error ? err.message : 'Failed to generate PDF')
+    } finally {
+      setPdfLoading(false)
+    }
   }
 
   const initialFormData = duplicateFrom
@@ -188,19 +205,40 @@ export function TimesheetPanel({ workerId, workerName, month }: TimesheetPanelPr
                   הצג את כל הימים
                 </label>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingShift(null)
-                  setDuplicateFrom(null)
-                  setShowForm(true)
-                }}
-                className="flex items-center gap-2 px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-sm"
-              >
-                <Plus className="w-4 h-4" />
-                הוסף רשומה
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleExportPdf}
+                  disabled={pdfLoading || shifts.length === 0}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded bg-emerald-700 hover:bg-emerald-600 text-white text-sm disabled:opacity-50"
+                  title="ייצא דוח PDF לחודש זה"
+                >
+                  {pdfLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <FileText className="w-4 h-4" />
+                  )}
+                  {pdfLoading ? 'מייצר PDF...' : 'ייצא PDF'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingShift(null)
+                    setDuplicateFrom(null)
+                    setShowForm(true)
+                  }}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  הוסף רשומה
+                </button>
+              </div>
             </div>
+            {pdfError && (
+              <div className="mb-3 p-2 bg-red-500/20 border border-red-500/40 rounded text-red-200 text-sm">
+                שגיאה ביצירת PDF: {pdfError}
+              </div>
+            )}
 
             {showForm && (
               <div className="mb-4">

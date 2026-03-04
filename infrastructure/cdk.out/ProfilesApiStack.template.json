@@ -155,7 +155,7 @@
       ],
       "Essential": true,
       "Image": {
-       "Fn::Sub": "857235179864.dkr.ecr.eu-north-1.${AWS::URLSuffix}/cdk-hnb659fds-container-assets-857235179864-eu-north-1:8a205cf1b6bf24bf8222a7e0faa832d348e36cef36c18bcf7f049ac699c40b71"
+       "Fn::Sub": "857235179864.dkr.ecr.eu-north-1.${AWS::URLSuffix}/cdk-hnb659fds-container-assets-857235179864-eu-north-1:7cbbf25fc88ba550d24c38cce96e7eff321fdc93ca79c7fb7a6aa948cbf526ec"
       },
       "LogConfiguration": {
        "LogDriver": "awslogs",
@@ -177,39 +177,138 @@
       "Secrets": [
        {
         "Name": "SUPABASE_URL",
-        "ValueFrom": "arn:aws:secretsmanager:eu-north-1:857235179864:secret:pashkovsky-profiles-api-secrets-kcRhsk:SUPABASE_URL::"
+        "ValueFrom": {
+         "Fn::Join": [
+          "",
+          [
+           "arn:",
+           {
+            "Ref": "AWS::Partition"
+           },
+           ":secretsmanager:eu-north-1:857235179864:secret:pashkovsky-profiles-api-secrets:SUPABASE_URL::"
+          ]
+         ]
+        }
        },
        {
         "Name": "SUPABASE_SERVICE_ROLE_KEY",
-        "ValueFrom": "arn:aws:secretsmanager:eu-north-1:857235179864:secret:pashkovsky-profiles-api-secrets-kcRhsk:SUPABASE_SERVICE_ROLE_KEY::"
+        "ValueFrom": {
+         "Fn::Join": [
+          "",
+          [
+           "arn:",
+           {
+            "Ref": "AWS::Partition"
+           },
+           ":secretsmanager:eu-north-1:857235179864:secret:pashkovsky-profiles-api-secrets:SUPABASE_SERVICE_ROLE_KEY::"
+          ]
+         ]
+        }
        },
        {
         "Name": "SUPABASE_ANON_KEY",
-        "ValueFrom": "arn:aws:secretsmanager:eu-north-1:857235179864:secret:pashkovsky-profiles-api-secrets-kcRhsk:SUPABASE_ANON_KEY::"
+        "ValueFrom": {
+         "Fn::Join": [
+          "",
+          [
+           "arn:",
+           {
+            "Ref": "AWS::Partition"
+           },
+           ":secretsmanager:eu-north-1:857235179864:secret:pashkovsky-profiles-api-secrets:SUPABASE_ANON_KEY::"
+          ]
+         ]
+        }
        },
        {
         "Name": "JWT_SECRET",
-        "ValueFrom": "arn:aws:secretsmanager:eu-north-1:857235179864:secret:pashkovsky-profiles-api-secrets-kcRhsk:JWT_SECRET::"
+        "ValueFrom": {
+         "Fn::Join": [
+          "",
+          [
+           "arn:",
+           {
+            "Ref": "AWS::Partition"
+           },
+           ":secretsmanager:eu-north-1:857235179864:secret:pashkovsky-profiles-api-secrets:JWT_SECRET::"
+          ]
+         ]
+        }
        },
        {
         "Name": "PASHKOVSKY_COMPANY_ID",
-        "ValueFrom": "arn:aws:secretsmanager:eu-north-1:857235179864:secret:pashkovsky-profiles-api-secrets-kcRhsk:PASHKOVSKY_COMPANY_ID::"
+        "ValueFrom": {
+         "Fn::Join": [
+          "",
+          [
+           "arn:",
+           {
+            "Ref": "AWS::Partition"
+           },
+           ":secretsmanager:eu-north-1:857235179864:secret:pashkovsky-profiles-api-secrets:PASHKOVSKY_COMPANY_ID::"
+          ]
+         ]
+        }
        },
        {
         "Name": "AWS_S3_BUCKET_NAME",
-        "ValueFrom": "arn:aws:secretsmanager:eu-north-1:857235179864:secret:pashkovsky-profiles-api-secrets-kcRhsk:AWS_S3_BUCKET_NAME::"
+        "ValueFrom": {
+         "Fn::Join": [
+          "",
+          [
+           "arn:",
+           {
+            "Ref": "AWS::Partition"
+           },
+           ":secretsmanager:eu-north-1:857235179864:secret:pashkovsky-profiles-api-secrets:AWS_S3_BUCKET_NAME::"
+          ]
+         ]
+        }
        },
        {
         "Name": "AWS_S3_REGION",
-        "ValueFrom": "arn:aws:secretsmanager:eu-north-1:857235179864:secret:pashkovsky-profiles-api-secrets-kcRhsk:AWS_S3_REGION::"
+        "ValueFrom": {
+         "Fn::Join": [
+          "",
+          [
+           "arn:",
+           {
+            "Ref": "AWS::Partition"
+           },
+           ":secretsmanager:eu-north-1:857235179864:secret:pashkovsky-profiles-api-secrets:AWS_S3_REGION::"
+          ]
+         ]
+        }
        },
        {
         "Name": "AWS_ACCESS_KEY_ID",
-        "ValueFrom": "arn:aws:secretsmanager:eu-north-1:857235179864:secret:pashkovsky-profiles-api-secrets-kcRhsk:AWS_ACCESS_KEY_ID::"
+        "ValueFrom": {
+         "Fn::Join": [
+          "",
+          [
+           "arn:",
+           {
+            "Ref": "AWS::Partition"
+           },
+           ":secretsmanager:eu-north-1:857235179864:secret:pashkovsky-profiles-api-secrets:AWS_ACCESS_KEY_ID::"
+          ]
+         ]
+        }
        },
        {
         "Name": "AWS_SECRET_ACCESS_KEY",
-        "ValueFrom": "arn:aws:secretsmanager:eu-north-1:857235179864:secret:pashkovsky-profiles-api-secrets-kcRhsk:AWS_SECRET_ACCESS_KEY::"
+        "ValueFrom": {
+         "Fn::Join": [
+          "",
+          [
+           "arn:",
+           {
+            "Ref": "AWS::Partition"
+           },
+           ":secretsmanager:eu-north-1:857235179864:secret:pashkovsky-profiles-api-secrets:AWS_SECRET_ACCESS_KEY::"
+          ]
+         ]
+        }
        }
       ]
      }
@@ -315,7 +414,18 @@
         "secretsmanager:DescribeSecret"
        ],
        "Effect": "Allow",
-       "Resource": "arn:aws:secretsmanager:eu-north-1:857235179864:secret:pashkovsky-profiles-api-secrets-kcRhsk"
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          "arn:",
+          {
+           "Ref": "AWS::Partition"
+          },
+          ":secretsmanager:eu-north-1:857235179864:secret:pashkovsky-profiles-api-secrets-??????"
+         ]
+        ]
+       }
       }
      ],
      "Version": "2012-10-17"
