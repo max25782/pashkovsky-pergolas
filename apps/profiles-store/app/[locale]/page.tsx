@@ -32,17 +32,21 @@ export default async function CatalogPage({ params, searchParams }: CatalogPageP
 
   return (
     <Container className="py-8">
+      {/* Wide search bar spanning full width */}
+      <div className="mb-6">
+        <SearchBar locale={locale} wide />
+      </div>
+
       <div className="flex gap-8">
         <aside className="hidden lg:block">
           <FilterPanel locale={locale} />
         </aside>
 
         <main className="flex-1">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-semibold text-white">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold text-white/70">
               {error ? '0' : profiles.length} {getTranslation(locale, 'catalog.products')}
             </h2>
-            <SearchBar locale={locale} />
           </div>
 
           {error ? (

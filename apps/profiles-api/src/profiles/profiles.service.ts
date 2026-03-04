@@ -17,7 +17,7 @@ export class ProfilesService {
    * Public users only see active profiles
    * Admin users see all profiles
    */
-  async findAll(companyId: string, isPublic = false) {
+  async findAll(companyId: string, isPublic = false, search?: string, category?: string) {
     let query = this.supabase
       .from("aluminum_profiles")
       .select("*")
@@ -26,6 +26,17 @@ export class ProfilesService {
 
     if (isPublic) {
       query = query.eq("is_active", true);
+    }
+
+    if (category && category !== "all") {
+      query = query.eq("category", category);
+    }
+
+    if (search && search.trim()) {
+      const term = `%${search.trim()}%`;
+      query = query.or(
+        `code.ilike.${term},name_he.ilike.${term},name_ru.ilike.${term},name_en.ilike.${term},dimensions.ilike.${term},category.ilike.${term}`,
+      );
     }
 
     const { data, error } = await query;

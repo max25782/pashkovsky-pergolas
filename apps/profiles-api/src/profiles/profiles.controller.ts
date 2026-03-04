@@ -30,11 +30,15 @@ export class ProfilesController {
    * Admin endpoint (with auth) shows all profiles
    */
   @Get()
-  findAll(@Query("company_id") companyId?: string) {
+  findAll(
+    @Query("company_id") companyId?: string,
+    @Query("search") search?: string,
+    @Query("category") category?: string,
+  ) {
     if (!companyId) {
       throw new BadRequestException("company_id query parameter required");
     }
-    return this.profilesService.findAll(companyId, true);
+    return this.profilesService.findAll(companyId, true, search, category);
   }
 
   /**

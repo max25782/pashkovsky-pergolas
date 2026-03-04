@@ -7,6 +7,7 @@ import { Profile } from '@/lib/api-client'
 import { useCart } from '@/lib/cart-store'
 import { getTranslation, type Locale } from '@/lib/locales'
 import { cn } from '@/lib/cn'
+import { ZoomIn, X } from 'lucide-react'
 
 interface ProductCardProps {
   profile: Profile
@@ -18,6 +19,7 @@ export function ProductCard({ profile, locale, companyId }: ProductCardProps) {
   const { addItem } = useCart()
   const [quantity, setQuantity] = useState(1)
   const [selectedLength, setSelectedLength] = useState(profile.available_lengths[0] || 6)
+  const [imageZoomed, setImageZoomed] = useState(false)
 
   const weightPerMeter = profile.weight_per_meter || 0
   const weightPerUnit = weightPerMeter * selectedLength
@@ -78,6 +80,17 @@ export function ProductCard({ profile, locale, companyId }: ProductCardProps) {
 
   const selectedColor = getColorForLength(selectedLength)
 
+  const categoryLabels: Record<string, Record<string, string>> = {
+    pergulas:  { he: 'פרגולות',       ru: 'Перголы',   en: 'Pergolas' },
+    fancy:     { he: 'גדר',           ru: 'Забор',     en: 'Fence' },
+    railling:  { he: 'מעקות',         ru: 'Перила',    en: 'Railings' },
+    concealed: { he: 'מסתורי כביסה',  ru: 'Скрытые',   en: 'Concealed' },
+    window:    { he: 'חלונות',        ru: 'Окна',      en: 'Windows' },
+  }
+  const categoryLabel = profile.category
+    ? (categoryLabels[profile.category]?.[locale] ?? categoryLabels[profile.category]?.he ?? profile.category)
+    : null
+
   return (
     <div className={cn(
       'bg-white rounded-lg shadow-card hover:shadow-card-hover transition-all duration-200 overflow-hidden',
@@ -100,23 +113,60 @@ export function ProductCard({ profile, locale, companyId }: ProductCardProps) {
         </div>
       </div>
 
-      {/* Image Section */}
+      {/* Image Section with hover zoom */}
       <div className="px-4 pb-2">
-        <Link href={`/${locale}/${profile.id}`} className="block">
-          <div className="relative w-full h-24 bg-gray-100 rounded-lg mb-2 overflow-hidden flex items-center justify-center">
-            {profile.image_url ? (
+        <div
+          className="relative w-full h-24 bg-gray-100 rounded-lg mb-2 overflow-hidden flex items-center justify-center group cursor-zoom-in"
+          onClick={(e) => {
+            if (profile.image_url) { e.preventDefault(); e.stopPropagation(); setImageZoomed(true) }
+          }}
+        >
+          {profile.image_url ? (
+            <>
               <Image
                 src={profile.image_url}
                 alt={profile.code}
                 fill
-                className="object-contain"
-                sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                className="object-contain transition-transform duration-200 group-hover:scale-110"
+                sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
                 priority
               />
-            ) : null}
-          </div>
-        </Link>
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200 flex items-center justify-center">
+                <ZoomIn className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow-lg" />
+              </div>
+            </>
+          ) : (
+            <Link href={`/${locale}/${profile.id}`} className="absolute inset-0" />
+          )}
+        </div>
       </div>
+
+      {/* Zoom modal */}
+      {imageZoomed && profile.image_url && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          onClick={() => setImageZoomed(false)}
+        >
+          <div className="relative max-w-2xl max-h-[80vh] w-full" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setImageZoomed(false)}
+              className="absolute -top-10 right-0 text-white hover:text-gray-300 transition-colors"
+            >
+              <X className="w-8 h-8" />
+            </button>
+            <div className="relative w-full h-[70vh] bg-white rounded-xl overflow-hidden">
+              <Image
+                src={profile.image_url}
+                alt={profile.code}
+                fill
+                className="object-contain p-4"
+                sizes="800px"
+              />
+            </div>
+            <p className="text-center text-white/70 text-sm mt-3 font-mono">{profile.code}</p>
+          </div>
+        </div>
+      )}
 
       {/* Specifications */}
       <div className="px-4 py-2 space-y-1 text-sm border-t border-gray-100">
@@ -134,10 +184,10 @@ export function ProductCard({ profile, locale, companyId }: ProductCardProps) {
             <span className="text-gray-900 font-medium">{dims.thickness} mm</span>
           </div>
         )}
-        {profile.category && (
+        {categoryLabel && (
           <div className="flex justify-between items-center">
             <span className="text-gray-600">קטגוריה:</span>
-            <span className="text-gray-900 font-medium text-xs">{profile.category}</span>
+            <span className="text-gray-900 font-medium text-xs">{categoryLabel}</span>
           </div>
         )}
       </div>
@@ -173,7 +223,7 @@ export function ProductCard({ profile, locale, companyId }: ProductCardProps) {
               <p className="font-bold text-gray-900 text-sm leading-tight">
                 {weightPerUnit.toFixed(2)}<span className="text-xs text-gray-500 font-normal"> kg</span>
               </p>
-              <p className="text-xs text-gray-400">{selectedLength.toFixed(2)} m</p>
+              <p className="text-xs text-gray-400">Length: {selectedLength % 1 === 0 ? selectedLength : selectedLength}m</p>
             </div>
           </div>
         </div>
@@ -192,7 +242,7 @@ export function ProductCard({ profile, locale, companyId }: ProductCardProps) {
             locale === 'he' && 'text-right'
           )}
         >
-          {locale === 'he' ? 'הוסף להצעת המחיר' : getTranslation(locale, 'product.addToQuote')}
+          {locale === 'he' ? 'הצעת מחיר' : locale === 'ru' ? 'В смету' : 'Quote'}
         </button>
 
         {/* Quantity Control */}
