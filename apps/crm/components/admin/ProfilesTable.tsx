@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { authFetch } from '@/lib/api/auth-fetch'
-import { Plus, Edit, Trash2, Image as ImageIcon } from 'lucide-react'
+import { Plus, Edit, Trash2, Image as ImageIcon, Upload, Loader2, X } from 'lucide-react'
 
 interface AluminumProfile {
   id: string
@@ -40,6 +40,9 @@ export function ProfilesTable() {
   const [editingProfile, setEditingProfile] = useState<AluminumProfile | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     loadProfiles()
@@ -136,6 +139,7 @@ export function ProfilesTable() {
   }
 
   function handleNew() {
+    setUploadError(null)
     setEditingProfile({
       id: '',
       code: '',
@@ -159,8 +163,39 @@ export function ProfilesTable() {
   }
 
   function handleEdit(profile: AluminumProfile) {
+    setUploadError(null)
     setEditingProfile({ ...profile })
     setShowForm(true)
+  }
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !editingProfile) return
+
+    setUploading(true)
+    setUploadError(null)
+
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      form.append('code', editingProfile.code || 'profile')
+
+      const res = await authFetch('/api/admin/profiles/upload-image', {
+        method: 'POST',
+        body: form,
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Upload failed')
+
+      setEditingProfile((prev) => prev ? { ...prev, image_url: data.url } : prev)
+    } catch (err: unknown) {
+      setUploadError(err instanceof Error ? err.message : 'Upload failed')
+    } finally {
+      setUploading(false)
+      // Reset input so same file can be re-selected
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
   }
 
   if (loading) {
@@ -305,16 +340,72 @@ export function ProfilesTable() {
                 />
               </div>
 
-              {/* Image URL */}
+              {/* Image Upload */}
               <div>
-                <label className="block text-sm font-medium mb-1">URL изображения</label>
-                <input
-                  type="text"
-                  value={editingProfile.image_url || ''}
-                  onChange={(e) => setEditingProfile({ ...editingProfile, image_url: e.target.value })}
-                  className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white"
-                  placeholder="https://..."
-                />
+                <label className="block text-sm font-medium mb-2">Изображение</label>
+
+                {/* Current image preview */}
+                {editingProfile.image_url && (
+                  <div className="relative inline-block mb-3">
+                    <img
+                      src={editingProfile.image_url}
+                      alt="preview"
+                      className="w-24 h-24 object-contain rounded border border-white/20 bg-white/5"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setEditingProfile({ ...editingProfile, image_url: '' })}
+                      className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center"
+                      title="Удалить изображение"
+                    >
+                      <X className="w-3 h-3 text-white" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Upload button */}
+                <div className="flex gap-2 items-center">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    id="profile-image-upload"
+                  />
+                  <label
+                    htmlFor="profile-image-upload"
+                    className={`flex items-center gap-2 px-4 py-2 rounded cursor-pointer font-medium text-sm transition-colors ${
+                      uploading
+                        ? 'bg-blue-800 text-white/60 cursor-not-allowed'
+                        : 'bg-blue-600 hover:bg-blue-700 text-white'
+                    }`}
+                  >
+                    {uploading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Upload className="w-4 h-4" />
+                    )}
+                    {uploading ? 'Загрузка...' : 'Загрузить в S3'}
+                  </label>
+                  <span className="text-white/40 text-xs">JPEG, PNG, WebP — до 5 МБ</span>
+                </div>
+
+                {/* Upload error */}
+                {uploadError && (
+                  <p className="mt-2 text-red-400 text-sm">{uploadError}</p>
+                )}
+
+                {/* Manual URL fallback */}
+                <div className="mt-2">
+                  <input
+                    type="text"
+                    value={editingProfile.image_url || ''}
+                    onChange={(e) => setEditingProfile({ ...editingProfile, image_url: e.target.value })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white text-sm"
+                    placeholder="или вставьте URL вручную..."
+                  />
+                </div>
               </div>
 
               {/* Active */}
@@ -341,6 +432,7 @@ export function ProfilesTable() {
                 onClick={() => {
                   setShowForm(false)
                   setEditingProfile(null)
+                  setUploadError(null)
                 }}
                 className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded font-semibold"
               >
