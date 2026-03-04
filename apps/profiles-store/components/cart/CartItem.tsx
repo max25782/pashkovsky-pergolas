@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import { CartItem as CartItemType } from '@/lib/cart-store'
-import { getTranslation, type Locale } from '@/lib/locales'
+import { type Locale } from '@/lib/locales'
 
 interface CartItemProps {
   item: CartItemType
@@ -12,65 +12,75 @@ interface CartItemProps {
 }
 
 export function CartItem({ item, locale, onUpdateQuantity, onRemove }: CartItemProps) {
+  const totalLength = item.quantity * item.length
+  const totalWeight = item.quantity * (item.weightPerPiece ?? 0)
+  const isRtl = locale === 'he'
+
   return (
-    <div className="bg-gray-50 rounded-lg p-4 flex gap-4">
-      {item.imageUrl && (
-        <div className="relative w-24 h-24 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-          <Image
-            src={item.imageUrl}
-            alt={item.code}
-            fill
-            className="object-contain"
-            sizes="96px"
-          />
+    <tr className="border-b border-gray-700 hover:bg-gray-800/50 transition-colors">
+      {/* Image */}
+      <td className="py-3 px-3">
+        <div className="relative w-16 h-16 bg-gray-700 rounded overflow-hidden flex-shrink-0 flex items-center justify-center">
+          {item.imageUrl ? (
+            <Image src={item.imageUrl} alt={item.code} fill className="object-contain p-1" sizes="64px" />
+          ) : (
+            <span className="text-gray-500 text-xs">—</span>
+          )}
         </div>
-      )}
-      <div className="flex-1">
-        <div className="flex items-start justify-between">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">{item.code}</h3>
-            <p className="text-sm text-gray-600">
-              {item.color} • {item.length}m
-            </p>
-          </div>
+      </td>
+
+      {/* Code + category */}
+      <td className="py-3 px-3 text-right">
+        <div className="font-semibold text-white text-sm">{item.code}</div>
+        {item.color && item.color !== 'default' && (
+          <div className="text-gray-400 text-xs mt-0.5">{item.color}</div>
+        )}
+      </td>
+
+      {/* Qty stepper */}
+      <td className="py-3 px-3">
+        <div className="flex items-center justify-center gap-1">
           <button
-            onClick={() => onRemove(item.profileId, item.color, item.length)}
-            className="text-gray-400 hover:text-red-500 transition-colors"
+            onClick={() => onUpdateQuantity(item.profileId, item.color, item.length, item.quantity - 1)}
+            className="w-7 h-7 flex items-center justify-center rounded bg-gray-700 hover:bg-gray-600 text-white font-bold transition-colors"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
-              className="w-5 h-5"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            −
+          </button>
+          <span className="w-8 text-center text-white font-semibold text-sm">{item.quantity}</span>
+          <button
+            onClick={() => onUpdateQuantity(item.profileId, item.color, item.length, item.quantity + 1)}
+            className="w-7 h-7 flex items-center justify-center rounded bg-gray-700 hover:bg-gray-600 text-white font-bold transition-colors"
+          >
+            +
           </button>
         </div>
-        <div className="flex items-center justify-between mt-4">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() =>
-                onUpdateQuantity(item.profileId, item.color, item.length, item.quantity - 1)
-              }
-              className="w-8 h-8 flex items-center justify-center border border-gray-100 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              -
-            </button>
-            <span className="w-12 text-center font-medium">{item.quantity}</span>
-            <button
-              onClick={() =>
-                onUpdateQuantity(item.profileId, item.color, item.length, item.quantity + 1)
-              }
-              className="w-8 h-8 flex items-center justify-center border border-gray-100 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              +
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+      </td>
+
+      {/* Length per unit */}
+      <td className="py-3 px-3 text-center text-white text-sm">
+        {item.length.toFixed(2)}<sub className="text-gray-400 text-xs">m</sub>
+      </td>
+
+      {/* Total length */}
+      <td className="py-3 px-3 text-center text-white text-sm font-medium">
+        {totalLength.toFixed(2)}<sub className="text-gray-400 text-xs">m</sub>
+      </td>
+
+      {/* Total weight */}
+      <td className="py-3 px-3 text-center text-white text-sm font-medium">
+        {totalWeight.toFixed(2)}<sub className="text-gray-400 text-xs">kg</sub>
+      </td>
+
+      {/* Remove */}
+      <td className="py-3 px-2 text-center">
+        <button
+          onClick={() => onRemove(item.profileId, item.color, item.length)}
+          className="w-7 h-7 rounded-full bg-gray-600 hover:bg-red-600 text-white flex items-center justify-center transition-colors mx-auto"
+          title={isRtl ? 'הסר' : 'Remove'}
+        >
+          ×
+        </button>
+      </td>
+    </tr>
   )
 }

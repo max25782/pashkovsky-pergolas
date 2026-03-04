@@ -1,12 +1,6 @@
 import { fetchProfile, fetchStock } from '@/lib/api-client'
-import { ProductImage } from '@/components/product/ProductImage'
-import { LengthSelector } from '@/components/product/LengthSelector'
-import { ColorSelector } from '@/components/product/ColorSelector'
-import { QuantityInput } from '@/components/product/QuantityInput'
-import { AddToCartButton } from '@/components/product/AddToCartButton'
 import { Container } from '@/components/layout/Container'
-import { formatPrice } from '@/lib/format'
-import { getTranslation, type Locale } from '@/lib/locales'
+import { type Locale } from '@/lib/locales'
 import { ProductDetailClient } from './ProductDetailClient'
 import type { Metadata } from 'next'
 
@@ -52,7 +46,7 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
     const defaultColor = availableColors[0] || ''
 
     return (
-      <Container className="py-12">
+      <Container className="py-8 flex justify-center">
         <ProductDetailClient
           profile={profile}
           stock={stock}
@@ -67,8 +61,8 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
     return (
       <Container className="py-12">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Product Not Found</h1>
-          <p className="text-gray-600">The product you&apos;re looking for doesn&apos;t exist.</p>
+          <h1 className="text-2xl font-bold text-white mb-4">Product Not Found</h1>
+          <p className="text-white/60">The product you&apos;re looking for doesn&apos;t exist.</p>
         </div>
       </Container>
     )

@@ -42,7 +42,15 @@ export function ProfilesTable() {
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [lengthsInput, setLengthsInput] = useState('6')
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  function parseLengthsInput(raw: string): number[] {
+    return raw
+      .split(/[\s,]+/)
+      .map((s) => parseFloat(s.trim()))
+      .filter((n) => !isNaN(n) && n > 0)
+  }
 
   useEffect(() => {
     loadProfiles()
@@ -140,6 +148,7 @@ export function ProfilesTable() {
 
   function handleNew() {
     setUploadError(null)
+    setLengthsInput('6')
     setEditingProfile({
       id: '',
       code: '',
@@ -148,7 +157,7 @@ export function ProfilesTable() {
       name_en: '',
       dimensions: '',
       weight_per_meter: 0,
-      available_lengths: [6.0, 6.5, 7.0, 8.0],
+      available_lengths: [6],
       category: 'pergulas',
       description_he: '',
       description_ru: '',
@@ -164,6 +173,7 @@ export function ProfilesTable() {
 
   function handleEdit(profile: AluminumProfile) {
     setUploadError(null)
+    setLengthsInput((profile.available_lengths || [6]).join(', '))
     setEditingProfile({ ...profile })
     setShowForm(true)
   }
@@ -338,6 +348,44 @@ export function ProfilesTable() {
                   onChange={(e) => setEditingProfile({ ...editingProfile, price_per_kg: parseFloat(e.target.value) || 0 })}
                   className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white"
                 />
+              </div>
+
+              {/* Available Lengths */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Доступные длины (м)</label>
+                <div className="flex items-center gap-3 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLengthsInput('6')
+                      setEditingProfile({ ...editingProfile, available_lengths: [6] })
+                    }}
+                    className={`px-3 py-1.5 rounded text-sm font-medium border transition-colors ${
+                      editingProfile.available_lengths.length === 1 && editingProfile.available_lengths[0] === 6
+                        ? 'bg-green-600 border-green-500 text-white'
+                        : 'bg-white/10 border-white/20 text-white/70 hover:bg-white/20'
+                    }`}
+                  >
+                    Только 6м
+                  </button>
+                  <span className="text-white/40 text-xs">или введите через запятую:</span>
+                </div>
+                <input
+                  type="text"
+                  value={lengthsInput}
+                  onChange={(e) => {
+                    setLengthsInput(e.target.value)
+                    const parsed = parseLengthsInput(e.target.value)
+                    if (parsed.length > 0) {
+                      setEditingProfile({ ...editingProfile, available_lengths: parsed })
+                    }
+                  }}
+                  className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white text-sm"
+                  placeholder="6, 6.5, 7, 8"
+                />
+                <p className="mt-1 text-white/40 text-xs">
+                  Текущие: [{editingProfile.available_lengths.join(', ')}]
+                </p>
               </div>
 
               {/* Image Upload */}

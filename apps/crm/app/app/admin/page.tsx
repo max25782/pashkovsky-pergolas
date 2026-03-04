@@ -18,7 +18,8 @@ import {
   UserCog,
   TrendingUp,
   Box,
-  ShoppingCart
+  ShoppingCart,
+  Package
 } from 'lucide-react'
 
 interface DashboardStats {
@@ -195,6 +196,14 @@ export default function AdminPage() {
       href: `/app/admin/orders`,
       icon: ShoppingCart,
       color: 'bg-pink-600 hover:bg-pink-700',
+    },
+    {
+      id: 'inventory',
+      title: language === 'ru' ? 'Инвентаризация' : language === 'en' ? 'Inventory' : 'ספירת מלאי',
+      description: language === 'ru' ? 'Учёт остатков профилей' : language === 'en' ? 'Stock count' : 'ניהול מלאי פרופילים',
+      href: `/app/admin/inventory`,
+      icon: Package,
+      color: 'bg-teal-600 hover:bg-teal-700',
     },
   ]
 
