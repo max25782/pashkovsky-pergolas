@@ -24,15 +24,14 @@ export function AddToCartButton({
   const { addItem } = useCart()
 
   const handleAddToCart = () => {
-    const pricePerPiece = profile.weight_per_meter * selectedLength * profile.price_per_kg
-
     addItem(
       {
         profileId: profile.id,
         code: profile.code,
         color: selectedColor,
         length: selectedLength,
-        pricePerPiece,
+        pricePerPiece: 0,
+        weightPerPiece: profile.weight_per_meter * selectedLength,
         imageUrl: profile.image_url,
       },
       quantity

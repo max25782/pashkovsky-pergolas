@@ -10,6 +10,7 @@ export interface CartItem {
   length: number
   quantity: number
   pricePerPiece: number
+  weightPerPiece: number
   imageUrl?: string
 }
 
@@ -21,6 +22,7 @@ interface CartStore {
   clear: () => void
   totalItems: () => number
   totalPrice: () => number
+  totalWeight: () => number
 }
 
 export const useCart = create<CartStore>()(
@@ -73,6 +75,9 @@ export const useCart = create<CartStore>()(
       },
       totalPrice: () => {
         return get().items.reduce((sum, item) => sum + item.quantity * item.pricePerPiece, 0)
+      },
+      totalWeight: () => {
+        return get().items.reduce((sum, item) => sum + item.quantity * item.weightPerPiece, 0)
       },
     }),
     {

@@ -7,7 +7,6 @@ import { LengthSelector } from '@/components/product/LengthSelector'
 import { ColorSelector } from '@/components/product/ColorSelector'
 import { QuantityInput } from '@/components/product/QuantityInput'
 import { AddToCartButton } from '@/components/product/AddToCartButton'
-import { formatPrice } from '@/lib/format'
 import { type Locale } from '@/lib/locales'
 
 interface ProductDetailClientProps {
@@ -38,7 +37,6 @@ export function ProductDetailClient({
   }, [stock, selectedColor, selectedLength])
 
   const availableQuantity = selectedStock?.qty_available || 0
-  const pricePerPiece = profile.weight_per_meter * selectedLength * profile.price_per_kg
 
   const colorsForSelectedLength = useMemo(() => {
     return [...new Set(stock.filter((s) => s.length_meters === selectedLength).map((s) => s.color))]
