@@ -27,7 +27,7 @@ interface AluminumProfile {
 // Category display names
 const categoryNames: Record<string, string> = {
   pergulas: 'Перголы',
-  fancy: 'Декоративные',
+  fancy: 'Забор (Fence)',
   railling: 'Перила',
   concealed: 'מסתורי כביסהת',
   window: 'Окна',
@@ -321,7 +321,7 @@ export function ProfilesTable() {
                   className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white"
                 >
                   <option value="pergulas">Перголы (Pergulas)</option>
-                  <option value="fancy">Декоративные (Fancy)</option>
+                  <option value="fancy">Забор (Fence)</option>
                   <option value="railling">Перила (Railling)</option>
                   <option value="concealed">מסתורי כביסהת (Concealed)</option>
                   <option value="window">Окна (Window)</option>

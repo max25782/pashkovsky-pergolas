@@ -9,12 +9,12 @@ interface FilterPanelProps {
 }
 
 const categories = [
-  { value: 'all', label: { he: 'כל המוצרים', ru: 'Все товары', en: 'All Products' } },
-  { value: 'pergulas', label: { he: 'פרגולות', ru: 'Перголы', en: 'Pergolas' } },
-  { value: 'structural', label: { he: 'מבני', ru: 'Конструкционные', en: 'Structural' } },
-  { value: 'lighting', label: { he: 'תאורה', ru: 'Освещение', en: 'Lighting' } },
-  { value: 'decorative', label: { he: 'דקורטיבי', ru: 'Декоративные', en: 'Decorative' } },
-  { value: 'railings', label: { he: 'מעקות', ru: 'Перила', en: 'Railings' } },
+  { value: 'all',       label: { he: 'כל המוצרים',    ru: 'Все товары',       en: 'All Products' } },
+  { value: 'pergulas',  label: { he: 'פרגולות',        ru: 'Перголы',          en: 'Pergolas' } },
+  { value: 'fancy',     label: { he: 'גדר',            ru: 'Забор',            en: 'Fence' } },
+  { value: 'railling',  label: { he: 'מעקות',          ru: 'Перила',           en: 'Railings' } },
+  { value: 'concealed', label: { he: 'מסתורי כביסה',   ru: 'Скрытые',          en: 'Concealed' } },
+  { value: 'window',    label: { he: 'חלונות',         ru: 'Окна',             en: 'Windows' } },
 ]
 
 export function FilterPanel({ locale }: FilterPanelProps) {
