@@ -129,31 +129,55 @@ export function TimesheetPanel({ workerId, workerName, month }: TimesheetPanelPr
         ) : (
           <>
             {summary && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4 p-3 bg-gray-900/50 rounded">
-                <div>
-                  <span className="text-white/60 text-sm">Days worked</span>
-                  <div className="font-semibold text-white">{summary.daysWorked}</div>
-                </div>
-                <div>
-                  <span className="text-white/60 text-sm">Total hours</span>
-                  <div className="font-semibold text-white">{summary.totalHours.toFixed(1)}</div>
-                </div>
-                <div>
-                  <span className="text-white/60 text-sm">Total cost</span>
-                  <div className="font-semibold text-white">
-                    {formatCurrencyILS(summary.totalCost)}
+              <div className="space-y-2 mb-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-gray-900/50 rounded">
+                  <div>
+                    <span className="text-white/60 text-sm">ימי עבודה</span>
+                    <div className="font-semibold text-white">{summary.daysWorked}</div>
+                  </div>
+                  <div>
+                    <span className="text-white/60 text-sm">שעות</span>
+                    <div className="font-semibold text-white">{summary.totalHours.toFixed(1)}</div>
+                  </div>
+                  <div>
+                    <span className="text-white/60 text-sm">עלות עבודה</span>
+                    <div className="font-semibold text-white">
+                      {formatCurrencyILS(summary.totalCost)}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-white/60 text-sm">יציאות מאוחרות</span>
+                    <div className="font-semibold text-white">{summary.lateDaysCount}</div>
                   </div>
                 </div>
-                <div>
-                  <span className="text-white/60 text-sm">Late days</span>
-                  <div className="font-semibold text-white">{summary.lateDaysCount}</div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-gray-900/50 rounded">
+                  <div>
+                    <span className="text-white/60 text-sm">חגים</span>
+                    <div className="font-semibold text-purple-300">{summary.holidayDays ?? 0}</div>
+                  </div>
+                  <div>
+                    <span className="text-white/60 text-sm">תשלום חגים</span>
+                    <div className="font-semibold text-purple-300">
+                      {formatCurrencyILS(summary.holidayPay ?? 0)}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-white/60 text-sm">ימי חופש (ללא תשלום)</span>
+                    <div className="font-semibold text-amber-300">{summary.dayOffDays ?? 0}</div>
+                  </div>
+                  <div className="border-r border-green-500/30 pr-3">
+                    <span className="text-white/60 text-sm">סה&quot;כ לתשלום</span>
+                    <div className="font-bold text-green-300 text-lg">
+                      {formatCurrencyILS(summary.totalPayable ?? summary.totalCost)}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
 
             <div className="flex justify-between items-center mb-3 flex-wrap gap-2">
               <div className="flex items-center gap-3">
-                <h4 className="font-medium text-white">Daily shifts</h4>
+                <h4 className="font-medium text-white">משמרות</h4>
                 <label className="flex items-center gap-2 text-white/70 text-sm cursor-pointer">
                   <input
                     type="checkbox"
@@ -161,7 +185,7 @@ export function TimesheetPanel({ workerId, workerName, month }: TimesheetPanelPr
                     onChange={(e) => setShowAllDays(e.target.checked)}
                     className="rounded"
                   />
-                  Show all days
+                  הצג את כל הימים
                 </label>
               </div>
               <button
@@ -174,7 +198,7 @@ export function TimesheetPanel({ workerId, workerName, month }: TimesheetPanelPr
                 className="flex items-center gap-2 px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-sm"
               >
                 <Plus className="w-4 h-4" />
-                Add shift
+                הוסף רשומה
               </button>
             </div>
 
@@ -197,21 +221,22 @@ export function TimesheetPanel({ workerId, workerName, month }: TimesheetPanelPr
 
             {shifts.length === 0 && !showForm ? (
               <div className="text-white/60 py-4 text-center">
-                No shifts for this month. Click &quot;Add shift&quot; to add one.
+                אין רשומות לחודש זה. לחץ &quot;הוסף רשומה&quot; כדי להוסיף.
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-right text-white/60 border-b border-white/10">
-                      <th className="py-2 px-2 text-right">Date</th>
-                      <th className="py-2 px-2 text-right">Deal</th>
-                      <th className="py-2 px-2 text-right">City/Address</th>
-                      <th className="py-2 px-2 text-right">Start</th>
-                      <th className="py-2 px-2 text-right">End</th>
-                      <th className="py-2 px-2 text-right">Hours</th>
-                      <th className="py-2 px-2 text-right">Cost</th>
-                      <th className="py-2 px-2 text-center">Actions</th>
+                      <th className="py-2 px-2 text-right">תאריך</th>
+                      <th className="py-2 px-2 text-right">סוג</th>
+                      <th className="py-2 px-2 text-right">עסקה</th>
+                      <th className="py-2 px-2 text-right">עיר</th>
+                      <th className="py-2 px-2 text-right">כניסה</th>
+                      <th className="py-2 px-2 text-right">יציאה</th>
+                      <th className="py-2 px-2 text-right">שעות</th>
+                      <th className="py-2 px-2 text-right">עלות</th>
+                      <th className="py-2 px-2 text-center">פעולות</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -225,35 +250,58 @@ export function TimesheetPanel({ workerId, workerName, month }: TimesheetPanelPr
                           return (
                             <tr key={dateStr} className="border-b border-white/5 text-white/40">
                               <td className="py-2 px-2 text-right">{formatDate(dateStr)}</td>
-                              <td colSpan={7} className="py-2 px-2 text-right">
+                              <td colSpan={8} className="py-2 px-2 text-right">
                                 —
                               </td>
                             </tr>
                           )
                         }
+                        const shiftTypeBadge = {
+                          work: null,
+                          holiday: <span className="px-1.5 py-0.5 rounded text-xs bg-purple-600/40 text-purple-200">חג</span>,
+                          day_off: <span className="px-1.5 py-0.5 rounded text-xs bg-amber-600/40 text-amber-200">יום חופש</span>,
+                        }[s.shiftType ?? 'work']
+
                         return (
                           <tr
                             key={s.id}
-                            className="border-b border-white/5 hover:bg-white/5 bg-white/5"
+                            className={`border-b border-white/5 hover:bg-white/5 ${
+                              s.shiftType === 'holiday'
+                                ? 'bg-purple-900/10'
+                                : s.shiftType === 'day_off'
+                                  ? 'bg-amber-900/10'
+                                  : 'bg-white/5'
+                            }`}
                           >
                             <td className="py-2 px-2 text-white font-medium">
                               {formatDate(s.shiftDate)}
                             </td>
+                            <td className="py-2 px-2">
+                              {shiftTypeBadge ?? <span className="text-white/40 text-xs">—</span>}
+                            </td>
                             <td className="py-2 px-2 text-white">
-                              {s.deal?.customerName ?? s.projectName ?? '—'}
+                              {s.shiftType !== 'work' ? '—' : (s.deal?.customerName ?? s.projectName ?? '—')}
                             </td>
                             <td className="py-2 px-2 text-white/80">
-                              {s.deal?.customerCity ?? s.deal?.projectAddress ?? '—'}
+                              {s.shiftType !== 'work' ? '—' : (s.deal?.customerCity ?? s.deal?.projectAddress ?? '—')}
                             </td>
-                            <td className="py-2 px-2 text-white">{formatTime(s.startTime)}</td>
-                            <td className="py-2 px-2 text-white">{formatTime(s.endTime)}</td>
+                            <td className="py-2 px-2 text-white">{s.shiftType !== 'work' ? '—' : formatTime(s.startTime)}</td>
+                            <td className="py-2 px-2 text-white">{s.shiftType !== 'work' ? '—' : formatTime(s.endTime)}</td>
                             <td className="py-2 px-2 text-white">
-                              {formatHours(s.minutesWorked)}
+                              {s.shiftType !== 'work' ? '—' : formatHours(s.minutesWorked)}
                             </td>
-                            <td className="py-2 px-2 text-white">
-                              {s.computedCost != null
-                                ? formatCurrencyILS(s.computedCost)
-                                : '—'}
+                            <td className="py-2 px-2">
+                              {s.shiftType === 'holiday' ? (
+                                <span className="text-purple-300">
+                                  {s.computedCost != null ? formatCurrencyILS(s.computedCost) : '—'}
+                                </span>
+                              ) : s.shiftType === 'day_off' ? (
+                                <span className="text-amber-400/70 text-xs">ללא תשלום</span>
+                              ) : s.computedCost != null ? (
+                                <span className="text-white">{formatCurrencyILS(s.computedCost)}</span>
+                              ) : (
+                                <span className="text-white/40">—</span>
+                              )}
                             </td>
                             <td className="py-2 px-2">
                               <div className="flex items-center justify-center gap-1">

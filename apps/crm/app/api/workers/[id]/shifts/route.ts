@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import type { WorkerShift, WorkerShiftSummary, WorkerShiftDraft } from '@/types/workers'
+import type { WorkerShift, WorkerShiftSummary, WorkerShiftDraft, WorkerShiftType } from '@/types/workers'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { requireCompanyAccess } from '@/lib/auth'
 import { computeMinutesWorked, computeShiftCost } from '@/lib/workers/calculations'
@@ -26,6 +26,7 @@ function transformShiftFromDB(row: any): WorkerShift {
     dealId: row.deal_id,
     projectName: row.project_name ?? null,
     shiftDate: row.shift_date,
+    shiftType: (row.shift_type as WorkerShiftType) ?? 'work',
     startTime: row.start_time ? String(row.start_time).slice(0, 5) : null,
     endTime: row.end_time ? String(row.end_time).slice(0, 5) : null,
     minutesWorked: row.minutes_worked,
@@ -123,17 +124,25 @@ export async function GET(
 
     const shifts: WorkerShift[] = (rows || []).map(transformShiftFromDB)
 
-    const totalMinutes = shifts.reduce((sum, s) => sum + (s.minutesWorked ?? 0), 0)
-    const totalCost = shifts.reduce((sum, s) => sum + (s.computedCost ?? 0), 0)
-    const lateDaysCount = shifts.filter((s) => computeLateFinish(s.endTime)).length
+    const workShifts = shifts.filter((s) => s.shiftType === 'work')
+    const holidayShifts = shifts.filter((s) => s.shiftType === 'holiday')
+    const totalMinutes = workShifts.reduce((sum, s) => sum + (s.minutesWorked ?? 0), 0)
+    // Work cost + holiday pay (daily rate per holiday day); day_off = no pay
+    const workCost = workShifts.reduce((sum, s) => sum + (s.computedCost ?? 0), 0)
+    const holidayPay = holidayShifts.reduce((sum, s) => sum + (s.computedCost ?? 0), 0)
+    const lateDaysCount = workShifts.filter((s) => computeLateFinish(s.endTime)).length
 
     const summary: WorkerShiftSummary = {
-      daysWorked: shifts.length,
+      daysWorked: workShifts.length,
+      holidayDays: holidayShifts.length,
+      dayOffDays: shifts.filter((s) => s.shiftType === 'day_off').length,
       totalMinutes,
       totalHours: Math.round((totalMinutes / 60) * 100) / 100,
-      totalCost,
+      totalCost: workCost,
+      holidayPay,
+      totalPayable: workCost + holidayPay,
       lateDaysCount,
-      avgFinishTime: parseAvgFinishTime(shifts),
+      avgFinishTime: parseAvgFinishTime(workShifts),
     }
 
     return NextResponse.json({ summary, shifts })
@@ -162,14 +171,19 @@ export async function POST(
 
   try {
     const body = (await req.json()) as WorkerShiftDraft
-    const { date, dealId, projectName, startTime, endTime, note } = body
+    const { date, shiftType, dealId, projectName, startTime, endTime, note } = body
 
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       return NextResponse.json({ error: 'date (YYYY-MM-DD) is required' }, { status: 400 })
     }
 
-    const hasStart = startTime != null && startTime !== ''
-    const hasEnd = endTime != null && endTime !== ''
+    const validTypes: WorkerShiftType[] = ['work', 'holiday', 'day_off']
+    const resolvedType: WorkerShiftType = shiftType && validTypes.includes(shiftType) ? shiftType : 'work'
+
+    const isWorkShift = resolvedType === 'work'
+
+    const hasStart = isWorkShift && startTime != null && startTime !== ''
+    const hasEnd = isWorkShift && endTime != null && endTime !== ''
     if (hasStart !== hasEnd) {
       return NextResponse.json(
         { error: 'Both start_time and end_time are required when one is provided' },
@@ -203,7 +217,13 @@ export async function POST(
     let minutesWorked: number | null = null
     let computedCost: number | null = null
 
-    if (hasStart && hasEnd) {
+    if (resolvedType === 'holiday') {
+      // Holiday = full daily rate, no hours tracked
+      computedCost = parseFloat(worker.daily_rate)
+    } else if (resolvedType === 'day_off') {
+      // Day off = no pay
+      computedCost = 0
+    } else if (hasStart && hasEnd) {
       minutesWorked = computeMinutesWorked(startTime!, endTime!) ?? null
       if (minutesWorked != null) {
         computedCost = computeShiftCost(
@@ -217,11 +237,12 @@ export async function POST(
     const payload = {
       company_id: worker.company_id,
       worker_id: workerId,
-      deal_id: dealId || null,
-      project_name: projectName?.trim() || null,
+      shift_type: resolvedType,
+      deal_id: isWorkShift ? (dealId || null) : null,
+      project_name: isWorkShift ? (projectName?.trim() || null) : null,
       shift_date: date,
-      start_time: startTime || null,
-      end_time: endTime || null,
+      start_time: hasStart ? startTime : null,
+      end_time: hasEnd ? endTime : null,
       minutes_worked: minutesWorked,
       computed_cost: computedCost,
       note: note || null,

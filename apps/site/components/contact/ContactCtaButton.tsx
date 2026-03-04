@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { FaWhatsapp } from 'react-icons/fa'
 import type { Locale } from '@/lib/locales'
 import { trackFormSubmit, trackWhatsApp, trackClick } from '@/lib/gtag-events'
+import { getCookie } from '@/lib/cookies'
 
 interface ContactCtaButtonProps {
   locale?: Locale
@@ -77,7 +78,8 @@ export default function ContactCtaButton({ locale = 'he', className, buttonText 
     e.preventDefault()
     setLoading(true)
     const utmSource = typeof window !== 'undefined' ? localStorage.getItem('lead_source') : null
-    
+    const gclid = getCookie('gclid')
+
     // Send to CRM Public Leads API
     const crmUrl = process.env.NEXT_PUBLIC_CRM_API_URL || 'https://crm.pashkovsky-group.com'
     const siteToken = process.env.NEXT_PUBLIC_CRM_SITE_TOKEN || 'dev-token'
@@ -95,6 +97,7 @@ export default function ContactCtaButton({ locale = 'he', className, buttonText 
           email: '',
           message: form.city ? `City: ${form.city}` : '',
           source: utmSource || 'website',
+          ...(gclid && { gclid }),
         }),
       })
       if (!resp.ok) {

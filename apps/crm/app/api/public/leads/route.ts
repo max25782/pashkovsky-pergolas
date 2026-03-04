@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { PublicLeadSchema } from '@/lib/validation/public-lead'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { sendWhatsAppTemplate } from '@/lib/whatsapp-send'
+import { uploadLeadConversion } from '@/lib/googleAds/offlineConversion'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -196,8 +197,10 @@ export async function POST(request: NextRequest) {
         utm_medium: leadData.utm_medium || null,
         utm_campaign: leadData.utm_campaign || null,
         metadata: leadData.metadata || null,
+        gclid: leadData.gclid || null,
+        google_conv_sent: false,
       })
-      .select('id')
+      .select('id, gclid, google_conv_sent')
       .single()
 
     if (dbError) {
@@ -231,6 +234,24 @@ export async function POST(request: NextRequest) {
         if (!r.ok) console.warn('[Public Leads] WhatsApp send failed:', r.error)
       })
       .catch((e) => console.warn('[Public Leads] WhatsApp send error:', e))
+
+    // 10. Google Ads offline conversion (fire-and-forget, never block lead creation)
+    if (leadData.gclid) {
+      uploadLeadConversion(leadData.gclid, 1)
+        .then(async () => {
+          await supabase
+            .from('leads')
+            .update({
+              google_conv_sent: true,
+              google_conv_sent_at: new Date().toISOString(),
+            })
+            .eq('id', lead.id)
+          console.log('[Public Leads] Google Ads conversion marked sent for lead', lead.id)
+        })
+        .catch((e) => {
+          console.error('[Public Leads] Google Ads conversion failed:', e?.message ?? e)
+        })
+    }
 
     return jsonResponse(
       { 

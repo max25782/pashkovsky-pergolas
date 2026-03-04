@@ -55,7 +55,13 @@
         "EMAIL_PASS",
         "EMAIL_FROM",
         "PROFILES_API_URL",
-        "CHROMIUM_PACK_URL"
+        "CHROMIUM_PACK_URL",
+        "GOOGLE_ADS_DEVELOPER_TOKEN",
+        "GOOGLE_ADS_CLIENT_ID",
+        "GOOGLE_ADS_CLIENT_SECRET",
+        "GOOGLE_ADS_REFRESH_TOKEN",
+        "GOOGLE_ADS_CUSTOMER_ID",
+        "GOOGLE_ADS_CONVERSION_ACTION_ID"
       ]
     },
     "dev": {

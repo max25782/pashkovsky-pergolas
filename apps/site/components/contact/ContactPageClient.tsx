@@ -4,6 +4,7 @@ import type { Locale } from '@/lib/locales'
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { trackFormSubmit, trackWhatsApp, trackPhoneCall } from '@/lib/gtag-events'
+import { getCookie } from '@/lib/cookies'
 
 interface Props { locale: Locale }
 
@@ -19,6 +20,7 @@ export default function ContactPageClient({ locale }: Props){
     const phone = String(fd.get('phone') || '').trim()
     const city = String(fd.get('city') || '').trim()
     const utmSource = typeof window !== 'undefined' ? localStorage.getItem('lead_source') : null
+    const gclid = getCookie('gclid')
 
     // Send to CRM Public Leads API
     const crmUrl = process.env.NEXT_PUBLIC_CRM_API_URL || 'https://crm.pashkovsky-group.com'
@@ -37,6 +39,7 @@ export default function ContactPageClient({ locale }: Props){
           email: '',
           message: city ? `City: ${city}` : '',
           source: utmSource || 'website',
+          ...(gclid && { gclid }),
         }),
       })
       if (!resp.ok) throw new Error('Failed to save')

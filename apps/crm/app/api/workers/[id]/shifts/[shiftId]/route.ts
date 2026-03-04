@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import type { WorkerShiftDraft } from '@/types/workers'
+import type { WorkerShiftDraft, WorkerShiftType } from '@/types/workers'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { requireCompanyAccess } from '@/lib/auth'
 import { computeMinutesWorked, computeShiftCost } from '@/lib/workers/calculations'
@@ -26,6 +26,7 @@ function transformShiftFromDB(row: any) {
     dealId: row.deal_id,
     projectName: row.project_name ?? null,
     shiftDate: row.shift_date,
+    shiftType: (row.shift_type as WorkerShiftType) ?? 'work',
     startTime: row.start_time ? String(row.start_time).slice(0, 5) : null,
     endTime: row.end_time ? String(row.end_time).slice(0, 5) : null,
     minutesWorked: row.minutes_worked,
@@ -60,7 +61,7 @@ export async function PATCH(
 
   try {
     const body = (await req.json()) as Partial<WorkerShiftDraft>
-    const { date, dealId, projectName, startTime, endTime, note } = body
+    const { date, shiftType, dealId, projectName, startTime, endTime, note } = body
 
     const { data: shift, error: shiftError } = await supabase
       .from('worker_shifts')
@@ -76,8 +77,14 @@ export async function PATCH(
     const access = await requireCompanyAccess(req, shift.company_id)
     if (!access.authorized) return access.error
 
-    const hasStart = startTime != null && startTime !== ''
-    const hasEnd = endTime != null && endTime !== ''
+    const validTypes: WorkerShiftType[] = ['work', 'holiday', 'day_off']
+    const resolvedType: WorkerShiftType | undefined =
+      shiftType && validTypes.includes(shiftType) ? shiftType : undefined
+
+    const isWorkShift = resolvedType === undefined ? undefined : resolvedType === 'work'
+
+    const hasStart = (isWorkShift !== false) && startTime != null && startTime !== ''
+    const hasEnd = (isWorkShift !== false) && endTime != null && endTime !== ''
     if (hasStart !== hasEnd) {
       return NextResponse.json(
         { error: 'Both start_time and end_time are required when one is provided' },
@@ -103,24 +110,45 @@ export async function PATCH(
 
     const updates: Record<string, unknown> = {}
     if (date !== undefined) updates.shift_date = date
-    if (dealId !== undefined) updates.deal_id = dealId || null
-    if (projectName !== undefined) updates.project_name = projectName?.trim() || null
-    if (startTime !== undefined) updates.start_time = startTime || null
-    if (endTime !== undefined) updates.end_time = endTime || null
+    if (resolvedType !== undefined) updates.shift_type = resolvedType
     if (note !== undefined) updates.note = note || null
 
-    if (hasStart && hasEnd && worker) {
-      const minutesWorked = computeMinutesWorked(startTime!, endTime!)
-      const computedCost = computeShiftCost(
-        minutesWorked ?? 0,
-        parseFloat(worker.daily_rate),
-        worker.hourly_rate != null ? parseFloat(worker.hourly_rate) : null
-      )
-      updates.minutes_worked = minutesWorked
-      updates.computed_cost = computedCost
-    } else if (hasStart === false && hasEnd === false) {
+    if (resolvedType === 'holiday' && worker) {
+      // Holiday = full daily rate, clear time fields
+      updates.deal_id = null
+      updates.project_name = null
+      updates.start_time = null
+      updates.end_time = null
       updates.minutes_worked = null
-      updates.computed_cost = null
+      updates.computed_cost = parseFloat(worker.daily_rate)
+    } else if (resolvedType === 'day_off') {
+      // Day off = no pay, clear time fields
+      updates.deal_id = null
+      updates.project_name = null
+      updates.start_time = null
+      updates.end_time = null
+      updates.minutes_worked = null
+      updates.computed_cost = 0
+    } else {
+      // Work shift
+      if (dealId !== undefined) updates.deal_id = dealId || null
+      if (projectName !== undefined) updates.project_name = projectName?.trim() || null
+      if (startTime !== undefined) updates.start_time = startTime || null
+      if (endTime !== undefined) updates.end_time = endTime || null
+
+      if (hasStart && hasEnd && worker) {
+        const minutesWorked = computeMinutesWorked(startTime!, endTime!)
+        const computedCost = computeShiftCost(
+          minutesWorked ?? 0,
+          parseFloat(worker.daily_rate),
+          worker.hourly_rate != null ? parseFloat(worker.hourly_rate) : null
+        )
+        updates.minutes_worked = minutesWorked
+        updates.computed_cost = computedCost
+      } else if (!hasStart && !hasEnd) {
+        updates.minutes_worked = null
+        updates.computed_cost = null
+      }
     }
 
     const { data, error } = await supabase

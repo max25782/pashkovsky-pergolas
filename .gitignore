@@ -34,5 +34,15 @@ next-env.d.ts
 
 #env
 .env
-.env.local# Cursor MCP config (may contain secrets)
+.env.local
+
+# Cursor MCP config (may contain secrets)
 .cursor/mcp.json
+
+# Turborepo cache (large binary files, no need in git)
+.turbo/cache/
+.turbo/daemon/
+.turbo/cookies/
+
+# CDK output (large generated assets)
+infrastructure/cdk.out/

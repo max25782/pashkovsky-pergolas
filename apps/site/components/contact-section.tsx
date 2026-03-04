@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { FaWhatsapp } from 'react-icons/fa'
 import type { Locale } from '@/lib/locales'
 import { trackFormSubmit, trackWhatsApp, trackClick } from '@/lib/gtag-events'
+import { getCookie } from '@/lib/cookies'
 
 interface ContactSectionProps {
   locale?: Locale
@@ -84,6 +85,7 @@ export default function ContactSection({ locale = 'he', pageName = 'unknown' }: 
 
     // Получаем UTM source из localStorage (если есть)
     const utmSource = typeof window !== 'undefined' ? localStorage.getItem('lead_source') : null
+    const gclid = getCookie('gclid')
 
     // Отправляем на CRM Public Leads API
     const crmUrl = process.env.NEXT_PUBLIC_CRM_API_URL || 'https://crm.pashkovsky-group.com'
@@ -102,6 +104,7 @@ export default function ContactSection({ locale = 'he', pageName = 'unknown' }: 
           email: '', // Not collected here
           message: form.city ? `City: ${form.city}` : '',
           source: utmSource || 'website',
+          ...(gclid && { gclid }),
         })
       })
       

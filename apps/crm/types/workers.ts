@@ -68,6 +68,8 @@ export interface MonthlyReport {
   projects: MonthlyReportRow[]
 }
 
+export type WorkerShiftType = 'work' | 'holiday' | 'day_off'
+
 // Worker shifts (timesheets with start/end time)
 export interface WorkerShift {
   id: string
@@ -75,6 +77,7 @@ export interface WorkerShift {
   dealId: string | null
   projectName?: string | null // Custom text when no deal linked
   shiftDate: string // YYYY-MM-DD
+  shiftType: WorkerShiftType
   startTime: string | null // HH:mm
   endTime: string | null // HH:mm
   minutesWorked: number | null
@@ -87,15 +90,20 @@ export interface WorkerShift {
 
 export interface WorkerShiftSummary {
   daysWorked: number
+  holidayDays: number
+  dayOffDays: number
   totalMinutes: number
   totalHours: number
-  totalCost: number
+  totalCost: number      // work shifts cost only
+  holidayPay: number     // holiday days cost (daily rate × holiday days)
+  totalPayable: number   // totalCost + holidayPay (day_off excluded)
   lateDaysCount: number
   avgFinishTime?: string
 }
 
 export interface WorkerShiftDraft {
   date: string // YYYY-MM-DD
+  shiftType?: WorkerShiftType
   dealId?: string | null
   projectName?: string | null // Custom text when no deal in list
   startTime?: string | null

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import { Save, X } from 'lucide-react'
-import type { WorkerShiftDraft, WorkerShift } from '@/types/workers'
+import type { WorkerShiftDraft, WorkerShift, WorkerShiftType } from '@/types/workers'
 import { authFetch } from '@/lib/api/auth-fetch'
 
 const TIME_PRESETS = [
@@ -47,6 +47,7 @@ export function ShiftForm({
 
   const [formData, setFormData] = useState<WorkerShiftDraft>({
     date: initialData?.date ?? today,
+    shiftType: initialData?.shiftType ?? 'work',
     dealId: initialData?.dealId ?? null,
     projectName: initialData?.projectName ?? null,
     startTime: initialData?.startTime ?? '08:00',
@@ -84,6 +85,7 @@ export function ShiftForm({
     if (editingShift) {
       setFormData({
         date: editingShift.shiftDate,
+        shiftType: editingShift.shiftType ?? 'work',
         dealId: editingShift.dealId,
         projectName: editingShift.projectName ?? null,
         startTime: editingShift.startTime ?? '08:00',
@@ -148,9 +150,11 @@ export function ShiftForm({
     e.preventDefault()
     setError(null)
 
-    const hasStart = formData.startTime != null && formData.startTime !== ''
-    const hasEnd = formData.endTime != null && formData.endTime !== ''
-    if (hasStart !== hasEnd) {
+    const isWork = (formData.shiftType ?? 'work') === 'work'
+
+    const hasStart = isWork && formData.startTime != null && formData.startTime !== ''
+    const hasEnd = isWork && formData.endTime != null && formData.endTime !== ''
+    if (isWork && hasStart !== hasEnd) {
       setError('Both start and end time are required when one is provided')
       return
     }
@@ -169,8 +173,9 @@ export function ShiftForm({
       setSubmitting(true)
       const payload = {
         date: formData.date,
-        dealId: formData.dealId || null,
-        projectName: formData.projectName?.trim() || null,
+        shiftType: formData.shiftType ?? 'work',
+        dealId: isWork ? (formData.dealId || null) : null,
+        projectName: isWork ? (formData.projectName?.trim() || null) : null,
         startTime: hasStart ? formData.startTime : null,
         endTime: hasEnd ? formData.endTime : null,
         note: formData.note || null,
@@ -208,6 +213,15 @@ export function ShiftForm({
     }
   }
 
+  const shiftTypeOptions: { value: WorkerShiftType; label: string; color: string }[] = [
+    { value: 'work', label: 'משמרת עבודה', color: 'bg-blue-600 hover:bg-blue-700' },
+    { value: 'holiday', label: 'חג', color: 'bg-purple-600 hover:bg-purple-700' },
+    { value: 'day_off', label: 'יום חופש', color: 'bg-amber-600 hover:bg-amber-700' },
+  ]
+
+  const currentType = formData.shiftType ?? 'work'
+  const isWork = currentType === 'work'
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4 p-4 bg-gray-900/50 rounded-lg border border-white/10">
       {error && (
@@ -216,7 +230,37 @@ export function ShiftForm({
         </div>
       )}
 
-      {formData.dealId == null && !formData.projectName?.trim() && (
+      {/* Shift type selector */}
+      <div>
+        <label className="block text-sm font-medium text-white/80 mb-2">סוג יום</label>
+        <div className="flex gap-2 flex-wrap">
+          {shiftTypeOptions.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() =>
+                setFormData((p) => ({
+                  ...p,
+                  shiftType: opt.value,
+                  startTime: opt.value !== 'work' ? null : (p.startTime ?? '08:00'),
+                  endTime: opt.value !== 'work' ? null : (p.endTime ?? '17:00'),
+                  dealId: opt.value !== 'work' ? null : p.dealId,
+                  projectName: opt.value !== 'work' ? null : p.projectName,
+                }))
+              }
+              className={`px-4 py-1.5 rounded text-white text-sm font-medium transition-all ${
+                currentType === opt.value
+                  ? opt.color + ' ring-2 ring-white/50'
+                  : 'bg-white/10 hover:bg-white/20'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {isWork && formData.dealId == null && !formData.projectName?.trim() && (
         <div className="p-2 bg-amber-500/20 border border-amber-500/50 rounded text-amber-200 text-sm">
           No deal linked
         </div>
@@ -234,7 +278,7 @@ export function ShiftForm({
           />
         </div>
 
-        <div className="relative">
+        {isWork && <div className="relative">
           <label className="block text-sm font-medium text-white/80 mb-1">Deal / Project</label>
           <input
             type="text"
@@ -329,53 +373,57 @@ export function ShiftForm({
               </button>
             </div>
           )}
-        </div>
+        </div>}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-white/80 mb-1">Start</label>
-          <input
-            type="time"
-            value={formData.startTime ?? ''}
-            onChange={(e) => setFormData((p) => ({ ...p, startTime: e.target.value }))}
-            step={300}
-            className="w-full px-3 py-2 rounded bg-white/10 border border-white/20 text-white"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-white/80 mb-1">End</label>
-          <input
-            type="time"
-            value={formData.endTime ?? ''}
-            onChange={(e) => setFormData((p) => ({ ...p, endTime: e.target.value }))}
-            step={300}
-            className="w-full px-3 py-2 rounded bg-white/10 border border-white/20 text-white"
-          />
-        </div>
-      </div>
+      {isWork && (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-1">Start</label>
+              <input
+                type="time"
+                value={formData.startTime ?? ''}
+                onChange={(e) => setFormData((p) => ({ ...p, startTime: e.target.value }))}
+                step={300}
+                className="w-full px-3 py-2 rounded bg-white/10 border border-white/20 text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-1">End</label>
+              <input
+                type="time"
+                value={formData.endTime ?? ''}
+                onChange={(e) => setFormData((p) => ({ ...p, endTime: e.target.value }))}
+                step={300}
+                className="w-full px-3 py-2 rounded bg-white/10 border border-white/20 text-white"
+              />
+            </div>
+          </div>
 
-      <div className="flex flex-wrap gap-2">
-        {TIME_PRESETS.map((p) => (
-          <button
-            key={p.label}
-            type="button"
-            onClick={() => handlePreset(p.start, p.end)}
-            className="px-3 py-1 rounded bg-white/10 hover:bg-white/20 text-white text-sm"
-          >
-            {p.label}
-          </button>
-        ))}
-      </div>
+          <div className="flex flex-wrap gap-2">
+            {TIME_PRESETS.map((p) => (
+              <button
+                key={p.label}
+                type="button"
+                onClick={() => handlePreset(p.start, p.end)}
+                className="px-3 py-1 rounded bg-white/10 hover:bg-white/20 text-white text-sm"
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
 
-      {onCopyYesterday && (
-        <button
-          type="button"
-          onClick={handleCopyYesterday}
-          className="px-3 py-1 rounded bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 text-sm"
-        >
-          Copy yesterday
-        </button>
+          {onCopyYesterday && (
+            <button
+              type="button"
+              onClick={handleCopyYesterday}
+              className="px-3 py-1 rounded bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 text-sm"
+            >
+              Copy yesterday
+            </button>
+          )}
+        </>
       )}
 
       <div>
