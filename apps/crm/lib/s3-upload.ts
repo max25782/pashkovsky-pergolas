@@ -86,8 +86,9 @@ export async function uploadToS3(
     throw error
   }
 
-  // Return public URL
-  return `https://${S3_BUCKET}.s3.${S3_REGION}.amazonaws.com/${key}`
+  // Return public URL — encode each path segment so non-ASCII chars (e.g. Hebrew) are valid HTTP URLs
+  const encodedKey = key.split('/').map(segment => encodeURIComponent(segment)).join('/')
+  return `https://${S3_BUCKET}.s3.${S3_REGION}.amazonaws.com/${encodedKey}`
 }
 
 /**
@@ -121,7 +122,8 @@ export function getS3Url(key: string): string {
   if (!S3_BUCKET) {
     throw new Error('S3 bucket not configured')
   }
-  return `https://${S3_BUCKET}.s3.${S3_REGION}.amazonaws.com/${key}`
+  const encodedKey = key.split('/').map(segment => encodeURIComponent(segment)).join('/')
+  return `https://${S3_BUCKET}.s3.${S3_REGION}.amazonaws.com/${encodedKey}`
 }
 
 /**
