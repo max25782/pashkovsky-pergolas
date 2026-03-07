@@ -20,8 +20,11 @@ interface ProjectNormalized {
   images: string[];
 }
 
-function ProjectsGalleryImpl({ locale = "he" }: { locale?: Locale }) {
-  const { data: apiData } = useSWR<{ projects: any[] }>('/api/pergola-projects', fetcher);
+function ProjectsGalleryImpl({ locale = "he", initialApiProjects = [] }: { locale?: Locale; initialApiProjects?: any[] }) {
+  const { data: apiData } = useSWR<{ projects: any[] }>('/api/pergola-projects', fetcher, {
+    fallbackData: { projects: initialApiProjects },
+    revalidateOnMount: false,
+  });
   const rawApi = apiData?.projects ?? [];
   const rawStatic = (projects as { projects: any[] }).projects;
 
@@ -118,8 +121,12 @@ function ProjectsGalleryImpl({ locale = "he" }: { locale?: Locale }) {
             ? "Наши проекты"
             : "הפרויקטים שלנו"}
         </h2>
-        <p className="text-center max-w-3xl mx-auto text-sm md:text-base opacity-90 mb-14">
+        <p className="text-center max-w-3xl mx-auto text-sm md:text-base opacity-90 mb-4">
           {title}
+        </p>
+        <p className="text-center text-sm text-white/50 mb-10">
+          {data.length}{' '}
+          {locale === "en" ? "projects" : locale === "ru" ? "проектов" : "פרויקטים"}
         </p>
 
         {/* Grid 3 / 2 / 1 */}
