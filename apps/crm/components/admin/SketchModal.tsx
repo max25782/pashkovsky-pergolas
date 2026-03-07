@@ -1,5 +1,6 @@
 "use client"
 
+import { useToast } from '@/components/ui/toast'
 import { useEffect, useRef, useState } from 'react'
 import { Save, Trash2, Undo2, Square, Minus, Grid, Edit3, Type } from 'lucide-react'
 
@@ -15,6 +16,7 @@ interface SketchModalProps {
 type DrawingTool = 'pencil' | 'dot' | 'rectangle' | 'circle' | 'line' | 'text' | 'pergola-rect' | 'pergola-l' | 'pergola-custom'
 
 export function SketchModal({ dealId, existingImageUrl, existingJson, onClose, onSave, adminToken = '' }: SketchModalProps) {
+  const toast = useToast()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const fabricCanvasRef = useRef<any>(null)
   const fabricRef = useRef<any>(null)
@@ -47,16 +49,13 @@ export function SketchModal({ dealId, existingImageUrl, existingJson, onClose, o
 
   useEffect(() => {
     if (!canvasRef.current) {
-      console.log('[Sketch] No canvas ref')
       return
     }
 
     let mounted = true
-    console.log('[Sketch] Starting fabric import')
 
     import('fabric').then((fabricModule: any) => {
       if (!mounted || !canvasRef.current) {
-        console.log('[Sketch] Component unmounted or no canvas ref')
         return
       }
       
@@ -353,7 +352,7 @@ export function SketchModal({ dealId, existingImageUrl, existingJson, onClose, o
       onClose()
     } catch (error) {
       console.error('Error saving sketch:', error)
-      alert('Ошибка сохранения')
+      toast.error('Ошибка сохранения')
     } finally {
       setSaving(false)
     }

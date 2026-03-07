@@ -94,20 +94,14 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    console.log('[Platform] Integration activated', {
-      company_id,
-      integration_id: integration.id,
-      admin_id: admin.user_id,
-    })
-
     return NextResponse.json({ success: true })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Platform API] Activate error:', error)
-
-    if (error.message?.includes('Unauthorized') || error.message?.includes('Forbidden')) {
+    const msg = error instanceof Error ? error.message : String(error)
+    if (msg?.includes('Unauthorized') || msg?.includes('Forbidden')) {
       return NextResponse.json(
-        { error: error.message },
-        { status: error.message.includes('Unauthorized') ? 401 : 403 }
+        { error: msg },
+        { status: msg.includes('Unauthorized') ? 401 : 403 }
       )
     }
 

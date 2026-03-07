@@ -82,11 +82,9 @@ describe('Multi-Tenant Security Isolation', () => {
   let userBTokens: AuthTokens
 
   beforeAll(async () => {
-    console.log('🔐 Logging in test users...')
     
     try {
       userATokens = await login(USER_A.email, USER_A.password)
-      console.log('✅ User A logged in (Company A)')
     } catch (error) {
       console.error('❌ User A login failed:', error)
       throw error
@@ -94,7 +92,6 @@ describe('Multi-Tenant Security Isolation', () => {
 
     try {
       userBTokens = await login(USER_B.email, USER_B.password)
-      console.log('✅ User B logged in (Company B)')
     } catch (error) {
       console.error('❌ User B login failed:', error)
       throw error
@@ -117,7 +114,6 @@ describe('Multi-Tenant Security Isolation', () => {
       )
       
       expect(hasCompanyBLead).toBe(false)
-      console.log('✅ User A cannot see Company B leads')
     })
 
     test('User A cannot GET deal from Company B', async () => {
@@ -135,7 +131,6 @@ describe('Multi-Tenant Security Isolation', () => {
       )
       
       expect(hasCompanyBDeal).toBe(false)
-      console.log('✅ User A cannot see Company B deals')
     })
 
     test('User A cannot GET offer from Company B by ID', async () => {
@@ -146,7 +141,6 @@ describe('Multi-Tenant Security Isolation', () => {
 
       // Should return 403 Forbidden or 404 Not Found
       expect([403, 404]).toContain(response.status)
-      console.log(`✅ User A cannot access Company B offer: ${response.status}`)
     })
 
     test('User A cannot GET worker from Company B', async () => {
@@ -164,7 +158,6 @@ describe('Multi-Tenant Security Isolation', () => {
       )
       
       expect(hasCompanyBWorker).toBe(false)
-      console.log('✅ User A cannot see Company B workers')
     })
   })
 
@@ -185,7 +178,6 @@ describe('Multi-Tenant Security Isolation', () => {
 
       // Should return 403 Forbidden or 404 Not Found
       expect([403, 404]).toContain(response.status)
-      console.log(`✅ User A cannot update Company B deal: ${response.status}`)
     })
 
     test('User A cannot DELETE offer from Company B', async () => {
@@ -197,7 +189,6 @@ describe('Multi-Tenant Security Isolation', () => {
 
       // Should return 403 Forbidden or 404 Not Found
       expect([403, 404]).toContain(response.status)
-      console.log(`✅ User A cannot delete Company B offer: ${response.status}`)
     })
 
     test('User A cannot UPDATE worker from Company B', async () => {
@@ -215,7 +206,6 @@ describe('Multi-Tenant Security Isolation', () => {
 
       // Should return 403 Forbidden or 404 Not Found
       expect([403, 404]).toContain(response.status)
-      console.log(`✅ User A cannot update Company B worker: ${response.status}`)
     })
 
     test('User A cannot DELETE worker from Company B', async () => {
@@ -227,7 +217,6 @@ describe('Multi-Tenant Security Isolation', () => {
 
       // Should return 403 Forbidden or 404 Not Found
       expect([403, 404]).toContain(response.status)
-      console.log(`✅ User A cannot delete Company B worker: ${response.status}`)
     })
   })
 
@@ -247,7 +236,6 @@ describe('Multi-Tenant Security Isolation', () => {
       )
       
       expect(allBelongToCompanyA).toBe(true)
-      console.log('✅ User A can access their own company data')
     })
 
     test('User B CAN access their own company data', async () => {
@@ -265,7 +253,6 @@ describe('Multi-Tenant Security Isolation', () => {
       )
       
       expect(allBelongToCompanyB).toBe(true)
-      console.log('✅ User B can access their own company data')
     })
   })
 
@@ -274,7 +261,6 @@ describe('Multi-Tenant Security Isolation', () => {
       const response = await fetch(`${API_BASE_URL}/admin-api/leads`)
       
       expect(response.status).toBe(401)
-      console.log('✅ Unauthenticated requests are blocked')
     })
 
     test('Invalid token should fail', async () => {
@@ -284,7 +270,6 @@ describe('Multi-Tenant Security Isolation', () => {
       )
       
       expect(response.status).toBe(401)
-      console.log('✅ Invalid tokens are rejected')
     })
   })
 })
@@ -293,13 +278,11 @@ describe('Multi-Tenant Security Isolation', () => {
  * Test runner (if not using Jest)
  */
 if (require.main === module) {
-  console.log('🧪 Running Multi-Tenant Security Tests...\n')
   
   // Simple test runner
   ;(async () => {
     try {
       const userATokens = await login(USER_A.email, USER_A.password)
-      console.log('✅ User A logged in')
 
       // Test 1: Try to get Company B lead
       const response = await authenticatedRequest(
@@ -313,7 +296,6 @@ if (require.main === module) {
         console.error('❌ SECURITY VIOLATION: User A can see Company B lead!')
         process.exit(1)
       } else {
-        console.log('✅ Test passed: User A cannot see Company B lead')
       }
 
       // Test 2: Try to delete Company B offer
@@ -327,10 +309,8 @@ if (require.main === module) {
         console.error('❌ SECURITY VIOLATION: User A can delete Company B offer!')
         process.exit(1)
       } else {
-        console.log(`✅ Test passed: User A cannot delete Company B offer (${deleteResponse.status})`)
       }
 
-      console.log('\n🎉 All tests passed!')
       process.exit(0)
     } catch (error) {
       console.error('❌ Test failed:', error)

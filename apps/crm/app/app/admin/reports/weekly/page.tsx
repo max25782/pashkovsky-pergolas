@@ -68,8 +68,8 @@ export default function WeeklyDigestsPage() {
 
       const data = await res.json()
       setDigests(data.digests || [])
-    } catch (err: any) {
-      setError(err.message || 'Ошибка загрузки дайджестов')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Ошибка загрузки дайджестов')
     } finally {
       setLoading(false)
     }
@@ -105,8 +105,8 @@ export default function WeeklyDigestsPage() {
           setSelectedDigest(digestData.digest)
         }
       }
-    } catch (err: any) {
-      setError(err.message || 'Ошибка генерации дайджеста')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Ошибка генерации дайджеста')
     } finally {
       setGenerating(false)
     }
@@ -122,8 +122,8 @@ export default function WeeklyDigestsPage() {
 
       const data = await res.json()
       setSelectedDigest(data.digest)
-    } catch (err: any) {
-      setError(err.message || 'Ошибка загрузки дайджеста')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Ошибка загрузки дайджеста')
     }
   }
 

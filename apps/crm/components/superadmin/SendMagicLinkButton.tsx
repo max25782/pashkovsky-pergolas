@@ -54,10 +54,10 @@ export function SendMagicLinkButton({ email, companyName }: SendMagicLinkButtonP
         await navigator.clipboard.writeText(data.magicLink)
         setMessage(`Magic link sent to ${email} and copied to clipboard!`)
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[SendMagicLink] Error:', error)
       setStatus('error')
-      setMessage(error.message || 'Failed to send magic link')
+      setMessage((error instanceof Error ? error.message : String(error)) || 'Failed to send magic link')
     } finally {
       setIsLoading(false)
     }

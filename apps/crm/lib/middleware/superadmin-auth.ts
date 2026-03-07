@@ -29,7 +29,6 @@ export async function checkSuperAdminAuth(request: NextRequest): Promise<SuperAd
     try {
       const session = await getSession(sessionId)
       if (session && session.role === 'superadmin') {
-        console.log('[SuperAdmin Auth] ✓ Redis session valid:', session.email)
         return {
           ...session,
           auth_method: 'redis',
@@ -60,7 +59,6 @@ export async function checkSuperAdminAuth(request: NextRequest): Promise<SuperAd
     const { data: { user }, error } = await supabase.auth.getUser()
     
     if (error || !user) {
-      console.log('[SuperAdmin Auth] No valid auth found')
       return null
     }
 
@@ -68,11 +66,9 @@ export async function checkSuperAdminAuth(request: NextRequest): Promise<SuperAd
     const isAdmin = await isSuperAdmin(user.id)
     
     if (!isAdmin) {
-      console.log('[SuperAdmin Auth] User not SuperAdmin:', user.email)
       return null
     }
 
-    console.log('[SuperAdmin Auth] ✓ Supabase auth valid:', user.email)
     return {
       user_id: user.id,
       email: user.email || '',

@@ -122,5 +122,4 @@ export async function sendCalendarInvite(appt: AppointmentData): Promise<void> {
     ],
   })
 
-  console.log('[CalendarInvite] Sent to', OWNER_EMAIL, '— appointment:', appt)
 }

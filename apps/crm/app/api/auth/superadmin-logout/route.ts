@@ -14,7 +14,6 @@ export async function POST(request: NextRequest) {
     if (sessionId) {
       // Delete session from Redis
       await deleteSession(sessionId)
-      console.log('[SuperAdmin Logout] Session deleted:', sessionId)
     }
 
     // Create response

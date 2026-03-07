@@ -37,13 +37,14 @@ export async function GET(req: NextRequest) {
       const digests = await getWeeklyDigests(companyId, limit)
       return NextResponse.json({ digests })
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error)
     console.error('[Weekly Digest GET] Error:', {
-      error: error.message?.substring(0, 500), // Limit log size
+      error: msg?.substring(0, 500), // Limit log size
     })
 
     return NextResponse.json(
-      { error: 'Failed to fetch digests', details: error.message },
+      { error: 'Failed to fetch digests', details: msg },
       { status: 500 }
     )
   }

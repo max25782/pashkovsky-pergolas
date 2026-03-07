@@ -10,18 +10,12 @@ export async function renderHtmlToPdfBuffer(html: string): Promise<Buffer> {
   let page = null
 
   try {
-    console.log('[PDF Render] Starting HTML to PDF conversion...')
-    console.log('[PDF Render] HTML length:', html.length, 'characters')
 
     // Launch browser
-    console.log('[PDF Render] Step 1: Creating browser instance...')
     browser = await createBrowser()
-    console.log('[PDF Render] ✅ Browser created successfully')
 
     // Create new page
-    console.log('[PDF Render] Step 2: Creating new page...')
     page = await browser.newPage()
-    console.log('[PDF Render] ✅ Page created')
     
     // Set extra HTTP headers to ensure UTF-8
     await page.setExtraHTTPHeaders({
@@ -29,7 +23,6 @@ export async function renderHtmlToPdfBuffer(html: string): Promise<Buffer> {
       'Accept-Charset': 'utf-8',
     })
 
-    console.log('[PDF Render] Step 3: Loading HTML content with embedded fonts...')
 
     // Use document.write instead of setContent: chrome-headless-shell throws
     // "Unexpected status code: 404" for setContent (even with domcontentloaded),
@@ -41,15 +34,12 @@ export async function renderHtmlToPdfBuffer(html: string): Promise<Buffer> {
       document.write(content)
       document.close()
     }, html)
-    console.log('[PDF Render] ✅ HTML content loaded')
 
     // Wait for fonts to be loaded and ready
     try {
-      console.log('[PDF Render] Step 4: Waiting for fonts to load...')
       await page.evaluate(() => {
         return document.fonts.ready
       })
-      console.log('[PDF Render] ✅ Fonts ready')
       
       // Additional wait to ensure fonts are rendered
       await new Promise(resolve => setTimeout(resolve, 1000))
@@ -59,7 +49,6 @@ export async function renderHtmlToPdfBuffer(html: string): Promise<Buffer> {
       await new Promise(resolve => setTimeout(resolve, 500))
     }
     
-    console.log('[PDF Render] Step 5: Generating PDF...')
 
     // Generate PDF
     const pdfBuffer = await page.pdf({
@@ -74,7 +63,6 @@ export async function renderHtmlToPdfBuffer(html: string): Promise<Buffer> {
       preferCSSPageSize: false,
     })
 
-    console.log('[PDF Render] ✅ PDF generated successfully, size:', pdfBuffer.length, 'bytes')
 
     return Buffer.from(pdfBuffer)
   } catch (error) {
@@ -88,7 +76,6 @@ export async function renderHtmlToPdfBuffer(html: string): Promise<Buffer> {
     if (page) {
       try {
         await page.close()
-        console.log('[PDF Render] ✅ Page closed')
       } catch (err) {
         console.error('[PDF Render] ⚠️ Error closing page:', err)
       }

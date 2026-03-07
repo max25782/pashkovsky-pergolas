@@ -39,7 +39,6 @@ export async function DELETE(
       }
     )
 
-    console.log('[SuperAdmin] Deleting company:', companyId, 'by admin:', adminSession.user_id)
 
     // First, check if company exists (don't use .single() to avoid coercion error)
     const { data: companies, error: checkError } = await supabase
@@ -48,7 +47,6 @@ export async function DELETE(
       .eq('id', companyId)
       .limit(1)
 
-    console.log('[SuperAdmin] Check company result:', { companies, checkError })
 
     if (checkError) {
       console.error('[SuperAdmin] Error checking company:', checkError)
@@ -67,7 +65,6 @@ export async function DELETE(
         .select('id, name')
         .limit(10)
       
-      console.log('[SuperAdmin] Available companies:', allCompanies)
       
       return NextResponse.json(
         { error: 'Company not found', companyId, availableCompanies: allCompanies?.length || 0 },
@@ -76,7 +73,6 @@ export async function DELETE(
     }
 
     const company = companies[0]
-    console.log('[SuperAdmin] Company to delete:', company)
 
     // Delete related records first (if cascade doesn't work)
     // Order matters: delete child records before parent
@@ -146,17 +142,16 @@ export async function DELETE(
       )
     }
 
-    console.log('[SuperAdmin] Company deleted successfully:', companyId, 'Deleted:', deleteData)
 
     return NextResponse.json({
       success: true,
       message: 'Company deleted successfully',
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[SuperAdmin] Delete company error:', error)
-    
+    const msg = error instanceof Error ? error.message : String(error)
     // Check if it's an auth error
-    if (error.message?.includes('Unauthorized') || error.message?.includes('Authentication required')) {
+    if (msg?.includes('Unauthorized') || msg?.includes('Authentication required')) {
       return NextResponse.json(
         { error: 'Unauthorized: SuperAdmin access required' },
         { status: 401 }
@@ -164,7 +159,7 @@ export async function DELETE(
     }
     
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: msg || 'Internal server error' },
       { status: 500 }
     )
   }

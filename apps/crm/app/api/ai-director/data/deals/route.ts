@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
       deals: data || [],
       count: data?.length || 0,
     })
-  } catch (error: any) {
+  } catch (error) {
     console.error('[AI Director] Unexpected error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

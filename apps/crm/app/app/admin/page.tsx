@@ -82,15 +82,11 @@ export default function AdminPage() {
       const supabase = createClient()
       const { data: { user }, error } = await supabase.auth.getUser()
       
-      console.log('[AdminPage] Checking auth...')
-      console.log('[AdminPage] User:', user?.email || 'null')
-      console.log('[AdminPage] Error:', error?.message || 'none')
       
       if (user) {
         setIsAuthenticated(true)
         setUserEmail(user.email || null)
       } else {
-        console.log('[AdminPage] No authenticated user, redirecting to /login')
         window.location.href = '/login'
       }
     } catch (err) {

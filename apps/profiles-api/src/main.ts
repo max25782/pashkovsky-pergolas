@@ -29,7 +29,6 @@ async function bootstrap() {
   const port = process.env.PORT || 3002;
   await app.listen(port);
 
-  console.log(`🚀 Profiles API running on http://localhost:${port}`);
 }
 
 bootstrap();

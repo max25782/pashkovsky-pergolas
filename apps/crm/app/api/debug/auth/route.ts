@@ -22,11 +22,11 @@ export async function GET(req: NextRequest) {
       auth_error: authError?.message || null,
       timestamp: new Date().toISOString(),
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json(
       {
         authenticated: false,
-        error: error.message || 'Unknown error',
+        error: (error instanceof Error ? error.message : String(error)) || 'Unknown error',
         timestamp: new Date().toISOString(),
       },
       { status: 500 }

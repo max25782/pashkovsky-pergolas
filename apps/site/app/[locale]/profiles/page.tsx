@@ -33,13 +33,11 @@ async function getProfilesImages(): Promise<Map<string, string>> {
   const imageMap = new Map<string, string>()
   
   if (!S3_BUCKET || !s3Client) {
-    console.log('[Profiles] S3 not configured')
     return imageMap
   }
 
   try {
     const prefix = 'images/profiles/'
-    console.log(`[Profiles] Fetching from S3: bucket=${S3_BUCKET}, region=${S3_REGION}, prefix=${prefix}`)
     
     const command = new ListObjectsV2Command({
       Bucket: S3_BUCKET,
@@ -49,7 +47,6 @@ async function getProfilesImages(): Promise<Map<string, string>> {
     const response = await s3Client.send(command)
     const contents = response.Contents || []
     
-    console.log(`[Profiles] S3 response: ${contents.length} total objects`)
     
     // Create map: filename -> full S3 URL
     contents.forEach(item => {
@@ -64,12 +61,12 @@ async function getProfilesImages(): Promise<Map<string, string>> {
       }
     })
     
-    console.log(`[Profiles] Mapped ${imageMap.size} images from S3`)
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const e = error as Error & { Code?: string; code?: string }
     console.error('[Profiles] Error fetching from S3:', {
-      message: error.message,
-      code: error.Code || error.code,
-      name: error.name,
+      message: e?.message ?? String(error),
+      code: e?.Code ?? e?.code,
+      name: e?.name,
     })
   }
   

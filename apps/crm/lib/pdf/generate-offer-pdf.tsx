@@ -10,29 +10,22 @@ import { renderHtmlToPdfBuffer } from './render-html-to-pdf'
  */
 export async function generateOfferPdf(offer: Offer): Promise<Buffer> {
   try {
-    console.log('[PDF Generator] ==========================================')
-    console.log('[PDF Generator] Starting PDF generation for offer:', offer.id)
-    console.log('[PDF Generator] Customer:', offer.customerName)
     
     // Render HTML template
-    console.log('[PDF Generator] Step 1: Rendering HTML template...')
     const html = renderOfferHtml(offer)
-    console.log('[PDF Generator] ✅ HTML template rendered, length:', html.length)
     
     // Convert HTML to PDF
-    console.log('[PDF Generator] Step 2: Converting HTML to PDF...')
     const pdfBuffer = await renderHtmlToPdfBuffer(html)
-    console.log('[PDF Generator] ✅ PDF generated successfully, size:', pdfBuffer.length, 'bytes')
-    console.log('[PDF Generator] ==========================================')
     
     return pdfBuffer
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const e = error instanceof Error ? error : null
     console.error('[PDF Generator] ==========================================')
-    console.error('[PDF Generator] ❌ ERROR generating PDF:')
-    console.error('[PDF Generator] Message:', error?.message)
-    console.error('[PDF Generator] Stack:', error?.stack)
+    console.error('[PDF Generator] ERROR generating PDF:')
+    console.error('[PDF Generator] Message:', e?.message)
+    console.error('[PDF Generator] Stack:', e?.stack)
     console.error('[PDF Generator] ==========================================')
-    throw new Error(`Failed to generate PDF: ${error.message || 'Unknown error'}`)
+    throw new Error(`Failed to generate PDF: ${e?.message || 'Unknown error'}`)
   }
 }
 

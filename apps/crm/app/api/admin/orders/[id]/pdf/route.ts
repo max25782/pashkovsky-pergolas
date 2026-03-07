@@ -67,12 +67,10 @@ export async function POST(
     }
 
     const order = await orderResponse.json()
-    console.log('[PDF API] Order fetched, generating PDF...')
 
     let pdfBuffer: Buffer
     try {
       pdfBuffer = await generateOrderPdf(order)
-      console.log('[PDF API] PDF buffer generated, size:', pdfBuffer.length)
     } catch (pdfErr: any) {
       const msg = pdfErr?.message || 'Unknown PDF error'
       console.error('[PDF API] PDF generation failed:', msg)
@@ -85,13 +83,11 @@ export async function POST(
     const filename = generateOrderPdfFilename(order)
     const key = `orders/${order.id}/${filename}`
 
-    console.log('[PDF API] Uploading PDF to S3:', key)
     const pdfUrl = await uploadToS3(pdfBuffer, key, 'application/pdf')
-    console.log('[PDF API] PDF uploaded to S3:', pdfUrl)
 
     return NextResponse.json({ pdfUrl, cached: false })
-  } catch (error: any) {
-    const msg = error?.message || 'Internal server error'
+  } catch (error: unknown) {
+    const msg = (error instanceof Error ? error.message : String(error)) || 'Internal server error'
     console.error('[PDF API] Unexpected error:', msg)
     return NextResponse.json(
       { error: msg },

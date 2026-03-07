@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
       work_shifts: workShifts,
       count: workers?.length || 0,
     })
-  } catch (error: any) {
+  } catch (error) {
     console.error('[AI Director] Unexpected error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

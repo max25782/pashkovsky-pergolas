@@ -27,8 +27,6 @@ async function fetchOffer(id: string): Promise<Offer | null> {
   }
 
   // Log raw shape data for debugging
-  console.log('[PDF] Raw pergola_shape_data from DB:', JSON.stringify(data.pergola_shape_data))
-  console.log('[PDF] Legacy fields - width:', data.pergola_width, 'length:', data.pergola_length)
 
   return {
     id: data.id,
@@ -166,7 +164,6 @@ export async function POST(
     const { searchParams } = new URL(req.url)
     const force = searchParams.get('force') === 'true'
 
-    console.log('[PDF API] PDF generation started for offer:', params.id, force ? '(forced)' : '')
     
     const offer = await fetchOffer(params.id)
     if (!offer) {
@@ -176,7 +173,6 @@ export async function POST(
 
     // If PDF already exists and not forcing regeneration, return existing URL
     if (offer.pdf?.url && !force) {
-      console.log('[PDF API] PDF already exists, returning cached URL:', offer.pdf.url)
       return NextResponse.json({ 
         pdfUrl: offer.pdf.url,
         cached: true,
@@ -184,34 +180,30 @@ export async function POST(
       })
     }
 
-    console.log('[PDF API] Generating PDF buffer...')
     const pdfBuffer = await generateOfferPdf(offer)
-    console.log('[PDF API] PDF buffer generated, size:', pdfBuffer.length)
 
     const filename = generateOfferPdfFilename(offer)
     const key = `offers/${offer.id}/${filename}`
 
-    console.log('[PDF API] Uploading PDF to S3:', key)
     const pdfUrl = await uploadToS3(pdfBuffer, key, 'application/pdf')
-    console.log('[PDF API] PDF uploaded to S3:', pdfUrl)
 
     await supabase
       .from('offers')
       .update({ pdf_url: pdfUrl, pdf_created_at: new Date().toISOString() })
       .eq('id', offer.id)
 
-    console.log('[PDF API] PDF URL saved to database')
     return NextResponse.json({ pdfUrl, cached: false })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as Error & { constructor?: { name?: string }; stack?: string }
     console.error('[PDF API] ==========================================')
-    console.error('[PDF API] ❌ ERROR generating PDF:')
-    console.error('[PDF API] Error type:', error?.constructor?.name || typeof error)
-    console.error('[PDF API] Error message:', error?.message || String(error))
-    console.error('[PDF API] Error stack:', error?.stack || 'No stack trace')
+    console.error('[PDF API] ERROR generating PDF:')
+    console.error('[PDF API] Error type:', err?.constructor?.name || typeof error)
+    console.error('[PDF API] Error message:', err instanceof Error ? err.message : String(error))
+    console.error('[PDF API] Error stack:', err?.stack || 'No stack trace')
     console.error('[PDF API] ==========================================')
     
     // Provide more helpful error messages
-    let errorMessage = error?.message || 'Unknown error'
+    let errorMessage = err instanceof Error ? err.message : String(error)
     if (errorMessage.includes('Failed to launch browser') || errorMessage.includes('Failed to launch Puppeteer')) {
       errorMessage = 'Не удалось запустить браузер для генерации PDF. Убедитесь, что Puppeteer установлен правильно.'
     } else if (errorMessage.includes('Failed to render PDF')) {
@@ -222,7 +214,7 @@ export async function POST(
       { 
         error: 'Failed to generate PDF', 
         details: errorMessage,
-        originalError: process.env.NODE_ENV === 'development' ? error?.message : undefined
+        originalError: process.env.NODE_ENV === 'development' && err instanceof Error ? err.message : undefined
       },
       { status: 500 }
     )
@@ -257,10 +249,10 @@ export async function GET(
 
     // Redirect to S3 URL
     return NextResponse.redirect(data.pdf_url)
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching PDF:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch PDF', details: error.message },
+      { error: 'Failed to fetch PDF', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     )
   }

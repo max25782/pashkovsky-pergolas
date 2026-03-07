@@ -80,12 +80,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    console.log('[Media Tag] Upserted:', { key, tags: validatedTags })
     return NextResponse.json({ success: true, asset: data })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Media Tag] Error:', error)
     return NextResponse.json(
-      { error: error.message ?? 'Failed to save tags' },
+      { error: (error instanceof Error ? error.message : String(error)) ?? 'Failed to save tags' },
       { status: 500 },
     )
   }

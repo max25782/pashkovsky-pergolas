@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
       message: 'Password reset successfully',
     })
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('[Password Reset] Unexpected error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },

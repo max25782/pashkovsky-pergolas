@@ -60,10 +60,10 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({ integration })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Integration API] GET error:', error)
-    
-    if (error.message?.includes('Unauthorized')) {
+    const msg = error instanceof Error ? error.message : String(error)
+    if (msg?.includes('Unauthorized')) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }

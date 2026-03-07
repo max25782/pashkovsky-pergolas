@@ -50,12 +50,6 @@ export class TranzilaProvider {
     // TODO: Implement Tranzila Recurring Payments API
     // https://direct.tranzila.com/api/recurring
 
-    console.log('[Tranzila] Creating subscription:', {
-      companyId: params.companyId,
-      planId: params.planId,
-      customer: params.customerEmail,
-    })
-
     throw new Error('Tranzila integration not yet implemented')
 
     /* Implementation outline:
@@ -88,7 +82,6 @@ export class TranzilaProvider {
    * Cancel subscription
    */
   async cancelSubscription(subscriptionId: string): Promise<void> {
-    console.log('[Tranzila] Canceling subscription:', subscriptionId)
     throw new Error('Tranzila integration not yet implemented')
   }
 
@@ -99,7 +92,6 @@ export class TranzilaProvider {
     subscriptionId: string,
     creditCard: CreateSubscriptionParams['creditCard']
   ): Promise<void> {
-    console.log('[Tranzila] Updating payment method:', subscriptionId)
     throw new Error('Tranzila integration not yet implemented')
   }
 
@@ -107,7 +99,6 @@ export class TranzilaProvider {
    * Get subscription details
    */
   async getSubscription(subscriptionId: string): Promise<TranzilaSubscription | null> {
-    console.log('[Tranzila] Getting subscription:', subscriptionId)
     throw new Error('Tranzila integration not yet implemented')
   }
 
@@ -121,7 +112,6 @@ export class TranzilaProvider {
     creditCard: CreateSubscriptionParams['creditCard']
     description: string
   }): Promise<{ success: boolean; transaction_id: string }> {
-    console.log('[Tranzila] Processing payment:', params.amount, params.currency)
     throw new Error('Tranzila integration not yet implemented')
   }
 
@@ -130,7 +120,6 @@ export class TranzilaProvider {
    */
   verifyWebhook(payload: any, signature: string): boolean {
     // TODO: Implement signature verification
-    console.log('[Tranzila] Verifying webhook')
     return false
   }
 }

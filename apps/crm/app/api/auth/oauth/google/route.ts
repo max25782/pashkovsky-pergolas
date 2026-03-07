@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
     
     // Redirect to Google OAuth
     return NextResponse.redirect(authUrl)
-  } catch (error: any) {
+  } catch (error) {
     console.error('[Google OAuth] Error:', error)
     return NextResponse.json(
       { error: 'Failed to initiate OAuth flow' },

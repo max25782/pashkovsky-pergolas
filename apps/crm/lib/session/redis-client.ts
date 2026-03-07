@@ -47,7 +47,6 @@ export async function createSession(data: Omit<SuperAdminSession, 'created_at' |
     JSON.stringify(session)
   )
   
-  console.log('[Session] Created:', { sessionId, email: session.email })
   
   return sessionId
 }
@@ -80,7 +79,6 @@ export async function getSession(sessionId: string): Promise<SuperAdminSession |
  */
 export async function deleteSession(sessionId: string): Promise<void> {
   await redis.del(`${SESSION_PREFIX}${sessionId}`)
-  console.log('[Session] Deleted:', sessionId)
 }
 
 /**

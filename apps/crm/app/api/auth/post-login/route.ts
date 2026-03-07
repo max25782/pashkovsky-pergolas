@@ -32,7 +32,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    console.log('[PostLogin] Ensuring trial for user:', user.email)
 
     // Call PostgreSQL function to ensure trial (idempotent)
     const serviceClient = createServiceClient(
@@ -60,17 +59,16 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    console.log('[PostLogin] Trial ensured for company:', data)
 
     return NextResponse.json({
       ok: true,
       trial_ensured: true,
       company_id: data,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[PostLogin] Unexpected error:', error)
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: (error instanceof Error ? error.message : String(error)) || 'Internal server error' },
       { status: 500 }
     )
   }

@@ -77,8 +77,8 @@ export default function IntegrationsSettingsPage() {
       
       // Reload integration
       await loadIntegration()
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || 'Failed to submit request' })
+    } catch (error: unknown) {
+      setMessage({ type: 'error', text: (error instanceof Error ? error.message : String(error)) || 'Failed to submit request' })
     } finally {
       setSubmitting(false)
     }

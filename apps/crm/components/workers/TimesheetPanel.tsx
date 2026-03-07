@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useCallback } from 'react'
+import { useToast } from '@/components/ui/toast'
 import { Plus, Edit2, Trash2, Copy, FileText, Loader2 } from 'lucide-react'
 import type { WorkerShift, WorkerShiftSummary } from '@/types/workers'
 import { authFetch } from '@/lib/api/auth-fetch'
@@ -41,6 +42,7 @@ function getDaysInMonth(month: string): string[] {
 }
 
 export function TimesheetPanel({ workerId, workerName, month }: TimesheetPanelProps) {
+  const toast = useToast()
   const [shifts, setShifts] = useState<WorkerShift[]>([])
   const [summary, setSummary] = useState<WorkerShiftSummary | null>(null)
   const [loading, setLoading] = useState(false)
@@ -96,7 +98,7 @@ export function TimesheetPanel({ workerId, workerName, month }: TimesheetPanelPr
       if (!r.ok) throw new Error('Failed to delete')
       fetchShifts()
     } catch {
-      alert('Failed to delete shift')
+      toast.error('Failed to delete shift')
     }
   }
 

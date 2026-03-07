@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
       token: newAccessToken,
     })
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('[Refresh Token] Unexpected error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },

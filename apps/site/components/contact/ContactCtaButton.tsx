@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { FaWhatsapp } from 'react-icons/fa'
 import type { Locale } from '@/lib/locales'
+import { useToast } from '@/components/ui/toast'
 import { trackFormSubmit, trackWhatsApp, trackClick } from '@/lib/gtag-events'
 import { getCookie } from '@/lib/cookies'
 
@@ -65,6 +66,7 @@ function getCopy(locale: Locale) {
 }
 
 export default function ContactCtaButton({ locale = 'he', className, buttonText }: ContactCtaButtonProps) {
+  const toast = useToast()
   const copy = getCopy(locale)
   const [isOpen, setIsOpen] = useState(false)
   const [step, setStep] = useState(1)
@@ -102,7 +104,7 @@ export default function ContactCtaButton({ locale = 'he', className, buttonText 
       })
       if (!resp.ok) {
         // Fallback alert messages based on locale
-        alert(locale === 'he' ? 'שגיאה בשמירה, נסה שוב' : locale === 'ru' ? 'Ошибка сохранения, попробуйте снова' : 'Save failed, try again')
+        toast.error(locale === 'he' ? 'שגיאה בשמירה, נסה שוב' : locale === 'ru' ? 'Ошибка сохранения, попробуйте снова' : 'Save failed, try again')
         setLoading(false)
         return
       }
@@ -110,7 +112,7 @@ export default function ContactCtaButton({ locale = 'he', className, buttonText 
       setLoading(false)
       setStep(2)
     } catch (err) {
-      alert(locale === 'he' ? 'שגיאת רשת, בדוק חיבור' : locale === 'ru' ? 'Ошибка сети, проверьте соединение' : 'Network error')
+      toast.error(locale === 'he' ? 'שגיאת רשת, בדוק חיבור' : locale === 'ru' ? 'Ошибка сети, проверьте соединение' : 'Network error')
       setLoading(false)
     }
   }

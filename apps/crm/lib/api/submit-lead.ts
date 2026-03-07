@@ -97,7 +97,7 @@ export async function submitLead(
       success: true,
       id: result.id,
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error('[Lead Submission] Error:', error)
     return {
       success: false,

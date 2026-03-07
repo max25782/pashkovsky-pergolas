@@ -10,6 +10,7 @@ import { cm } from './utils'
 import { useProfiles } from './useProfiles'
 import { ControlsPanel } from './ControlsPanel'
 import { SceneWithSaveBridge } from './SceneWithSaveBridge'
+import { useToast } from '@/components/ui/toast'
 import { getTranslations } from './translations'
 
 interface Pergola3DProps {
@@ -17,6 +18,7 @@ interface Pergola3DProps {
 }
 
 export function Pergola3D({ locale }: Pergola3DProps): ReactElement {
+  const toast = useToast()
   const [params, setParams] = useState<PergolaParams>({
     widthCm: 400,
     depthCm: 350,
@@ -91,6 +93,8 @@ export function Pergola3D({ locale }: Pergola3DProps): ReactElement {
           beamDepthCm={beamDepthCm}
           lamellaHeightCm={lamellaHeightCm}
           lamellaDepthCm={lamellaDepthCm}
+          onSaveSuccess={(msg) => toast.success(msg)}
+          onSaveError={(msg) => toast.error(msg)}
         />
       </Canvas>
 

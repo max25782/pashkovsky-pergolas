@@ -1,73 +1,82 @@
 'use client'
-import { useCallback, useEffect, useRef, useState } from 'react'
+
+import { createContext, useContext, useCallback, useState, ReactNode } from 'react'
 import { X } from 'lucide-react'
+import clsx from 'clsx'
 
-type ToastType = 'success' | 'error' | 'info'
+type ToastVariant = 'success' | 'error' | 'info' | 'warning'
 
-interface ToastItem {
+interface Toast {
   id: string
   message: string
-  type: ToastType
+  variant: ToastVariant
 }
 
-interface ToastProps {
-  toasts: ToastItem[]
-  onDismiss: (id: string) => void
+interface ToastContextValue {
+  toast: (message: string, variant?: ToastVariant) => void
+  success: (message: string) => void
+  error: (message: string) => void
+  info: (message: string) => void
+  warning: (message: string) => void
 }
 
-export function ToastContainer({ toasts, onDismiss }: ToastProps) {
-  if (toasts.length === 0) return null
+const ToastContext = createContext<ToastContextValue | undefined>(undefined)
+
+export function ToastProvider({ children }: { children: ReactNode }) {
+  const [toasts, setToasts] = useState<Toast[]>([])
+
+  const dismiss = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id))
+  }, [])
+
+  const addToast = useCallback((message: string, variant: ToastVariant = 'info') => {
+    const id = Math.random().toString(36).slice(2)
+    setToasts((prev) => [...prev, { id, message, variant }])
+    setTimeout(() => dismiss(id), 4000)
+  }, [dismiss])
+
+  const value: ToastContextValue = {
+    toast: addToast,
+    success: (msg) => addToast(msg, 'success'),
+    error: (msg) => addToast(msg, 'error'),
+    info: (msg) => addToast(msg, 'info'),
+    warning: (msg) => addToast(msg, 'warning'),
+  }
+
   return (
-    <div className="fixed bottom-4 left-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none">
-      {toasts.map(toast => (
-        <div
-          key={toast.id}
-          className={`flex items-start gap-3 px-4 py-3 rounded-lg shadow-lg border text-sm font-medium pointer-events-auto transition-all ${
-            toast.type === 'success'
-              ? 'bg-green-900/90 border-green-500/40 text-green-200'
-              : toast.type === 'error'
-              ? 'bg-red-900/90 border-red-500/40 text-red-200'
-              : 'bg-blue-900/90 border-blue-500/40 text-blue-200'
-          }`}
-        >
-          <span className="flex-1">{toast.message}</span>
-          <button
-            onClick={() => onDismiss(toast.id)}
-            className="shrink-0 opacity-70 hover:opacity-100 transition-opacity"
-            aria-label="Dismiss"
+    <ToastContext.Provider value={value}>
+      {children}
+      <div className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2 max-w-sm w-full pointer-events-none">
+        {toasts.map((t) => (
+          <div
+            key={t.id}
+            className={clsx(
+              'flex items-start gap-3 px-4 py-3 rounded-lg shadow-lg border pointer-events-auto',
+              'animate-in slide-in-from-bottom-2 duration-200',
+              {
+                'bg-green-900/90 border-green-600/50 text-green-100': t.variant === 'success',
+                'bg-red-900/90 border-red-600/50 text-red-100': t.variant === 'error',
+                'bg-yellow-900/90 border-yellow-600/50 text-yellow-100': t.variant === 'warning',
+                'bg-gray-800/90 border-white/20 text-white': t.variant === 'info',
+              }
+            )}
           >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      ))}
-    </div>
+            <span className="flex-1 text-sm leading-snug">{t.message}</span>
+            <button
+              onClick={() => dismiss(t.id)}
+              className="text-current opacity-60 hover:opacity-100 transition shrink-0 mt-0.5"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        ))}
+      </div>
+    </ToastContext.Provider>
   )
 }
 
-export function useToast(autoDismissMs = 4000) {
-  const [toasts, setToasts] = useState<ToastItem[]>([])
-  const timers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
-
-  const dismiss = useCallback((id: string) => {
-    setToasts(prev => prev.filter(t => t.id !== id))
-    const timer = timers.current.get(id)
-    if (timer !== undefined) {
-      clearTimeout(timer)
-      timers.current.delete(id)
-    }
-  }, [])
-
-  const show = useCallback((message: string, type: ToastType = 'info') => {
-    const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`
-    setToasts(prev => [...prev, { id, message, type }])
-    const timer = setTimeout(() => dismiss(id), autoDismissMs)
-    timers.current.set(id, timer)
-  }, [autoDismissMs, dismiss])
-
-  useEffect(() => {
-    const current = timers.current
-    return () => { current.forEach(t => clearTimeout(t)); current.clear() }
-  }, [])
-
-  return { toasts, show, dismiss }
+export function useToast(): ToastContextValue {
+  const ctx = useContext(ToastContext)
+  if (!ctx) throw new Error('useToast must be used within ToastProvider')
+  return ctx
 }

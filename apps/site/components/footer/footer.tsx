@@ -1,10 +1,10 @@
 // components/Footer.tsx
-import type { Locale } from '@/lib/locales'
+import { createTranslator, type Locale } from '@/lib/locales'
 import { FaWhatsapp, FaInstagram, FaFacebook } from 'react-icons/fa'
 import { SiTiktok } from 'react-icons/si'
 
 export default function Footer({ locale = 'he' }: { locale?: Locale }) {
-  const t = (he: string, ru: string, en: string) => (locale === 'he' ? he : locale === 'ru' ? ru : en)
+  const t = createTranslator(locale)
   return (
     <footer className="bg-neutral-900 text-neutral-200 py-10 px-6 mt-20">
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">

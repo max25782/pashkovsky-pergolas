@@ -50,7 +50,6 @@ export async function uploadLeadConversion(
   const cleanCustomerId = customerId.replace(/-/g, '')
   const conversionAction = getConversionAction()
 
-  console.log('[GoogleAds] Sending conversion', { gclid: gclid.substring(0, 20) + '...', value })
 
   const oauth2 = new OAuth2Client(
     process.env.GOOGLE_ADS_CLIENT_ID,
@@ -104,7 +103,6 @@ export async function uploadLeadConversion(
     throw new Error('Google Ads conversion partial failure')
   }
 
-  console.log('[GoogleAds] Conversion success')
 }
 
 /**

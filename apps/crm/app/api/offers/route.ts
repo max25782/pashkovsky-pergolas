@@ -30,7 +30,6 @@ export async function POST(req: NextRequest) {
     )
   }
   
-  console.log('[POST /api/offers] Company ID:', companyId)
 
   try {
     const body = await req.json()
@@ -252,14 +251,15 @@ export async function POST(req: NextRequest) {
     const offer = transformOfferFromDB(data)
 
     return NextResponse.json(offer, { status: 201 })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const e = error instanceof Error ? error : null
     console.error('Error in POST /api/offers:', error)
-    console.error('Error stack:', error.stack)
+    console.error('Error stack:', e?.stack)
     return NextResponse.json(
       { 
         error: 'Internal server error', 
-        details: error.message,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        details: e?.message ?? String(error),
+        stack: process.env.NODE_ENV === 'development' ? e?.stack : undefined
       },
       { status: 500 }
     )
@@ -304,10 +304,10 @@ export async function GET(req: NextRequest) {
     const offers = data.map(transformOfferFromDB)
 
     return NextResponse.json({ offers })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in GET /api/offers:', error)
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      { error: 'Internal server error', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     )
   }

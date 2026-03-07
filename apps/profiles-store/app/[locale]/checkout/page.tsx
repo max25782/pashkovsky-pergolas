@@ -8,6 +8,7 @@ import { CheckoutForm } from '@/components/checkout/CheckoutForm'
 import { OrderSummary } from '@/components/checkout/OrderSummary'
 import { Container } from '@/components/layout/Container'
 import { getTranslation, type Locale } from '@/lib/locales'
+import { useToast } from '@/components/ui/toast'
 
 export default function CheckoutPage() {
   const params = useParams()
@@ -15,6 +16,7 @@ export default function CheckoutPage() {
   const locale = (params.locale as Locale) || 'he'
   const companyId = searchParams.get('company_id') || process.env.NEXT_PUBLIC_COMPANY_ID
   const router = useRouter()
+  const toast = useToast()
   const hydrated = useCartHydrated()
   const { items, clear, removeItem, addItem } = useCart()
   const patchedRef = useRef(false)
@@ -84,7 +86,7 @@ export default function CheckoutPage() {
       router.push(`/${locale}/orders/${order.id}`)
     } catch (error) {
       console.error('Failed to submit order:', error)
-      alert('Failed to submit order. Please try again.')
+      toast.error('Failed to submit order. Please try again.')
       setIsSubmitting(false)
     }
   }

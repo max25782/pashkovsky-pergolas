@@ -147,8 +147,8 @@ export function ControlsPanel({
         >
           <option value="">{t.defaultPost}</option>
           {profilesLoading && <option disabled>{t.loadingProfiles}</option>}
-          {candidates.map(c => (
-            <option key={c.p.id} value={c.p.id}>
+          {candidates.map((c, idx) => (
+            <option key={`post-${c.p.id}-${idx}`} value={c.p.id}>
               {c.p.id} {c.dims ? `(${c.dims.a.toFixed(1)}x${c.dims.b.toFixed(1)} cm)` : ` ${t.dimensionsUnknown}`}
             </option>
           ))}
@@ -162,8 +162,8 @@ export function ControlsPanel({
         >
           <option value="">{t.defaultBeam}</option>
           {profilesLoading && <option disabled>{t.loadingProfiles}</option>}
-          {candidates.map(c => (
-            <option key={c.p.id} value={c.p.id}>
+          {candidates.map((c, idx) => (
+            <option key={`beam-${c.p.id}-${idx}`} value={c.p.id}>
               {c.p.id} {c.dims ? `(${c.dims.a.toFixed(1)}x${c.dims.b.toFixed(1)} cm)` : ` ${t.dimensionsUnknown}`}
             </option>
           ))}
@@ -177,8 +177,8 @@ export function ControlsPanel({
         >
           <option value="">{t.defaultLamella}</option>
           {profilesLoading && <option disabled>{t.loadingProfiles}</option>}
-          {candidates.map(c => (
-            <option key={c.p.id} value={c.p.id}>
+          {candidates.map((c, idx) => (
+            <option key={`lamella-${c.p.id}-${idx}`} value={c.p.id}>
               {c.p.id} {c.dims ? `(${c.dims.a.toFixed(1)}x${c.dims.b.toFixed(1)} cm)` : ` ${t.dimensionsUnknown}`}
             </option>
           ))}

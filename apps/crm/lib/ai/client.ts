@@ -112,14 +112,15 @@ export async function callLLM({
     return {
       content,
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error)
     console.error('[AI Analytics] Request error:', {
-      error: error.message?.substring(0, 500), // Limit log size
+      error: msg?.substring(0, 500), // Limit log size
     })
 
     return {
       content: '',
-      error: error.message || 'Unknown error occurred',
+      error: msg || 'Unknown error occurred',
     }
   }
 }

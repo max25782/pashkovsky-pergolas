@@ -3,6 +3,7 @@ import { useState } from "react"
 import type { Deal } from './deal-types'
 import { getStages } from './deal-types'
 import { useCRMTranslations } from './useCRMTranslations'
+import { useToast } from '@/components/ui/toast'
 import { RailingsFormFields, type RailingsFormValue } from './RailingsFormFields'
 
 interface CreateDealModalProps {
@@ -15,6 +16,7 @@ export function CreateDealModal({
   onCreate
 }: CreateDealModalProps) {
   const t = useCRMTranslations()
+  const toast = useToast();
   const stages = getStages(t.deals)
   const [customerType, setCustomerType] = useState<'private' | 'contractor'>('private')
   const [workType, setWorkType] = useState<'pergola' | 'railings' | 'gates' | 'facade' | 'other'>('pergola')
@@ -78,21 +80,21 @@ export function CreateDealModal({
 
   async function handleCreate() {
     if (!dealData.customer_name || !dealData.customer_phone) {
-      alert(t.deals.customerName === 'Customer Name' ? 'Please fill in customer name and phone' : t.deals.customerName === 'Имя клиента' ? 'Пожалуйста, заполните имя и телефон клиента' : 'אנא מלא שם וטלפון של הלקוח')
+      toast.error(t.deals.customerName === 'Customer Name' ? 'Please fill in customer name and phone' : t.deals.customerName === 'Имя клиента' ? 'Пожалуйста, заполните имя и телефон клиента' : 'אנא מלא שם וטלפון של הלקוח')
       return
     }
 
     if (workType === 'railings') {
       if (!railingsForm.meters_total || railingsForm.meters_total <= 0) {
-        alert(t.deals.metersTotal ? `${t.deals.metersTotal} ${t.deals.required}` : 'Meters total is required')
+        toast.error(t.deals.metersTotal ? `${t.deals.metersTotal} ${t.deals.required}` : 'Meters total is required')
         return
       }
       if (!railingsForm.profile_type?.trim()) {
-        alert(t.deals.profileType ? `${t.deals.profileType} ${t.deals.required}` : 'Profile type is required')
+        toast.error(t.deals.profileType ? `${t.deals.profileType} ${t.deals.required}` : 'Profile type is required')
         return
       }
       if (!railingsForm.color?.trim()) {
-        alert(t.deals.color ? `${t.deals.color} ${t.deals.required}` : 'Color is required')
+        toast.error(t.deals.color ? `${t.deals.color} ${t.deals.required}` : 'Color is required')
         return
       }
     }

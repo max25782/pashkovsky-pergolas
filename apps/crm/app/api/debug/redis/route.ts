@@ -28,10 +28,10 @@ export async function GET() {
         hasToken: !!process.env.UPSTASH_REDIS_REST_TOKEN,
       },
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json({
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
       env: {
         hasUrl: !!process.env.UPSTASH_REDIS_REST_URL,
         hasToken: !!process.env.UPSTASH_REDIS_REST_TOKEN,

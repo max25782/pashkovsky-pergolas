@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
@@ -207,8 +207,8 @@ export default function AIAnalyticsPage() {
       const newHistory = [historyItem, ...history].slice(0, 20) // Keep last 20
       setHistory(newHistory)
       localStorage.setItem('ai_analytics_history', JSON.stringify(newHistory))
-    } catch (err: any) {
-      setError(err.message || 'Ошибка при анализе')
+    } catch (err: unknown) {
+      setError((err instanceof Error ? err.message : String(err)) || 'Ошибка при анализе')
     } finally {
       setLoading(false)
     }
@@ -287,8 +287,8 @@ export default function AIAnalyticsPage() {
           suggestions: updatedSuggestions,
         })
       }
-    } catch (err: any) {
-      setError(`Ошибка при применении предложения: ${err.message}`)
+    } catch (err: unknown) {
+      setError(`Ошибка при применении предложения: ${err instanceof Error ? err.message : String(err)}`)
     } finally {
       setApplyingSuggestion(null)
     }

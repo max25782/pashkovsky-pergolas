@@ -15,6 +15,8 @@ interface SceneWithSaveBridgeProps {
   beamDepthCm: number
   lamellaHeightCm: number
   lamellaDepthCm: number
+  onSaveSuccess?: (message: string) => void
+  onSaveError?: (message: string) => void
 }
 
 export function SceneWithSaveBridge({
@@ -25,11 +27,12 @@ export function SceneWithSaveBridge({
   beamDepthCm,
   lamellaHeightCm,
   lamellaDepthCm,
+  onSaveSuccess,
+  onSaveError,
 }: SceneWithSaveBridgeProps): ReactElement {
-  const save = useSaver(() => params, locale)
-  // Expose save on window for the outer button to call
-  ;(globalThis as any).__savePergola = save
-  
+  const save = useSaver(() => params, locale, { onSuccess: onSaveSuccess, onError: onSaveError })
+  ;(globalThis as Record<string, unknown>).__savePergola = save
+
   return (
     <>
       <Lights />
@@ -45,4 +48,3 @@ export function SceneWithSaveBridge({
     </>
   )
 }
-

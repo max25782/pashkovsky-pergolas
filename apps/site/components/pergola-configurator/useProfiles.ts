@@ -22,7 +22,6 @@ export function useProfiles() {
           setProfiles(loadedProfiles)
           setProfilesLoading(false)
           if (loadedProfiles.length > 0) {
-            console.log(`Loaded ${loadedProfiles.length} profiles from /data/profiles.json`)
           }
         }
       })
@@ -57,7 +56,6 @@ export function useProfiles() {
       if (!lamellaExists) {
         console.warn('Default lamella profile f10020 not found or has no dimensions in profiles.json')
       }
-      console.log(`Loaded ${candidates.length} profiles (${candidates.filter(c => c.dims).length} with dimensions)`)
     }
   }, [profiles, candidates])
 

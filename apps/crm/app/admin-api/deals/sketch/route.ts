@@ -86,9 +86,9 @@ export async function POST(req: NextRequest) {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Ошибка POST sketch:', error)
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     })

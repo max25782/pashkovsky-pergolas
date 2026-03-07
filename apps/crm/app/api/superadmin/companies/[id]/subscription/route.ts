@@ -28,7 +28,6 @@ export async function GET(
     const resolvedParams = await context.params
     const companyId = resolvedParams.id
 
-    console.log('[SuperAdmin] Fetching subscription for company:', companyId)
 
     // Fetch subscription with plan details
     const { data: subscription, error: subError } = await supabaseAdmin
@@ -46,11 +45,6 @@ export async function GET(
       .eq('company_id', companyId)
       .limit(1)
 
-    console.log('[SuperAdmin] Subscription query result:', {
-      data: subscription,
-      error: subError,
-    })
-
     // Fetch subscription history
     const { data: history, error: historyError } = await supabaseAdmin
       .from('subscription_history')
@@ -65,11 +59,6 @@ export async function GET(
       .order('created_at', { ascending: false })
       .limit(10)
 
-    console.log('[SuperAdmin] History query result:', {
-      count: history?.length || 0,
-      error: historyError,
-    })
-
     return NextResponse.json({
       success: true,
       subscription: subscription?.[0] || null,
@@ -80,12 +69,12 @@ export async function GET(
         historyCount: history?.length || 0,
       },
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[SuperAdmin] Error fetching subscription:', error)
     return NextResponse.json(
       {
         success: false,
-        error: error.message || 'Failed to fetch subscription',
+        error: (error instanceof Error ? error.message : String(error)) || 'Failed to fetch subscription',
       },
       { status: 500 }
     )

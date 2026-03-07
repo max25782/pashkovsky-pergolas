@@ -248,7 +248,6 @@ export async function PATCH(req: NextRequest) {
   
   // Проверяем, что есть что обновлять
   if (Object.keys(updates).length === 0 && !hasRailingsUpdates) {
-    console.log('PATCH: No updates provided, fetching current deal')
     // Если нет обновлений, просто возвращаем текущую сделку
     const { data: currentDeal, error: fetchError } = await supabase
       .from('deals')
@@ -274,7 +273,6 @@ export async function PATCH(req: NextRequest) {
     if (updates[key] === '') updates[key] = null
   })
   
-  console.log('PATCH: Updating deal', id, 'with updates:', updates)
   
   // Сначала проверяем, существует ли сделка
   const { data: existingDeal, error: checkError } = await supabase
@@ -397,7 +395,6 @@ export async function PATCH(req: NextRequest) {
     })
   }
   
-  console.log('PATCH: Success, returning data:', data)
   
   // Log successful update
   await logDealEvent(req, 'update', data.id, updates, 'success')

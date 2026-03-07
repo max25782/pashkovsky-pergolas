@@ -222,9 +222,10 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.redirect(loginUrl.toString())
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Google OAuth] Callback error:', error)
-    return NextResponse.redirect(`${APP_URL}/he/auth/login?error=oauth_failed&details=${encodeURIComponent(error.message || 'Unknown error')}`)
+    const msg = error instanceof Error ? error.message : String(error)
+    return NextResponse.redirect(`${APP_URL}/he/auth/login?error=oauth_failed&details=${encodeURIComponent(msg || 'Unknown error')}`)
   }
 }
 

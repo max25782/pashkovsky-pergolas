@@ -17,7 +17,6 @@ if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
     if (error) {
       console.error('❌ Email transporter verification failed:', error)
     } else {
-      console.log('✅ Email transporter is ready to send messages')
     }
   })
 }
@@ -43,11 +42,10 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
       text: text || html.replace(/<[^>]*>/g, ''), // Strip HTML for plain text fallback
     })
 
-    console.log('✅ Email sent:', info.messageId)
     return { ok: true, messageId: info.messageId }
-  } catch (error: any) {
-    console.error('❌ Failed to send email:', error)
-    throw new Error(`Failed to send email: ${error.message}`)
+  } catch (error: unknown) {
+    console.error('Failed to send email:', error)
+    throw new Error(`Failed to send email: ${error instanceof Error ? error.message : String(error)}`)
   }
 }
 

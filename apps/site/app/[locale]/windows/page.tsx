@@ -1,3 +1,4 @@
+import { createTranslator } from '@/lib/locales'
 import type { Locale } from '@/lib/locales'
 import { MediaGallery } from '@/components/generic/MediaGallery'
 import ArticleModal from '@/components/articleModal'
@@ -30,7 +31,6 @@ async function getWindowsImages(): Promise<MediaItem[]> {
   const s3Client = getS3Client()
   
   if (!S3_BUCKET || !s3Client) {
-    console.log('[Windows] S3 not configured, using static data')
     return (windowsData as { items: MediaItem[] }).items || []
   }
 
@@ -62,7 +62,6 @@ async function getWindowsImages(): Promise<MediaItem[]> {
 
     // If S3 is empty, fallback to static data
     if (items.length === 0) {
-      console.log('[Windows] S3 returned 0 items, using static fallback')
       return (windowsData as { items: MediaItem[] }).items || []
     }
 
@@ -73,7 +72,7 @@ async function getWindowsImages(): Promise<MediaItem[]> {
 }
 
 export default async function Page({ params: { locale } }: { params: { locale: Locale } }) {
-  const t = (he: string, ru: string, en: string) => (locale === 'he' ? he : locale === 'ru' ? ru : en)
+  const t = createTranslator(locale)
   
   const items = await getWindowsImages()
 

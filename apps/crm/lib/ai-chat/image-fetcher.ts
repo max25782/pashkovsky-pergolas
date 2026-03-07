@@ -55,7 +55,6 @@ export async function fetchImagesByContext(text: string): Promise<string[]> {
 
     const rows = data ?? []
     if (rows.length === 0) {
-      console.log(`[AI Chat] No images found for tag: ${tagsToQuery[0]}`)
       return []
     }
 
@@ -73,7 +72,6 @@ export async function fetchImagesByContext(text: string): Promise<string[]> {
     )
 
     const valid = urls.filter(Boolean)
-    console.log(`[AI Chat] Media query (${tagsToQuery[0]}): ${valid.length} images`)
     return valid
   } catch (e) {
     console.warn('[AI Chat] fetchImagesByContext failed:', e)

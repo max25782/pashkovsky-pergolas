@@ -11,7 +11,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // SuperAdmins can access /app/admin without company membership (for testing/debugging)
   const isAdmin = await isSuperAdmin(user.id)
   if (isAdmin) {
-    console.log('[AdminLayout] SuperAdmin access granted:', user.email)
     return <>{children}</>
   }
 

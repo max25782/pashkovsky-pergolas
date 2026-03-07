@@ -1,5 +1,6 @@
 'use client'
 
+import { useToast } from '@/components/ui/toast'
 /**
  * SuperAdmin Integrations Management Page
  * View and manage all company integrations
@@ -22,6 +23,7 @@ interface IntegrationWithCompany extends CompanyIntegration {
 }
 
 export default function SuperAdminIntegrationsPage() {
+  const toast = useToast()
   const t = integrationsTranslations.en // SuperAdmin always EN
   
   const [integrations, setIntegrations] = useState<IntegrationWithCompany[]>([])
@@ -97,16 +99,16 @@ export default function SuperAdminIntegrationsPage() {
 
       if (action === 'rotate') {
         const result = await response.json()
-        alert(`New webhook secret: ${result.new_secret}\n\nMake sure to update the company's integration settings!`)
+        toast.info(`New webhook secret: ${result.new_secret}`)
       } else {
-        alert(`Integration ${action}d successfully!`)
+        toast.success(`Integration ${action}d successfully!`)
       }
 
       // Reload data
       loadIntegrations()
-    } catch (error: any) {
+    } catch (error) {
       console.error('[SuperAdmin] Action error:', error)
-      alert(error.message || 'Action failed')
+      toast.error(error instanceof Error ? error.message : 'Action failed')
     }
   }
 

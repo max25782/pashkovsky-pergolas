@@ -131,9 +131,7 @@ export function DealsTable() {
           deal={selectedDeal}
           onClose={() => setSelectedDeal(null)}
           onUpdate={async (updates) => {
-            console.log('DealsTable onUpdate called with:', updates)
             const result = await patch(selectedDeal.id, updates)
-            console.log('Patch result:', result)
             await reload()
             return result
           }}

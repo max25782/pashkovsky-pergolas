@@ -1,9 +1,10 @@
+'use client'
+
+import { useToast } from '@/components/ui/toast'
 /**
  * Companies Table - Client Component
  * Handles company deletion
  */
-
-'use client'
 
 import { useState } from 'react'
 import { Building2, Trash2 } from 'lucide-react'
@@ -27,6 +28,7 @@ interface CompaniesTableProps {
 
 export function CompaniesTable({ companies }: CompaniesTableProps) {
   const router = useRouter()
+  const toast = useToast()
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const handleView = (company: Company) => {
@@ -70,17 +72,16 @@ export function CompaniesTable({ companies }: CompaniesTableProps) {
         throw new Error(errorMessage)
       }
 
-      console.log('[CompaniesTable] Company deleted:', company.name)
       
       // Show success message
-      alert(`Company "${company.name}" deleted successfully`)
+      toast.success(`Company "${company.name}" deleted successfully`)
       
       // Hard refresh to show updated list
       window.location.reload()
     } catch (error) {
       console.error('[CompaniesTable] Delete error:', error)
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      alert(`Failed to delete company: ${errorMessage}\n\nCheck browser console for details.`)
+      toast.error(`Failed to delete company: ${errorMessage}`)
     } finally {
       setDeletingId(null)
     }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { authFetch } from '@/lib/api/auth-fetch'
+import { useToast } from '@/components/ui/toast'
 import { Plus, Edit, Trash2, Image as ImageIcon, Upload, Loader2, X } from 'lucide-react'
 
 interface AluminumProfile {
@@ -34,6 +35,7 @@ const categoryNames: Record<string, string> = {
 }
 
 export function ProfilesTable() {
+  const toast = useToast()
   const [profiles, setProfiles] = useState<AluminumProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -84,45 +86,39 @@ export function ProfilesTable() {
 
     // Validation
     if (!editingProfile.code || !editingProfile.weight_per_meter || !editingProfile.price_per_kg) {
-      alert('Заполните все обязательные поля (код, вес за метр, цена за кг)')
+      toast.error('Заполните все обязательные поля (код, вес за метр, цена за кг)')
       return
     }
 
     try {
       const isNew = !editingProfile.id || editingProfile.id === ''
-      const url = isNew 
+      const url = isNew
         ? '/api/admin/profiles'
         : `/api/admin/profiles/${editingProfile.id}`
 
-      // Prepare payload - remove fields that shouldn't be sent
-      const payload: any = { ...editingProfile }
-      
-      // Remove server-managed fields (for both new and update)
-      delete payload.id
-      delete payload.company_id
-      delete payload.created_at
-      delete payload.updated_at
+      type ProfilePayload = Omit<AluminumProfile, 'id' | 'created_at' | 'updated_at'>
+      const payloadObj = { ...editingProfile } as AluminumProfile & { company_id?: string }
+      const { id: _id, created_at: _ca, updated_at: _ua, company_id: _cid, ...payload } = payloadObj
+      void _id; void _ca; void _ua; void _cid
 
       const response = await authFetch(url, {
         method: isNew ? 'POST' : 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload as Partial<ProfilePayload>),
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to save profile')
+        const data = await response.json() as { error?: string }
+        throw new Error(data.error ?? 'Failed to save profile')
       }
 
-      alert('Профиль сохранен!')
+      toast.success('Профиль сохранен!')
       loadProfiles()
       setShowForm(false)
       setEditingProfile(null)
     } catch (error) {
       console.error('Error saving profile:', error)
-      alert(error instanceof Error ? error.message : 'Ошибка сохранения')
+      toast.error(error instanceof Error ? error.message : 'Ошибка сохранения')
     }
   }
 
@@ -138,11 +134,11 @@ export function ProfilesTable() {
         throw new Error('Failed to delete profile')
       }
 
-      alert('Профиль удален!')
+      toast.success('Профиль удален!')
       loadProfiles()
     } catch (error) {
       console.error('Error deleting profile:', error)
-      alert('Ошибка удаления')
+      toast.error('Ошибка удаления')
     }
   }
 

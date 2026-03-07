@@ -58,8 +58,6 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
 
     try {
       const requestBody = { ...draft, ...calculation }
-      console.log('Submitting offer:', requestBody)
-      console.log('Pergola shape:', requestBody.pergola?.shape)
       
       const response = await authFetch('/api/offers', {
         method: 'POST',
@@ -73,7 +71,6 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
         let errorMessage = 'Failed to create offer'
         try {
           const errorData = await response.json()
-          console.log('API Error:', errorData)
           errorMessage = errorData.error || errorData.details || errorMessage
           if (errorData.details) {
             console.error('Error details:', errorData.details)
@@ -92,9 +89,9 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
       const newOffer = await response.json()
       onCreated?.(newOffer)
       onClose()
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error creating offer:', err)
-      setError(err.message || 'Failed to create offer. Please check console for details.')
+      setError((err instanceof Error ? err.message : String(err)) || 'Failed to create offer. Please check console for details.')
     } finally {
       setIsSubmitting(false)
     }
@@ -197,14 +194,12 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
       return
     }
     
-    console.log('[AI Improve] Starting improvement for text:', currentNotes)
     
     setIsImprovingText(true)
     setError(null)
     setAiSuggestion(null)
     
     try {
-      console.log('[AI Improve] Calling API...')
       const response = await authFetch('/api/ai/improve-offer-text', {
         method: 'POST',
         headers: {
@@ -220,7 +215,6 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
         }),
       })
       
-      console.log('[AI Improve] Response status:', response.status)
       
       if (!response.ok) {
         const errorData = await response.json()
@@ -229,11 +223,10 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
       }
       
       const data = await response.json()
-      console.log('[AI Improve] Success! Improved text:', data.improvedText)
       setAiSuggestion(data.improvedText)
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[AI Improve] Error:', err)
-      setError(err.message || 'שגיאה בשיפור הטקסט')
+      setError((err instanceof Error ? err.message : String(err)) || 'שגיאה בשיפור הטקסט')
     } finally {
       setIsImprovingText(false)
     }
@@ -241,7 +234,6 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
 
   // Generate complete professional description automatically
   const generateCompleteDescription = useCallback(async () => {
-    console.log('[AI Generate] Starting auto-generation...')
     
     setIsGeneratingDescription(true)
     setError(null)
@@ -281,7 +273,6 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
         baseDescription += ` (כולל ${draft.discountPercent}% הנחה!)`
       }
       
-      console.log('[AI Generate] Base description created, calling AI...')
       
       // Now improve it with AI
       const response = await authFetch('/api/ai/improve-offer-text', {
@@ -299,7 +290,6 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
         }),
       })
       
-      console.log('[AI Generate] Response status:', response.status)
       
       if (!response.ok) {
         const errorData = await response.json()
@@ -308,14 +298,13 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
       }
       
       const data = await response.json()
-      console.log('[AI Generate] Success! Generated text:', data.improvedText)
       
       // Set the generated text directly as notes
       updateOptions({ notes: data.improvedText })
       setAiSuggestion(null) // Clear any previous suggestions
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[AI Generate] Error:', err)
-      setError(err.message || 'שגיאה ביצירת תיאור אוטומטי')
+      setError((err instanceof Error ? err.message : String(err)) || 'שגיאה ביצירת תיאור אוטומטי')
     } finally {
       setIsGeneratingDescription(false)
     }

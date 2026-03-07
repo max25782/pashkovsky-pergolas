@@ -46,10 +46,6 @@ export function assertCompanyOwnership(
 ): void {
   // Log the check
   const checkId = Math.random().toString(36).substring(7)
-  console.log(`[Security Check ${checkId}] Verifying ${resourceType} ownership`, {
-    resourceCompanyId: resourceCompanyId?.substring(0, 8),
-    expectedCompanyId: expectedCompanyId?.substring(0, 8),
-  })
 
   // Check 1: Resource must have company_id
   if (!resourceCompanyId) {
@@ -92,7 +88,6 @@ export function assertCompanyOwnership(
     )
   }
 
-  console.log(`[Security Check ${checkId}] ✅ Ownership verified`)
 }
 
 /**

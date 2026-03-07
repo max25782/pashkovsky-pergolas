@@ -63,9 +63,10 @@ export async function POST(req: NextRequest) {
         headers: { 'Content-Type': 'application/json' },
       })
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error('Leads API error', e)
-    return new Response(JSON.stringify({ error: 'Server error', detail: String(e?.message ?? e) }), {
+    const detail = e instanceof Error ? e.message : String(e)
+    return new Response(JSON.stringify({ error: 'Server error', detail }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     })

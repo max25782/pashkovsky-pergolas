@@ -225,12 +225,6 @@ async function* streamGeminiResponse(
     },
   }
 
-  console.log('[AI Chat] Calling Gemini API (non-streaming):', {
-    model: AI_CONFIG.model,
-    messageCount: geminiContents.length,
-    url: apiUrl.replace(GEMINI_API_KEY, '***'),
-  })
-
   const response = await fetch(apiUrl, {
     method: 'POST',
     headers: {
@@ -472,9 +466,6 @@ export async function POST(req: NextRequest) {
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          console.log('[AI Chat] Starting Gemini stream, history length:', history.length)
-          console.log('[AI Chat] GEMINI_API_KEY exists:', !!GEMINI_API_KEY)
-          console.log('[AI Chat] Model:', AI_CONFIG.model)
           
           let chunkCount = 0
           let detectedImageUrls: string[] = []
@@ -499,7 +490,6 @@ export async function POST(req: NextRequest) {
               }
               
               if (chunkCount === 1) {
-                console.log('[AI Chat] First chunk received, length:', chunk.length)
               }
             }
           } catch (streamError: any) {
@@ -512,20 +502,17 @@ export async function POST(req: NextRequest) {
             throw streamError
           }
           
-          console.log('[AI Chat] Stream completed, total chunks:', chunkCount, 'total length:', fullResponse.length)
           
           // Save assistant response
           if (fullResponse) {
             try {
               await saveMessage(sessionId, 'assistant', fullResponse)
-              console.log('[AI Chat] Assistant message saved')
             } catch (error) {
               console.error('[AI Chat] Failed to save assistant message:', error)
             }
 
             // Detect appointment confirmation and send calendar invite (fire-and-forget)
             if (isAppointmentConfirmation(fullResponse)) {
-              console.log('[AI Chat] Appointment confirmation detected — sending calendar invite')
               const allMessages = [...history, { role: 'assistant', content: fullResponse }]
               extractAppointment(allMessages)
                 .then((appt) => {
@@ -542,11 +529,12 @@ export async function POST(req: NextRequest) {
           
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, remaining })}\n\n`))
           controller.close()
-        } catch (error: any) {
+        } catch (error: unknown) {
+          const e = error as Error & { stack?: string; name?: string }
           console.error('[AI Chat] Streaming error:', error)
-          console.error('[AI Chat] Error stack:', error?.stack)
-          console.error('[AI Chat] Error name:', error?.name)
-          const errorMessage = error?.message || 'Failed to generate response'
+          console.error('[AI Chat] Error stack:', e?.stack)
+          console.error('[AI Chat] Error name:', e?.name)
+          const errorMessage = (e?.message ?? String(error)) || 'Failed to generate response'
           console.error('[AI Chat] Sending error to client:', errorMessage)
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: errorMessage })}\n\n`))
           controller.close()
@@ -562,12 +550,13 @@ export async function POST(req: NextRequest) {
       },
     })
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[AI Chat] POST error:', error)
-    const errorMessage = error?.message || 'Internal server error'
+    const e = error as Error & { stack?: string }
+    const errorMessage = (e?.message ?? String(error)) || 'Internal server error'
     return new Response(JSON.stringify({ 
       error: errorMessage,
-      details: process.env.NODE_ENV === 'development' ? error?.stack : undefined
+      details: process.env.NODE_ENV === 'development' ? e?.stack : undefined
     }), { 
       status: 500,
       headers: { 'Content-Type': 'application/json' }

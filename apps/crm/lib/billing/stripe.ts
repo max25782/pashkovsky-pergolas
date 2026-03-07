@@ -43,7 +43,6 @@ export class StripeProvider {
     name: string
     metadata?: Record<string, string>
   }): Promise<any> {
-    console.log('[Stripe] createCustomer called (placeholder):', params)
     throw new Error('Stripe not implemented yet')
   }
 
@@ -51,7 +50,6 @@ export class StripeProvider {
    * Create subscription - PLACEHOLDER
    */
   async createSubscription(params: CreateSubscriptionParams): Promise<any> {
-    console.log('[Stripe] createSubscription called (placeholder):', params)
     throw new Error('Stripe not implemented yet')
   }
 
@@ -62,7 +60,6 @@ export class StripeProvider {
     subscriptionId: string,
     cancelAtPeriodEnd: boolean = true
   ): Promise<any> {
-    console.log('[Stripe] cancelSubscription called (placeholder):', { subscriptionId, cancelAtPeriodEnd })
     throw new Error('Stripe not implemented yet')
   }
 }

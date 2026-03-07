@@ -100,7 +100,6 @@ export async function PATCH(req: NextRequest) {
   if (updates.status === '') updates.status = null
   if (updates.notes === '') updates.notes = null
   
-  console.log('PATCH: Updating lead', id, 'with', updates)
   
   // First, get the current lead to check if status is changing to 'won'
   const { data: currentLead } = await supabase
@@ -155,7 +154,6 @@ export async function PATCH(req: NextRequest) {
         console.error('Failed to create deal from won lead:', dealError)
         // Don't fail the lead update, just log the error
       } else {
-        console.log('Successfully created deal from won lead:', newDeal?.id)
       }
     } catch (dealErr) {
       console.error('Error creating deal from won lead:', dealErr)
@@ -163,7 +161,6 @@ export async function PATCH(req: NextRequest) {
     }
   }
   
-  console.log('PATCH: Successfully updated', data)
   return new Response(JSON.stringify(data), { 
     status: 200,
     headers: { 'Content-Type': 'application/json' }

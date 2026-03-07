@@ -29,7 +29,6 @@ function RegisterPageContent() {
     const { data: { user } } = await supabase.auth.getUser()
     
     if (user) {
-      console.log('[Register] User already logged in, redirecting...')
       router.push('/app/admin')
     }
   }
@@ -104,7 +103,6 @@ function RegisterPageContent() {
         return
       }
 
-      console.log('[Register] User created:', authData.user.id)
 
       // Step 2: Create company and link to user
       const response = await fetch('/api/auth/setup-company', {
@@ -129,7 +127,6 @@ function RegisterPageContent() {
         throw new Error(data.error || 'Failed to setup company')
       }
 
-      console.log('[Register] Company setup complete')
       
       // Show success message (user needs to verify email)
       if (authData.user.identities?.length === 0) {
@@ -139,9 +136,9 @@ function RegisterPageContent() {
         // Email auto-confirmed or OAuth
         router.push('/app/admin')
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[Register] Error:', err)
-      setError(err.message || 'Registration failed. Please try again.')
+      setError(err instanceof Error ? err.message : 'Registration failed. Please try again.')
     } finally {
       setLoading(false)
     }

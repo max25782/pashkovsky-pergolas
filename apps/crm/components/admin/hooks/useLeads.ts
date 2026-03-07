@@ -44,9 +44,9 @@ export function useLeads({
       }
       
       setLeads(data || [])
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('[useLeads] Error:', e)
-      setError(e.message)
+      setError(e instanceof Error ? e.message : String(e))
     } finally {
       setLoading(false)
     }

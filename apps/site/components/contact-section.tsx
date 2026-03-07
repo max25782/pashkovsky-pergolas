@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FaWhatsapp } from 'react-icons/fa'
 import type { Locale } from '@/lib/locales'
+import { useToast } from '@/components/ui/toast'
 import { trackFormSubmit, trackWhatsApp, trackClick } from '@/lib/gtag-events'
 import { getCookie } from '@/lib/cookies'
 
@@ -70,6 +71,7 @@ function getCopy(locale: Locale) {
 }
 
 export default function ContactSection({ locale = 'he', pageName = 'unknown' }: ContactSectionProps) {
+  const toast = useToast()
   const copy = getCopy(locale)
   const [isOpen, setIsOpen] = useState(false)
   const [step, setStep] = useState(1)
@@ -111,7 +113,7 @@ export default function ContactSection({ locale = 'he', pageName = 'unknown' }: 
       if (!resp.ok) {
         const errData = await resp.json().catch(() => ({ error: 'Unknown error' }))
         console.error('API error:', errData)
-        alert(locale === 'he' ? 'שגיאה בשמירה, נסה שוב' : locale === 'ru' ? 'Ошибка сохранения, попробуйте снова' : 'Save failed, try again')
+        toast.error(locale === 'he' ? 'שגיאה בשמירה, נסה שוב' : locale === 'ru' ? 'Ошибка сохранения, попробуйте снова' : 'Save failed, try again')
         setLoading(false)
         return
       }
@@ -121,7 +123,7 @@ export default function ContactSection({ locale = 'he', pageName = 'unknown' }: 
       setStep(2)
     } catch (err) {
       console.error('Network error:', err)
-      alert(locale === 'he' ? 'שגיאת רשת, בדוק חיבור' : locale === 'ru' ? 'Ошибка сети, проверьте соединение' : 'Network error')
+      toast.error(locale === 'he' ? 'שגיאת רשת, בדוק חיבור' : locale === 'ru' ? 'Ошибка сети, проверьте соединение' : 'Network error')
       setLoading(false)
     }
   }

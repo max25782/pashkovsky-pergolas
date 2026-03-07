@@ -45,11 +45,12 @@ export async function GET(
 
     const data = await response.json()
     return NextResponse.json(data)
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Orders API GET] Error:', error)
-    const isTimeout = error?.name === 'TimeoutError' || error?.name === 'AbortError'
+    const e = error as Error & { name?: string }
+    const isTimeout = e?.name === 'TimeoutError' || e?.name === 'AbortError'
     return NextResponse.json(
-      { error: isTimeout ? 'Request to Profiles API timed out' : error.message || 'Internal server error' },
+      { error: isTimeout ? 'Request to Profiles API timed out' : (e?.message ?? String(error)) || 'Internal server error' },
       { status: isTimeout ? 504 : 500 }
     )
   }
@@ -98,11 +99,12 @@ export async function PATCH(
 
     const data = await response.json()
     return NextResponse.json(data)
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Orders API PATCH] Error:', error)
-    const isTimeout = error?.name === 'TimeoutError' || error?.name === 'AbortError'
+    const e = error as Error & { name?: string }
+    const isTimeout = e?.name === 'TimeoutError' || e?.name === 'AbortError'
     return NextResponse.json(
-      { error: isTimeout ? 'Request to Profiles API timed out' : error.message || 'Internal server error' },
+      { error: isTimeout ? 'Request to Profiles API timed out' : (e?.message ?? String(error)) || 'Internal server error' },
       { status: isTimeout ? 504 : 500 }
     )
   }

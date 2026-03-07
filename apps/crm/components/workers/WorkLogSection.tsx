@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
+import { useToast } from '@/components/ui/toast'
 import { Plus, Trash2 } from 'lucide-react'
 import { AddWorkShiftModal } from './AddWorkShiftModal'
 import { formatCurrencyILS } from '@/lib/workers/calculations'
@@ -36,6 +37,7 @@ function groupByDate(shifts: DealShift[]) {
 }
 
 export function WorkLogSection({ projectId, onShiftAdded }: WorkLogSectionProps) {
+  const toast = useToast()
   const [shifts, setShifts] = useState<DealShift[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -73,7 +75,7 @@ export function WorkLogSection({ projectId, onShiftAdded }: WorkLogSectionProps)
       fetchShifts()
       onShiftAdded?.()
     } catch (err: unknown) {
-      alert('שגיאה במחיקת משמרת: ' + (err instanceof Error ? err.message : 'Unknown'))
+      toast.error('שגיאה במחיקת משמרת: ' + (err instanceof Error ? err.message : 'Unknown'))
     }
   }
 

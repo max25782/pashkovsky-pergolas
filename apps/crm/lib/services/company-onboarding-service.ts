@@ -65,7 +65,6 @@ interface OnboardingResult {
  * Find existing user or create new one
  */
 async function findOrCreateUser(email: string): Promise<{ id: string; email: string }> {
-  console.log('[Onboarding] Finding or creating user:', email)
 
   // Check if user exists by listing users and filtering by email
   // Note: getUserByEmail doesn't exist in Supabase Admin API, so we use listUsers
@@ -79,13 +78,11 @@ async function findOrCreateUser(email: string): Promise<{ id: string; email: str
     const existingUser = users.users.find(u => u.email?.toLowerCase() === email.toLowerCase())
     
     if (existingUser) {
-      console.log('[Onboarding] User already exists:', existingUser.id)
       return { id: existingUser.id, email: existingUser.email || email }
     }
   }
 
   // Create new user
-  console.log('[Onboarding] Creating new user...')
   const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
     email,
     email_confirm: true, // Auto-confirm email
@@ -95,7 +92,6 @@ async function findOrCreateUser(email: string): Promise<{ id: string; email: str
     throw new Error(`Failed to create user: ${createError?.message || 'Unknown error'}`)
   }
 
-  console.log('[Onboarding] User created:', newUser.user.id)
   return { id: newUser.user.id, email: newUser.user.email || email }
 }
 
@@ -106,7 +102,6 @@ async function createCompanyForUser(userId: string, email: string): Promise<Comp
   const companyName = email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '') || 'Company'
   let companySlug = slugify(companyName, { lower: true, strict: true })
 
-  console.log('[Onboarding] Creating company:', companyName)
 
   // Check if slug already exists and generate unique one if needed
   let slugSuffix = 0
@@ -125,7 +120,6 @@ async function createCompanyForUser(userId: string, email: string): Promise<Comp
     } else {
       slugSuffix++
       finalSlug = `${companySlug}-${slugSuffix}`
-      console.log('[Onboarding] Slug exists, trying:', finalSlug)
     }
   }
 
@@ -147,7 +141,6 @@ async function createCompanyForUser(userId: string, email: string): Promise<Comp
     throw new Error(`Failed to create company: ${error.message}`)
   }
 
-  console.log('[Onboarding] Company created:', data.id)
   return data as Company
 }
 
@@ -155,7 +148,6 @@ async function createCompanyForUser(userId: string, email: string): Promise<Comp
  * Assign user as company owner
  */
 async function assignOwnerRole(companyId: string, userId: string): Promise<void> {
-  console.log('[Onboarding] Assigning owner role:', { companyId, userId })
 
   const { error } = await supabaseAdmin
     .from('company_members')
@@ -171,14 +163,12 @@ async function assignOwnerRole(companyId: string, userId: string): Promise<void>
     throw new Error(`Failed to assign owner role: ${error.message}`)
   }
 
-  console.log('[Onboarding] Owner role assigned')
 }
 
 /**
  * Grant enterprise subscription (free, manual)
  */
 async function grantEnterpriseAccess(companyId: string, adminId: string): Promise<void> {
-  console.log('[Onboarding] Granting enterprise access:', companyId)
 
   const { data: enterprisePlan, error: planError } = await supabaseAdmin
     .from('subscription_plans')
@@ -212,7 +202,6 @@ async function grantEnterpriseAccess(companyId: string, adminId: string): Promis
   }
 
   if (existingSub) {
-    console.log('[Onboarding] Updating existing subscription to enterprise (1 month)')
     const { error: updateError } = await supabaseAdmin
       .from('company_subscriptions')
       .update(subscriptionData)
@@ -222,7 +211,6 @@ async function grantEnterpriseAccess(companyId: string, adminId: string): Promis
       throw new Error(`Failed to update subscription: ${updateError.message}`)
     }
   } else {
-    console.log('[Onboarding] Creating new enterprise subscription (1 month)')
     const { error: subError } = await supabaseAdmin
       .from('company_subscriptions')
       .insert({
@@ -235,7 +223,6 @@ async function grantEnterpriseAccess(companyId: string, adminId: string): Promis
     }
   }
 
-  console.log('[Onboarding] Enterprise access granted')
 
   // Log subscription history
   const { error: historyError } = await supabaseAdmin
@@ -256,12 +243,9 @@ async function grantEnterpriseAccess(companyId: string, adminId: string): Promis
  * Send magic link to user
  */
 async function sendMagicLink(email: string, baseUrl: string): Promise<{ sent: boolean; url?: string }> {
-  console.log('[Onboarding] Generating magic link for:', email)
-  console.log('[Onboarding] Using base URL:', baseUrl)
 
   try {
     const redirectUrl = `${baseUrl}/app/admin`
-    console.log('[Onboarding] Redirect URL:', redirectUrl)
 
     const { data, error } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
@@ -276,13 +260,12 @@ async function sendMagicLink(email: string, baseUrl: string): Promise<{ sent: bo
       return { sent: false }
     }
 
-    console.log('[Onboarding] Magic link generated:', data.properties.action_link)
 
     return {
       sent: true,
       url: data.properties.action_link,
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error('[Onboarding] Exception generating magic link:', error)
     return { sent: false }
   }
@@ -296,7 +279,6 @@ export async function onboardCompany(
   adminId: string
 ): Promise<OnboardingResult> {
   try {
-    console.log('[Onboarding] Starting onboarding for:', email)
 
     // 1. Find or create user
     const user = await findOrCreateUser(email)
@@ -311,7 +293,6 @@ export async function onboardCompany(
 
     if (existingMemberships && existingMemberships.length > 0) {
       const existingCompany = existingMemberships[0].companies as any
-      console.log('[Onboarding] User already has a company:', existingCompany.id)
       
       return {
         success: false,
@@ -331,23 +312,17 @@ export async function onboardCompany(
     // 4. Grant enterprise access
     await grantEnterpriseAccess(company.id, adminId)
 
-    console.log('[Onboarding] Onboarding completed successfully:', {
-      company_id: company.id,
-      user_id: user.id,
-      company_name: company.name,
-    })
-
     return {
       success: true,
       company_id: company.id,
       user_id: user.id,
       company_name: company.name,
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Onboarding] Onboarding failed:', error)
     return {
       success: false,
-      error: error.message || 'Unknown error',
+      error: (error instanceof Error ? error.message : String(error)) || 'Unknown error',
     }
   }
 }

@@ -160,17 +160,18 @@ export async function POST(req: NextRequest) {
         })
 
         scored++
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const msg = error instanceof Error ? error.message : String(error)
         console.error('[Batch Scoring] Failed to score lead:', {
           leadId: lead.id,
-          error: error.message?.substring(0, 200), // Limit log size
+          error: msg?.substring(0, 200), // Limit log size
         })
 
         results.push({
           leadId: lead.id,
           score: null,
           success: false,
-          error: error.message?.substring(0, 100),
+          error: msg?.substring(0, 100),
         })
 
         failed++
@@ -185,13 +186,14 @@ export async function POST(req: NextRequest) {
       failed,
       results,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error)
     console.error('[Batch Scoring] Error:', {
-      error: error.message?.substring(0, 500), // Limit log size
+      error: msg?.substring(0, 500), // Limit log size
     })
 
     return NextResponse.json(
-      { error: 'Failed to batch score leads', details: error.message },
+      { error: 'Failed to batch score leads', details: msg },
       { status: 500 }
     )
   }

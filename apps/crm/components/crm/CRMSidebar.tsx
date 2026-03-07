@@ -60,7 +60,6 @@ export default function CRMSidebar() {
       localStorage.removeItem('refreshToken')
       localStorage.removeItem('admin_token')
       
-      console.log('[Logout] Successfully logged out')
       
       // Redirect to login
       router.push('/login')
@@ -132,8 +131,6 @@ export default function CRMSidebar() {
                   key={item.href}
                   href={item.href}
                   onClick={(e) => {
-                    console.log('[CRMSidebar] Link clicked:', item.href)
-                    console.log('[CRMSidebar] Current pathname:', pathname)
                     setIsOpen(false)
                     setIsHovered(false)
                   }}

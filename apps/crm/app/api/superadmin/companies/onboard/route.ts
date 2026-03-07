@@ -64,7 +64,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('[API /superadmin/companies/onboard] Starting onboarding for:', email)
 
     // Execute onboarding
     const result = await onboardCompany(
@@ -79,11 +78,6 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
-
-    console.log('[API /superadmin/companies/onboard] Onboarding successful:', {
-      company_id: result.company_id,
-      user_id: result.user_id,
-    })
 
     // Generate and send magic link if requested
     let actionLink: string | undefined
@@ -117,7 +111,6 @@ export async function POST(request: NextRequest) {
 
         // Use 'recovery' for existing users, 'invite' for new users (both generate PKCE flow)
         const linkType = userExists ? 'recovery' : 'invite'
-        console.log('[API /superadmin/companies/onboard] Generating link with type:', linkType, 'for user:', userExists ? 'existing' : 'new')
 
         // Try generateLink first (PKCE flow with ?code= parameter)
         const { data: linkData, error: linkErr } =
@@ -131,7 +124,6 @@ export async function POST(request: NextRequest) {
 
         if (linkErr || !linkData?.properties?.action_link) {
           // If generateLink fails (user not found or other error), try inviteUserByEmail
-          console.log('[API /superadmin/companies/onboard] generateLink failed, trying inviteUserByEmail...')
           
           const { data: inviteData, error: inviteErr } =
             await supabaseAdmin.auth.admin.inviteUserByEmail(email.toLowerCase().trim(), {
@@ -146,7 +138,6 @@ export async function POST(request: NextRequest) {
             method = 'invite'
             emailSent = true // Supabase sends the invite email
             actionLink = undefined // No action_link for invite
-            console.log('[API /superadmin/companies/onboard] ✓ Invite sent via Supabase')
           }
         } else {
           // generateLink succeeded - we have action_link, send via Zoho
@@ -159,16 +150,9 @@ export async function POST(request: NextRequest) {
             const hasCode = linkUrl.searchParams.has('code')
             const hasHash = linkUrl.hash.includes('access_token')
             
-            console.log('[API /superadmin/companies/onboard] Link analysis:', {
-              hasCode,
-              hasHash,
-              type: linkType,
-            })
-            
             if (!hasCode && hasHash) {
               console.error('[API /superadmin/companies/onboard] ❌ Link uses implicit flow instead of PKCE')
             } else if (hasCode) {
-              console.log('[API /superadmin/companies/onboard] ✅ Link contains code parameter - PKCE flow will work')
             }
           } catch (urlError) {
             console.warn('[API /superadmin/companies/onboard] Could not parse link URL:', urlError)
@@ -184,7 +168,6 @@ export async function POST(request: NextRequest) {
                 html,
               })
               emailSent = true
-              console.log('[API /superadmin/companies/onboard] ✓ Email sent via Zoho')
             } else {
               emailError = 'Email not configured (EMAIL_USER/EMAIL_PASS missing)'
               console.warn('[API /superadmin/companies/onboard] ⚠️', emailError)
@@ -210,11 +193,11 @@ export async function POST(request: NextRequest) {
       email_error: emailError || undefined,
       method,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[API /superadmin/companies/onboard] Unexpected error:', error)
-
+    const msg = error instanceof Error ? error.message : String(error)
     // Check if it's an auth error
-    if (error.message?.includes('Unauthorized') || error.message?.includes('Authentication required')) {
+    if (msg?.includes('Unauthorized') || msg?.includes('Authentication required')) {
       return NextResponse.json(
         { error: 'Unauthorized: SuperAdmin access required' },
         { status: 401 }
@@ -222,7 +205,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: msg || 'Internal server error' },
       { status: 500 }
     )
   }

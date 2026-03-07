@@ -147,7 +147,8 @@ export async function generateWeeklyDigest(
       aiText: data.ai_text,
       status: data.status as 'generated' | 'failed',
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : String(error)
     // Save failed digest (if not already saved)
     if (supabase) {
       try {
@@ -169,7 +170,7 @@ export async function generateWeeklyDigest(
               summary_json: {},
               ai_text: '',
               status: 'failed',
-              error_message: error.message?.substring(0, 500),
+              error_message: errMsg?.substring(0, 500),
             })
         } else {
           // Update existing to failed status
@@ -177,7 +178,7 @@ export async function generateWeeklyDigest(
             .from('weekly_digests')
             .update({
               status: 'failed',
-              error_message: error.message?.substring(0, 500),
+              error_message: errMsg?.substring(0, 500),
             })
             .eq('id', existing.id)
         }

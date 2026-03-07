@@ -81,7 +81,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ users })
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('[Users] Unexpected error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
@@ -132,7 +132,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ success: true, membership: data })
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('[Users] Unexpected error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
@@ -200,7 +200,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true })
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('[Users] Unexpected error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

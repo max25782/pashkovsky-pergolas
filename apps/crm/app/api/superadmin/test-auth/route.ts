@@ -9,11 +9,9 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(request: NextRequest) {
   try {
-    console.log('[Test Auth] Checking SuperAdmin auth...')
     
     const session = await requireSuperAdmin(request)
     
-    console.log('[Test Auth] ✓ Auth successful:', session.email)
     
     return NextResponse.json({
       success: true,
@@ -25,12 +23,13 @@ export async function GET(request: NextRequest) {
         auth_method: session.auth_method,
       },
     })
-  } catch (error: any) {
-    console.error('[Test Auth] ✗ Auth failed:', error.message)
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error)
+    console.error('[Test Auth] Auth failed:', msg)
     
     return NextResponse.json({
       success: false,
-      error: error.message || 'Authentication failed',
+      error: msg || 'Authentication failed',
       cookies: {
         has_superadmin_session: !!request.cookies.get('superadmin_session'),
         has_sb_auth_token: !!request.cookies.getAll().find(c => c.name.startsWith('sb-')),

@@ -48,8 +48,8 @@ function VerifyEmailPageContent({ params }: { params: { locale: Locale } }) {
 
       setSuccess(true)
       setVerified(true)
-    } catch (err: any) {
-      setError(err.message || 'Verification failed')
+    } catch (err: unknown) {
+      setError((err instanceof Error ? err.message : String(err)) || 'Verification failed')
     } finally {
       setLoading(false)
     }
@@ -77,8 +77,8 @@ function VerifyEmailPageContent({ params }: { params: { locale: Locale } }) {
       }
 
       setSuccess(true)
-    } catch (err: any) {
-      setError(err.message || 'Failed to resend email')
+    } catch (err: unknown) {
+      setError((err instanceof Error ? err.message : String(err)) || 'Failed to resend email')
     } finally {
       setLoading(false)
     }

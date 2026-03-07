@@ -52,8 +52,8 @@ export function LeadScore({ lead, adminToken, onScoreUpdated }: LeadScoreProps) 
       if (onScoreUpdated) {
         onScoreUpdated(updatedLead)
       }
-    } catch (err: any) {
-      setError(err.message || 'Ошибка пересчёта скора')
+    } catch (err: unknown) {
+      setError((err instanceof Error ? err.message : String(err)) || 'Ошибка пересчёта скора')
     } finally {
       setLoading(false)
     }

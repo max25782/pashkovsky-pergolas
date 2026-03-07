@@ -42,7 +42,6 @@ export async function POST(req: NextRequest) {
 
     // Use 'recovery' for existing users, 'invite' for new users (both generate PKCE flow)
     const linkType = userExists ? 'recovery' : 'invite'
-    console.log('[SendMagicLink] Generating link with type:', linkType, 'for user:', userExists ? 'existing' : 'new')
 
     // 1) Try generateLink first (PKCE flow with ?code= parameter)
     const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
@@ -61,18 +60,10 @@ export async function POST(req: NextRequest) {
         const hasCode = linkUrl.searchParams.has('code')
         const hasHash = linkUrl.hash.includes('access_token')
         
-        console.log('[SendMagicLink] Link analysis:', {
-          hasCode,
-          hasHash,
-          type: linkType,
-          redirectTo: linkUrl.searchParams.get('redirect_to') || 'none',
-        })
-        
         if (!hasCode && hasHash) {
           console.error('[SendMagicLink] ❌ Link uses implicit flow (#access_token) instead of PKCE (?code=)')
           console.error('[SendMagicLink] This will NOT work with SSR cookies. Link:', actionLink.substring(0, 200))
         } else if (hasCode) {
-          console.log('[SendMagicLink] ✅ Link contains code parameter - PKCE flow will work')
         }
       } catch (urlError) {
         console.warn('[SendMagicLink] Could not parse link URL:', urlError)
@@ -88,7 +79,6 @@ export async function POST(req: NextRequest) {
             html,
           })
           emailSent = true
-          console.log('[SendMagicLink] ✓ Email sent via Zoho')
         } else {
           emailError = 'Email not configured (EMAIL_USER/EMAIL_PASS missing)'
           console.warn('[SendMagicLink] ⚠️', emailError)
@@ -131,17 +121,17 @@ export async function POST(req: NextRequest) {
       email_sent: emailSent,
       note: 'Invite email sent by Supabase (no action_link available)',
     })
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error('[SendMagicLink] Exception:', e)
-    
+    const msg = e instanceof Error ? e.message : String(e)
     // Check if it's an auth error
-    if (e.message?.includes('Unauthorized') || e.message?.includes('Authentication required')) {
+    if (msg?.includes('Unauthorized') || msg?.includes('Authentication required')) {
       return NextResponse.json(
         { error: 'Unauthorized: SuperAdmin access required' },
         { status: 401 }
       )
     }
 
-    return NextResponse.json({ error: e.message || 'internal_error' }, { status: 500 })
+    return NextResponse.json({ error: msg || 'internal_error' }, { status: 500 })
   }
 }

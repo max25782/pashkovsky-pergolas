@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useToast } from '@/components/ui/toast'
 import { authFetch } from '@/lib/api/auth-fetch'
 
 interface DealPayment {
@@ -57,6 +58,7 @@ export function DealPaymentsWidget({
   translations = defaultTranslations,
 }: DealPaymentsWidgetProps) {
   const t = { ...defaultTranslations, ...translations }
+  const toast = useToast()
   const [payments, setPayments] = useState<DealPayment[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -121,7 +123,7 @@ export function DealPaymentsWidget({
       await fetchPayments()
     } catch (e) {
       console.error('DealPaymentsWidget add error:', e)
-      alert(e instanceof Error ? e.message : 'Failed to add payment')
+      toast.error(e instanceof Error ? e.message : 'Failed to add payment')
     } finally {
       setSubmitting(false)
     }

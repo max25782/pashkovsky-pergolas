@@ -87,7 +87,6 @@ export async function getGalleryImages(
       }
     })
 
-    console.log(`[getGalleryImages] Returning ${mediaItems.length} items for ${categoryKey}`)
     return mediaItems
 
   } catch (error) {

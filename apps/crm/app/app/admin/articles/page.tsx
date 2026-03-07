@@ -1,9 +1,8 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import type { Locale } from '@/lib/locales'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
+import { useToast } from '@/components/ui/toast'
 import { authFetch } from '@/lib/api/auth-fetch'
 
 interface Article {
@@ -19,12 +18,12 @@ interface Article {
 
 export default function AdminArticlesPage() {
   const t = useCRMTranslations()
+  const toast = useToast()
   const [articles, setArticles] = useState<Article[]>([])
   const [loading, setLoading] = useState(true)
   const [editingArticle, setEditingArticle] = useState<Article | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const router = useRouter()
 
   useEffect(() => {
     loadArticles()
@@ -69,13 +68,13 @@ export default function AdminArticlesPage() {
         throw new Error('Failed to save article')
       }
 
-      alert(t.articles.save === 'Save' ? 'Article saved! Refresh the page.' : t.articles.save === 'Сохранить' ? 'Статья сохранена! Обновите страницу.' : 'המאמר נשמר! רענן את הדף.')
+      toast.success(t.common.save === 'Save' ? 'Article saved!' : t.common.save === 'Сохранить' ? 'Статья сохранена!' : 'המאמר נשמר!')
       loadArticles()
       setShowForm(false)
       setEditingArticle(null)
     } catch (error) {
       console.error('Error saving article:', error)
-      alert(t.common.error)
+      toast.error(t.common.error)
     }
   }
 
@@ -91,11 +90,11 @@ export default function AdminArticlesPage() {
         throw new Error('Failed to delete article')
       }
 
-      alert(t.articles.deleteArticle === 'Delete' ? 'Article deleted!' : t.articles.deleteArticle === 'Удалить' ? 'Статья удалена!' : 'המאמר נמחק!')
+      toast.success(t.articles.deleteArticle === 'Delete' ? 'Article deleted!' : t.articles.deleteArticle === 'Удалить' ? 'Статья удалена!' : 'המאמר נמחק!')
       loadArticles()
     } catch (error) {
       console.error('Error deleting article:', error)
-      alert(t.common.error)
+      toast.error(t.common.error)
     }
   }
 

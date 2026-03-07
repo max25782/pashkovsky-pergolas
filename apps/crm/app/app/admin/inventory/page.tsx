@@ -1,5 +1,6 @@
 'use client'
 
+import { useToast } from '@/components/ui/toast'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { authFetch } from '@/lib/api/auth-fetch'
@@ -42,6 +43,7 @@ const emptyForm = {
 }
 
 export default function InventoryPage() {
+  const toast = useToast()
   const [rows, setRows] = useState<StockRow[]>([])
   const [profiles, setProfiles] = useState<ProfileOption[]>([])
   const [loading, setLoading] = useState(true)
@@ -83,7 +85,7 @@ export default function InventoryPage() {
 
   async function handleAdd() {
     if (!form.profile_id || !form.color || !form.length_meters) {
-      alert('Заполните профиль, цвет и длину')
+      toast.error('Заполните профиль, цвет и длину')
       return
     }
     setSaving(true)
@@ -98,7 +100,7 @@ export default function InventoryPage() {
       setShowAdd(false)
       await load()
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : 'Error')
+      toast.error(e instanceof Error ? e.message : 'Error')
     } finally {
       setSaving(false)
     }
@@ -120,7 +122,7 @@ export default function InventoryPage() {
       setEditingId(null)
       await load()
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : 'Error')
+      toast.error(e instanceof Error ? e.message : 'Error')
     } finally {
       setSaving(false)
     }
@@ -133,7 +135,7 @@ export default function InventoryPage() {
       if (!res.ok) throw new Error((await res.json()).error || 'Failed')
       await load()
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : 'Error')
+      toast.error(e instanceof Error ? e.message : 'Error')
     }
   }
 

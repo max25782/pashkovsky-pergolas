@@ -55,8 +55,8 @@ export default function CompanySettingsPage() {
       }
       const data = await res.json()
       setCompany(data)
-    } catch (error: any) {
-      showMessage('error', error.message || t.loadFailed)
+    } catch (error: unknown) {
+      showMessage('error', (error instanceof Error ? error.message : String(error)) || t.loadFailed)
     } finally {
       setLoading(false)
     }
@@ -83,8 +83,8 @@ export default function CompanySettingsPage() {
       const updated = await res.json()
       setCompany(updated)
       showMessage('success', t.savedSuccess)
-    } catch (error: any) {
-      showMessage('error', error.message || t.saveFailed)
+    } catch (error: unknown) {
+      showMessage('error', (error instanceof Error ? error.message : String(error)) || t.saveFailed)
     } finally {
       setSaving(false)
     }
@@ -114,8 +114,8 @@ export default function CompanySettingsPage() {
       const { logo_url } = await res.json()
       setCompany(prev => prev ? { ...prev, logo_url } : null)
       showMessage('success', t.logoUploadSuccess)
-    } catch (error: any) {
-      showMessage('error', error.message || t.logoUploadFailed)
+    } catch (error: unknown) {
+      showMessage('error', (error instanceof Error ? error.message : String(error)) || t.logoUploadFailed)
     } finally {
       setUploading(false)
     }

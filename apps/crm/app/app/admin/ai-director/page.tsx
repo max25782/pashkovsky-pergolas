@@ -1,5 +1,6 @@
 'use client'
 
+import { useToast } from '@/components/ui/toast'
 import { useState, useEffect, useRef } from 'react'
 import { authFetch } from '@/lib/api/auth-fetch'
 import { Brain, Send, Loader2, Sparkles } from 'lucide-react'
@@ -14,6 +15,7 @@ interface Message {
 
 export default function AIDirectorPage() {
   const { language } = useLanguage()
+  const { error: toastError } = useToast()
   const t = aiDirectorTranslations[language]
   
   const [messages, setMessages] = useState<Message[]>([])
@@ -111,7 +113,7 @@ export default function AIDirectorPage() {
       console.error('Error:', error)
       // Remove optimistic message on error
       setMessages(prev => prev.slice(0, -1))
-      alert(error instanceof Error ? error.message : t.error)
+      toastError(error instanceof Error ? error.message : t.error)
     } finally {
       setLoading(false)
     }

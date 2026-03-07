@@ -57,8 +57,8 @@ export async function GET(req: NextRequest) {
 
     const data = await response.json()
     return NextResponse.json(data)
-  } catch (error: any) {
-    const msg = error?.message || 'Internal server error'
+  } catch (error: unknown) {
+    const msg = (error instanceof Error ? error.message : String(error)) || 'Internal server error'
     const isConnectionError = /ECONNREFUSED|ENOTFOUND|ETIMEDOUT|fetch failed/i.test(String(msg))
     console.error('[Orders API] Error:', msg, { url: PROFILES_API_URL, isConnectionError })
     return NextResponse.json(

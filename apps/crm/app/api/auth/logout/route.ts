@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
       message: 'Logged out successfully',
     })
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('[Logout] Unexpected error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },

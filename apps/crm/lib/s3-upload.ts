@@ -68,11 +68,12 @@ export async function uploadToS3(
 
   try {
     await s3Client.send(command)
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const e = error as { name?: string; Code?: string; message?: string }
     // Enhanced error logging for AWS credential issues
-    if (error.name === 'InvalidAccessKeyId' || error.Code === 'InvalidAccessKeyId') {
+    if (e?.name === 'InvalidAccessKeyId' || e?.Code === 'InvalidAccessKeyId') {
       console.error('[S3 Upload] AWS Credentials Error:', {
-        error: error.message,
+        error: e?.message,
         accessKeyId: maskedKey,
         bucket: S3_BUCKET,
         region: S3_REGION,

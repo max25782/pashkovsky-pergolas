@@ -70,22 +70,17 @@ export async function POST(req: NextRequest) {
           digestId: digest.id,
           period: `${digest.periodFrom} to ${digest.periodTo}`,
         })
-
-        console.log('[Weekly Digest Cron] Generated digest:', {
-          companyId: companyId,
-          digestId: digest.id,
-          period: `${digest.periodFrom} to ${digest.periodTo}`,
-        })
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const msg = error instanceof Error ? error.message : String(error)
         results.push({
           companyId: companyId,
           success: false,
-          error: error.message?.substring(0, 200), // Limit log size
+          error: msg?.substring(0, 200), // Limit log size
         })
 
         console.error('[Weekly Digest Cron] Failed to generate digest:', {
           companyId: companyId,
-          error: error.message?.substring(0, 500), // Limit log size
+          error: msg?.substring(0, 500), // Limit log size
         })
       }
     }
@@ -95,9 +90,10 @@ export async function POST(req: NextRequest) {
       timestamp: new Date().toISOString(),
       results,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error)
     console.error('[Weekly Digest Cron] Unexpected error:', {
-      error: error.message?.substring(0, 500), // Limit log size
+      error: msg?.substring(0, 500), // Limit log size
     })
 
     return NextResponse.json(

@@ -1,5 +1,6 @@
 'use client'
 
+import { useToast } from '@/components/ui/toast'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -22,6 +23,7 @@ interface OnboardingResponse {
 }
 
 export default function CompanyOnboardingForm() {
+  const toast = useToast()
   const [email, setEmail] = useState('')
   const [sendMagicLink, setSendMagicLink] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -33,7 +35,6 @@ export default function CompanyOnboardingForm() {
     setResult(null)
 
     try {
-      console.log('[CompanyOnboardingForm] Submitting:', email)
       
       const response = await fetch('/api/superadmin/companies/onboard', {
         method: 'POST',
@@ -47,7 +48,6 @@ export default function CompanyOnboardingForm() {
         }),
       })
       
-      console.log('[CompanyOnboardingForm] Response status:', response.status)
 
       let data: OnboardingResponse
       
@@ -63,7 +63,6 @@ export default function CompanyOnboardingForm() {
         throw new Error(data.error || `Request failed with status ${response.status}`)
       }
 
-      console.log('[CompanyOnboardingForm] Success response:', data)
       setResult(data)
       
       // Immediately refresh to show new company in the list
@@ -72,15 +71,15 @@ export default function CompanyOnboardingForm() {
         window.location.reload()
       }, 1500) // Quick refresh (1.5s)
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[CompanyOnboardingForm] Error:', error)
-      
+      const msg = error instanceof Error ? error.message : String(error)
       // Provide more specific error messages
-      let errorMessage = error.message || 'Unknown error'
+      let errorMessage = msg || 'Unknown error'
       
-      if (error.message?.includes('Failed to fetch')) {
+      if (msg?.includes('Failed to fetch')) {
         errorMessage = 'Network error: Unable to reach server. Please check your connection and try again.'
-      } else if (error.message?.includes('NetworkError')) {
+      } else if (msg?.includes('NetworkError')) {
         errorMessage = 'Network error: Request was interrupted. Please try again.'
       }
       
@@ -138,7 +137,6 @@ export default function CompanyOnboardingForm() {
             disabled={loading || !email}
             className="w-full !bg-blue-600 !text-white hover:!bg-blue-700 !border-transparent disabled:!opacity-50 disabled:!cursor-not-allowed"
             onClick={() => {
-              console.log('[Button] Clicked! Email:', email, 'Loading:', loading, 'Disabled:', loading || !email)
             }}
           >
             {loading ? (
@@ -212,7 +210,7 @@ export default function CompanyOnboardingForm() {
                           onClick={async () => {
                             try {
                               await navigator.clipboard.writeText(result.magic_link!)
-                              alert('Magic link copied to clipboard!')
+                              toast.success('Magic link copied to clipboard!')
                             } catch (err) {
                               console.error('Failed to copy:', err)
                             }

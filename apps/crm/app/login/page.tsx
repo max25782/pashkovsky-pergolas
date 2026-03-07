@@ -46,20 +46,15 @@ function LoginPageContent() {
   }
 
   async function handleEmailLogin(e: React.FormEvent) {
-    console.log('[Login] Form submitted!')
     e.preventDefault()
     
-    console.log('[Login] Email or Phone:', formData.emailOrPhone)
-    console.log('[Login] Password length:', formData.password.length)
     
     if (!formData.emailOrPhone || !formData.password) {
-      console.log('[Login] Missing fields')
       setError('Please fill in all fields')
       return
     }
 
     try {
-      console.log('[Login] Starting login...')
       setLoading(true)
       setError(null)
       
@@ -71,11 +66,9 @@ function LoginPageContent() {
       let loginData: any = null // Define at function scope
       
       if (isPhone) {
-        console.log('[Login] Detected phone number, using SuperAdmin token login...')
         
         // Normalize phone number (remove spaces, dashes)
         const normalizedPhone = formData.emailOrPhone.trim().replace(/[\s-]/g, '')
-        console.log('[Login] Normalized phone:', normalizedPhone)
         
         // SuperAdmin login with token (password field = SUPERADMIN_TOKEN)
         const response = await fetch('/api/auth/superadmin-login', {
@@ -96,13 +89,10 @@ function LoginPageContent() {
           return
         }
         
-        console.log('[Login] ✓ SuperAdmin login successful!', result)
-        console.log('[Login] ✓ httpOnly cookie set by server')
         
         // Session is stored server-side (Redis)
         // Cookie is httpOnly (not accessible from JavaScript)
         // Just redirect - middleware will handle auth
-        console.log('[Login] Redirecting to /superadmin')
         
         // Use setTimeout to ensure cookie is set
         setTimeout(() => {
@@ -111,14 +101,12 @@ function LoginPageContent() {
         return
       } else {
         // Email login
-        console.log('[Login] Calling signInWithPassword with email...')
         
         const { data, error } = await supabase.auth.signInWithPassword({
           email: formData.emailOrPhone,
           password: formData.password,
         })
 
-        console.log('[Login] Response:', { user: data?.user?.email, error: error?.message })
 
         if (error) {
           console.error('[Login] Email login error:', error)
@@ -130,8 +118,6 @@ function LoginPageContent() {
         loginData = data
         
         // Redirect to CRM admin
-        console.log('[Login] Successfully logged in:', loginData.user?.email)
-        console.log('[Login] Redirecting to /app/admin')
         window.location.href = '/app/admin'
         return
       }

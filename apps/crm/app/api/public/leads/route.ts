@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { PublicLeadSchema } from '@/lib/validation/public-lead'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { sendWhatsAppTemplate } from '@/lib/whatsapp-send'
 import { uploadLeadConversion } from '@/lib/googleAds/offlineConversion'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabase(): SupabaseClient | null {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) return null
+  return createClient(url, key, { db: { schema: 'public' } })
+}
 
 export const dynamic = 'force-dynamic'
 
@@ -170,11 +172,20 @@ export async function POST(request: NextRequest) {
 
     const leadData = validationResult.data
 
-    // 6. Get default company ID for website leads
+    // 6. Get default company ID and Supabase client
     const defaultCompanyId = process.env.DEFAULT_COMPANY_ID
-    
+    const supabase = getSupabase()
+
     if (!defaultCompanyId) {
       console.error('[Public Leads] DEFAULT_COMPANY_ID not configured')
+      return jsonResponse(
+        { error: 'Service misconfigured' },
+        { status: 500 },
+        request
+      )
+    }
+    if (!supabase) {
+      console.error('[Public Leads] Supabase not configured (NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)')
       return jsonResponse(
         { error: 'Service misconfigured' },
         { status: 500 },
@@ -217,15 +228,6 @@ export async function POST(request: NextRequest) {
 
     // 8. Success
     const duration = Date.now() - startTime
-    console.log('[Public Leads] Success', {
-      leadId: lead.id,
-      source: leadData.source,
-      hasEmail: !!leadData.email,
-      hasMessage: !!leadData.message,
-      hasUtm: !!(leadData.utm_source || leadData.utm_medium || leadData.utm_campaign),
-      ip: clientIp,
-      duration: `${duration}ms`,
-    })
 
     // 9. Send WhatsApp welcome message (fire-and-forget)
     const templateName = process.env.WHATSAPP_TEMPLATE_NAME || 'hi'
@@ -246,7 +248,6 @@ export async function POST(request: NextRequest) {
               google_conv_sent_at: new Date().toISOString(),
             })
             .eq('id', lead.id)
-          console.log('[Public Leads] Google Ads conversion marked sent for lead', lead.id)
         })
         .catch((e) => {
           console.error('[Public Leads] Google Ads conversion failed:', e?.message ?? e)
@@ -268,10 +269,11 @@ export async function POST(request: NextRequest) {
       request
     )
 
-  } catch (error: any) {
+  } catch (error) {
     const duration = Date.now() - startTime
+    const message = error instanceof Error ? error.message : String(error)
     console.error('[Public Leads] Unexpected error', {
-      error: error.message,
+      error: message,
       duration: `${duration}ms`,
     })
     

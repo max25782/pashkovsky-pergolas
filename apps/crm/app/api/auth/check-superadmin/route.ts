@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       isSuperAdmin: isAdmin,
       userId: user.id 
     })
-  } catch (error: any) {
+  } catch (error) {
     console.error('[Check SuperAdmin] Error:', error)
     return NextResponse.json({ isSuperAdmin: false })
   }

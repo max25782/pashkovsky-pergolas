@@ -48,10 +48,10 @@ export async function GET(
     const offer = transformOfferFromDB(data)
 
     return NextResponse.json(offer)
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in GET /api/public/offers/[id]:', error)
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      { error: 'Internal server error', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     )
   }

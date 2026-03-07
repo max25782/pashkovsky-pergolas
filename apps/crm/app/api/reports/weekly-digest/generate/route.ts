@@ -53,13 +53,14 @@ export async function POST(req: NextRequest) {
         status: digest.status,
       },
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error)
     console.error('[Weekly Digest Generate] Error:', {
-      error: error.message?.substring(0, 500), // Limit log size
+      error: msg?.substring(0, 500), // Limit log size
     })
 
     return NextResponse.json(
-      { error: 'Failed to generate digest', details: error.message },
+      { error: 'Failed to generate digest', details: msg },
       { status: 500 }
     )
   }

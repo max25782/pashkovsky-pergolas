@@ -91,7 +91,7 @@ export async function checkAIDirectorAccess(companyId: string): Promise<NextResp
 
     // Access granted
     return null
-  } catch (error: any) {
+  } catch (error) {
     console.error('[AI Director] Subscription check error:', error)
     return NextResponse.json(
       {

@@ -32,14 +32,12 @@ export async function GET(req: NextRequest) {
     if (error) {
       // If table doesn't exist, return empty array
       if (error.code === '42P01') {
-        console.log('[Articles API] Table does not exist, returning empty')
         return NextResponse.json({ articles: [] })
       }
       console.error('[Articles API] Error loading:', error)
       throw error
     }
 
-    console.log(`[Articles API] Loaded ${data?.length || 0} articles`)
     return NextResponse.json({ articles: data || [] })
   } catch (error) {
     console.error('[Articles API] Error:', error)

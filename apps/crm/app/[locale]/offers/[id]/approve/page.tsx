@@ -1,5 +1,6 @@
 "use client"
 
+import { useToast } from '@/components/ui/toast'
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import SignatureCanvas from 'react-signature-canvas'
@@ -58,6 +59,7 @@ function renderPergolaDimensions(shape: PergolaShape) {
 export default function OfferApprovePage() {
   const params = useParams()
   const router = useRouter()
+  const toast = useToast()
   const signaturePadRef = useRef<SignatureCanvas>(null)
   
   const [offer, setOffer] = useState<Offer | null>(null)
@@ -83,8 +85,8 @@ export default function OfferApprovePage() {
       setOffer(data)
       setCustomerName(data.customerName || '')
       setCustomerPhone(data.customerPhone || '')
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err))
     } finally {
       setLoading(false)
     }
@@ -96,12 +98,12 @@ export default function OfferApprovePage() {
 
   async function handleApprove() {
     if (!signaturePadRef.current || signaturePadRef.current.isEmpty()) {
-      alert('אנא חתמו על ההצעה')
+      toast.error('אנא חתמו על ההצעה')
       return
     }
 
     if (!customerName.trim()) {
-      alert('אנא הזינו את שמכם')
+      toast.error('אנא הזינו את שמכם')
       return
     }
 
@@ -127,9 +129,9 @@ export default function OfferApprovePage() {
 
       // Redirect to success page
       router.push(`/${params.locale}/offers/${params.id}/success`)
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error approving offer:', err)
-      setError(err.message)
+      setError(err instanceof Error ? err.message : String(err))
     } finally {
       setSubmitting(false)
     }

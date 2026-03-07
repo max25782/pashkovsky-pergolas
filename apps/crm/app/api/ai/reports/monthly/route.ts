@@ -398,10 +398,10 @@ export async function GET(request: NextRequest) {
       report: aiReport,
       generatedAt: new Date().toISOString(),
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Monthly Report] Error:', error)
     return NextResponse.json(
-      { error: 'Failed to generate report', details: error.message },
+      { error: 'Failed to generate report', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     )
   }

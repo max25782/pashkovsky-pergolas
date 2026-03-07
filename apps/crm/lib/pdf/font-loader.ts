@@ -9,7 +9,6 @@ export function createOptimizedFontDataUri(fontPath: string): string {
   try {
     const fullPath = path.join(process.cwd(), fontPath)
     
-    console.log(`[Font] Loading font: ${fontPath}`)
     
     if (!fs.existsSync(fullPath)) {
       console.error(`[Font] ❌ Font file not found: ${fullPath}`)
@@ -19,7 +18,6 @@ export function createOptimizedFontDataUri(fontPath: string): string {
     const fontBuffer = fs.readFileSync(fullPath)
     const base64Font = fontBuffer.toString('base64')
     
-    console.log(`[Font] ✅ Font loaded: ${path.basename(fontPath)} (${(fontBuffer.length / 1024).toFixed(2)} KB)`)
     
     // Use application/font-ttf or font/truetype - both should work
     return `data:application/font-ttf;charset=utf-8;base64,${base64Font}`
@@ -45,7 +43,6 @@ export function getHebrewFontsCss(): string {
     `
   }
 
-  console.log(`[Font] ✅ Fonts embedded (Regular: ${!!regularUri}, Bold: ${!!boldUri})`)
 
   let css = ''
 
@@ -91,7 +88,6 @@ export function getHebrewFontsCss(): string {
 
 // Logo embedded as base64 so it's always available in Vercel serverless
 // (public/ directory files are NOT accessible in API route filesystem at runtime).
-// To update: node -e "const fs=require('fs'); console.log(Buffer.from(fs.readFileSync('apps/crm/public/logo.svg')).toString('base64'))"
 const LOGO_BASE64 = 'PHN2ZyB2aWV3Qm94PSIwIDAgMjAwIDYwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPg0KICA8IS0tIEEgaWNvbjogYWx1bWludW0gcGFuZWxzIGZvcm1pbmcgQSBzaGFwZSAtLT4NCiAgPGcgaWQ9Imljb24iPg0KICAgIDwhLS0gTWFpbiBBIHNoYXBlIGluIGJsdWUgLS0+DQogICAgPHBhdGggZD0iTSAyMCA1MCBMIDMwIDE1IEwgNDAgMTUgTCA1MCA1MCBaIiBmaWxsPSIjMjU2M0VCIiBvcGFjaXR5PSIwLjkiLz4NCiAgICA8IS0tIFNpbHZlciBhbHVtaW51bSBiYXIgYWNyb3NzIG1pZGRsZSAtLT4NCiAgICA8cmVjdCB4PSIyNyIgeT0iMzIiIHdpZHRoPSIxNiIgaGVpZ2h0PSI1IiBmaWxsPSIjOTRBM0I4Ii8+DQogICAgPCEtLSBTbWFsbCBhbHVtaW51bSBkZXRhaWwgYXQgdG9wIC0tPg0KICAgIDxjaXJjbGUgY3g9IjM1IiBjeT0iMTIiIHI9IjMiIGZpbGw9IiM5NEEzQjgiLz4NCiAgPC9nPg0KICANCiAgPCEtLSBUZXh0OiBBbHVtaW5DUk0gLS0+DQogIDx0ZXh0IHg9IjYwIiB5PSI0MCIgZm9udC1mYW1pbHk9InN5c3RlbS11aSwgLWFwcGxlLXN5c3RlbSwgQmxpbmtNYWNTeXN0ZW1Gb250LCAnU2Vnb2UgVUknLCBzYW5zLXNlcmlmIiBmb250LXdlaWdodD0iNzAwIiBmb250LXNpemU9IjI2IiBmaWxsPSIjMUUyOTNCIj4NCiAgICBBbHVtaW48dHNwYW4gZmlsbD0iIzI1NjNFQiI+Q1JNPC90c3Bhbj4NCiAgPC90ZXh0Pg0KPC9zdmc+DQoNCg=='
 
 /**

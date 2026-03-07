@@ -21,6 +21,7 @@ export interface CRMTranslations {
     of: string
     yes: string
     no: string
+    edit: string
   }
 
   // Auth
@@ -273,6 +274,7 @@ export function getCRMTranslations(locale: Locale): CRMTranslations {
         of: 'из',
         yes: 'Да',
         no: 'Нет',
+        edit: 'Редактировать',
       },
       auth: {
         enterAdminToken: 'Введите токен администратора',
@@ -507,6 +509,7 @@ export function getCRMTranslations(locale: Locale): CRMTranslations {
         of: 'of',
         yes: 'Yes',
         no: 'No',
+        edit: 'Edit',
       },
       auth: {
         enterAdminToken: 'Enter admin token',
@@ -741,6 +744,7 @@ export function getCRMTranslations(locale: Locale): CRMTranslations {
       of: 'מתוך',
       yes: 'כן',
       no: 'לא',
+      edit: 'ערוך',
     },
     auth: {
       enterAdminToken: 'הכנס אסימון מנהל',

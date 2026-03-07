@@ -137,8 +137,8 @@ export async function buildAnalyticsContext({
         }
         dataGaps.push('Per-source conversion rates not calculated - requires additional queries')
         dataGaps.push('Average days to convert not calculated - requires tracking conversion timestamps')
-      } catch (error: any) {
-        dataGaps.push(`Failed to fetch leads data: ${error.message}`)
+      } catch (error: unknown) {
+        dataGaps.push(`Failed to fetch leads data: ${error instanceof Error ? error.message : String(error)}`)
       }
     }
 
@@ -192,8 +192,8 @@ export async function buildAnalyticsContext({
         dataGaps.push('Project type breakdown not calculated - requires additional query')
         dataGaps.push('Average days in stage not calculated - requires stage transition tracking')
         dataGaps.push('Top customers list not generated - requires additional aggregation')
-      } catch (error: any) {
-        dataGaps.push(`Failed to fetch deals data: ${error.message}`)
+      } catch (error: unknown) {
+        dataGaps.push(`Failed to fetch deals data: ${error instanceof Error ? error.message : String(error)}`)
       }
     }
 
@@ -242,8 +242,8 @@ export async function buildAnalyticsContext({
         dataGaps.push('Cash flow timeline not generated - requires daily aggregation')
         dataGaps.push('Material costs not tracked separately - only labor costs available')
         dataGaps.push('Revenue projections not calculated - requires historical trend analysis')
-      } catch (error: any) {
-        dataGaps.push(`Failed to fetch finance data: ${error.message}`)
+      } catch (error: unknown) {
+        dataGaps.push(`Failed to fetch finance data: ${error instanceof Error ? error.message : String(error)}`)
       }
     }
 
@@ -267,8 +267,8 @@ export async function buildAnalyticsContext({
       assumptions.push('Stalled deals are those unchanged for >30 days')
     }
 
-  } catch (error: any) {
-    dataGaps.push(`Critical error building analytics context: ${error.message}`)
+  } catch (error: unknown) {
+    dataGaps.push(`Critical error building analytics context: ${error instanceof Error ? error.message : String(error)}`)
   }
 
   // Add notes to context metadata

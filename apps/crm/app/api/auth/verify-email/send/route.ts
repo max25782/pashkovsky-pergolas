@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
       message: 'Verification email sent',
     })
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('[Verify Email] Unexpected error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },

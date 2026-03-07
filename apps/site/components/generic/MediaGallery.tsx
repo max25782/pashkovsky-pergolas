@@ -14,7 +14,6 @@ interface MediaGalleryProps {
 }
 
 export function MediaGallery({ title, items }: MediaGalleryProps){
-  console.log('[MediaGallery] Received items:', items.length)
   
   const videos = items.filter(i => i.type === 'video').map(v => ({ ...v, src: getImageUrl(v.src) }))
   const images = items.filter(i => i.type === 'image').map(i => {
@@ -23,7 +22,6 @@ export function MediaGallery({ title, items }: MediaGalleryProps){
     return url
   })
   
-  console.log('[MediaGallery] Videos:', videos.length, 'Images:', images.length)
 
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [startIndex, setStartIndex] = useState(0)

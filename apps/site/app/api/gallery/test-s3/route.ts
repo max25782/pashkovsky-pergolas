@@ -40,7 +40,6 @@ export async function GET(req: NextRequest) {
     prefix,
   }
 
-  console.log('[Test S3] Configuration:', config)
 
   const s3Client = getS3Client()
 
@@ -80,12 +79,13 @@ export async function GET(req: NextRequest) {
         commonPrefixes: response.CommonPrefixes?.map(p => p.Prefix) || [],
       },
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const e = error as Error & { Code?: string }
     console.error('[Test S3] Error:', error)
     return NextResponse.json({
       success: false,
-      error: error.message,
-      errorCode: error.Code,
+      error: e?.message ?? String(error),
+      errorCode: e?.Code,
       config,
     }, { status: 500 })
   }

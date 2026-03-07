@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -64,9 +64,9 @@ export default function MonthlyReportPage() {
       }
       
       setReport(data.report)
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[Monthly Report] Fetch error:', err)
-      setError(err.message || 'Failed to load report')
+      setError(err instanceof Error ? err.message : 'Failed to load report')
       setReport(null)
     } finally {
       setLoading(false)

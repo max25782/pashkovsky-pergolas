@@ -50,7 +50,6 @@ export async function POST(req: NextRequest) {
 
     const url = await uploadToS3(buffer, key, file.type)
 
-    console.log(`[Profile Image Upload] Uploaded ${key} (${file.size} bytes) → ${url}`)
 
     return NextResponse.json({ url })
   } catch (err: unknown) {

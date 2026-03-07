@@ -89,8 +89,8 @@ export default function MediaAdminPage() {
       setS3Items(newItems)
       setNextToken(data.nextToken)
       setHasMore(!!data.nextToken)
-    } catch (e: any) {
-      setError(e.message)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e))
     } finally {
       setLoading(false)
     }
@@ -236,8 +236,8 @@ export default function MediaAdminPage() {
       })
       setEditKey(null)
       setMessage(`Saved tags for ${key.split('/').pop()}`)
-    } catch (e: any) {
-      setError(e.message)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e))
     } finally {
       setSavingKey(null)
     }

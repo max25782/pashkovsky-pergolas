@@ -18,32 +18,26 @@ let browserInstance: Browser | null = null
  */
 export async function createBrowser(): Promise<Browser> {
   if (browserInstance && browserInstance.isConnected()) {
-    console.log('[Browser] Reusing existing browser instance')
     return browserInstance
   }
 
-  console.log('[Browser] Creating new Chromium instance, env:', process.env.NODE_ENV, 'vercel:', !!process.env.VERCEL)
 
   // Local development: use full puppeteer (bundles its own Chromium)
   if (process.env.NODE_ENV === 'development' && !process.env.VERCEL) {
-    console.log('[Browser] Dev mode: launching puppeteer...')
     const puppeteer = await import('puppeteer')
     browserInstance = await puppeteer.default.launch({
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
     })
-    console.log('[Browser] ✅ Puppeteer launched')
     return browserInstance
   }
 
   // Production / Vercel: download Chromium binary at runtime to /tmp.
   // setGraphicsMode=false disables WebGL/SwiftShader (not needed for PDF).
   // v143 has no setHeadlessMode — headless is always on.
-  console.log('[Browser] Production mode: downloading Chromium from:', CHROMIUM_PACK_URL)
   chromium.setGraphicsMode = false
 
   const executablePath = await chromium.executablePath(CHROMIUM_PACK_URL)
-  console.log('[Browser] Chromium executable:', executablePath)
 
   // headless: 'shell' tells Puppeteer v21+ to use chrome-headless-shell mode.
   // Passing headless: true would inject --headless=new which conflicts with
@@ -55,7 +49,6 @@ export async function createBrowser(): Promise<Browser> {
     headless: 'shell',
   })
 
-  console.log('[Browser] ✅ Chromium launched successfully')
   return browserInstance
 }
 
@@ -66,7 +59,6 @@ export async function closeBrowser(): Promise<void> {
   if (browserInstance && browserInstance.isConnected()) {
     await browserInstance.close()
     browserInstance = null
-    console.log('[Browser] Browser closed')
   }
 }
 

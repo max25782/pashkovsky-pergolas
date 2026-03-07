@@ -78,25 +78,18 @@ async function prefetchImages(order: Order): Promise<Record<string, string>> {
  */
 export async function generateOrderPdf(order: Order): Promise<Buffer> {
   try {
-    console.log('[PDF Generator] Starting PDF generation for order:', order.id)
-    console.log('[PDF Generator] Order number:', order.order_number)
 
-    console.log('[PDF Generator] Step 1: Prefetching product images...')
     const imageMap = await prefetchImages(order)
-    console.log('[PDF Generator] ✅ Images prefetched:', Object.keys(imageMap).length)
 
-    console.log('[PDF Generator] Step 2: Rendering HTML template...')
     const html = renderOrderHtml(order, imageMap)
-    console.log('[PDF Generator] ✅ HTML rendered, length:', html.length)
 
-    console.log('[PDF Generator] Step 3: Converting HTML to PDF...')
     const pdfBuffer = await renderHtmlToPdfBuffer(html)
-    console.log('[PDF Generator] ✅ PDF generated, size:', pdfBuffer.length, 'bytes')
 
     return pdfBuffer
-  } catch (error: any) {
-    console.error('[PDF Generator] ❌ ERROR:', error?.message)
-    throw new Error(`Failed to generate PDF: ${error.message || 'Unknown error'}`)
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error)
+    console.error('[PDF Generator] ERROR:', msg)
+    throw new Error(`Failed to generate PDF: ${msg || 'Unknown error'}`)
   }
 }
 

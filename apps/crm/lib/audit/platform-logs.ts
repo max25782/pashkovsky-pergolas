@@ -54,7 +54,6 @@ export async function logPlatformEvent(params: LogEventParams): Promise<void> {
     if (error) {
       console.error('[Audit Log] Failed to log event:', error)
     } else {
-      console.log('[Audit Log] Event logged:', params.event_type)
     }
   } catch (error) {
     console.error('[Audit Log] Exception:', error)

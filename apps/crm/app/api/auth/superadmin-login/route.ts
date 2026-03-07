@@ -6,7 +6,6 @@ export async function POST(request: NextRequest) {
   try {
     const { phone, token } = await request.json();
 
-    console.log('[SuperAdmin Login] Attempt:', { phone, tokenLength: token?.length });
 
     // Validate input
     if (!phone || !token) {
@@ -19,12 +18,6 @@ export async function POST(request: NextRequest) {
 
     // Validate SUPERADMIN_TOKEN
     const expectedToken = process.env.SUPERADMIN_TOKEN;
-    console.log('[SuperAdmin Login] Token check:', {
-      hasExpectedToken: !!expectedToken,
-      expectedTokenLength: expectedToken?.length,
-      receivedTokenLength: token?.length,
-      tokensMatch: token === expectedToken,
-    });
 
     if (!expectedToken) {
       console.error('[SuperAdmin Login] ❌ SUPERADMIN_TOKEN not configured in .env.local');
@@ -44,11 +37,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('[SuperAdmin Login] ✓ Token validated');
 
     // Normalize phone
     const normalizedPhone = phone.replace(/\D/g, '');
-    console.log('[SuperAdmin Login] Normalized phone:', normalizedPhone);
 
     // Check for SERVICE_ROLE_KEY
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -59,7 +50,6 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
-    console.log('[SuperAdmin Login] ✓ SERVICE_ROLE_KEY configured');
 
     // Create Supabase Admin client (bypasses RLS)
     const supabaseAdmin = createClient(
@@ -72,7 +62,6 @@ export async function POST(request: NextRequest) {
         },
       }
     );
-    console.log('[SuperAdmin Login] ✓ Supabase Admin client created');
 
     // Check if phone belongs to an active SuperAdmin
     const { data: admin, error: adminError } = await supabaseAdmin
@@ -98,8 +87,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('[SuperAdmin Login] ✓ SuperAdmin verified:', admin.email);
-    console.log('[SuperAdmin Login] User ID:', admin.user_id);
 
     // Create server-side session in Redis
     const sessionId = await createSession({
@@ -109,7 +96,6 @@ export async function POST(request: NextRequest) {
       phone: normalizedPhone,
     });
 
-    console.log('[SuperAdmin Login] ✓ Session created in Redis');
 
     // Create response with httpOnly cookie
     const response = NextResponse.json({
@@ -127,7 +113,6 @@ export async function POST(request: NextRequest) {
       path: '/',
     });
 
-    console.log('[SuperAdmin Login] ✓ httpOnly cookie set');
 
     return response;
   } catch (error) {

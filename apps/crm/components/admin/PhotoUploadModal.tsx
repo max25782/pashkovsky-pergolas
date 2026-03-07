@@ -1,5 +1,6 @@
 "use client"
 import { useState, useRef, useCallback } from 'react'
+import { useToast } from '@/components/ui/toast'
 import type { GalleryImage } from './gallery-types'
 
 interface PhotoUploadModalProps {
@@ -10,6 +11,7 @@ interface PhotoUploadModalProps {
 }
 
 export function PhotoUploadModal({ categoryKey, categoryName, onClose, onUpload }: PhotoUploadModalProps) {
+  const toast = useToast()
   const [files, setFiles] = useState<File[]>([])
   const [previews, setPreviews] = useState<string[]>([])
   const [uploading, setUploading] = useState(false)
@@ -25,7 +27,7 @@ export function PhotoUploadModal({ categoryKey, categoryName, onClose, onUpload 
     )
 
     if (imageFiles.length === 0) {
-      alert('Пожалуйста, выберите изображения')
+      toast.error('Пожалуйста, выберите изображения')
       return
     }
 
@@ -64,7 +66,7 @@ export function PhotoUploadModal({ categoryKey, categoryName, onClose, onUpload 
 
   async function handleUpload() {
     if (files.length === 0) {
-      alert('Пожалуйста, выберите файлы для загрузки')
+      toast.error('Пожалуйста, выберите файлы для загрузки')
       return
     }
 
@@ -72,30 +74,26 @@ export function PhotoUploadModal({ categoryKey, categoryName, onClose, onUpload 
     setUploadProgress(0)
 
     try {
-      console.log('Starting upload:', { categoryKey, filesCount: files.length })
       setUploadProgress(10)
       
       const result = await onUpload(files)
-      console.log('Upload result:', result)
       setUploadProgress(100)
       
       if (result.success && result.uploaded > 0) {
         // Даём время родительскому компоненту обновить состояние перед закрытием
         // onUpload уже выполнил все обновления (loadCategoryImages, loadCategories)
-        console.log('Upload successful, closing modal after state updates...')
         // Используем requestAnimationFrame для гарантии, что React успел обновить DOM
         requestAnimationFrame(() => {
           setTimeout(() => {
-            console.log('Closing upload modal')
             onClose()
           }, 300)
         })
       } else {
-        alert(`Загружено ${result.uploaded} из ${files.length} файлов`)
+        toast.success(`Загружено ${result.uploaded} из ${files.length} файлов`)
       }
-    } catch (e: any) {
+    } catch (e) {
       console.error('Upload error:', e)
-      alert(`Ошибка загрузки: ${e.message}`)
+      toast.error(`Ошибка загрузки: ${e instanceof Error ? e.message : "Error"}`)
     } finally {
       setUploading(false)
       setUploadProgress(0)

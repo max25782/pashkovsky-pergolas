@@ -1,5 +1,6 @@
 "use client"
 import { useState, useEffect } from 'react'
+import { useToast } from '@/components/ui/toast'
 import type { GalleryImage } from './gallery-types'
 
 interface GalleryImagesListProps {
@@ -9,13 +10,12 @@ interface GalleryImagesListProps {
 }
 
 export function GalleryImagesList({ images, onDelete, loading }: GalleryImagesListProps) {
+  const toast = useToast()
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
   // Логируем изменения для отладки
   useEffect(() => {
-    console.log('GalleryImagesList: images changed, count:', images.length)
     images.forEach((img, idx) => {
-      console.log(`  Image ${idx + 1}:`, { id: img.id, filename: img.filename, url: img.url })
     })
   }, [images])
 
@@ -25,9 +25,9 @@ export function GalleryImagesList({ images, onDelete, loading }: GalleryImagesLi
     setDeletingId(id)
     try {
       await onDelete(id)
-    } catch (e: any) {
+    } catch (e) {
       console.error('Delete error:', e)
-      alert(`Ошибка удаления: ${e.message}`)
+      toast.error(e instanceof Error ? `Ошибка удаления: ${e.message}` : "Ошибка удаления")
     } finally {
       setDeletingId(null)
     }

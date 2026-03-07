@@ -98,7 +98,6 @@ ${conversation}
     }
 
     const parsed: AppointmentData = JSON.parse(jsonMatch[0])
-    console.log('[Appointment] Extracted:', parsed)
     return parsed
   } catch (e) {
     console.error('[Appointment] Extraction failed:', e)

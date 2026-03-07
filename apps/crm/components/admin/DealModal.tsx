@@ -5,6 +5,7 @@ import { getStages } from './deal-types'
 import { SketchModal } from './SketchModal'
 import { FileImage, FileText } from 'lucide-react'
 import { useCRMTranslations } from './useCRMTranslations'
+import { useToast } from '@/components/ui/toast'
 import { CreateOfferModal } from '../offers/CreateOfferModal'
 import { OffersList } from '../offers/OffersList'
 import { WorkLogSection } from '../workers/WorkLogSection'
@@ -37,6 +38,7 @@ export function DealModal({
   adminToken = ''
 }: DealModalProps) {
   const t = useCRMTranslations()
+  const toast = useToast()
   const stages = getStages(t.deals)
   const [localDeal, setLocalDeal] = useState(deal)
   const [saving, setSaving] = useState(false)
@@ -160,15 +162,15 @@ export function DealModal({
 
       if (localDeal.work_type === 'railings') {
         if (!railingsForm.meters_total || railingsForm.meters_total <= 0) {
-          alert(`${t.deals.metersTotal} ${t.deals.required}`)
+          toast.error(`${t.deals.metersTotal} ${t.deals.required}`)
           return
         }
         if (!railingsForm.profile_type?.trim()) {
-          alert(`${t.deals.profileType} ${t.deals.required}`)
+          toast.error(`${t.deals.profileType} ${t.deals.required}`)
           return
         }
         if (!railingsForm.color?.trim()) {
-          alert(`${t.deals.color} ${t.deals.required}`)
+          toast.error(`${t.deals.color} ${t.deals.required}`)
           return
         }
       }
@@ -798,7 +800,6 @@ export function DealModal({
           isOpen={showOfferModal}
           onClose={() => setShowOfferModal(false)}
           onCreated={(offer) => {
-            console.log('Offer created:', offer)
             setOffersRefreshTrigger(prev => prev + 1)
             setShowOfferModal(false)
           }}

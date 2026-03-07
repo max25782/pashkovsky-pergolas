@@ -247,7 +247,7 @@ export async function GET(req: NextRequest) {
     const messages = await getChatHistory(sessionId)
     
     return jsonResponse({ messages, sessionId }, {}, req)
-  } catch (error: any) {
+  } catch (error) {
     console.error('[Public AI Chat] GET error:', error)
     return jsonResponse({ error: 'Failed to load chat history' }, { status: 500 }, req)
   }
@@ -359,9 +359,10 @@ export async function POST(req: NextRequest) {
             encoder.encode(`data: ${JSON.stringify({ done: true, remaining: rateLimit.remaining })}\n\n`)
           )
           controller.close()
-        } catch (error: any) {
+        } catch (error: unknown) {
           console.error('[Public AI Chat] Stream error:', error)
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: error.message })}\n\n`))
+          const msg = error instanceof Error ? error.message : String(error)
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`))
           controller.close()
         }
       },
@@ -376,7 +377,7 @@ export async function POST(req: NextRequest) {
         ...corsHeaders(origin),
       },
     })
-  } catch (error: any) {
+  } catch (error) {
     console.error('[Public AI Chat] POST error:', error)
     return jsonResponse({ error: 'Internal server error' }, { status: 500 }, req)
   }

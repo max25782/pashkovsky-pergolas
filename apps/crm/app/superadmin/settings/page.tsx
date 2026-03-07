@@ -27,8 +27,8 @@ export default function SettingsPage() {
       if (!res.ok) throw new Error('Failed to fetch settings')
       const data = await res.json()
       setSettings(data)
-    } catch (error: any) {
-      showMessage('error', error.message || 'Failed to load settings')
+    } catch (error: unknown) {
+      showMessage('error', (error instanceof Error ? error.message : String(error)) || 'Failed to load settings')
     } finally {
       setLoading(false)
     }
@@ -56,8 +56,8 @@ export default function SettingsPage() {
       const updated = await res.json()
       setSettings(updated)
       showMessage('success', 'Settings saved successfully!')
-    } catch (error: any) {
-      showMessage('error', error.message || 'Failed to save settings')
+    } catch (error: unknown) {
+      showMessage('error', (error instanceof Error ? error.message : String(error)) || 'Failed to save settings')
     } finally {
       setSaving(false)
     }

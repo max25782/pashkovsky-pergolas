@@ -1,5 +1,6 @@
 "use client"
 import { useState, useEffect } from 'react'
+import { useToast } from '@/components/ui/toast'
 import type { GalleryCategory } from './gallery-types'
 
 interface CategoryModalProps {
@@ -9,6 +10,7 @@ interface CategoryModalProps {
 }
 
 export function CategoryModal({ category, onClose, onSave }: CategoryModalProps) {
+  const toast = useToast()
   const [saving, setSaving] = useState(false)
   const [formData, setFormData] = useState({
     key: category?.key || '',
@@ -36,7 +38,7 @@ export function CategoryModal({ category, onClose, onSave }: CategoryModalProps)
 
   async function handleSave() {
     if (!formData.key.trim()) {
-      alert('Пожалуйста, заполните ключ категории')
+      toast.error('Пожалуйста, заполните ключ категории')
       return
     }
 
@@ -44,9 +46,9 @@ export function CategoryModal({ category, onClose, onSave }: CategoryModalProps)
     try {
       await onSave(formData)
       onClose()
-    } catch (e: any) {
+    } catch (e) {
       console.error('Save error:', e)
-      alert(`Ошибка сохранения: ${e.message}`)
+      toast.error(`Ошибка сохранения: ${e instanceof Error ? e.message : 'Error'}`)
     } finally {
       setSaving(false)
     }

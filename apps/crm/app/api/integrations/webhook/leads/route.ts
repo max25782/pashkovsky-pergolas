@@ -137,10 +137,6 @@ export async function POST(request: NextRequest) {
           lead => lead.message && lead.message.trim() === leadData.message!.trim()
         )
         if (isDuplicate) {
-          console.log('[Webhook] Duplicate lead detected (24h window)', {
-            company_id,
-            phone: normalizedPhone,
-          })
           return NextResponse.json(
             { success: true, deduped: true },
             { status: 200 }
@@ -201,11 +197,6 @@ export async function POST(request: NextRequest) {
 
     // 10. Success
     const duration = Date.now() - startTime
-    console.log('[Webhook] Lead received successfully', {
-      lead_id: lead.id,
-      company_id,
-      duration: `${duration}ms`,
-    })
 
     return NextResponse.json(
       {
@@ -214,10 +205,11 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 }
     )
-  } catch (error: any) {
+  } catch (error: unknown) {
     const duration = Date.now() - startTime
+    const msg = error instanceof Error ? error.message : String(error)
     console.error('[Webhook] Unexpected error:', {
-      error: error.message,
+      error: msg,
       duration: `${duration}ms`,
     })
 

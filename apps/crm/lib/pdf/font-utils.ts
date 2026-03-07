@@ -10,7 +10,6 @@ export function getFontDataUri(fontPath: string): string {
   try {
     const fullPath = path.join(process.cwd(), fontPath)
     
-    console.log(`[Font] Attempting to load font: ${fullPath}`)
     
     if (!fs.existsSync(fullPath)) {
       console.error(`[Font] ❌ Font file not found: ${fullPath}`)
@@ -21,7 +20,6 @@ export function getFontDataUri(fontPath: string): string {
     const base64Font = fontBuffer.toString('base64')
     const base64Length = base64Font.length
     
-    console.log(`[Font] ✅ Font loaded successfully: ${fontPath} (${base64Length} chars base64)`)
     
     return `data:font/ttf;charset=utf-8;base64,${base64Font}`
   } catch (error) {
@@ -51,7 +49,6 @@ export function getEmbeddedFontsCss(): string {
     `
   }
 
-  console.log(`[Font] ✅ Fonts embedded successfully (Regular: ${!!regularFontUri}, Bold: ${!!boldFontUri})`)
 
   let css = ''
 

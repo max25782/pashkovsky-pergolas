@@ -71,11 +71,6 @@ export async function callBedrockAgent({
     const command = new InvokeAgentCommand(commandInput)
     const response = await client.send(command)
 
-    console.log('[Bedrock] Response metadata:', {
-      hasCompletion: !!response.completion,
-      sessionId: response.sessionId,
-    })
-
     // Read the response stream
     let responseText = ''
     let chunkCount = 0
@@ -83,32 +78,19 @@ export async function callBedrockAgent({
       for await (const chunk of response.completion) {
         chunkCount++
         
-        // Log full chunk structure for debugging
-        console.log('[Bedrock] Chunk', chunkCount, 'full:', JSON.stringify(chunk, null, 2))
-        
-        console.log('[Bedrock] Chunk', chunkCount, 'summary:', {
-          hasBytes: !!chunk.chunk?.bytes,
-          hasAttribution: !!chunk.chunk?.attribution,
-          hasTrace: !!chunk.trace,
-          chunkKeys: chunk.chunk ? Object.keys(chunk.chunk) : [],
-          type: chunk.chunk?.bytes ? 'bytes' : 'other',
-        })
         
         if (chunk.chunk?.bytes) {
           const decoder = new TextDecoder()
           const text = decoder.decode(chunk.chunk.bytes)
-          console.log('[Bedrock] Decoded text:', text.substring(0, 100))
           responseText += text
         }
         
         // Check for trace information (action group invocations)
         if (chunk.trace) {
-          console.log('[Bedrock] Trace found:', JSON.stringify(chunk.trace, null, 2))
         }
       }
     }
 
-    console.log('[Bedrock] Total chunks:', chunkCount, 'Response length:', responseText.length)
 
     if (!responseText) {
       console.error('[Bedrock] No text in response. This usually means:')
@@ -127,15 +109,16 @@ export async function callBedrockAgent({
       content: responseText,
       sessionId: currentSessionId,
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const e = error as { message?: string; code?: string }
     console.error('[Bedrock] Error calling agent:', {
-      error: error.message?.substring(0, 500),
-      code: error.code,
+      error: e?.message?.substring(0, 500),
+      code: e?.code,
     })
 
     return {
       content: '',
-      error: error.message || 'Failed to call Bedrock agent',
+      error: e?.message || 'Failed to call Bedrock agent',
     }
   }
 }

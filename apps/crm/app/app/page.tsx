@@ -39,11 +39,12 @@ export default async function AppPage() {
 
     redirect('/app/admin')
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const e = error as { digest?: string; message?: string } | undefined
     // next/navigation redirect() throws NEXT_REDIRECT — let it propagate normally
-    if (error?.digest?.startsWith('NEXT_REDIRECT')) throw error
+    if (e?.digest?.startsWith('NEXT_REDIRECT')) throw error
 
-    console.error('[AppPage] Unexpected error:', error?.message ?? error)
+    console.error('[AppPage] Unexpected error:', e?.message ?? error)
     throw error
   }
 }

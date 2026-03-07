@@ -32,11 +32,10 @@ export function useLeadActions({
       
       onUpdate?.(data as Lead)
       return data as Lead
-    } catch (e: any) {
+    } catch (e) {
       console.error('[useLeadActions] Patch error:', e)
       const error = e instanceof Error ? e : new Error(String(e))
       onError?.(error)
-      alert(`Ошибка обновления: ${error.message}`)
       throw error
     } finally {
       setUpdating(false)
@@ -58,11 +57,10 @@ export function useLeadActions({
       if (dbError) throw new Error(dbError.message)
       
       onDelete?.(id)
-    } catch (e: any) {
+    } catch (e) {
       console.error('[useLeadActions] Delete error:', e)
       const error = e instanceof Error ? e : new Error(String(e))
       onError?.(error)
-      alert(`Ошибка удаления: ${error.message}`)
       throw error
     } finally {
       setDeleting(false)

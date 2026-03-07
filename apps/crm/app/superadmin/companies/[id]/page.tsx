@@ -62,12 +62,6 @@ export default async function CompanyDetailsPage({ params }: PageProps) {
     .eq('company_id', companyId)
     .limit(1)
 
-  console.log('[CompanyDetails] Subscription query result:', {
-    companyId,
-    data: subscriptionData,
-    error: subError,
-  })
-
   const subscription = subscriptionData?.[0] || null
 
   // Fetch company members
@@ -75,12 +69,6 @@ export default async function CompanyDetailsPage({ params }: PageProps) {
     .from('company_members')
     .select('*')
     .eq('company_id', companyId)
-
-  console.log('[CompanyDetails] Members query result:', {
-    companyId,
-    count: members?.length || 0,
-    error: membersError,
-  })
 
   // Fetch subscription history
   const { data: history, error: historyError } = await supabaseAdmin
@@ -95,12 +83,6 @@ export default async function CompanyDetailsPage({ params }: PageProps) {
     .eq('company_id', companyId)
     .order('created_at', { ascending: false })
     .limit(10)
-
-  console.log('[CompanyDetails] History query result:', {
-    companyId,
-    count: history?.length || 0,
-    error: historyError,
-  })
 
   return (
     <div className="p-8 max-w-7xl mx-auto">

@@ -8,6 +8,7 @@ import { FileText, Check, Clock, Download, FileDown, MessageCircle, Mail, Trash2
 import { getOfferPublicUrl } from '@/lib/offer-sharing'
 import type { Locale } from '@/lib/locales'
 import { authFetch } from '@/lib/api/auth-fetch'
+import { useToast } from '@/components/ui/toast'
 
 interface OffersListProps {
   dealId: string
@@ -18,162 +19,115 @@ interface OffersListProps {
 export function OffersList({ dealId, refreshTrigger, adminToken }: OffersListProps) {
   const params = useParams()
   const locale = (params?.locale as Locale) || 'he'
+  const toast = useToast()
   const [offers, setOffers] = useState<Offer[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-
   const fetchOffers = useCallback(async () => {
     setLoading(true)
     setError(null)
-
     try {
       const response = await fetch(`/api/offers?dealId=${dealId}`)
-      if (!response.ok) {
-        throw new Error('Failed to fetch offers')
-      }
-
-      const data = await response.json()
-      setOffers(data.offers || [])
-    } catch (err: any) {
+      if (!response.ok) throw new Error('Failed to fetch offers')
+      const data = await response.json() as { offers?: Offer[] }
+      setOffers(data.offers ?? [])
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load offers'
       console.error('Error fetching offers:', err)
-      setError(err.message)
+      setError(message)
     } finally {
       setLoading(false)
     }
   }, [dealId])
 
-  useEffect(() => {
-    fetchOffers()
-  }, [fetchOffers, refreshTrigger])
+  useEffect(() => { fetchOffers() }, [fetchOffers, refreshTrigger])
 
   const handleSendWhatsApp = useCallback((offer: Offer) => {
     try {
       const offerUrl = getOfferPublicUrl(offer.id, locale)
-
-      // Normalize phone to international format for wa.me
-      const raw = offer.customerPhone?.replace(/\D/g, '') || '972524494848' // fallback to main number
+      const raw = offer.customerPhone?.replace(/\D/g, '') || '972524494848'
       let phone = raw
-      if (phone.startsWith('0')) {
-        phone = `972${phone.slice(1)}`
-      } else if (!phone.startsWith('972')) {
-        phone = `972${phone}`
-      }
+      if (phone.startsWith('0')) phone = `972${phone.slice(1)}`
+      else if (!phone.startsWith('972')) phone = `972${phone}`
       phone = `+${phone}`
 
-      // Build message with AI-generated description if available
-      let messageText = `שלום ${offer.customerName},\n\n` +
-        `הצעת המחיר שלך מוכנה! 🎉\n\n`
-      
-      // Add AI-generated description if exists
-      if (offer.options?.notes && offer.options.notes.trim()) {
-        // Limit to ~300 chars to keep WhatsApp message reasonable
-        const shortDescription = offer.options.notes.length > 300
+      let messageText = `שלום ${offer.customerName},\n\nהצעת המחיר שלך מוכנה!\n\n`
+      if (offer.options?.notes?.trim()) {
+        const shortDesc = offer.options.notes.length > 300
           ? offer.options.notes.substring(0, 297) + '...'
           : offer.options.notes
-        
-        messageText += `📋 תיאור:\n${shortDescription}\n\n`
+        messageText += `תיאור:\n${shortDesc}\n\n`
       }
-      
-      messageText += `לצפייה ואישור הצעת המחיר המלאה לחץ כאן:\n${offerUrl}\n\n` +
-        `💰 סכום: ₪${offer.finalPrice.toLocaleString('he-IL', { minimumFractionDigits: 2 })}\n\n` +
-        `בברכה,\nPashkovsky Group`
+      messageText += `לצפייה:\n${offerUrl}\n\n` +
+        `סכום: ₪${offer.finalPrice.toLocaleString('he-IL', { minimumFractionDigits: 2 })}\n\nבברכה,\nPashkovsky Group`
 
-      const message = encodeURIComponent(messageText)
-      window.open(`https://wa.me/${phone}?text=${message}`, '_blank')
-    } catch (err: any) {
-      alert('שגיאה: ' + err.message)
+      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(messageText)}`, '_blank')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      toast.error('שגיאה: ' + message)
     }
-  }, [locale])
+  }, [locale, toast])
 
   const handleSendEmail = useCallback(async (offer: Offer) => {
     const email = prompt('הזן כתובת אימייל לשליחת ההצעה:')
     if (!email) return
-
     try {
       const offerUrl = getOfferPublicUrl(offer.id, locale)
-      
       const response = await fetch(`/api/offers/${offer.id}/send-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          offerUrl,
-          customerName: offer.customerName,
-        }),
+        body: JSON.stringify({ email, offerUrl, customerName: offer.customerName }),
       })
-
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.details || 'Failed to send email')
+        const data = await response.json() as { details?: string }
+        throw new Error(data.details ?? 'Failed to send email')
       }
-
-      alert('✅ האימייל נשלח בהצלחה!')
-    } catch (err: any) {
-      console.error('Error sending email:', err)
-      alert('❌ שגיאה בשליחת אימייל: ' + err.message)
+      toast.success('האימייל נשלח בהצלחה!')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      toast.error('שגיאה בשליחת אימייל: ' + message)
     }
-  }, [locale])
+  }, [locale, toast])
 
   const handleDelete = useCallback(async (offerId: string) => {
     if (!confirm('למחוק את ההצעה הזו?')) return
     try {
-      const response = await authFetch(`/api/offers/${offerId}`, {
-        method: 'DELETE'
-      })
+      const response = await authFetch(`/api/offers/${offerId}`, { method: 'DELETE' })
       if (!response.ok) {
-        const err = await response.json()
-        throw new Error(err.error || 'Failed to delete offer')
+        const data = await response.json() as { error?: string }
+        throw new Error(data.error ?? 'Failed to delete offer')
       }
-      // refresh list
       fetchOffers()
-    } catch (err: any) {
-      alert('❌ שגיאה במחיקה: ' + err.message)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      toast.error('שגיאה במחיקה: ' + message)
     }
-  }, [fetchOffers])
+  }, [fetchOffers, toast])
 
   const handleGeneratePdf = useCallback(async (offer: Offer, forceRegenerate = false) => {
     try {
       const url = `/api/offers/${offer.id}/pdf${forceRegenerate ? '?force=true' : ''}`
-      console.log('[PDF] Generating PDF for offer:', offer.id, 'URL:', url)
-      
-      const res = await authFetch(url, {
-        method: 'POST'
-      })
-      
+      const res = await authFetch(url, { method: 'POST' })
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        const errorMessage = err.error || err.details || `HTTP ${res.status}: ${res.statusText}`
-        console.error('[PDF] PDF generation failed:', errorMessage, err)
-        throw new Error(errorMessage)
+        const err = await res.json().catch(() => ({})) as { error?: string; details?: string }
+        throw new Error(err.error ?? err.details ?? `HTTP ${res.status}`)
       }
-      
-      const data = await res.json()
-      console.log('[PDF] PDF generation response:', data)
-      
-      if (data?.pdfUrl) {
-        // Safari-compatible way to open PDF
+      const data = await res.json() as { pdfUrl?: string; cached?: boolean }
+      if (data.pdfUrl !== undefined && data.pdfUrl !== '') {
         const pdfWindow = window.open(data.pdfUrl, '_blank')
-        if (!pdfWindow) {
-          // Safari might block popup, fallback to direct navigation
-          window.location.href = data.pdfUrl
-        }
-        // If it was cached, ask if user wants to regenerate
-        if (data.cached && !forceRegenerate) {
-          const shouldRegenerate = confirm('PDF כבר קיים. האם לייצר מחדש?')
-          if (shouldRegenerate) {
-            handleGeneratePdf(offer, true)
-          }
+        if (!pdfWindow) window.location.href = data.pdfUrl
+        if (data.cached === true && !forceRegenerate) {
+          if (confirm('PDF כבר קיים. האם לייצר מחדש?')) handleGeneratePdf(offer, true)
         }
       } else {
-        alert('PDF נוצר אך לא הוחזר קישור')
+        toast.info('PDF נוצר אך לא הוחזר קישור')
       }
-    } catch (err: any) {
-      console.error('[PDF] Error in handleGeneratePdf:', err)
-      const errorMessage = err?.message || 'שגיאה לא ידועה'
-      alert('❌ שגיאה ביצירת PDF: ' + errorMessage)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'שגיאה לא ידועה'
+      toast.error('שגיאה ביצירת PDF: ' + message)
     }
-  }, [])
+  }, [toast])
 
   const handleViewOffer = useCallback((offerId: string) => {
     const url = getOfferPublicUrl(offerId, locale)

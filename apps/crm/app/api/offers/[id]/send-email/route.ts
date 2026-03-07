@@ -66,11 +66,11 @@ export async function POST(
       success: true,
       message: 'Email sent successfully',
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error sending email:', error)
-    
+    const msg = error instanceof Error ? error.message : String(error)
     // Check if it's an email configuration error
-    if (error.message.includes('Email configuration is missing')) {
+    if (msg.includes('Email configuration is missing')) {
       return NextResponse.json(
         { 
           error: 'Email not configured',
@@ -83,7 +83,7 @@ export async function POST(
     return NextResponse.json(
       { 
         error: 'Failed to send email',
-        details: error.message 
+        details: msg 
       },
       { status: 500 }
     )

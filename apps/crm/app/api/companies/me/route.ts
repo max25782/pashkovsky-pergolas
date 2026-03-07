@@ -19,23 +19,19 @@ type MembershipWithCompany = {
 
 export async function GET() {
   try {
-    console.log('[companies/me] Route called')
     
     const supabase = createClient()
 
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     if (userError || !user) {
-      console.log('[companies/me] Unauthorized:', userError?.message || 'No user')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    console.log('[companies/me] User:', user.email, 'user_id:', user.id)
 
     const admin = await isSuperAdmin(user.id)
 
     // --- SuperAdmin: use service role ---
     if (admin) {
-      console.log('[companies/me] SuperAdmin detected')
       const service = createServiceClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -50,18 +46,15 @@ export async function GET() {
         .single()
 
       if (companyError || !company) {
-        console.log('[companies/me] No companies available for SuperAdmin')
         return NextResponse.json({ error: 'No companies available' }, { status: 404 })
       }
 
-      console.log('[companies/me] SuperAdmin company:', company.id)
       const response = {
         company_id: company.id,
         company_name: company.name,
         role: 'superadmin',
         status: company.status,
       }
-      console.log('[companies/me] Returning SuperAdmin response:', response)
       return NextResponse.json(response)
     }
 
@@ -80,10 +73,8 @@ export async function GET() {
       )
     }
 
-    console.log('[companies/me] Raw memberships found:', rawMemberships?.length || 0)
 
     if (!rawMemberships || rawMemberships.length === 0) {
-      console.log('[companies/me] No memberships found for user')
       return NextResponse.json({ error: 'Company not found' }, { status: 404 })
     }
 
@@ -106,28 +97,20 @@ export async function GET() {
       .limit(1)
       .maybeSingle<MembershipWithCompany>()
 
-    console.log('[companies/me] Join result:', {
-      hasData: !!membershipsWithCompanies,
-      error: joinError?.message || 'none',
-    })
-
     // If join succeeded and returned data, use it
     if (membershipsWithCompanies && !joinError && membershipsWithCompanies.companies) {
       const company = membershipsWithCompanies.companies
-      console.log('[companies/me] Company found via join:', company.id)
       const response = {
         company_id: company.id,
         company_name: company.name,
         role: membershipsWithCompanies.role,
         status: company.status,
       }
-      console.log('[companies/me] Returning join response:', response)
       return NextResponse.json(response)
     }
 
     // If join failed but we have raw memberships, RLS is blocking access to companies
     // Fallback: fetch company via service role (only for the user's own memberships)
-    console.log('[companies/me] Join failed, using service role fallback for RLS-blocked companies')
     
     const service = createServiceClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -155,18 +138,17 @@ export async function GET() {
       return NextResponse.json({ error: 'Company not found' }, { status: 404 })
     }
 
-    console.log('[companies/me] Company found via service role fallback:', company.id)
     const response = {
       company_id: company.id,
       company_name: company.name,
       role: newestMembership.role || 'worker',
       status: company.status,
     }
-    console.log('[companies/me] Returning fallback response:', response)
     return NextResponse.json(response)
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const e = error as Error & { stack?: string }
     console.error('[companies/me] Unexpected error:', error)
-    console.error('[companies/me] Error stack:', error.stack)
+    console.error('[companies/me] Error stack:', e?.stack)
     // Always return valid JSON, never throw
     return NextResponse.json(
       { error: 'Internal Server Error' },

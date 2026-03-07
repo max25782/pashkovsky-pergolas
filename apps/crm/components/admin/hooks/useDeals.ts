@@ -58,11 +58,10 @@ export function useDeals({
         throw new Error(queryError.message)
       }
       
-      console.log('[useDeals] Loaded deals:', data?.length || 0)
       setDeals(data || [])
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('[useDeals] Load error:', e)
-      setError(e.message)
+      setError(e instanceof Error ? e.message : String(e))
     } finally {
       setLoading(false)
     }

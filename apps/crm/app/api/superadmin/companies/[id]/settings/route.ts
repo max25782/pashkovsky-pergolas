@@ -48,15 +48,16 @@ export async function GET(
     }
 
     return NextResponse.json(company)
-  } catch (error: any) {
-    if (error.message?.includes('Unauthorized')) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error)
+    if (msg?.includes('Unauthorized')) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       )
     }
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: msg || 'Internal server error' },
       { status: 500 }
     )
   }
@@ -118,14 +119,14 @@ export async function PATCH(
       )
     }
 
-    console.log('[Update Company Settings] Updated by:', adminSession.email, 'Company:', companyId)
 
     return NextResponse.json({
       success: true,
       company,
     })
-  } catch (error: any) {
-    if (error.message?.includes('Unauthorized')) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error)
+    if (msg?.includes('Unauthorized')) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -133,7 +134,7 @@ export async function PATCH(
     }
     console.error('[Update Company Settings] Error:', error)
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: msg || 'Internal server error' },
       { status: 500 }
     )
   }

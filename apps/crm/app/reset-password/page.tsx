@@ -45,8 +45,8 @@ function ResetPasswordPageContent({ params }: { params: { locale: Locale } }) {
       }
 
       setSuccess(true)
-    } catch (err: any) {
-      setError(err.message || 'Failed to send reset email')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to send reset email')
     } finally {
       setLoading(false)
     }
@@ -86,8 +86,8 @@ function ResetPasswordPageContent({ params }: { params: { locale: Locale } }) {
       setTimeout(() => {
         router.push(`/${params.locale}/auth/login`)
       }, 2000)
-    } catch (err: any) {
-      setError(err.message || 'Failed to reset password')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to reset password')
     } finally {
       setLoading(false)
     }

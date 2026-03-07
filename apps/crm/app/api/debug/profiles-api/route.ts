@@ -23,16 +23,16 @@ export async function GET() {
   try {
     const res = await fetch(healthUrl, { signal: AbortSignal.timeout(5000) })
     healthResult = { status: res.status, ok: res.ok, body: await res.text().catch(() => '') }
-  } catch (e: any) {
-    healthResult = { error: e?.message }
+  } catch (e: unknown) {
+    healthResult = { error: e instanceof Error ? e.message : String(e) }
   }
 
   try {
     const res = await fetch(profilesUrl, { signal: AbortSignal.timeout(5000) })
     const text = await res.text().catch(() => '')
     profilesResult = { status: res.status, ok: res.ok, body: text.slice(0, 300) }
-  } catch (e: any) {
-    profilesResult = { error: e?.message }
+  } catch (e: unknown) {
+    profilesResult = { error: e instanceof Error ? e.message : String(e) }
   }
 
   return NextResponse.json({

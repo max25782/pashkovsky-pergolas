@@ -63,7 +63,6 @@ export async function GET(req: NextRequest) {
     // Take up to limit
     images = images.slice(0, Math.min(limit, images.length))
     
-    console.log(`[Gallery API] Returning ${images.length} images for category ${categoryKey}`)
     
     // Ensure all URLs are full S3 URLs (if S3 is configured)
     // URLs from database should already be S3 URLs, but we ensure they're valid

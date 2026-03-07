@@ -1,6 +1,7 @@
 'use client'
 import Link from 'next/link'
-import type { Locale } from '@/lib/locales'
+import { createTranslator, type Locale } from '@/lib/locales'
+import { useToast } from '@/components/ui/toast'
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { trackFormSubmit, trackWhatsApp, trackPhoneCall } from '@/lib/gtag-events'
@@ -9,7 +10,8 @@ import { getCookie } from '@/lib/cookies'
 interface Props { locale: Locale }
 
 export default function ContactPageClient({ locale }: Props){
-  const t = (he: string, ru: string, en: string) => (locale === 'ru' ? ru : locale === 'en' ? en : he)
+  const t = createTranslator(locale)
+  const toast = useToast()
   const [showSuccess, setShowSuccess] = useState(false)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -48,7 +50,7 @@ export default function ContactPageClient({ locale }: Props){
       setShowSuccess(true)
     } catch (err) {
       console.error(err)
-      alert(t('אירעה שגיאה בשליחה. נסה שוב בבקשה.', 'Произошла ошибка при отправке. Попробуйте ещё раз.', 'An error occurred. Please try again.'))
+      toast.error(t('אירעה שגיאה בשליחה. נסה שוב בבקשה.', 'Произошла ошибка при отправке. Попробуйте ещё раз.', 'An error occurred. Please try again.'))
     }
   }
 

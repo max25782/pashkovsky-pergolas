@@ -1,3 +1,4 @@
+import { createTranslator } from '@/lib/locales'
 import type { Locale } from '@/lib/locales'
 import { MediaGallery } from '@/components/generic/MediaGallery'
 import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3'
@@ -29,15 +30,12 @@ async function getFromShetahImages(): Promise<MediaItem[]> {
   const s3Client = getS3Client()
   
   if (!S3_BUCKET || !s3Client) {
-    console.log('[FromShetah] S3 not configured, using static data')
     const staticItems = (fromShetahData as { items: MediaItem[] }).items || []
-    console.log(`[FromShetah] Static data contains ${staticItems.length} items`)
     return staticItems
   }
 
   try {
     const prefix = 'images/fromShetah/'
-    console.log(`[FromShetah] Fetching from S3: bucket=${S3_BUCKET}, region=${S3_REGION}, prefix=${prefix}`)
     
     const command = new ListObjectsV2Command({
       Bucket: S3_BUCKET,
@@ -47,9 +45,7 @@ async function getFromShetahImages(): Promise<MediaItem[]> {
     const response = await s3Client.send(command)
     const contents = response.Contents || []
     
-    console.log(`[FromShetah] S3 response: ${contents.length} total objects, isTruncated=${response.IsTruncated}`)
     if (contents.length > 0) {
-      console.log(`[FromShetah] Sample keys:`, contents.slice(0, 3).map(c => c.Key))
     }
 
     const items: MediaItem[] = contents
@@ -68,33 +64,31 @@ async function getFromShetahImages(): Promise<MediaItem[]> {
       })
       .sort((a, b) => a.src.localeCompare(b.src))
 
-    console.log(`[FromShetah] Processed ${items.length} media items (${items.filter(i => i.type === 'video').length} videos, ${items.filter(i => i.type === 'image').length} images)`)
 
     // If S3 is empty, fallback to static data
     if (items.length === 0) {
       console.warn('[FromShetah] S3 returned 0 items, falling back to static data')
       const staticItems = (fromShetahData as { items: MediaItem[] }).items || []
-      console.log(`[FromShetah] Static fallback contains ${staticItems.length} items`)
       return staticItems
     }
 
     return items
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const e = error as Error & { Code?: string; code?: string; $metadata?: { httpStatusCode?: number; requestId?: string } }
     console.error('[FromShetah] Error fetching from S3:', {
-      message: error.message,
-      code: error.Code || error.code,
-      name: error.name,
-      httpStatusCode: error.$metadata?.httpStatusCode,
-      requestId: error.$metadata?.requestId,
+      message: e?.message ?? String(error),
+      code: e?.Code ?? e?.code,
+      name: e?.name,
+      httpStatusCode: e?.$metadata?.httpStatusCode,
+      requestId: e?.$metadata?.requestId,
     })
     const staticItems = (fromShetahData as { items: MediaItem[] }).items || []
-    console.log(`[FromShetah] Error fallback: static data contains ${staticItems.length} items`)
     return staticItems
   }
 }
 
 export default async function Page({ params: { locale } }: { params: { locale: Locale } }) {
-  const t = (he: string, ru: string, en: string) => (locale === 'he' ? he : locale === 'ru' ? ru : en)
+  const t = createTranslator(locale)
   
   const items = await getFromShetahImages()
   

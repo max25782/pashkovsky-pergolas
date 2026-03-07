@@ -2,7 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { authFetch } from '@/lib/api/auth-fetch'
+import { useToast } from '@/components/ui/toast'
 import { createClient } from '@/lib/supabase/client'
+
+type InviteRole = 'admin' | 'manager' | 'viewer'
 
 interface User {
   id: string
@@ -15,37 +18,25 @@ interface User {
 }
 
 export default function AdminUsersPage() {
+  const toast = useToast()
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [inviteEmail, setInviteEmail] = useState('')
-  const [inviteRole, setInviteRole] = useState<'admin' | 'manager' | 'viewer'>('viewer')
+  const [inviteRole, setInviteRole] = useState<InviteRole>('viewer')
   const [inviting, setInviting] = useState(false)
   const [companyId, setCompanyId] = useState<string | null>(null)
 
-  useEffect(() => {
-    initializeAndLoadUsers()
-  }, [])
+  useEffect(() => { initializeAndLoadUsers() }, [])
 
   async function initializeAndLoadUsers() {
     try {
-      // Get company ID from user metadata
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
-      
-      if (!user) {
-        console.error('[Users] No authenticated user')
-        return
-      }
+      if (!user) return
 
-      // Get company from localStorage or user metadata
       const storedCompanyId = localStorage.getItem('company_id')
-      const userCompanyId = user.user_metadata?.company_id
-      const activeCompanyId = storedCompanyId || userCompanyId
-
-      if (!activeCompanyId) {
-        console.error('[Users] No company ID found')
-        return
-      }
+      const activeCompanyId = storedCompanyId ?? (user.user_metadata?.company_id as string | undefined)
+      if (!activeCompanyId) return
 
       setCompanyId(activeCompanyId)
       await loadUsers(activeCompanyId)
@@ -57,14 +48,10 @@ export default function AdminUsersPage() {
 
   async function loadUsers(activeCompanyId: string) {
     try {
-      const response = await authFetch(`/admin-api/users?company_id=${activeCompanyId}`)
-
-      if (!response.ok) {
-        throw new Error('Failed to load users')
-      }
-
-      const data = await response.json()
-      setUsers(data.users || [])
+      const res = await authFetch(`/admin-api/users?company_id=${activeCompanyId}`)
+      if (!res.ok) throw new Error('Failed to load users')
+      const data = await res.json() as { users?: User[] }
+      setUsers(data.users ?? [])
     } catch (error) {
       console.error('Error loading users:', error)
     } finally {
@@ -74,34 +61,23 @@ export default function AdminUsersPage() {
 
   async function handleInvite(e: React.FormEvent) {
     e.preventDefault()
-    
-    if (!companyId) {
-      alert('Company ID not found')
-      return
-    }
-
+    if (!companyId) { toast.error('Company ID not found'); return }
     setInviting(true)
-
     try {
-      const response = await authFetch('/admin-api/users/invite', {
+      const res = await authFetch('/admin-api/users/invite', {
         method: 'POST',
-        body: JSON.stringify({
-          email: inviteEmail,
-          companyId,
-          role: inviteRole,
-        }),
+        body: JSON.stringify({ email: inviteEmail, companyId, role: inviteRole }),
       })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to invite user')
+      if (!res.ok) {
+        const data = await res.json() as { error?: string }
+        throw new Error(data.error ?? 'Failed to invite user')
       }
-
-      alert('User invited successfully!')
+      toast.success('User invited successfully!')
       setInviteEmail('')
       await loadUsers(companyId)
-    } catch (error: any) {
-      alert(`Error: ${error.message}`)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to invite user'
+      toast.error(message)
     } finally {
       setInviting(false)
     }
@@ -109,60 +85,40 @@ export default function AdminUsersPage() {
 
   async function handleRoleChange(userId: string, newRole: string) {
     if (!companyId) return
-
     try {
-      const response = await authFetch('/admin-api/users', {
+      const res = await authFetch('/admin-api/users', {
         method: 'PATCH',
-        body: JSON.stringify({
-          userId,
-          companyId,
-          role: newRole,
-        }),
+        body: JSON.stringify({ userId, companyId, role: newRole }),
       })
-
-      if (!response.ok) {
-        throw new Error('Failed to update role')
-      }
-
+      if (!res.ok) throw new Error('Failed to update role')
       await loadUsers(companyId)
     } catch (error) {
-      console.error('Error updating role:', error)
-      alert('Failed to update role')
+      const message = error instanceof Error ? error.message : 'Failed to update role'
+      toast.error(message)
     }
   }
 
   async function handleRemove(userId: string) {
     if (!companyId) return
-
-    if (!confirm('Are you sure you want to remove this user?')) {
-      return
-    }
-
+    if (!confirm('Are you sure you want to remove this user?')) return
     try {
-      const response = await authFetch(`/admin-api/users?user_id=${userId}&company_id=${companyId}`, {
+      const res = await authFetch(`/admin-api/users?user_id=${userId}&company_id=${companyId}`, {
         method: 'DELETE',
       })
-
-      if (!response.ok) {
-        throw new Error('Failed to remove user')
-      }
-
+      if (!res.ok) throw new Error('Failed to remove user')
       await loadUsers(companyId)
     } catch (error) {
-      console.error('Error removing user:', error)
-      alert('Failed to remove user')
+      const message = error instanceof Error ? error.message : 'Failed to remove user'
+      toast.error(message)
     }
   }
 
-  if (loading) {
-    return <div className="p-8">Loading users...</div>
-  }
+  if (loading) return <div className="p-8">Loading users...</div>
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
       <h1 className="text-3xl font-bold mb-8">User Management</h1>
 
-      {/* Invite User Form */}
       <div className="bg-white rounded-lg shadow p-6 mb-8">
         <h2 className="text-xl font-semibold mb-4">Invite User</h2>
         <form onSubmit={handleInvite} className="flex gap-4">
@@ -176,7 +132,7 @@ export default function AdminUsersPage() {
           />
           <select
             value={inviteRole}
-            onChange={(e) => setInviteRole(e.target.value as any)}
+            onChange={(e) => setInviteRole(e.target.value as InviteRole)}
             className="px-4 py-2 border rounded-lg"
           >
             <option value="viewer">Viewer</option>
@@ -193,7 +149,6 @@ export default function AdminUsersPage() {
         </form>
       </div>
 
-      {/* Users List */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <table className="w-full">
           <thead className="bg-gray-50">
@@ -209,10 +164,8 @@ export default function AdminUsersPage() {
             {users.map((user) => (
               <tr key={user.id}>
                 <td className="px-6 py-4">
-                  <div>
-                    <div className="font-medium">{user.full_name || user.email}</div>
-                    <div className="text-sm text-gray-500">{user.email}</div>
-                  </div>
+                  <div className="font-medium">{user.full_name ?? user.email}</div>
+                  <div className="text-sm text-gray-500">{user.email}</div>
                 </td>
                 <td className="px-6 py-4">
                   <select
@@ -227,22 +180,17 @@ export default function AdminUsersPage() {
                   </select>
                 </td>
                 <td className="px-6 py-4">
-                  {user.email_verified_at ? (
-                    <span className="text-green-600">Verified</span>
-                  ) : (
-                    <span className="text-yellow-600">Pending</span>
-                  )}
+                  {user.email_verified_at !== null
+                    ? <span className="text-green-600">Verified</span>
+                    : <span className="text-yellow-600">Pending</span>}
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-500">
-                  {user.last_login_at
+                  {user.last_login_at !== null
                     ? new Date(user.last_login_at).toLocaleDateString()
                     : 'Never'}
                 </td>
                 <td className="px-6 py-4">
-                  <button
-                    onClick={() => handleRemove(user.id)}
-                    className="text-red-600 hover:text-red-800 text-sm"
-                  >
+                  <button onClick={() => handleRemove(user.id)} className="text-red-600 hover:text-red-800 text-sm">
                     Remove
                   </button>
                 </td>
@@ -254,5 +202,3 @@ export default function AdminUsersPage() {
     </div>
   )
 }
-
-

@@ -74,7 +74,6 @@ export async function GET(req: NextRequest) {
       }))
       .sort((a, b) => a.degem.localeCompare(b.degem)) // Sort models alphabetically
     
-    console.log(`[Models API] Returning ${items.length} models with ${allImages.length} total images`)
     
     return new Response(JSON.stringify({ items }), { 
       status: 200,

@@ -25,12 +25,6 @@ function getS3Client() {
     return null
   }
 
-  console.log('[from-shetah API] Using AWS config:', {
-    bucket: S3_BUCKET,
-    region: S3_REGION,
-    accessKeyPrefix: `${AWS_ACCESS_KEY_ID.slice(0, 4)}***`,
-  })
-
   return new S3Client({
     region: S3_REGION,
     credentials: {
@@ -50,7 +44,6 @@ export async function GET() {
 
   try {
     const prefix = 'images/fromShetah/'
-    console.log(`[from-shetah API] Listing S3 objects: bucket=${S3_BUCKET}, prefix=${prefix}`)
 
     const command = new ListObjectsV2Command({
       Bucket: S3_BUCKET,
@@ -60,7 +53,6 @@ export async function GET() {
     const response = await s3Client.send(command)
     const contents = response.Contents || []
 
-    console.log(`[from-shetah API] S3 returned ${contents.length} objects`)
 
     const items: MediaItem[] = contents
       .filter(item => {
@@ -78,16 +70,16 @@ export async function GET() {
       })
       .sort((a, b) => a.src.localeCompare(b.src))
 
-    console.log(`[from-shetah API] Returning ${items.length} items`)
 
     return NextResponse.json({ items }, { status: 200 })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const e = error as Error & { Code?: string; code?: string; $metadata?: { httpStatusCode?: number; requestId?: string } }
     const debug = {
-      name: error?.name,
-      message: error?.message,
-      code: error?.code || error?.Code,
-      httpStatusCode: error?.$metadata?.httpStatusCode,
-      requestId: error?.$metadata?.requestId,
+      name: e?.name,
+      message: e?.message ?? String(error),
+      code: e?.Code ?? e?.code,
+      httpStatusCode: e?.$metadata?.httpStatusCode,
+      requestId: e?.$metadata?.requestId,
     }
 
     console.error('[from-shetah API] Error:', debug)

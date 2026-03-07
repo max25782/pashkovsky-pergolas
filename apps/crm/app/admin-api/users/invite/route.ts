@@ -49,7 +49,6 @@ export async function POST(req: NextRequest) {
     if (existingUser) {
       // User already exists in auth
       userId = existingUser.id
-      console.log('[Invite] User already exists:', userId)
     } else {
       // Create user in Supabase Auth
       const { data: newAuthUser, error: authError } = await supabase.auth.admin.createUser({
@@ -66,7 +65,6 @@ export async function POST(req: NextRequest) {
       }
 
       userId = newAuthUser.user.id
-      console.log('[Invite] Created new user:', userId)
     }
 
     // Check if user is already a member
@@ -135,7 +133,7 @@ export async function POST(req: NextRequest) {
       membership,
     }, { status: 201 })
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('[Invite] Unexpected error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

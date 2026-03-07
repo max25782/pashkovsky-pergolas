@@ -48,7 +48,6 @@ export function SuperAdminSidebar() {
   }
 
   const handleLogout = async () => {
-    console.log('[SuperAdmin] Logging out...')
     
     try {
       // Call logout API (deletes Redis session + clears cookie)
@@ -57,7 +56,6 @@ export function SuperAdminSidebar() {
         credentials: 'include', // Include cookies
       })
       
-      console.log('[SuperAdmin] ✓ Logged out successfully')
     } catch (error) {
       console.error('[SuperAdmin] Logout error:', error)
     } finally {

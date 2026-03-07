@@ -71,8 +71,8 @@ export async function GET(req: NextRequest) {
 
     const data = await response.json()
     return NextResponse.json(data)
-  } catch (error: any) {
-    const msg = error?.message || 'Internal server error'
+  } catch (error: unknown) {
+    const msg = (error instanceof Error ? error.message : String(error)) || 'Internal server error'
     const isConnectionError =
       /ECONNREFUSED|ENOTFOUND|ETIMEDOUT|fetch failed|aborted|timeout/i.test(String(msg))
     console.error('[Profiles API] Error:', msg, { url: PROFILES_API_URL, isConnectionError })
@@ -125,8 +125,8 @@ export async function POST(req: NextRequest) {
 
     const data = await response.json()
     return NextResponse.json(data)
-  } catch (error: any) {
-    const msg = error?.message || 'Internal server error'
+  } catch (error: unknown) {
+    const msg = (error instanceof Error ? error.message : String(error)) || 'Internal server error'
     const isConnectionError =
       /ECONNREFUSED|ENOTFOUND|ETIMEDOUT|fetch failed|aborted|timeout/i.test(String(msg))
     console.error('[Profiles API] Error:', msg, { url: PROFILES_API_URL, isConnectionError })

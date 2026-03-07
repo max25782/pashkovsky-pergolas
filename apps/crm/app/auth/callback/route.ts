@@ -7,15 +7,9 @@ export async function GET(request: NextRequest) {
   const next = url.searchParams.get('next') || '/app'
   const hash = url.hash
 
-  console.log('[Callback] URL:', url.pathname + url.search + (hash ? '#' + hash.substring(0, 50) + '...' : ''))
-  console.log('[Callback] Has code:', !!code)
-  console.log('[Callback] Has hash:', !!hash)
-  console.log('[Callback] Next redirect:', next)
-  console.log('[Callback] All search params:', Object.fromEntries(url.searchParams))
 
   // Check for PKCE code in query (preferred)
   if (code) {
-    console.log('[Callback] Found code parameter, using PKCE flow')
   } else if (hash) {
     // Fallback: check for hash fragment (implicit flow - not ideal but handle it)
     console.warn('[Callback] No code parameter, checking hash fragment (implicit flow)')
@@ -65,7 +59,6 @@ export async function GET(request: NextRequest) {
     }
   )
 
-  console.log('[Callback] Exchanging code for session...')
   const { data: sessionData, error } = await supabase.auth.exchangeCodeForSession(code)
 
   if (error) {
@@ -75,23 +68,13 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  console.log('[Callback] Session established, user:', sessionData.user?.email)
-  console.log('[Callback] Cookies to set:', cookiesToSet.length)
 
   // Note: Trial activation happens in /app/page.tsx after redirect
   // This keeps callback minimal and fast
 
   // Log cookie details
-  cookiesToSet.forEach((c, i) => {
-    console.log(`[Callback] Cookie ${i + 1}:`, {
-      name: c.name,
-      value: c.value.substring(0, 20) + '...',
-      domain: c.options?.domain,
-      path: c.options?.path,
-      httpOnly: c.options?.httpOnly,
-      secure: c.options?.secure,
-      sameSite: c.options?.sameSite,
-    })
+  cookiesToSet.forEach((_c, _i) => {
+    // cookie details logged during auth flow
   })
 
   const response = NextResponse.redirect(new URL(next, url.origin))
@@ -109,6 +92,5 @@ export async function GET(request: NextRequest) {
     })
   }
 
-  console.log('[Callback] Redirecting to', next, 'with', cookiesToSet.length, 'cookies set')
   return response
 }

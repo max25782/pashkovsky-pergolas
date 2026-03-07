@@ -63,11 +63,9 @@ export async function getCompanyIdAsync(req: NextRequest): Promise<string | null
       const { data: { user }, error } = await supabase.auth.getUser(token)
       
       if (error || !user) {
-        console.log('[getCompanyIdAsync] Supabase auth error:', error?.message || 'No user')
         return getCompanyId(req) // Fallback to sync version
       }
       
-      console.log('[getCompanyIdAsync] User found:', user.id, user.email)
       
       // Get company_id from company_members with company details
       // Priority: 1) Most recently created company where user is owner, 2) Most recent membership
@@ -94,7 +92,6 @@ export async function getCompanyIdAsync(req: NextRequest): Promise<string | null
         return null
       }
       
-      console.log('[getCompanyIdAsync] Found', members.length, 'company memberships')
       
       // Filter owner memberships
       const ownerMemberships = members.filter((m: any) => m.role === 'owner')
@@ -108,7 +105,6 @@ export async function getCompanyIdAsync(req: NextRequest): Promise<string | null
         })
         
         const selectedMember = ownerMemberships[0]
-        console.log('[getCompanyIdAsync] Selected most recent owner company:', selectedMember.company_id)
         return selectedMember.company_id
       }
       
@@ -120,10 +116,9 @@ export async function getCompanyIdAsync(req: NextRequest): Promise<string | null
       })
       
       const selectedMember = members[0]
-      console.log('[getCompanyIdAsync] Selected most recent membership:', selectedMember.company_id, 'role:', selectedMember.role)
       return selectedMember.company_id
-    } catch (err: any) {
-      console.error('[getCompanyIdAsync] Error:', err.message)
+    } catch (err: unknown) {
+      console.error('[getCompanyIdAsync] Error:', err instanceof Error ? err.message : String(err))
       return getCompanyId(req) // Fallback to sync version
     }
   }
@@ -219,8 +214,8 @@ export async function getUserContextAsync(req: NextRequest): Promise<{ userId: s
         companyId: member.company_id,
         role: member.role,
       }
-    } catch (err: any) {
-      console.error('[getUserContextAsync] Error:', err.message)
+    } catch (err: unknown) {
+      console.error('[getUserContextAsync] Error:', err instanceof Error ? err.message : String(err))
       return getUserContext(req) // Fallback to sync version
     }
   }

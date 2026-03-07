@@ -115,13 +115,10 @@ async function authenticateRequest(request: NextRequest): Promise<{ userId: stri
   const authHeader = request.headers.get('authorization')
   const adminToken = request.headers.get('x-admin-token')
   
-  console.log('[AI Auth] authHeader:', authHeader ? 'Present' : 'Missing')
-  console.log('[AI Auth] adminToken:', adminToken ? 'Present' : 'Missing')
   
   // If JWT token
   if (authHeader?.startsWith('Bearer ')) {
     const token = authHeader.substring(7)
-    console.log('[AI Auth] JWT token found, length:', token.length)
     
     if (!supabase) {
       console.error('[AI Auth] Supabase client not available')
@@ -138,7 +135,6 @@ async function authenticateRequest(request: NextRequest): Promise<{ userId: stri
       return null
     }
     
-    console.log('[AI Auth] User found:', user.id, user.email)
     
     // Get company from company_members
     const { data: member, error: memberError } = await supabase
@@ -156,7 +152,6 @@ async function authenticateRequest(request: NextRequest): Promise<{ userId: stri
       return null
     }
     
-    console.log('[AI Auth] Company found:', member.company_id)
     return { userId: user.id, companyId: member.company_id }
   }
   
@@ -164,7 +159,6 @@ async function authenticateRequest(request: NextRequest): Promise<{ userId: stri
   if (adminToken) {
     // For admin tokens, use default company
     const defaultCompanyId = process.env.DEFAULT_COMPANY_ID
-    console.log('[AI Auth] Using admin token, default company:', defaultCompanyId)
     if (!defaultCompanyId) return null
     
     return { userId: 'admin', companyId: defaultCompanyId }
@@ -176,11 +170,9 @@ async function authenticateRequest(request: NextRequest): Promise<{ userId: stri
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('[AI Improve] Request received')
     
     // 1. Authenticate
     const auth = await authenticateRequest(request)
-    console.log('[AI Improve] Auth result:', auth ? 'authenticated' : 'failed')
     
     if (!auth) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -190,7 +182,6 @@ export async function POST(request: NextRequest) {
     const body: ImproveTextRequest = await request.json()
     const { text, context } = body
     
-    console.log('[AI Improve] Text length:', text?.length, 'Context:', context)
     
     if (!text || typeof text !== 'string' || text.trim().length === 0) {
       return NextResponse.json({ error: 'Text is required' }, { status: 400 })
@@ -206,11 +197,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'AI service not configured' }, { status: 500 })
     }
     
-    console.log('[AI Improve] GEMINI_API_KEY configured:', GEMINI_API_KEY.substring(0, 10) + '...')
     
     // 4. Improve text with AI
     const improvedText = await improveTextWithGemini(text, context)
-    console.log('[AI Improve] Improved text generated successfully')
     
     // 5. Log the improvement (optional, for analytics)
     if (supabase) {
@@ -222,9 +211,9 @@ export async function POST(request: NextRequest) {
           improved_text: improvedText,
           context,
         })
-      } catch (err: any) {
+      } catch (err: unknown) {
         // Ignore if table doesn't exist
-        console.warn('[Offer AI] Failed to log improvement:', err.message)
+        console.warn('[Offer AI] Failed to log improvement:', err instanceof Error ? err.message : String(err))
       }
     }
     
@@ -237,10 +226,10 @@ export async function POST(request: NextRequest) {
         improved: text !== improvedText,
       },
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Offer AI] Error:', error)
     return NextResponse.json(
-      { error: 'Failed to improve text', details: error.message },
+      { error: 'Failed to improve text', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     )
   }

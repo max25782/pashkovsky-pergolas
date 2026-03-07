@@ -110,12 +110,11 @@ export async function POST(req: NextRequest) {
       }),
     )
 
-    console.log('[Media Query] Returning', items.length, 'items for tags:', tags)
     return NextResponse.json({ items })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Media Query] Error:', error)
     return NextResponse.json(
-      { error: error.message ?? 'Failed to query media assets' },
+      { error: (error instanceof Error ? error.message : String(error)) ?? 'Failed to query media assets' },
       { status: 500 },
     )
   }

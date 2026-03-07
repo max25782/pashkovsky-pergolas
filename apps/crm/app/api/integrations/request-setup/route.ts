@@ -135,12 +135,6 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    console.log('[Integration Request] Setup requested:', {
-      company_id: companyId,
-      integration_id: integration.id,
-      website_url: body.website_url,
-    })
-
     return NextResponse.json({
       success: true,
       integration: {
@@ -150,10 +144,10 @@ export async function POST(request: NextRequest) {
       },
       message: 'Integration setup request submitted successfully',
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Integration Request] Error:', error)
-    
-    if (error.message?.includes('Unauthorized')) {
+    const msg = error instanceof Error ? error.message : String(error)
+    if (msg?.includes('Unauthorized')) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -161,7 +155,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: msg || 'Internal server error' },
       { status: 500 }
     )
   }

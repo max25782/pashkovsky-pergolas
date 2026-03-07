@@ -20,7 +20,6 @@ export function useDealActions({
   async function patch(id: string, updates: Partial<Deal>) {
     setUpdating(true)
     try {
-      console.log('[useDealActions] Updating deal:', id, updates)
       
       const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
@@ -50,14 +49,12 @@ export function useDealActions({
       }
       
       const data = JSON.parse(responseText) as Deal
-      console.log('[useDealActions] Updated deal:', data)
       onUpdate?.(data)
       return data
-    } catch (e: any) {
+    } catch (e) {
       console.error('[useDealActions] Patch error:', e)
       const error = e instanceof Error ? e : new Error(String(e))
       onError?.(error)
-      alert(`Ошибка обновления: ${error.message}`)
       throw error
     } finally {
       setUpdating(false)
@@ -69,7 +66,6 @@ export function useDealActions({
     
     setDeleting(true)
     try {
-      console.log('[useDealActions] Deleting deal:', id)
       
       const supabase = createClient()
       const { error } = await supabase
@@ -81,14 +77,12 @@ export function useDealActions({
         throw new Error(error.message)
       }
       
-      console.log('[useDealActions] Deleted deal:', id)
       onDelete?.(id)
       return true
-    } catch (e: any) {
+    } catch (e) {
       console.error('[useDealActions] Delete error:', e)
       const error = e instanceof Error ? e : new Error(String(e))
       onError?.(error)
-      alert(`Ошибка удаления: ${error.message}`)
       throw error
     } finally {
       setDeleting(false)
@@ -98,7 +92,6 @@ export function useDealActions({
   async function create(dealData: Partial<Deal>) {
     setCreating(true)
     try {
-      console.log('[useDealActions] Creating deal:', dealData)
 
       const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
@@ -128,14 +121,12 @@ export function useDealActions({
       }
 
       const data = JSON.parse(responseText) as Deal
-      console.log('[useDealActions] Created deal:', data)
       onUpdate?.(data)
       return data
-    } catch (e: any) {
+    } catch (e) {
       console.error('[useDealActions] Create error:', e)
       const error = e instanceof Error ? e : new Error(String(e))
       onError?.(error)
-      alert(`Ошибка создания: ${error.message}`)
       throw error
     } finally {
       setCreating(false)

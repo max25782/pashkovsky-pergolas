@@ -27,14 +27,12 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    console.log('[Media S3 List] Listing prefix:', prefix)
     const result = await listS3Objects(prefix, token)
-    console.log('[Media S3 List] Found items:', result.items.length)
     return NextResponse.json(result)
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Media S3 List] Error:', error)
     return NextResponse.json(
-      { error: error.message ?? 'Failed to list S3 objects' },
+      { error: (error instanceof Error ? error.message : String(error)) ?? 'Failed to list S3 objects' },
       { status: 500 },
     )
   }

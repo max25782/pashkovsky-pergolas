@@ -55,11 +55,11 @@ export function CompanySettingsForm({ companyId }: CompanySettingsFormProps) {
         status: data.status || 'active',
         plan: data.plan || '',
       })
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[CompanySettingsForm] Load error:', error)
       setResult({
         success: false,
-        message: error.message || 'Failed to load company settings',
+        message: (error instanceof Error ? error.message : String(error)) || 'Failed to load company settings',
       })
     } finally {
       setLoading(false)
@@ -99,11 +99,11 @@ export function CompanySettingsForm({ companyId }: CompanySettingsFormProps) {
       setTimeout(() => {
         setResult(null)
       }, 3000)
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[CompanySettingsForm] Save error:', error)
       setResult({
         success: false,
-        message: error.message || 'Failed to update company settings',
+        message: (error instanceof Error ? error.message : String(error)) || 'Failed to update company settings',
       })
     } finally {
       setSaving(false)

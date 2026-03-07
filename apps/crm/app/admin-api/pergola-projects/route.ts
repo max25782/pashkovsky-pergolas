@@ -77,8 +77,8 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ project: data }, { status: 201 })
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || 'Bad request' }, { status: 400 })
+  } catch (e: unknown) {
+    return NextResponse.json({ error: (e instanceof Error ? e.message : String(e)) || 'Bad request' }, { status: 400 })
   }
 }
 
@@ -119,9 +119,9 @@ export async function DELETE(req: NextRequest) {
           await s3Client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }))
           s3Deleted.push(key)
         }
-      } catch (e: any) {
+      } catch (e: unknown) {
         s3Errors.push(url)
-        console.error('S3 delete error for', url, e.message)
+        console.error('S3 delete error for', url, e instanceof Error ? e.message : String(e))
       }
     }
   }

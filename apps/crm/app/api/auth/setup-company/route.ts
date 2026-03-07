@@ -41,7 +41,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    console.log('[Setup Company] Creating company for user:', user_id)
 
     // Step 1: Check if user already has a company
     const { data: existingMember } = await supabase
@@ -51,7 +50,6 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (existingMember) {
-      console.log('[Setup Company] User already has a company')
       return NextResponse.json({ 
         success: true,
         message: 'User already has a company',
@@ -83,7 +81,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    console.log('[Setup Company] Company created:', company.id)
 
     // Step 3: Add user as owner of the company
     const { error: memberError } = await supabase
@@ -139,7 +136,6 @@ export async function POST(req: NextRequest) {
       // Continue anyway, settings are not critical
     }
 
-    console.log('[Setup Company] Setup complete for company:', company.id)
 
     return NextResponse.json({
       success: true,

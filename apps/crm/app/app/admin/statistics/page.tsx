@@ -21,7 +21,6 @@ export default function StatisticsPage() {
     async function loadDeals() {
       try {
         setLoading(true)
-        console.log('[Statistics] Loading deals with JWT...')
         
         const supabase = createClient()
         
@@ -31,7 +30,6 @@ export default function StatisticsPage() {
           .order('created_at', { ascending: false })
           .limit(1000)
         
-        console.log('[Statistics] Response:', { data: data?.length, error: dbError })
         
         if (dbError) {
           console.error('[Statistics] DB error:', dbError)
@@ -39,12 +37,10 @@ export default function StatisticsPage() {
           return
         }
         
-        console.log('[Statistics] Loaded deals:', data?.length || 0)
-        console.log('[Statistics] First deal:', data?.[0])
         setDeals(data || [])
-      } catch (e: any) {
+      } catch (e: unknown) {
         console.error('[Statistics] Error:', e)
-        setError(e.message)
+        setError(e instanceof Error ? e.message : String(e))
       } finally {
         setLoading(false)
       }

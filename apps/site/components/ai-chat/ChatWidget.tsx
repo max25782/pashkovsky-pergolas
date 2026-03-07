@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { useToast } from '@/components/ui/toast'
 import { MessageCircle, X, Send, Loader2, Bot, User, AlertCircle, Plus, Image as ImageIcon, XCircle } from 'lucide-react'
 
 interface Message {
@@ -12,6 +13,7 @@ interface Message {
 }
 
 export function ChatWidget() {
+  const toast = useToast()
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -97,12 +99,12 @@ export function ChatWidget() {
     if (!file) return
     
     if (!file.type.startsWith('image/')) {
-      alert('אנא בחר קובץ תמונה')
+      toast.error('אנא בחר קובץ תמונה')
       return
     }
     
     if (file.size > 10 * 1024 * 1024) {
-      alert('הקובץ גדול מדי. מקסימום 10MB')
+      toast.error('הקובץ גדול מדי. מקסימום 10MB')
       return
     }
     
@@ -251,8 +253,8 @@ export function ChatWidget() {
         return
       }
       
-    } catch (e: any) {
-      setError(e?.message || 'שגיאה בשליחת ההודעה. נסה שוב.')
+    } catch (e: unknown) {
+      setError((e instanceof Error ? e.message : String(e)) || 'שגיאה בשליחת ההודעה. נסה שוב.')
     } finally {
       setIsLoading(false)
       setIsStreaming(false)

@@ -90,7 +90,6 @@ export async function DELETE(req: NextRequest) {
   if (isS3Configured() && image.storage_path) {
     try {
       await deleteFromS3(image.storage_path)
-      console.log(`[DELETE] Successfully deleted from S3: ${image.storage_path}`)
     } catch (s3Error: any) {
       console.error('[DELETE] S3 deletion error:', s3Error)
       // Не возвращаем ошибку, так как запись из БД уже удалена

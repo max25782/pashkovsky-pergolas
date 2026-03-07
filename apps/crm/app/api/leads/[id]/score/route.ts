@@ -116,14 +116,15 @@ export async function POST(
       aiReasons: scoringResult.aiReasons,
       suggestedNextAction: scoringResult.suggestedNextAction,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error)
     console.error('[Lead Scoring] Error:', {
-      error: error.message?.substring(0, 500), // Limit log size
+      error: msg?.substring(0, 500), // Limit log size
       leadId: params.id,
     })
 
     return NextResponse.json(
-      { error: 'Failed to score lead', details: error.message },
+      { error: 'Failed to score lead', details: msg },
       { status: 500 }
     )
   }

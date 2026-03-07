@@ -165,19 +165,19 @@ export async function GET(req: NextRequest) {
     }
 
     // Log summary for debugging
-    console.log(`[Monthly Report] Month: ${month}, Deals: ${dealsData?.length || 0}, Offers: ${offersData.length}, Projects: ${projectMap.size}`)
 
     return NextResponse.json({ report })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const e = error instanceof Error ? error : null
     console.error('Error in GET /api/reports/monthly:', {
-      error: error.message,
-      stack: error.stack?.substring(0, 500),
+      error: e?.message ?? String(error),
+      stack: e?.stack?.substring(0, 500),
       month,
     })
     return NextResponse.json(
       { 
         error: 'Internal server error', 
-        details: error.message,
+        details: e?.message ?? String(error),
         month,
       },
       { status: 500 }

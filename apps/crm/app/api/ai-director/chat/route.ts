@@ -163,12 +163,11 @@ async function preflightExternalDataApi(apiBaseUrl: string): Promise<void> {
         hint: 'Bedrock agent may not be able to fetch data, but chat will still work',
       })
     } else {
-      console.log('[AI Director] Preflight check passed:', healthUrl)
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Log warning but don't block - Bedrock agent will handle API errors gracefully
     console.warn('[AI Director] Preflight check error (non-blocking):', {
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
       url: normalizedUrl,
       hint: 'This is a soft check. Bedrock agent will attempt to fetch data when needed.',
     })
@@ -224,10 +223,10 @@ export async function GET(req: NextRequest) {
       messages: messages || [],
       sessionId: session.id,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[AI Director] GET error:', error)
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: (error instanceof Error ? error.message : String(error)) || 'Internal server error' },
       { status: 500 }
     )
   }
@@ -287,13 +286,6 @@ export async function POST(req: NextRequest) {
       user_language: detectedLanguage,
     }
     
-    console.log('[AI Director] Session attributes:', {
-      company_id: sessionAttributes.company_id,
-      api_base_url: sessionAttributes.api_base_url,
-      api_token: sessionAttributes.api_token ? '***' + sessionAttributes.api_token.slice(-4) : 'MISSING',
-      user_language: sessionAttributes.user_language,
-    })
-    
     if (!sessionAttributes.api_token) {
       console.error('[AI Director] ERROR: AI_DIRECTOR_API_TOKEN is not set in environment variables!')
       return NextResponse.json({ 
@@ -314,7 +306,6 @@ export async function POST(req: NextRequest) {
 
     if (invokeLambdaUrl && invokeLambdaSecret) {
       // Call intermediate Lambda for Bedrock invocation
-      console.log('[AI Director] Invoking Bedrock via Lambda proxy:', invokeLambdaUrl)
       try {
         bedrockResponse = await callBedrockAgentViaLambda({
           url: invokeLambdaUrl,
@@ -329,7 +320,6 @@ export async function POST(req: NextRequest) {
       }
     } else {
       // Fallback to direct Bedrock SDK invocation
-      console.log('[AI Director] Invoking Bedrock directly with SDK')
       bedrockResponse = await callBedrockAgent({
         prompt: message,
         sessionId: session.id,
@@ -370,10 +360,10 @@ export async function POST(req: NextRequest) {
       response: bedrockResponse.content || '',
       sessionId: bedrockResponse.sessionId || session.id,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[AI Director] Chat error:', error)
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: (error instanceof Error ? error.message : String(error)) || 'Internal server error' },
       { status: 500 }
     )
   }

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { useToast } from '@/components/ui/toast'
 import { MessageCircle, X, Send, Loader2, Bot, User, AlertCircle, Plus, Image as ImageIcon, XCircle } from 'lucide-react'
 
 interface Message {
@@ -12,6 +13,7 @@ interface Message {
 }
 
 export function ChatWidget() {
+  const toast = useToast()
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -80,12 +82,12 @@ export function ChatWidget() {
     if (!file) return
     
     if (!file.type.startsWith('image/')) {
-      alert('אנא בחר קובץ תמונה')
+      toast.error('אנא בחר קובץ תמונה')
       return
     }
     
     if (file.size > 10 * 1024 * 1024) {
-      alert('הקובץ גדול מדי. מקסימום 10MB')
+      toast.error('הקובץ גדול מדי. מקסימום 10MB')
       return
     }
     
@@ -172,7 +174,6 @@ export function ChatWidget() {
         throw new Error('No reader')
       }
       
-      console.log('[ChatWidget] Starting to read stream...')
       const decoder = new TextDecoder()
       let buffer = ''
       let chunkCount = 0
@@ -182,7 +183,6 @@ export function ChatWidget() {
           const { done, value } = await reader.read()
           
           if (done) {
-            console.log('[ChatWidget] Stream finished, chunks received:', chunkCount)
             break
           }
           
@@ -236,7 +236,6 @@ export function ChatWidget() {
                 }
                 
                 if (data.done) {
-                  console.log('[ChatWidget] Stream done, remaining:', data.remaining)
                   if (typeof data.remaining === 'number') {
                     setRemaining(data.remaining)
                   }
@@ -245,7 +244,6 @@ export function ChatWidget() {
                 console.warn('[ChatWidget] Failed to parse JSON:', line.substring(0, 100))
               }
             } else if (line.trim()) {
-              console.log('[ChatWidget] Unexpected line format:', line.substring(0, 100))
             }
           }
         }
@@ -256,14 +254,15 @@ export function ChatWidget() {
         return
       }
       
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const err = e instanceof Error ? e : null
       console.error('[ChatWidget] Send error:', e)
       console.error('[ChatWidget] Error details:', {
-        message: e?.message,
-        stack: e?.stack,
-        name: e?.name
+        message: err?.message,
+        stack: err?.stack,
+        name: err?.name
       })
-      setError(e?.message || 'שגיאה בשליחת ההודעה. נסה שוב.')
+      setError(err?.message || 'שגיאה בשליחת ההודעה. נסה שוב.')
     } finally {
       setIsLoading(false)
       setIsStreaming(false)

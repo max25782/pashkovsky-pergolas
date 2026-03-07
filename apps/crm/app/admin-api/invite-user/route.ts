@@ -45,7 +45,6 @@ export async function POST(req: NextRequest) {
     const cleanEmail = email.toLowerCase().trim()
     const callbackUrl = `${req.nextUrl.origin}/auth/callback?next=/app`
 
-    console.log('[InviteUser] Starting invite flow:', { email: cleanEmail, company_id, role })
 
     // Create service role client
     const supabaseAdmin = createServiceClient(
@@ -86,7 +85,6 @@ export async function POST(req: NextRequest) {
     if (existingUser) {
       userId = existingUser.id
       userExists = true
-      console.log('[InviteUser] User exists:', userId)
     } else {
       // Create new user
       const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
@@ -106,7 +104,6 @@ export async function POST(req: NextRequest) {
       }
 
       userId = newUser.user.id
-      console.log('[InviteUser] Created new user:', userId)
     }
 
     // Step 2: Upsert membership
@@ -133,7 +130,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    console.log('[InviteUser] Membership upserted:', membership.id)
 
     // Step 3: Ensure trial exists (idempotent - only if missing)
     const { data: existingSubscription } = await supabaseAdmin
@@ -166,18 +162,15 @@ export async function POST(req: NextRequest) {
           console.error('[InviteUser] Error creating trial subscription:', subError)
           // Don't fail the invite if subscription creation fails
         } else {
-          console.log('[InviteUser] Trial subscription created for company:', company_id)
         }
       }
     } else {
-      console.log('[InviteUser] Subscription already exists for company:', company_id)
     }
 
     // Step 4: Generate magic link (PKCE flow for login)
     // CRITICAL: 'magiclink' type generates implicit flow (#access_token) - NOT PKCE!
     // Use 'invite' for new users or 'recovery' for existing users to get PKCE flow (?code=...)
     const linkType = userExists ? 'recovery' : 'invite'
-    console.log('[InviteUser] Generating magic link (PKCE flow) with type:', linkType, 'for user:', userExists ? 'existing' : 'new')
     
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: linkType as any, // 'invite' or 'recovery' - both generate PKCE flow with ?code=
@@ -197,9 +190,6 @@ export async function POST(req: NextRequest) {
     }
 
     const actionLink = linkData.properties.action_link
-    console.log('[InviteUser] Magic link generated successfully')
-    console.log('[InviteUser] Full action_link:', actionLink)
-    console.log('[InviteUser] Link preview (first 300 chars):', actionLink.substring(0, 300))
     
     // CRITICAL: Supabase generateLink returns a link to Supabase verify page
     // This verify page should redirect to callbackUrl with ?code= parameter
@@ -214,15 +204,6 @@ export async function POST(req: NextRequest) {
       const linkTypeParam = linkUrl.searchParams.get('type')
       const token = linkUrl.searchParams.get('token')
       
-      console.log('[InviteUser] Link analysis:', {
-        hasCode,
-        hasHash,
-        redirectTo: redirectTo || 'none',
-        type: linkTypeParam || 'none',
-        hasToken: !!token,
-        hostname: linkUrl.hostname,
-        pathname: linkUrl.pathname,
-      })
       
       // Supabase verify link structure:
       // https://PROJECT.supabase.co/auth/v1/verify?token=xxx&type=invite&redirect_to=...
@@ -242,7 +223,6 @@ export async function POST(req: NextRequest) {
       if (!hasCode && !hasHash) {
         // This is normal - Supabase verify link doesn't have code yet
         // Code will be added when Supabase redirects to callbackUrl
-        console.log('[InviteUser] ✅ Link structure correct - Supabase verify page will redirect with code')
       } else if (hasHash) {
         console.error('[InviteUser] ❌ Link contains hash fragment - this is IMPLICIT FLOW, not PKCE!')
         return NextResponse.json(
@@ -269,7 +249,6 @@ export async function POST(req: NextRequest) {
           html,
         })
         emailSent = true
-        console.log('[InviteUser] ✓ Email sent via Zoho')
       } else {
         emailError = 'Email not configured (EMAIL_USER/EMAIL_PASS missing)'
         console.warn('[InviteUser] ⚠️', emailError)
@@ -287,10 +266,11 @@ export async function POST(req: NextRequest) {
       email_sent: emailSent,
       email_error: emailError || undefined,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[InviteUser] Unexpected error:', error)
+    const msg = error instanceof Error ? error.message : String(error)
 
-    if (error.message?.includes('Unauthorized') || error.message?.includes('Authentication required')) {
+    if (msg.includes('Unauthorized') || msg.includes('Authentication required')) {
       return NextResponse.json(
         { error: 'Unauthorized: SuperAdmin access required' },
         { status: 401 }
@@ -298,7 +278,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: msg || 'Internal server error' },
       { status: 500 }
     )
   }

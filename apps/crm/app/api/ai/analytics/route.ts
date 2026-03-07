@@ -169,13 +169,14 @@ export async function POST(req: NextRequest) {
         },
         companyId,
       })
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error)
       console.error('[AI Analytics] Error building context:', {
-        error: error.message?.substring(0, 500), // Limit log size
+        error: msg?.substring(0, 500), // Limit log size
         mode: body.mode,
       })
       return NextResponse.json(
-        { error: 'Failed to build analytics context', details: error.message },
+        { error: 'Failed to build analytics context', details: msg },
         { status: 500 }
       )
     }
@@ -231,9 +232,10 @@ export async function POST(req: NextRequest) {
             suggestions = undefined
           }
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         // If parsing fails, just ignore suggestions
-        console.warn('[AI Analytics] Failed to parse suggestions:', error.message?.substring(0, 200))
+        const msg = error instanceof Error ? error.message : String(error)
+        console.warn('[AI Analytics] Failed to parse suggestions:', msg?.substring(0, 200))
         suggestions = undefined
       }
     }
@@ -245,23 +247,16 @@ export async function POST(req: NextRequest) {
       suggestions, // Include suggestions if parsed
     }
 
-    // Log success (without sensitive data)
-    console.log('[AI Analytics] Success:', {
-      mode: body.mode,
-      period: `${body.period.from} to ${body.period.to}`,
-      answerLength: llmResponse.content.length,
-      rateLimitRemaining: rateLimit.remaining,
-    })
-
     return NextResponse.json(response, {
       headers: {
         'X-RateLimit-Remaining': rateLimit.remaining.toString(),
         'X-RateLimit-Limit': RATE_LIMIT_MAX_REQUESTS.toString(),
       },
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error)
     console.error('[AI Analytics] Unexpected error:', {
-      error: error.message?.substring(0, 500), // Limit log size
+      error: msg?.substring(0, 500), // Limit log size
     })
     return NextResponse.json(
       { error: 'Internal server error' },

@@ -87,10 +87,10 @@ export async function POST(request: NextRequest) {
       refreshToken: refreshToken,
       company_id: company_id,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Select Company API] Error:', error)
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: (error instanceof Error ? error.message : String(error)) || 'Internal server error' },
       { status: 500 }
     )
   }
