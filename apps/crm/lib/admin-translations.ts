@@ -213,6 +213,35 @@ export interface CRMTranslations {
     unavailable: string
   }
 
+  // Orders
+  orders: {
+    title: string
+    orderNumber: string
+    customer: string
+    status: string
+    totalWeight: string
+    totalAmount: string
+    finalAmount: string
+    createdAt: string
+    items: string
+    notes: string
+    deliveryDate: string
+    paymentStatus: string
+    discount: string
+    save: string
+    cancel: string
+    generatePdf: string
+    statuses: {
+      pending_price: string
+      priced: string
+      confirmed: string
+      in_production: string
+      ready: string
+      delivered: string
+      cancelled: string
+    }
+  }
+
   // Status
   status: {
     loading: string
@@ -421,6 +450,33 @@ export function getCRMTranslations(locale: Locale): CRMTranslations {
         title: 'Галерея',
         unavailable: 'Админка галереи временно недоступна. Компонент был удален.',
       },
+      orders: {
+        title: 'Заказы',
+        orderNumber: '№ заказа',
+        customer: 'Клиент',
+        status: 'Статус',
+        totalWeight: 'Вес (кг)',
+        totalAmount: 'Сумма',
+        finalAmount: 'Итог',
+        createdAt: 'Дата',
+        items: 'Позиции',
+        notes: 'Заметки',
+        deliveryDate: 'Дата доставки',
+        paymentStatus: 'Оплата',
+        discount: 'Скидка',
+        save: 'Сохранить',
+        cancel: 'Отмена',
+        generatePdf: 'PDF',
+        statuses: {
+          pending_price: 'Ожидает цену',
+          priced: 'Оценён',
+          confirmed: 'Подтверждён',
+          in_production: 'В производстве',
+          ready: 'Готов',
+          delivered: 'Доставлен',
+          cancelled: 'Отменён',
+        },
+      },
       status: {
         loading: 'Загрузка...',
         error: 'Ошибка загрузки данных',
@@ -628,6 +684,33 @@ export function getCRMTranslations(locale: Locale): CRMTranslations {
         title: 'Gallery',
         unavailable: 'Gallery admin is temporarily unavailable. Component was removed.',
       },
+      orders: {
+        title: 'Orders',
+        orderNumber: 'Order #',
+        customer: 'Customer',
+        status: 'Status',
+        totalWeight: 'Weight (kg)',
+        totalAmount: 'Amount',
+        finalAmount: 'Final',
+        createdAt: 'Date',
+        items: 'Items',
+        notes: 'Notes',
+        deliveryDate: 'Delivery Date',
+        paymentStatus: 'Payment',
+        discount: 'Discount',
+        save: 'Save',
+        cancel: 'Cancel',
+        generatePdf: 'PDF',
+        statuses: {
+          pending_price: 'Pending Price',
+          priced: 'Priced',
+          confirmed: 'Confirmed',
+          in_production: 'In Production',
+          ready: 'Ready',
+          delivered: 'Delivered',
+          cancelled: 'Cancelled',
+        },
+      },
       status: {
         loading: 'Loading...',
         error: 'Error loading data',
@@ -834,6 +917,33 @@ export function getCRMTranslations(locale: Locale): CRMTranslations {
     gallery: {
       title: 'גלריה',
       unavailable: 'ניהול הגלריה זמנית לא זמין. הרכיב הוסר.',
+    },
+    orders: {
+      title: 'הזמנות',
+      orderNumber: 'מס\' הזמנה',
+      customer: 'לקוח',
+      status: 'סטטוס',
+      totalWeight: 'משקל (ק"ג)',
+      totalAmount: 'סכום',
+      finalAmount: 'סופי',
+      createdAt: 'תאריך',
+      items: 'פריטים',
+      notes: 'הערות',
+      deliveryDate: 'תאריך משלוח',
+      paymentStatus: 'תשלום',
+      discount: 'הנחה',
+      save: 'שמור',
+      cancel: 'ביטול',
+      generatePdf: 'PDF',
+      statuses: {
+        pending_price: 'ממתין למחיר',
+        priced: 'תומחר',
+        confirmed: 'מאושר',
+        in_production: 'בייצור',
+        ready: 'מוכן',
+        delivered: 'נמסר',
+        cancelled: 'בוטל',
+      },
     },
     status: {
       loading: 'טוען...',

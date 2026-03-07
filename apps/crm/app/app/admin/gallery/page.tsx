@@ -1,668 +1,330 @@
 "use client"
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import type { Locale } from '@/lib/locales'
-import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
 import { Trash2, RefreshCw, Eye } from 'lucide-react'
-import { authFetch } from '@/lib/api/auth-fetch'
+import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
+import { ToastContainer, useToast } from '@/components/ui/toast'
+import { galleryService } from '@/lib/api/gallery-service'
+import { projectService } from '@/lib/api/project-service'
+import type { GalleryCategory, GalleryImage, PergolaProject } from '@/lib/types/gallery'
 
-interface GalleryImage {
-  id: string
-  url: string
-  filename: string
-  category_key: string
-  created_at: string
-}
+type ViewMode = 'upload' | 'manage' | 'projects'
 
 export default function GalleryAdminPage() {
   const t = useCRMTranslations()
-  const [categories, setCategories] = useState<any[]>([])
-  const [selectedCategory, setSelectedCategory] = useState<string>('')
+  const { toasts, show: showToast, dismiss } = useToast()
+
+  const [categories, setCategories] = useState<GalleryCategory[]>([])
+  const [selectedCategory, setSelectedCategory] = useState('')
   const [files, setFiles] = useState<File[]>([])
   const [uploading, setUploading] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [uploaded, setUploaded] = useState<number>(0)
   const [folderName, setFolderName] = useState('')
-  
-  // Gallery management state
+  const [viewMode, setViewMode] = useState<ViewMode>('upload')
+
   const [images, setImages] = useState<GalleryImage[]>([])
   const [loadingImages, setLoadingImages] = useState(false)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [viewMode, setViewMode] = useState<'upload' | 'manage' | 'projects'>('upload')
+  const [deletingImageId, setDeletingImageId] = useState<string | null>(null)
 
-  // Projects state
-  interface PergolaProject { id: string; title_he: string; title_ru?: string; images: string[]; created_at: string }
   const [projects, setProjects] = useState<PergolaProject[]>([])
   const [loadingProjects, setLoadingProjects] = useState(false)
   const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null)
 
   useEffect(() => {
-    async function loadCategories() {
-      try {
-        const res = await authFetch('/admin-api/gallery/categories')
-        if (!res.ok) throw new Error('Failed to fetch categories')
-        const data = await res.json()
-        console.log('📦 Categories loaded:', data.data)
-        setCategories(data.data || [])
-        if ((data.data || []).length > 0) {
-          const firstKey = data.data[0].key
-          console.log('🎯 Auto-selected category:', firstKey)
-          setSelectedCategory(firstKey)
-        }
-      } catch (e: any) {
-        console.error(e)
-        setError(e.message)
-      }
-    }
-    loadCategories()
-  }, [])
+    galleryService.fetchCategories()
+      .then(data => {
+        setCategories(data)
+        if (data.length > 0) setSelectedCategory(data[0].key)
+      })
+      .catch(err => showToast((err as Error).message, 'error'))
+  }, [showToast])
 
-  // Load images when category changes or after upload
-  useEffect(() => {
-    if (viewMode === 'manage' && selectedCategory) {
-      loadImages()
-    }
-    if (viewMode === 'projects') {
-      loadProjects()
-    }
-  }, [selectedCategory, viewMode])
-
-  const loadImages = async () => {
+  const loadImages = useCallback(async () => {
     if (!selectedCategory) return
     setLoadingImages(true)
-    setError(null)
     try {
-      const res = await authFetch(`/admin-api/gallery/images?category_key=${selectedCategory}`)
-      if (!res.ok) throw new Error('Failed to fetch images')
-      const data = await res.json()
-      setImages(data.images || [])
-    } catch (e: any) {
-      console.error(e)
-      setError(e.message)
+      setImages(await galleryService.fetchImages(selectedCategory))
+    } catch (err) {
+      showToast((err as Error).message, 'error')
     } finally {
       setLoadingImages(false)
     }
-  }
+  }, [selectedCategory, showToast])
 
-  const handleDeleteImage = async (imageId: string, filename: string) => {
-    if (!confirm(`Delete "${filename}"?\n\nThis will remove the image from both S3 and database.`)) {
-      return
-    }
-    
-    setDeletingId(imageId)
-    setError(null)
-    setMessage(null)
-    
-    try {
-      const res = await authFetch(`/admin-api/gallery/images?id=${imageId}`, {
-        method: 'DELETE',
-      })
-      
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Failed to delete image')
-      }
-      
-      setMessage(`נמחק: ${filename}`)
-      // Refresh the images list
-      await loadImages()
-    } catch (e: any) {
-      console.error(e)
-      setError(e.message)
-    } finally {
-      setDeletingId(null)
-    }
-  }
-
-  const loadProjects = async () => {
+  const loadProjects = useCallback(async () => {
     setLoadingProjects(true)
-    setError(null)
     try {
-      const res = await authFetch('/admin-api/pergola-projects')
-      if (!res.ok) throw new Error('Failed to fetch projects')
-      const data = await res.json()
-      setProjects(data.projects || [])
-    } catch (e: any) {
-      setError(e.message)
+      setProjects(await projectService.fetchProjects())
+    } catch (err) {
+      showToast((err as Error).message, 'error')
     } finally {
       setLoadingProjects(false)
+    }
+  }, [showToast])
+
+  useEffect(() => {
+    if (viewMode === 'manage' && selectedCategory) loadImages()
+    if (viewMode === 'projects') loadProjects()
+  }, [viewMode, selectedCategory, loadImages, loadProjects])
+
+  const handleDeleteImage = async (imageId: string, filename: string) => {
+    if (!window.confirm(`מחק "${filename}"?\n\nהתמונה תוסר מ-S3 ומהמסד.`)) return
+    setDeletingImageId(imageId)
+    try {
+      await galleryService.deleteImage(imageId)
+      showToast(`נמחק: ${filename}`, 'success')
+      await loadImages()
+    } catch (err) {
+      showToast((err as Error).message, 'error')
+    } finally {
+      setDeletingImageId(null)
     }
   }
 
   const handleDeleteProject = async (projectId: string, title: string, deleteS3: boolean) => {
-    const confirmMsg = deleteS3
+    const msg = deleteS3
       ? `מחק פרויקט "${title}" + כל התמונות מ-S3?\n\nפעולה זו אינה הפיכה!`
       : `מחק פרויקט "${title}" מהרשימה בלבד?\n(התמונות ב-S3 יישארו)`
-    if (!confirm(confirmMsg)) return
-
+    if (!window.confirm(msg)) return
     setDeletingProjectId(projectId)
-    setError(null)
-    setMessage(null)
     try {
-      const url = `/admin-api/pergola-projects?id=${projectId}${deleteS3 ? '&delete_s3=1' : ''}`
-      const res = await authFetch(url, { method: 'DELETE' })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to delete project')
-      const s3Msg = deleteS3 && data.s3_deleted?.length > 0
-        ? ` (${data.s3_deleted.length} תמונות נמחקו מ-S3)`
+      const result = await projectService.deleteProject(projectId, deleteS3)
+      const s3Msg = deleteS3 && (result.s3_deleted?.length ?? 0) > 0
+        ? ` (${result.s3_deleted!.length} תמונות נמחקו מ-S3)`
         : ''
-      setMessage(`פרויקט "${title}" נמחק${s3Msg}`)
+      showToast(`פרויקט "${title}" נמחק${s3Msg}`, 'success')
       await loadProjects()
-    } catch (e: any) {
-      setError(e.message)
+    } catch (err) {
+      showToast((err as Error).message, 'error')
     } finally {
       setDeletingProjectId(null)
     }
   }
 
-  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files) return
-    setFiles(Array.from(e.target.files))
-  }
-
   const handleUpload = async () => {
-    if (!selectedCategory) {
-      setError('בחר קטגוריה')
-      return
-    }
-    if (!files.length) {
-      setError('בחר קבצים')
-      return
-    }
+    if (!selectedCategory) { showToast('בחר קטגוריה', 'error'); return }
+    if (!files.length) { showToast('בחר קבצים', 'error'); return }
 
-    const MAX_FILE_BYTES = 4 * 1024 * 1024 // 4 MB per file
-    const tooBig = files.filter(f => f.size > MAX_FILE_BYTES)
-    if (tooBig.length > 0) {
-      setError(`קבצים גדולים מדי (מעל 4 MB): ${tooBig.map(f => f.name).join(', ')}. דחוס או בחר קבצים קטנים יותר.`)
-      return
-    }
+    const validationError = galleryService.validateFiles(files)
+    if (validationError) { showToast(validationError, 'error'); return }
 
-    // Vercel limit 4.5 MB — split by size
-    const MAX_BATCH_BYTES = 4 * 1024 * 1024 // 4 MB to stay under 4.5 MB
-    const batches: File[][] = []
-    let current: File[] = []
-    let currentSize = 0
-    for (const f of files) {
-      if (currentSize + f.size > MAX_BATCH_BYTES && current.length > 0) {
-        batches.push(current)
-        current = []
-        currentSize = 0
-      }
-      current.push(f)
-      currentSize += f.size
-    }
-    if (current.length > 0) batches.push(current)
-
-    setError(null)
-    setMessage(null)
+    const batches = galleryService.buildBatches(files)
     setUploading(true)
     let totalUploaded = 0
     const allImageUrls: string[] = []
 
     try {
-      for (let b = 0; b < batches.length; b++) {
-        const batch = batches[b]
-        const form = new FormData()
-        form.append('category_key', selectedCategory)
-        if (folderName.trim()) form.append('folder_name', folderName.trim())
-        batch.forEach(f => form.append('files', f))
-
-        const res = await authFetch('/admin-api/gallery/upload', {
-          method: 'POST',
-          body: form,
-        })
-
-        if (res.status === 413) {
-          throw new Error('הבקשה גדולה מדי. הקבצים נשלחים בחבילות — נסה שוב או דחוס את התמונות.')
-        }
-
-        let data: { uploaded?: number; images?: Array<{ url: string }>; error?: string }
-        try {
-          data = await res.json()
-        } catch {
-          throw new Error(res.statusText || 'Upload failed')
-        }
-
-        if (!res.ok) {
-          throw new Error(data.error || 'Upload failed')
-        }
-
-        const count = data.uploaded || 0
-        totalUploaded += count
-        setUploaded(totalUploaded)
-        if (data.images?.length) {
-          allImageUrls.push(...(data.images as Array<{ url: string }>).map(img => img.url))
-        }
+      for (const batch of batches) {
+        const result = await galleryService.uploadBatch(batch, selectedCategory, folderName)
+        totalUploaded += result.uploaded ?? 0
+        allImageUrls.push(...(result.images ?? []).map(img => img.url))
       }
 
       if (folderName.trim() && allImageUrls.length > 0) {
         try {
-          const projRes = await authFetch('/admin-api/pergola-projects', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              title_he: folderName.trim(),
-              desc_he: null,
-              images: allImageUrls,
-            }),
-          })
-          if (projRes.ok) {
-            setMessage(`הועלו ${totalUploaded} קבצים לתיקייה "${folderName.trim()}" ✓ פרויקט נוצר אוטומטית`)
-          } else {
-            setMessage(`הועלו ${totalUploaded} קבצים לתיקייה "${folderName.trim()}"`)
-          }
+          await projectService.createProject({ title_he: folderName.trim(), images: allImageUrls })
+          showToast(`הועלו ${totalUploaded} קבצים לתיקייה "${folderName.trim()}" — פרויקט נוצר אוטומטית`, 'success')
         } catch {
-          setMessage(`הועלו ${totalUploaded} קבצים לתיקייה "${folderName.trim()}"`)
+          showToast(`הועלו ${totalUploaded} קבצים לתיקייה "${folderName.trim()}"`, 'success')
         }
       } else {
-        setMessage(`הועלו ${totalUploaded} קבצים בהצלחה`)
+        showToast(`הועלו ${totalUploaded} קבצים בהצלחה`, 'success')
       }
 
       setFiles([])
-      if (viewMode === 'manage') {
-        setTimeout(() => loadImages(), 1000)
-      }
-    } catch (e: any) {
-      setError(e.message)
+      if (viewMode === 'manage') setTimeout(loadImages, 1000)
+    } catch (err) {
+      showToast((err as Error).message, 'error')
     } finally {
       setUploading(false)
     }
   }
 
-
   return (
     <main className="container py-8 text-white">
+      <ToastContainer toasts={toasts} onDismiss={dismiss} />
+
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold">Admin • {t.gallery.title}</h1>
         <div className="flex gap-2 flex-wrap">
-          <Link
-            href="/app/admin/deals"
-            className="px-4 py-2 rounded bg-green-600 hover:bg-green-700 font-semibold"
-          >
-            {t.nav.deals}
-          </Link>
-          <Link
-            href="/app/admin/statistics"
-            className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-700 font-semibold"
-          >
-            {t.nav.statistic}
-          </Link>
-          <Link
-            href="/app/admin/leads"
-            className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 font-semibold"
-          >
-            {t.nav.leads}
-          </Link>
-          <Link
-            href="/app/admin/ai-chats"
-            className="px-4 py-2 rounded bg-cyan-600 hover:bg-cyan-700 font-semibold"
-          >
-            {t.nav.aiChats}
-          </Link>
-          <Link
-            href="/app/admin/articles"
-            className="px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-700 font-semibold"
-          >
-            {t.nav.articles}
-          </Link>
-          <Link
-            href="/app/admin/workers"
-            className="px-4 py-2 rounded bg-yellow-600 hover:bg-yellow-700 font-semibold"
-          >
-            {t.nav.workers}
-          </Link>
+          <Link href="/app/admin/deals" className="px-4 py-2 rounded bg-green-600 hover:bg-green-700 font-semibold">{t.nav.deals}</Link>
+          <Link href="/app/admin/statistics" className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-700 font-semibold">{t.nav.statistic}</Link>
+          <Link href="/app/admin/leads" className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 font-semibold">{t.nav.leads}</Link>
+          <Link href="/app/admin/ai-chats" className="px-4 py-2 rounded bg-cyan-600 hover:bg-cyan-700 font-semibold">{t.nav.aiChats}</Link>
+          <Link href="/app/admin/articles" className="px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-700 font-semibold">{t.nav.articles}</Link>
+          <Link href="/app/admin/workers" className="px-4 py-2 rounded bg-yellow-600 hover:bg-yellow-700 font-semibold">{t.nav.workers}</Link>
         </div>
       </div>
 
-      {/* View Mode Tabs */}
+      {/* Tabs */}
       <div className="flex gap-2 mb-4">
-        <button
-          onClick={() => setViewMode('upload')}
-          className={`px-4 py-2 rounded font-semibold transition-colors ${
-            viewMode === 'upload' 
-              ? 'bg-blue-600 text-white' 
-              : 'bg-white/10 text-white/70 hover:bg-white/20'
-          }`}
-        >
-          📤 העלאת תמונות
-        </button>
-        <button
-          onClick={() => setViewMode('manage')}
-          className={`px-4 py-2 rounded font-semibold transition-colors ${
-            viewMode === 'manage' 
-              ? 'bg-red-600 text-white' 
-              : 'bg-white/10 text-white/70 hover:bg-white/20'
-          }`}
-        >
-          🗑️ ניהול תמונות
-        </button>
-        <button
-          onClick={() => setViewMode('projects')}
-          className={`px-4 py-2 rounded font-semibold transition-colors ${
-            viewMode === 'projects'
-              ? 'bg-purple-600 text-white'
-              : 'bg-white/10 text-white/70 hover:bg-white/20'
-          }`}
-        >
-          📁 פרויקטים
-        </button>
+        {(['upload', 'manage', 'projects'] as ViewMode[]).map(mode => (
+          <button
+            key={mode}
+            onClick={() => setViewMode(mode)}
+            className={`px-4 py-2 rounded font-semibold transition-colors ${
+              viewMode === mode
+                ? mode === 'upload' ? 'bg-blue-600 text-white'
+                  : mode === 'manage' ? 'bg-red-600 text-white'
+                  : 'bg-purple-600 text-white'
+                : 'bg-white/10 text-white/70 hover:bg-white/20'
+            }`}
+          >
+            {mode === 'upload' ? 'העלאת תמונות' : mode === 'manage' ? 'ניהול תמונות' : 'פרויקטים'}
+          </button>
+        ))}
       </div>
 
-      {/* Upload Section */}
+      {/* Upload */}
       {viewMode === 'upload' && (
         <div className="bg-white/5 rounded-lg border border-white/10 p-6 space-y-5">
-
-          {/* Step 1 — Category */}
-          <div className="flex items-start gap-3">
-            <span className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-600 text-white text-sm font-bold flex items-center justify-center mt-0.5">1</span>
-            <div className="flex-1 space-y-1.5">
-              <label className="text-sm font-medium text-white">בחר קטגוריה</label>
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full max-w-xs bg-black/30 border border-white/20 rounded px-3 py-2 text-white"
-              >
-                {categories.map((c: any) => (
-                  <option key={c.id} value={c.key}>{c.name_he || c.key}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Step 2 — Folder / Project name */}
-          <div className="flex items-start gap-3">
-            <span className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-600 text-white text-sm font-bold flex items-center justify-center mt-0.5">2</span>
-            <div className="flex-1 space-y-1.5">
-              <label className="text-sm font-medium text-white">
-                שם תיקייה / פרויקט
-                <span className="text-white/40 font-normal text-xs mr-2">(אופציונלי — אם תמלא, פרויקט ייווצר אוטומטית)</span>
-              </label>
-              <input
-                type="text"
-                value={folderName}
-                onChange={(e) => setFolderName(e.target.value)}
-                placeholder="לדוגמה: פרגולה אשדוד"
-                className="w-full max-w-sm bg-black/30 border border-white/20 rounded px-3 py-2 text-white placeholder:text-white/30"
-              />
-              {folderName.trim() && (
-                <p className="text-xs text-emerald-400">
-                  ✓ נתיב: images/{selectedCategory}/{folderName.trim().replace(/\s+/g, '_')}/... • פרויקט ייווצר אוטומטית
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Step 3 — Files */}
-          <div className="flex items-start gap-3">
-            <span className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-600 text-white text-sm font-bold flex items-center justify-center mt-0.5">3</span>
-            <div className="flex-1 space-y-1.5">
-              <label className="text-sm font-medium text-white">בחר תמונות (אפשר לבחור כמה בבת אחת)</label>
-              <input
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={onFileChange}
-                className="w-full text-white"
-              />
-              {files.length > 0 && (
-                <p className="text-sm text-green-300 font-medium">✓ {files.length} קבצים נבחרו</p>
-              )}
-            </div>
-          </div>
-
-          {/* Step 4 — Upload button */}
-          <div className="flex items-center gap-4 pt-1">
-            <button
-              onClick={handleUpload}
-              disabled={uploading || !files.length}
-              className="px-6 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-40 font-semibold text-white transition-colors"
+          <StepRow number={1} label="בחר קטגוריה">
+            <select
+              value={selectedCategory}
+              onChange={e => setSelectedCategory(e.target.value)}
+              className="w-full max-w-xs bg-black/30 border border-white/20 rounded px-3 py-2 text-white"
             >
-              {uploading ? `מעלה... (${files.length} קבצים)` : `העלה ל-S3${files.length > 0 ? ` (${files.length} קבצים)` : ''}`}
-            </button>
-          </div>
+              {categories.map(c => (
+                <option key={c.id} value={c.key}>{c.name_he || c.key}</option>
+              ))}
+            </select>
+          </StepRow>
 
-          {message && <div className="bg-green-500/20 border border-green-500/40 rounded p-3 text-green-300 text-sm">{message}</div>}
-          {error && <div className="bg-red-500/20 border border-red-500/40 rounded p-3 text-red-300 text-sm">{error}</div>}
+          <StepRow number={2} label="שם תיקייה / פרויקט" hint="(אופציונלי — אם תמלא, פרויקט ייווצר אוטומטית)">
+            <input
+              type="text"
+              value={folderName}
+              onChange={e => setFolderName(e.target.value)}
+              placeholder="לדוגמה: פרגולה אשדוד"
+              className="w-full max-w-sm bg-black/30 border border-white/20 rounded px-3 py-2 text-white placeholder:text-white/30"
+            />
+            {folderName.trim() && (
+              <p className="text-xs text-emerald-400 mt-1">
+                נתיב: images/{selectedCategory}/{folderName.trim().replace(/\s+/g, '_')}/... — פרויקט ייווצר אוטומטית
+              </p>
+            )}
+          </StepRow>
+
+          <StepRow number={3} label="בחר תמונות (אפשר לבחור כמה בבת אחת)">
+            <input type="file" multiple accept="image/*" onChange={e => setFiles(e.target.files ? Array.from(e.target.files) : [])} className="w-full text-white" />
+            {files.length > 0 && <p className="text-sm text-green-300 font-medium mt-1">{files.length} קבצים נבחרו</p>}
+          </StepRow>
+
+          <button
+            onClick={handleUpload}
+            disabled={uploading || !files.length}
+            className="px-6 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-40 font-semibold transition-colors"
+          >
+            {uploading ? `מעלה... (${files.length} קבצים)` : `העלה ל-S3${files.length > 0 ? ` (${files.length} קבצים)` : ''}`}
+          </button>
         </div>
       )}
 
-      {/* Manage Images Section */}
+      {/* Manage */}
       {viewMode === 'manage' && (
         <div className="bg-white/5 rounded-lg border border-white/10 p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-bold">ניהול תמונות</h2>
-              <p className="text-sm text-white/60">צפה ומחק תמונות לפי קטגוריה</p>
-            </div>
-            <button
-              onClick={loadImages}
-              disabled={loadingImages}
-              className="flex items-center gap-2 px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
-            >
-              <RefreshCw className={`w-4 h-4 ${loadingImages ? 'animate-spin' : ''}`} />
-              רענן
-            </button>
-          </div>
-
-          {/* Category Selector */}
+          <SectionHeader title="ניהול תמונות" subtitle="צפה ומחק תמונות לפי קטגוריה" loading={loadingImages} onRefresh={loadImages} />
           <div className="space-y-2">
             <label className="text-sm text-white/70">בחר קטגוריה</label>
             <select
               value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
+              onChange={e => setSelectedCategory(e.target.value)}
               className="w-full max-w-md bg-black/30 border border-white/20 rounded px-3 py-2 text-white"
             >
-              {categories.map((c: any) => (
-                <option key={c.id} value={c.key}>
-                  {c.name_he || c.key} ({c.image_count || 0} תמונות)
-                </option>
+              {categories.map(c => (
+                <option key={c.id} value={c.key}>{c.name_he || c.key} ({c.image_count ?? 0} תמונות)</option>
               ))}
             </select>
           </div>
 
-          {/* Messages */}
-          {message && (
-            <div className="bg-green-500/20 border border-green-500/50 rounded p-3 text-green-300">
-              {message}
-            </div>
-          )}
-          {error && (
-            <div className="bg-red-500/20 border border-red-500/50 rounded p-3 text-red-300">
-              {error}
-            </div>
+          {loadingImages && <Spinner label="טוען תמונות..." />}
+
+          {!loadingImages && images.length === 0 && (
+            <EmptyState title="אין תמונות בקטגוריה זו" subtitle='העלה תמונות דרך הכרטיסייה "העלאת תמונות"' />
           )}
 
-          {/* Loading State */}
-          {loadingImages && (
-            <div className="text-center py-8 text-white/60">
-              <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2" />
-              <p>טוען תמונות...</p>
-            </div>
-          )}
-
-          {/* Images Grid */}
           {!loadingImages && images.length > 0 && (
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-white/70">
-                  {images.length} תמונות בקטגוריה <span className="font-bold">{selectedCategory}</span>
-                </p>
-              </div>
-
+              <p className="text-sm text-white/70">{images.length} תמונות בקטגוריה <span className="font-bold">{selectedCategory}</span></p>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {images.map((img) => (
-                  <div
-                    key={img.id}
-                    className="group relative bg-black/30 rounded-lg border border-white/10 overflow-hidden hover:border-white/30 transition-all"
-                  >
-                    {/* Image */}
+                {images.map(img => (
+                  <div key={img.id} className="group relative bg-black/30 rounded-lg border border-white/10 overflow-hidden hover:border-white/30 transition-all">
                     <div className="aspect-square relative">
-                      <Image
-                        src={img.url}
-                        alt={img.filename}
-                        fill
-                        className="object-cover"
-                        unoptimized
-                      />
-                      {/* Overlay on Hover */}
+                      <Image src={img.url} alt={img.filename} fill className="object-cover" unoptimized />
                       <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                        <a
-                          href={img.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-2 bg-blue-600 hover:bg-blue-700 rounded-full"
-                          title="צפה בתמונה"
-                        >
+                        <a href={img.url} target="_blank" rel="noopener noreferrer" className="p-2 bg-blue-600 hover:bg-blue-700 rounded-full" title="צפה בתמונה">
                           <Eye className="w-4 h-4" />
                         </a>
                         <button
                           onClick={() => handleDeleteImage(img.id, img.filename)}
-                          disabled={deletingId === img.id}
+                          disabled={deletingImageId === img.id}
                           className="p-2 bg-red-600 hover:bg-red-700 rounded-full disabled:opacity-50"
-                          title="מחק תמונה"
                         >
-                          {deletingId === img.id ? (
-                            <RefreshCw className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="w-4 h-4" />
-                          )}
+                          {deletingImageId === img.id ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                         </button>
                       </div>
                     </div>
-                    {/* Filename */}
-                    <div className="p-2 text-xs text-white/70 truncate" title={img.filename}>
-                      {img.filename}
-                    </div>
-                    {/* Date */}
-                    <div className="px-2 pb-2 text-xs text-white/50">
-                      {new Date(img.created_at).toLocaleDateString('he-IL')}
-                    </div>
+                    <div className="p-2 text-xs text-white/70 truncate" title={img.filename}>{img.filename}</div>
+                    <div className="px-2 pb-2 text-xs text-white/50">{new Date(img.created_at).toLocaleDateString('he-IL')}</div>
                   </div>
                 ))}
               </div>
             </div>
           )}
-
-          {/* Empty State */}
-          {!loadingImages && images.length === 0 && (
-            <div className="text-center py-12 text-white/60">
-              <p className="text-lg mb-2">אין תמונות בקטגוריה זו</p>
-              <p className="text-sm">העלה תמונות דרך הכרטיסייה "העלאת תמונות"</p>
-            </div>
-          )}
         </div>
       )}
 
-      {/* Projects Section */}
+      {/* Projects */}
       {viewMode === 'projects' && (
         <div className="bg-white/5 rounded-lg border border-white/10 p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-bold">פרויקטים</h2>
-              <p className="text-sm text-white/60">רשימת כל הפרויקטים ב-Our Projects</p>
-            </div>
-            <button
-              onClick={loadProjects}
-              disabled={loadingProjects}
-              className="flex items-center gap-2 px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
-            >
-              <RefreshCw className={`w-4 h-4 ${loadingProjects ? 'animate-spin' : ''}`} />
-              רענן
-            </button>
-          </div>
+          <SectionHeader title="פרויקטים" subtitle="רשימת כל הפרויקטים ב-Our Projects" loading={loadingProjects} onRefresh={loadProjects} />
 
-          {message && (
-            <div className="bg-green-500/20 border border-green-500/50 rounded p-3 text-green-300">{message}</div>
-          )}
-          {error && (
-            <div className="bg-red-500/20 border border-red-500/50 rounded p-3 text-red-300">{error}</div>
-          )}
-
-          {loadingProjects && (
-            <div className="text-center py-8 text-white/60">
-              <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2" />
-              <p>טוען פרויקטים...</p>
-            </div>
-          )}
+          {loadingProjects && <Spinner label="טוען פרויקטים..." />}
 
           {!loadingProjects && projects.length === 0 && (
-            <div className="text-center py-12 text-white/60">
-              <p className="text-lg mb-2">אין פרויקטים</p>
-              <p className="text-sm">העלה תמונות עם שם תיקייה ליצירת פרויקט</p>
-            </div>
+            <EmptyState title="אין פרויקטים" subtitle="העלה תמונות עם שם תיקייה ליצירת פרויקט" />
           )}
 
           {!loadingProjects && projects.length > 0 && (
             <div className="space-y-3">
               <p className="text-sm text-white/60">{projects.length} פרויקטים</p>
-              {projects.map((proj) => (
-                <div
-                  key={proj.id}
-                  className="bg-black/30 rounded-lg border border-white/10 p-4 flex items-start gap-4"
-                >
-                  {/* First image preview */}
+              {projects.map(proj => (
+                <div key={proj.id} className="bg-black/30 rounded-lg border border-white/10 p-4 flex items-start gap-4">
                   {proj.images?.[0] && (
-                    <div className="relative w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-black/30">
-                      <Image
-                        src={proj.images[0]}
-                        alt={proj.title_he}
-                        fill
-                        className="object-cover"
-                        unoptimized
-                      />
+                    <div className="relative w-20 h-20 shrink-0 rounded-lg overflow-hidden bg-black/30">
+                      <Image src={proj.images[0]} alt={proj.title_he} fill className="object-cover" unoptimized />
                     </div>
                   )}
-
-                  {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-white">{proj.title_he}</p>
+                    <p className="font-semibold">{proj.title_he}</p>
                     {proj.title_ru && <p className="text-sm text-white/60">{proj.title_ru}</p>}
                     <p className="text-xs text-white/40 mt-1">
-                      {proj.images?.length || 0} תמונות • {new Date(proj.created_at).toLocaleDateString('he-IL')}
+                      {proj.images?.length ?? 0} תמונות • {new Date(proj.created_at).toLocaleDateString('he-IL')}
                     </p>
-                    {/* Image URLs preview */}
                     <div className="mt-2 flex gap-1 flex-wrap">
-                      {(proj.images || []).slice(0, 5).map((url, i) => (
-                        <a
-                          key={i}
-                          href={url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-blue-400 hover:text-blue-300 underline truncate max-w-[120px]"
-                        >
+                      {proj.images.slice(0, 5).map((url, i) => (
+                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:text-blue-300 underline truncate max-w-[120px]">
                           תמונה {i + 1}
                         </a>
                       ))}
-                      {(proj.images?.length || 0) > 5 && (
-                        <span className="text-xs text-white/40">+{proj.images.length - 5} עוד</span>
-                      )}
+                      {proj.images.length > 5 && <span className="text-xs text-white/40">+{proj.images.length - 5} עוד</span>}
                     </div>
                   </div>
-
-                  {/* Delete buttons */}
-                  <div className="flex flex-col gap-2 flex-shrink-0">
+                  <div className="flex flex-col gap-2 shrink-0">
                     <button
                       onClick={() => handleDeleteProject(proj.id, proj.title_he, false)}
                       disabled={deletingProjectId === proj.id}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-yellow-600/80 hover:bg-yellow-600 rounded text-xs font-medium disabled:opacity-50 whitespace-nowrap"
-                      title="מחק רק מהרשימה, התמונות ב-S3 יישארו"
                     >
-                      {deletingProjectId === proj.id
-                        ? <RefreshCw className="w-3 h-3 animate-spin" />
-                        : <Trash2 className="w-3 h-3" />}
+                      {deletingProjectId === proj.id ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
                       מחק רשומה
                     </button>
                     <button
                       onClick={() => handleDeleteProject(proj.id, proj.title_he, true)}
                       disabled={deletingProjectId === proj.id}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-red-700 hover:bg-red-600 rounded text-xs font-medium disabled:opacity-50 whitespace-nowrap"
-                      title="מחק פרויקט + כל התמונות מ-S3"
                     >
-                      {deletingProjectId === proj.id
-                        ? <RefreshCw className="w-3 h-3 animate-spin" />
-                        : <Trash2 className="w-3 h-3" />}
+                      {deletingProjectId === proj.id ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
                       מחק + S3
                     </button>
                   </div>
@@ -676,3 +338,52 @@ export default function GalleryAdminPage() {
   )
 }
 
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function StepRow({ number, label, hint, children }: { number: number; label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-3">
+      <span className="shrink-0 w-7 h-7 rounded-full bg-blue-600 text-white text-sm font-bold flex items-center justify-center mt-0.5">{number}</span>
+      <div className="flex-1 space-y-1.5">
+        <label className="text-sm font-medium text-white">
+          {label}
+          {hint && <span className="text-white/40 font-normal text-xs mr-2">{hint}</span>}
+        </label>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function SectionHeader({ title, subtitle, loading, onRefresh }: { title: string; subtitle: string; loading: boolean; onRefresh: () => void }) {
+  return (
+    <div className="flex items-center justify-between">
+      <div>
+        <h2 className="text-xl font-bold">{title}</h2>
+        <p className="text-sm text-white/60">{subtitle}</p>
+      </div>
+      <button onClick={onRefresh} disabled={loading} className="flex items-center gap-2 px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 disabled:opacity-50">
+        <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+        רענן
+      </button>
+    </div>
+  )
+}
+
+function Spinner({ label }: { label: string }) {
+  return (
+    <div className="text-center py-8 text-white/60">
+      <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2" />
+      <p>{label}</p>
+    </div>
+  )
+}
+
+function EmptyState({ title, subtitle }: { title: string; subtitle: string }) {
+  return (
+    <div className="text-center py-12 text-white/60">
+      <p className="text-lg mb-2">{title}</p>
+      <p className="text-sm">{subtitle}</p>
+    </div>
+  )
+}

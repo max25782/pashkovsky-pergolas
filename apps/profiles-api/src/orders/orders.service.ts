@@ -236,7 +236,7 @@ export class OrdersService {
       }
     }
 
-    const updateData: any = { ...dto };
+    const updateData: Record<string, unknown> = { ...dto };
     if (finalAmount !== undefined) {
       updateData.final_amount = finalAmount;
     }

@@ -46,7 +46,10 @@ export default function CheckoutPage() {
           },
           item.quantity
         )
-      } catch { /* leave as-is on error */ }
+      } catch (err) {
+        console.error('[Checkout] Failed to patch stale cart item:', item.profileId, err)
+        /* leave item as-is on fetch error — it will still appear in cart */
+      }
     })
   }, [hydrated, items, removeItem, addItem, companyId])
   const [isSubmitting, setIsSubmitting] = useState(false)
