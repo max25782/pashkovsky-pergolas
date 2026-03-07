@@ -7,6 +7,9 @@ import { useEffect, useState } from 'react'
 export interface CartItem {
   profileId: string
   code: string
+  nameHe?: string
+  nameRu?: string
+  nameEn?: string
   color: string
   length: number
   quantity: number

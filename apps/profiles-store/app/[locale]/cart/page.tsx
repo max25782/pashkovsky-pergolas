@@ -17,10 +17,10 @@ export default function CartPage() {
   const { items, updateQuantity, removeItem, addItem, clear } = useCart()
   const patchedRef = useRef(false)
 
-  // Patch stale items that have weightPerPiece === 0 (saved before the field existed)
+  // Patch stale items missing weightPerPiece or name fields
   useEffect(() => {
     if (!hydrated || patchedRef.current) return
-    const staleItems = items.filter((i) => !i.weightPerPiece)
+    const staleItems = items.filter((i) => !i.weightPerPiece || (!i.nameHe && !i.nameRu && !i.nameEn))
     if (staleItems.length === 0) return
     patchedRef.current = true
 
@@ -31,7 +31,18 @@ export default function CartPage() {
         const weightPerPiece = (profile.weight_per_meter || 0) * item.length
         removeItem(item.profileId, item.color, item.length)
         addItem(
-          { profileId: item.profileId, code: item.code, color: item.color, length: item.length, pricePerPiece: 0, weightPerPiece, imageUrl: item.imageUrl },
+          {
+            profileId: item.profileId,
+            code: item.code,
+            nameHe: profile.name_he,
+            nameRu: profile.name_ru,
+            nameEn: profile.name_en,
+            color: item.color,
+            length: item.length,
+            pricePerPiece: 0,
+            weightPerPiece,
+            imageUrl: item.imageUrl,
+          },
           item.quantity
         )
       } catch { /* leave as-is on error */ }

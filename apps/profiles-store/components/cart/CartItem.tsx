@@ -29,11 +29,19 @@ export function CartItem({ item, locale, onUpdateQuantity, onRemove }: CartItemP
         </div>
       </td>
 
-      {/* Code + category */}
+      {/* Name + code */}
       <td className="py-3 px-3 text-right">
-        <div className="font-semibold text-white text-sm">{item.code}</div>
+        <div className="font-semibold text-white text-sm">
+          {(locale === 'he' && item.nameHe) ||
+           (locale === 'ru' && item.nameRu) ||
+           item.nameEn ||
+           item.nameHe ||
+           item.nameRu ||
+           item.code}
+        </div>
+        <div className="text-gray-400 text-xs mt-0.5 font-mono">{item.code}</div>
         {item.color && item.color !== 'default' && (
-          <div className="text-gray-400 text-xs mt-0.5">{item.color}</div>
+          <div className="text-gray-500 text-xs">{item.color}</div>
         )}
       </td>
 

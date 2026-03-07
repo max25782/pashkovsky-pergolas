@@ -57,4 +57,8 @@ export class UpdateOrderItemDto {
   @IsNumber()
   @Min(0)
   price_per_piece: number;
+
+  @IsOptional()
+  @IsString()
+  color?: string;
 }

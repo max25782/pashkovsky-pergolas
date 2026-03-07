@@ -24,16 +24,19 @@ export default function GalleryAdminPage() {
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [uploaded, setUploaded] = useState<number>(0)
-  const [projTitle, setProjTitle] = useState('')
-  const [projDesc, setProjDesc] = useState('')
-  const [projImages, setProjImages] = useState('')
-  const [creatingProject, setCreatingProject] = useState(false)
+  const [folderName, setFolderName] = useState('')
   
   // Gallery management state
   const [images, setImages] = useState<GalleryImage[]>([])
   const [loadingImages, setLoadingImages] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [viewMode, setViewMode] = useState<'upload' | 'manage'>('upload')
+  const [viewMode, setViewMode] = useState<'upload' | 'manage' | 'projects'>('upload')
+
+  // Projects state
+  interface PergolaProject { id: string; title_he: string; title_ru?: string; images: string[]; created_at: string }
+  const [projects, setProjects] = useState<PergolaProject[]>([])
+  const [loadingProjects, setLoadingProjects] = useState(false)
+  const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null)
 
   useEffect(() => {
     async function loadCategories() {
@@ -60,6 +63,9 @@ export default function GalleryAdminPage() {
   useEffect(() => {
     if (viewMode === 'manage' && selectedCategory) {
       loadImages()
+    }
+    if (viewMode === 'projects') {
+      loadProjects()
     }
   }, [selectedCategory, viewMode])
 
@@ -110,6 +116,47 @@ export default function GalleryAdminPage() {
     }
   }
 
+  const loadProjects = async () => {
+    setLoadingProjects(true)
+    setError(null)
+    try {
+      const res = await authFetch('/admin-api/pergola-projects')
+      if (!res.ok) throw new Error('Failed to fetch projects')
+      const data = await res.json()
+      setProjects(data.projects || [])
+    } catch (e: any) {
+      setError(e.message)
+    } finally {
+      setLoadingProjects(false)
+    }
+  }
+
+  const handleDeleteProject = async (projectId: string, title: string, deleteS3: boolean) => {
+    const confirmMsg = deleteS3
+      ? `מחק פרויקט "${title}" + כל התמונות מ-S3?\n\nפעולה זו אינה הפיכה!`
+      : `מחק פרויקט "${title}" מהרשימה בלבד?\n(התמונות ב-S3 יישארו)`
+    if (!confirm(confirmMsg)) return
+
+    setDeletingProjectId(projectId)
+    setError(null)
+    setMessage(null)
+    try {
+      const url = `/admin-api/pergola-projects?id=${projectId}${deleteS3 ? '&delete_s3=1' : ''}`
+      const res = await authFetch(url, { method: 'DELETE' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to delete project')
+      const s3Msg = deleteS3 && data.s3_deleted?.length > 0
+        ? ` (${data.s3_deleted.length} תמונות נמחקו מ-S3)`
+        : ''
+      setMessage(`פרויקט "${title}" נמחק${s3Msg}`)
+      await loadProjects()
+    } catch (e: any) {
+      setError(e.message)
+    } finally {
+      setDeletingProjectId(null)
+    }
+  }
+
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return
     setFiles(Array.from(e.target.files))
@@ -125,8 +172,6 @@ export default function GalleryAdminPage() {
       return
     }
     
-    console.log('🚀 Upload started:', { selectedCategory, filesCount: files.length })
-    
     setError(null)
     setMessage(null)
     setUploading(true)
@@ -134,9 +179,8 @@ export default function GalleryAdminPage() {
     try {
       const form = new FormData()
       form.append('category_key', selectedCategory)
+      if (folderName.trim()) form.append('folder_name', folderName.trim())
       files.forEach(f => form.append('files', f))
-      
-      console.log('📤 Sending to API:', { category_key: selectedCategory })
       
       const res = await authFetch('/admin-api/gallery/upload', {
         method: 'POST',
@@ -144,15 +188,39 @@ export default function GalleryAdminPage() {
       })
       const data = await res.json()
       
-      console.log('📥 API Response:', data)
-      
       if (!res.ok) {
         throw new Error(data.error || 'Upload failed')
       }
-      setUploaded(data.uploaded || 0)
-      setMessage(`הועלו ${data.uploaded || 0} קבצים בהצלחה`)
+
+      const uploadedCount = data.uploaded || 0
+      setUploaded(uploadedCount)
+
+      // Auto-create pergola_projects record if folder name given and category is pergulot
+      if (folderName.trim() && data.images?.length > 0) {
+        const imageUrls = (data.images as Array<{ url: string }>).map(img => img.url)
+        try {
+          const projRes = await authFetch('/admin-api/pergola-projects', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title_he: folderName.trim(),
+              desc_he: null,
+              images: imageUrls,
+            }),
+          })
+          if (projRes.ok) {
+            setMessage(`הועלו ${uploadedCount} קבצים לתיקייה "${folderName.trim()}" ✓ פרויקט נוצר אוטומטית`)
+          } else {
+            setMessage(`הועלו ${uploadedCount} קבצים לתיקייה "${folderName.trim()}" (שגיאה ביצירת פרויקט)`)
+          }
+        } catch {
+          setMessage(`הועלו ${uploadedCount} קבצים לתיקייה "${folderName.trim()}"`)
+        }
+      } else {
+        setMessage(`הועלו ${uploadedCount} קבצים בהצלחה`)
+      }
+
       setFiles([])
-      // Refresh images if in manage mode
       if (viewMode === 'manage') {
         setTimeout(() => loadImages(), 1000)
       }
@@ -164,43 +232,6 @@ export default function GalleryAdminPage() {
     }
   }
 
-  const handleCreateProject = async () => {
-    if (!projTitle.trim()) {
-      setError('הזן שם פרויקט')
-      return
-    }
-    const imagesArr = projImages.split('\n').map(s => s.trim()).filter(Boolean)
-    if (imagesArr.length === 0) {
-      setError('הוסף לפחות כתובת תמונה אחת (S3)')
-      return
-    }
-    setError(null)
-    setMessage(null)
-    setCreatingProject(true)
-    try {
-      const res = await authFetch('/admin-api/pergola-projects', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title_he: projTitle.trim(),
-          desc_he: projDesc.trim() || null,
-          images: imagesArr,
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to create project')
-      setMessage('פרויקט נוצר בהצלחה')
-      setProjTitle('')
-      setProjDesc('')
-      setProjImages('')
-    } catch (e: any) {
-      setError(e.message)
-    } finally {
-      setCreatingProject(false)
-    }
-  }
 
   return (
     <main className="container py-8 text-white">
@@ -268,101 +299,93 @@ export default function GalleryAdminPage() {
         >
           🗑️ ניהול תמונות
         </button>
+        <button
+          onClick={() => setViewMode('projects')}
+          className={`px-4 py-2 rounded font-semibold transition-colors ${
+            viewMode === 'projects'
+              ? 'bg-purple-600 text-white'
+              : 'bg-white/10 text-white/70 hover:bg-white/20'
+          }`}
+        >
+          📁 פרויקטים
+        </button>
       </div>
 
       {/* Upload Section */}
       {viewMode === 'upload' && (
-        <div className="bg-white/5 rounded-lg border border-white/10 p-6 space-y-4">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <label className="text-sm text-white/70">קטגוריה</label>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full bg-black/30 border border-white/20 rounded px-3 py-2 text-white"
-            >
-              {categories.map((c: any) => (
-                <option key={c.id} value={c.key}>{c.name_he || c.key}</option>
-              ))}
-            </select>
-            <p className="text-xs text-white/50">טען תמונות לכל קטגוריות האתר דרך S3</p>
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm text-white/70">קבצים (jpg/png/webp/gif)</label>
-            <input
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={onFileChange}
-              className="w-full text-white"
-            />
-            {files.length > 0 && (
-              <p className="text-xs text-green-300">{files.length} קבצים נבחרו</p>
-            )}
-          </div>
-        </div>
+        <div className="bg-white/5 rounded-lg border border-white/10 p-6 space-y-5">
 
-        <div className="flex gap-3">
-          <button
-            onClick={handleUpload}
-            disabled={uploading}
-            className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
-          >
-            {uploading ? 'מעלה...' : 'העלה ל-S3'}
-          </button>
-          {uploaded > 0 && (
-            <span className="text-green-300 text-sm">הועלו {uploaded} קבצים</span>
-          )}
-        </div>
-
-        {message && <div className="text-green-300 text-sm">{message}</div>}
-        {error && <div className="text-red-300 text-sm">{error}</div>}
-
-        <div className="text-white/60 text-sm">
-          - קבצים מומלצים: עד 10MB, תמונות באיכות טובה<br/>
-          - נשמרים ב-S3 עם פרוססינג ל-WebP<br/>
-          - המטא-דאטה נשמר ב-Supabase בטבלת gallery_images<br/>
-          - הקטגוריות מגיעות מטבלת gallery_categories (משותפות לכל האתר)
-        </div>
-
-        <div className="border-t border-white/10 pt-6">
-          <h3 className="text-lg font-semibold mb-3">צור פרויקט פרגולה (pergulot)</h3>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <label className="text-sm text-white/70">שם פרויקט (he)</label>
-              <input
-                value={projTitle}
-                onChange={(e) => setProjTitle(e.target.value)}
-                className="w-full bg-black/30 border border-white/20 rounded px-3 py-2 text-white"
-                placeholder="לדוגמה: פרגולה אשדוד"
-              />
-              <label className="text-sm text-white/70">תיאור (he)</label>
-              <textarea
-                value={projDesc}
-                onChange={(e) => setProjDesc(e.target.value)}
-                className="w-full bg-black/30 border border-white/20 rounded px-3 py-2 text-white min-h-[90px]"
-                placeholder="אופציונלי"
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-sm text-white/70">כתובות תמונות (S3) — כל כתובת בשורה</label>
-              <textarea
-                value={projImages}
-                onChange={(e) => setProjImages(e.target.value)}
-                className="w-full bg-black/30 border border-white/20 rounded px-3 py-2 text-white min-h-[140px]"
-                placeholder="https://pashkovsky-gallery.s3.../images/pergulas/...\nhttps://..."
-              />
-              <button
-                onClick={handleCreateProject}
-                disabled={creatingProject}
-                className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50"
+          {/* Step 1 — Category */}
+          <div className="flex items-start gap-3">
+            <span className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-600 text-white text-sm font-bold flex items-center justify-center mt-0.5">1</span>
+            <div className="flex-1 space-y-1.5">
+              <label className="text-sm font-medium text-white">בחר קטגוריה</label>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="w-full max-w-xs bg-black/30 border border-white/20 rounded px-3 py-2 text-white"
               >
-                {creatingProject ? 'יוצר...' : 'צור פרויקט'}
-              </button>
+                {categories.map((c: any) => (
+                  <option key={c.id} value={c.key}>{c.name_he || c.key}</option>
+                ))}
+              </select>
             </div>
           </div>
-          <p className="text-xs text-white/50 mt-2">הפרויקט נשמר בטבלה pergola_projects ונשלף אוטומטית ל-Our Projects.</p>
-        </div>
+
+          {/* Step 2 — Folder / Project name */}
+          <div className="flex items-start gap-3">
+            <span className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-600 text-white text-sm font-bold flex items-center justify-center mt-0.5">2</span>
+            <div className="flex-1 space-y-1.5">
+              <label className="text-sm font-medium text-white">
+                שם תיקייה / פרויקט
+                <span className="text-white/40 font-normal text-xs mr-2">(אופציונלי — אם תמלא, פרויקט ייווצר אוטומטית)</span>
+              </label>
+              <input
+                type="text"
+                value={folderName}
+                onChange={(e) => setFolderName(e.target.value)}
+                placeholder="לדוגמה: פרגולה אשדוד"
+                className="w-full max-w-sm bg-black/30 border border-white/20 rounded px-3 py-2 text-white placeholder:text-white/30"
+              />
+              {folderName.trim() && (
+                <p className="text-xs text-emerald-400">
+                  ✓ נתיב: images/{selectedCategory}/{folderName.trim().replace(/\s+/g, '_')}/... • פרויקט ייווצר אוטומטית
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Step 3 — Files */}
+          <div className="flex items-start gap-3">
+            <span className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-600 text-white text-sm font-bold flex items-center justify-center mt-0.5">3</span>
+            <div className="flex-1 space-y-1.5">
+              <label className="text-sm font-medium text-white">בחר תמונות (אפשר לבחור כמה בבת אחת)</label>
+              <input
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={onFileChange}
+                className="w-full text-white"
+              />
+              {files.length > 0 && (
+                <p className="text-sm text-green-300 font-medium">✓ {files.length} קבצים נבחרו</p>
+              )}
+            </div>
+          </div>
+
+          {/* Step 4 — Upload button */}
+          <div className="flex items-center gap-4 pt-1">
+            <button
+              onClick={handleUpload}
+              disabled={uploading || !files.length}
+              className="px-6 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-40 font-semibold text-white transition-colors"
+            >
+              {uploading ? `מעלה... (${files.length} קבצים)` : `העלה ל-S3${files.length > 0 ? ` (${files.length} קבצים)` : ''}`}
+            </button>
+          </div>
+
+          {message && <div className="bg-green-500/20 border border-green-500/40 rounded p-3 text-green-300 text-sm">{message}</div>}
+          {error && <div className="bg-red-500/20 border border-red-500/40 rounded p-3 text-red-300 text-sm">{error}</div>}
         </div>
       )}
 
@@ -488,6 +511,124 @@ export default function GalleryAdminPage() {
             <div className="text-center py-12 text-white/60">
               <p className="text-lg mb-2">אין תמונות בקטגוריה זו</p>
               <p className="text-sm">העלה תמונות דרך הכרטיסייה "העלאת תמונות"</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Projects Section */}
+      {viewMode === 'projects' && (
+        <div className="bg-white/5 rounded-lg border border-white/10 p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold">פרויקטים</h2>
+              <p className="text-sm text-white/60">רשימת כל הפרויקטים ב-Our Projects</p>
+            </div>
+            <button
+              onClick={loadProjects}
+              disabled={loadingProjects}
+              className="flex items-center gap-2 px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${loadingProjects ? 'animate-spin' : ''}`} />
+              רענן
+            </button>
+          </div>
+
+          {message && (
+            <div className="bg-green-500/20 border border-green-500/50 rounded p-3 text-green-300">{message}</div>
+          )}
+          {error && (
+            <div className="bg-red-500/20 border border-red-500/50 rounded p-3 text-red-300">{error}</div>
+          )}
+
+          {loadingProjects && (
+            <div className="text-center py-8 text-white/60">
+              <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2" />
+              <p>טוען פרויקטים...</p>
+            </div>
+          )}
+
+          {!loadingProjects && projects.length === 0 && (
+            <div className="text-center py-12 text-white/60">
+              <p className="text-lg mb-2">אין פרויקטים</p>
+              <p className="text-sm">העלה תמונות עם שם תיקייה ליצירת פרויקט</p>
+            </div>
+          )}
+
+          {!loadingProjects && projects.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-sm text-white/60">{projects.length} פרויקטים</p>
+              {projects.map((proj) => (
+                <div
+                  key={proj.id}
+                  className="bg-black/30 rounded-lg border border-white/10 p-4 flex items-start gap-4"
+                >
+                  {/* First image preview */}
+                  {proj.images?.[0] && (
+                    <div className="relative w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-black/30">
+                      <Image
+                        src={proj.images[0]}
+                        alt={proj.title_he}
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
+                    </div>
+                  )}
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-white">{proj.title_he}</p>
+                    {proj.title_ru && <p className="text-sm text-white/60">{proj.title_ru}</p>}
+                    <p className="text-xs text-white/40 mt-1">
+                      {proj.images?.length || 0} תמונות • {new Date(proj.created_at).toLocaleDateString('he-IL')}
+                    </p>
+                    {/* Image URLs preview */}
+                    <div className="mt-2 flex gap-1 flex-wrap">
+                      {(proj.images || []).slice(0, 5).map((url, i) => (
+                        <a
+                          key={i}
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-400 hover:text-blue-300 underline truncate max-w-[120px]"
+                        >
+                          תמונה {i + 1}
+                        </a>
+                      ))}
+                      {(proj.images?.length || 0) > 5 && (
+                        <span className="text-xs text-white/40">+{proj.images.length - 5} עוד</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Delete buttons */}
+                  <div className="flex flex-col gap-2 flex-shrink-0">
+                    <button
+                      onClick={() => handleDeleteProject(proj.id, proj.title_he, false)}
+                      disabled={deletingProjectId === proj.id}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-yellow-600/80 hover:bg-yellow-600 rounded text-xs font-medium disabled:opacity-50 whitespace-nowrap"
+                      title="מחק רק מהרשימה, התמונות ב-S3 יישארו"
+                    >
+                      {deletingProjectId === proj.id
+                        ? <RefreshCw className="w-3 h-3 animate-spin" />
+                        : <Trash2 className="w-3 h-3" />}
+                      מחק רשומה
+                    </button>
+                    <button
+                      onClick={() => handleDeleteProject(proj.id, proj.title_he, true)}
+                      disabled={deletingProjectId === proj.id}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-red-700 hover:bg-red-600 rounded text-xs font-medium disabled:opacity-50 whitespace-nowrap"
+                      title="מחק פרויקט + כל התמונות מ-S3"
+                    >
+                      {deletingProjectId === proj.id
+                        ? <RefreshCw className="w-3 h-3 animate-spin" />
+                        : <Trash2 className="w-3 h-3" />}
+                      מחק + S3
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

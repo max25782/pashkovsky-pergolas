@@ -43,9 +43,10 @@ export async function POST(req: NextRequest) {
     console.log('Parsing form data...')
     const formData = await req.formData()
     const categoryKey = formData.get('category_key') as string
+    const folderName = (formData.get('folder_name') as string | null)?.trim().replace(/[^a-zA-Z0-9-_א-ת ]/g, '').replace(/\s+/g, '_') || ''
     const files = formData.getAll('files') as File[]
     
-    console.log('Form data parsed:', { categoryKey, filesCount: files.length })
+    console.log('Form data parsed:', { categoryKey, folderName, filesCount: files.length })
     
     if (!categoryKey) {
       return new Response(JSON.stringify({ error: 'Missing category_key' }), {
@@ -127,7 +128,9 @@ export async function POST(req: NextRequest) {
         const originalName = file.name.replace(/\.[^/.]+$/, '')
         const sanitizedName = originalName.replace(/[^a-zA-Z0-9-_]/g, '_')
         const filename = `${sanitizedName}_${timestamp}_${random}.webp`
-        const storagePath = `images/${categoryKey}/${filename}`
+        const storagePath = folderName
+          ? `images/${categoryKey}/${folderName}/${filename}`
+          : `images/${categoryKey}/${filename}`
         console.log(`Generated filename: ${filename}, storage path: ${storagePath}`)
         
         // Загружаем в S3
@@ -181,6 +184,7 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({
       success: true,
       uploaded: uploadedImages.length,
+      folder_name: folderName || null,
       images: uploadedImages
     }), {
       status: 200,

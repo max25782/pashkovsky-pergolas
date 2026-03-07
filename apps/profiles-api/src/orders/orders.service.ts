@@ -314,15 +314,20 @@ export class OrdersService {
       throw new NotFoundException("Order item not found");
     }
 
-    // Update item price and recalculate subtotal
+    // Update item price, color and recalculate subtotal
     const subtotal = dto.price_per_piece * item.quantity_pieces;
+
+    const updatePayload: Record<string, unknown> = {
+      price_per_piece: dto.price_per_piece,
+      subtotal: subtotal,
+    };
+    if (dto.color !== undefined) {
+      updatePayload.color = dto.color;
+    }
 
     const { data: updatedItem, error: updateError } = await this.supabase
       .from("order_items")
-      .update({
-        price_per_piece: dto.price_per_piece,
-        subtotal: subtotal,
-      })
+      .update(updatePayload)
       .eq("id", itemId)
       .select()
       .single();

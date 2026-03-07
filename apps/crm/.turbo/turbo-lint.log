@@ -1,9 +1,15 @@
 
-
 > @alumincrm/app@1.0.0 lint
 > next lint
 
-[1m[36m?[39m How would you like to configure ESLint? https://nextjs.org/docs/basic-features/eslint[22m
-[?25l[36m❯ [39m [1m[4m[36mStrict[39m[24m[22m[1m[33m (recommended)[39m[22m
+? How would you like to configure ESLint? https://nextjs.org/docs/basic-features/eslint
+[?25l❯  Strict (recommended)
    Base
-   Cancel
+ ⚠ If you set up ESLint yourself, we recommend adding the Next.js ESLint plugin. See https://nextjs.org/docs/basic-features/eslint#migrating-existing-config
+npm error Lifecycle script `lint` failed with error:
+npm error code 1
+npm error path /Users/user/Downloads/pashkovsky-pergolas_starter/apps/crm
+npm error workspace @alumincrm/app@1.0.0
+npm error location /Users/user/Downloads/pashkovsky-pergolas_starter/apps/crm
+npm error command failed
+npm error command sh -c next lint

@@ -69,23 +69,32 @@ function getColorLabel(color: string): string {
   return map[color] ?? map[color.toLowerCase()] ?? color
 }
 
-function groupByColor(items: OrderItem[]): Array<{ name: string; qty: string; amount: string }> {
-  const groups = new Map<string, { weight: number; pieces: number; amount: number }>()
+function groupByColor(items: OrderItem[]): Array<{ name: string; qty: string; pricePerKg: string; amount: string }> {
+  const groups = new Map<string, { weight: number; pieces: number; amount: number; pricePerKgSum: number; priceCount: number }>()
   for (const item of items) {
     const key = getColorLabel(item.color)
-    const g = groups.get(key) ?? { weight: 0, pieces: 0, amount: 0 }
+    const g = groups.get(key) ?? { weight: 0, pieces: 0, amount: 0, pricePerKgSum: 0, priceCount: 0 }
     g.weight += item.total_weight_kg ?? 0
     g.pieces += item.quantity_pieces ?? 0
     g.amount += item.subtotal ?? 0
+    // Calculate price per kg for this item
+    if (item.weight_per_piece > 0 && item.price_per_piece > 0) {
+      g.pricePerKgSum += item.price_per_piece / item.weight_per_piece
+      g.priceCount += 1
+    }
     groups.set(key, g)
   }
-  const result = Array.from(groups.entries()).map(([name, g]) => ({
-    name,
-    qty: g.weight > 0 ? `${g.weight.toFixed(2)} ק"ג` : `${g.pieces} יח'`,
-    amount: formatCurrency(g.amount),
-  }))
+  const result = Array.from(groups.entries()).map(([name, g]) => {
+    const avgPricePerKg = g.priceCount > 0 ? g.pricePerKgSum / g.priceCount : 0
+    return {
+      name,
+      qty: g.weight > 0 ? `${g.weight.toFixed(2)} ק"ג` : `${g.pieces} יח'`,
+      pricePerKg: avgPricePerKg > 0 ? `${avgPricePerKg.toFixed(2)} ₪/ק"ג` : '',
+      amount: formatCurrency(g.amount),
+    }
+  })
   // Pad to multiple of 3 for grid
-  while (result.length % 3 !== 0) result.push({ name: '', qty: '', amount: '' })
+  while (result.length % 3 !== 0) result.push({ name: '', qty: '', pricePerKg: '', amount: '' })
   return result
 }
 
@@ -239,6 +248,7 @@ export function renderOrderHtml(order: Order, imageMap: Record<string, string> =
     .sg-cell.empty { background: #f8f8f8; }
     .sg-name { font-weight: bold; font-size: 11px; color: #1e3a5f; display: block; margin-bottom: 2px; }
     .sg-qty  { font-size: 10px; color: #555; display: block; }
+    .sg-pkg  { font-size: 10px; color: #1e3a5f; display: block; font-weight: bold; }
     .sg-amt  { font-size: 11px; font-weight: bold; color: #222; display: block; }
 
     /* ── Items table ── */
@@ -374,6 +384,7 @@ export function renderOrderHtml(order: Order, imageMap: Record<string, string> =
           ${g.name ? `
             <span class="sg-name">${g.name}</span>
             <span class="sg-qty">${g.qty}</span>
+            ${g.pricePerKg ? `<span class="sg-pkg">${g.pricePerKg}</span>` : ''}
             <span class="sg-amt">${g.amount}</span>
           ` : '&nbsp;'}
         </div>`).join('')}

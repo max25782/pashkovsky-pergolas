@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, FormEvent } from 'react'
+import { useState, FormEvent, useEffect, useRef } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
-import { useCart } from '@/lib/cart-store'
-import { submitOrder } from '@/lib/api-client'
+import { useCart, useCartHydrated } from '@/lib/cart-store'
+import { submitOrder, fetchProfile } from '@/lib/api-client'
 import { CheckoutForm } from '@/components/checkout/CheckoutForm'
 import { OrderSummary } from '@/components/checkout/OrderSummary'
 import { Container } from '@/components/layout/Container'
@@ -15,7 +15,40 @@ export default function CheckoutPage() {
   const locale = (params.locale as Locale) || 'he'
   const companyId = searchParams.get('company_id') || process.env.NEXT_PUBLIC_COMPANY_ID
   const router = useRouter()
-  const { items, clear } = useCart()
+  const hydrated = useCartHydrated()
+  const { items, clear, removeItem, addItem } = useCart()
+  const patchedRef = useRef(false)
+
+  // Patch stale items missing name fields
+  useEffect(() => {
+    if (!hydrated || patchedRef.current) return
+    const staleItems = items.filter((i) => !i.nameHe && !i.nameRu && !i.nameEn)
+    if (staleItems.length === 0) return
+    patchedRef.current = true
+
+    staleItems.forEach(async (item) => {
+      try {
+        const profile = await fetchProfile(item.profileId, companyId)
+        const weightPerPiece = item.weightPerPiece || (profile.weight_per_meter || 0) * item.length
+        removeItem(item.profileId, item.color, item.length)
+        addItem(
+          {
+            profileId: item.profileId,
+            code: item.code,
+            nameHe: profile.name_he,
+            nameRu: profile.name_ru,
+            nameEn: profile.name_en,
+            color: item.color,
+            length: item.length,
+            pricePerPiece: 0,
+            weightPerPiece,
+            imageUrl: item.imageUrl,
+          },
+          item.quantity
+        )
+      } catch { /* leave as-is on error */ }
+    })
+  }, [hydrated, items, removeItem, addItem, companyId])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [customerInfo, setCustomerInfo] = useState({
     name: '',

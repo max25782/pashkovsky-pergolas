@@ -28,6 +28,9 @@ export function AddToCartButton({
       {
         profileId: profile.id,
         code: profile.code,
+        nameHe: profile.name_he,
+        nameRu: profile.name_ru,
+        nameEn: profile.name_en,
         color: selectedColor,
         length: selectedLength,
         pricePerPiece: 0,

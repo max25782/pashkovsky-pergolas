@@ -158,19 +158,39 @@ export default function OrdersPage() {
     }
   }
 
-  async function handleUpdateItemPrice(orderId: string, itemId: string, newPrice: number) {
+  async function handleUpdateItemPrice(orderId: string, itemId: string, newPrice: number, color?: string) {
     try {
+      const body: Record<string, unknown> = { price_per_piece: newPrice }
+      if (color !== undefined) body.color = color
+
       const response = await authFetch(`/api/admin/orders/${orderId}/items/${itemId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ price_per_piece: newPrice }),
+        body: JSON.stringify(body),
       })
 
       if (!response.ok) {
         throw new Error('Failed to update item price')
       }
 
-      await loadOrders()
+      // Reload orders and sync the open modal with fresh data
+      const ordersRes = await authFetch('/api/admin/orders')
+      if (ordersRes.ok) {
+        const freshOrders: Order[] = await ordersRes.json()
+        setOrders(Array.isArray(freshOrders) ? freshOrders : [])
+
+        // If modal is open for this order, refresh it
+        if (editingOrder?.id === orderId) {
+          const freshOrder = freshOrders.find((o) => o.id === orderId)
+          if (freshOrder) {
+            setEditingOrder(freshOrder)
+            setEditForm((prev) => prev ? {
+              ...prev,
+              final_amount: freshOrder.final_amount ?? freshOrder.total_amount ?? 0,
+            } : prev)
+          }
+        }
+      }
     } catch (err: any) {
       console.error('[Orders] Error updating item:', err)
       alert(err.message || 'Failed to update item price')
@@ -485,40 +505,75 @@ export default function OrdersPage() {
                   />
                 </div>
 
-                {/* Order Items */}
+                {/* Order Items — set price per kg */}
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    {language === 'ru' ? 'Товары' : language === 'en' ? 'Items' : 'פריטים'}
+                    {language === 'ru' ? 'Товары — цена за кг' : language === 'en' ? 'Items — price per kg' : 'פריטים — מחיר לק"ג'}
                   </label>
                   <div className="space-y-2">
-                    {editingOrder.order_items?.map((item) => (
-                      <div key={item.id} className="flex items-center justify-between bg-white/5 rounded p-3">
-                        <div className="flex-1">
-                          <span className="font-medium">
-                            {item.aluminum_profiles?.code || item.profile_id.slice(0, 8)}
-                          </span>
-                          {' - '}
-                          {item.length_meters}m × {item.quantity_pieces}
-                          {item.color !== 'default' && ` (${item.color})`}
+                    {editingOrder.order_items?.map((item) => {
+                      const pricePerKg = item.weight_per_piece > 0
+                        ? item.price_per_piece / item.weight_per_piece
+                        : 0
+                      const currentColor = item.color === 'default' ? '' : (item.color || '')
+                      return (
+                        <div key={item.id} className="bg-white/5 rounded p-3 space-y-2">
+                          {/* Item info */}
+                          <div className="text-sm">
+                            <span className="font-medium">
+                              {item.aluminum_profiles?.name_he || item.aluminum_profiles?.code || item.profile_id.slice(0, 8)}
+                            </span>
+                            <span className="text-white/50 font-mono ml-1 text-xs">
+                              {item.aluminum_profiles?.code}
+                            </span>
+                            <div className="text-white/50 text-xs mt-0.5">
+                              {item.length_meters}m × {item.quantity_pieces}
+                              {' · '}{item.total_weight_kg?.toFixed(2)} kg
+                            </div>
+                          </div>
+                          {/* Color + Price row */}
+                          <div className="flex items-center gap-3">
+                            {/* Color / גוון */}
+                            <div className="flex-1 flex items-center gap-2">
+                              <span className="text-white/60 text-xs whitespace-nowrap">גוון:</span>
+                              <input
+                                type="text"
+                                defaultValue={currentColor}
+                                onBlur={(e) => {
+                                  const newColor = e.target.value.trim() || 'default'
+                                  const priceEl = e.target.closest('.bg-white\\/5')?.querySelector('input[type="number"]') as HTMLInputElement | null
+                                  const currentPricePerKg = priceEl ? parseFloat(priceEl.value) : pricePerKg
+                                  const newPricePerPiece = currentPricePerKg * (item.weight_per_piece || 0)
+                                  handleUpdateItemPrice(editingOrder.id, item.id, newPricePerPiece, newColor)
+                                }}
+                                placeholder="לבן / שחור / RAL..."
+                                className="flex-1 px-2 py-1 bg-black/30 border border-white/20 rounded text-white text-sm placeholder:text-white/30"
+                              />
+                            </div>
+                            {/* Price per kg */}
+                            <div className="flex items-center gap-1 shrink-0">
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                defaultValue={pricePerKg.toFixed(2)}
+                                onBlur={(e) => {
+                                  const newPricePerKg = parseFloat(e.target.value)
+                                  if (!isNaN(newPricePerKg)) {
+                                    const colorEl = e.target.closest('.bg-white\\/5')?.querySelector('input[type="text"]') as HTMLInputElement | null
+                                    const color = colorEl ? (colorEl.value.trim() || 'default') : item.color
+                                    const newPricePerPiece = newPricePerKg * (item.weight_per_piece || 0)
+                                    handleUpdateItemPrice(editingOrder.id, item.id, newPricePerPiece, color)
+                                  }
+                                }}
+                                className="w-24 px-2 py-1 bg-black/30 border border-white/20 rounded text-white text-sm"
+                              />
+                              <span className="text-white/60 text-sm">₪/kg</span>
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            defaultValue={item.price_per_piece}
-                            onBlur={(e) => {
-                              const newPrice = parseFloat(e.target.value)
-                              if (!isNaN(newPrice) && newPrice !== item.price_per_piece) {
-                                handleUpdateItemPrice(editingOrder.id, item.id, newPrice)
-                              }
-                            }}
-                            className="w-24 px-2 py-1 bg-black/30 border border-white/20 rounded text-white text-sm"
-                          />
-                          <span className="text-white/60">₪</span>
-                        </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               </div>

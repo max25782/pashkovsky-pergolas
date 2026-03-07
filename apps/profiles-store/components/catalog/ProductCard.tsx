@@ -46,6 +46,9 @@ export function ProductCard({ profile, locale, companyId }: ProductCardProps) {
       {
         profileId: profile.id,
         code: profile.code,
+        nameHe: profile.name_he,
+        nameRu: profile.name_ru,
+        nameEn: profile.name_en,
         color,
         length: selectedLength,
         pricePerPiece: 0,

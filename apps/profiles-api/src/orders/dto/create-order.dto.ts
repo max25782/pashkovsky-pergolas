@@ -4,6 +4,7 @@ import {
   IsArray,
   ValidateNested,
   IsNotEmpty,
+  IsOptional,
   IsUUID,
   IsNumber,
   Min,
@@ -28,8 +29,8 @@ class CustomerDto {
   city: string;
 
   @IsString()
-  @IsNotEmpty()
-  address: string;
+  @IsOptional()
+  address?: string;
 }
 
 class OrderItemDto {

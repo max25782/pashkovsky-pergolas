@@ -41,7 +41,7 @@ export function CheckoutForm({
           required
           value={customerInfo.name}
           onChange={(e) => handleChange('name', e.target.value)}
-          className="w-full px-4 py-2 border border-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white text-gray-900 placeholder:text-gray-400"
         />
       </div>
 
@@ -54,7 +54,7 @@ export function CheckoutForm({
           required
           value={customerInfo.phone}
           onChange={(e) => handleChange('phone', e.target.value)}
-          className="w-full px-4 py-2 border border-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white text-gray-900 placeholder:text-gray-400"
         />
       </div>
 
@@ -67,7 +67,7 @@ export function CheckoutForm({
           required
           value={customerInfo.email}
           onChange={(e) => handleChange('email', e.target.value)}
-          className="w-full px-4 py-2 border border-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white text-gray-900 placeholder:text-gray-400"
         />
       </div>
 
@@ -80,20 +80,19 @@ export function CheckoutForm({
           required
           value={customerInfo.city}
           onChange={(e) => handleChange('city', e.target.value)}
-          className="w-full px-4 py-2 border border-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white text-gray-900 placeholder:text-gray-400"
         />
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-900 mb-2">
-          {getTranslation(locale, 'checkout.address')} *
+          {getTranslation(locale, 'checkout.address')}
         </label>
         <textarea
-          required
           value={customerInfo.address}
           onChange={(e) => handleChange('address', e.target.value)}
           rows={3}
-          className="w-full px-4 py-2 border border-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white text-gray-900 placeholder:text-gray-400"
         />
       </div>
 

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
+import { s3Client, isS3Configured } from '@/lib/s3-upload'
+import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -80,7 +82,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// DELETE (admin) - delete by id
+// DELETE (admin) - delete project by id, optionally also delete S3 images
 export async function DELETE(req: NextRequest) {
   const authCheck = await requireAuthAsync(req)
   if (!authCheck.authorized) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -89,8 +91,42 @@ export async function DELETE(req: NextRequest) {
 
   const { searchParams } = new URL(req.url)
   const id = searchParams.get('id')
+  const deleteS3 = searchParams.get('delete_s3') === '1'
   if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
 
+  // Fetch the project first to get image URLs for S3 cleanup
+  const { data: project, error: fetchError } = await supabase
+    .from('pergola_projects')
+    .select('images')
+    .eq('id', id)
+    .single()
+
+  if (fetchError || !project) {
+    return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+  }
+
+  // Delete S3 images if requested
+  const s3Deleted: string[] = []
+  const s3Errors: string[] = []
+  if (deleteS3 && isS3Configured() && s3Client && Array.isArray(project.images)) {
+    const bucket = process.env.AWS_S3_BUCKET_NAME!
+    for (const url of project.images as string[]) {
+      try {
+        // Extract S3 key from URL: https://bucket.s3.region.amazonaws.com/KEY
+        const match = url.match(/amazonaws\.com\/(.+)$/)
+        if (match) {
+          const key = match[1]
+          await s3Client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }))
+          s3Deleted.push(key)
+        }
+      } catch (e: any) {
+        s3Errors.push(url)
+        console.error('S3 delete error for', url, e.message)
+      }
+    }
+  }
+
+  // Delete from database
   const { error } = await supabase
     .from('pergola_projects')
     .delete()
@@ -101,7 +137,7 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  return NextResponse.json({ success: true })
+  return NextResponse.json({ success: true, s3_deleted: s3Deleted, s3_errors: s3Errors })
 }
 
 

@@ -32,20 +32,17 @@ function ProjectsGalleryImpl({ locale = "he" }: { locale?: Locale }) {
       : Array.isArray(p.media)
         ? processImageArray(p.media.filter((m: any) => m.type === "image").map((m: any) => m.src))
         : [];
-    const titleValue = typeof p.title === 'string' ? p.title : (p.title?.he ?? id);
-    const descValue = typeof p.desc === 'string' ? p.desc : (p.desc?.he ?? '');
+    // Support both flat API format (title_he/title_ru/title_en) and nested static JSON format (title.he)
+    const titleHe = p.title_he ?? p.title?.he ?? (typeof p.title === 'string' ? p.title : null) ?? id;
+    const titleEn = p.title_en ?? p.title?.en ?? titleHe;
+    const titleRu = p.title_ru ?? p.title?.ru ?? titleHe;
+    const descHe = p.desc_he ?? p.desc?.he ?? (typeof p.desc === 'string' ? p.desc : '') ?? '';
+    const descEn = p.desc_en ?? p.desc?.en ?? descHe;
+    const descRu = p.desc_ru ?? p.desc?.ru ?? descHe;
     return {
       id,
-      title: {
-        he: p.title?.he ?? titleValue,
-        en: p.title?.en ?? titleValue,
-        ru: p.title?.ru ?? titleValue,
-      },
-      desc: {
-        he: p.desc?.he ?? descValue,
-        en: p.desc?.en ?? descValue,
-        ru: p.desc?.ru ?? descValue,
-      },
+      title: { he: titleHe, en: titleEn, ru: titleRu },
+      desc: { he: descHe, en: descEn, ru: descRu },
       images,
     };
   }, []);
