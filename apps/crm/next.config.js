@@ -1,6 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ['framer-motion'],
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '25mb', // Gallery upload allows up to 10MB per file; 25MB for multiple files
+    },
+  },
   images: {
     formats: ['image/webp', 'image/avif'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
