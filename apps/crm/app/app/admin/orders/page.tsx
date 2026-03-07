@@ -74,7 +74,8 @@ const L = {
 }
 
 function t(key: keyof typeof L, lang: string): string {
-  return L[key]?.[lang] ?? L[key]?.['he'] ?? key
+  const entry = L[key] as Record<string, string>
+  return entry?.[lang] ?? entry?.['he'] ?? key
 }
 
 function statusLabel(status: string, lang: string): string {
