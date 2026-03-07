@@ -1,6 +1,4 @@
-'use client'
 import { ShieldCheck, Target, Lightbulb, Heart, Wrench } from 'lucide-react'
-import { useEffect, useState } from 'react'
 import type { Locale } from '@/lib/locales'
 
 const features = [
@@ -99,39 +97,31 @@ const content = {
 }
 
 export default function WhyChooseUs({ locale }: { locale: Locale }) {
-  const [visible, setVisible] = useState(false)
-
-  useEffect(() => {
-    const timeout = setTimeout(() => setVisible(true), 200)
-    return () => clearTimeout(timeout)
-  }, [])
-
   return (
     <section className="w-full py-20 bg-gradient-to-b from-neutral-950 to-neutral-900 overflow-hidden">
       <div className="max-w-7xl mx-auto px-6 text-center">
-        <h2 
-          className={`text-3xl sm:text-4xl font-bold mb-4 text-white transition-all duration-700 ease-out
-          ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
+        <h2
+          className="text-3xl sm:text-4xl font-bold mb-4 text-white"
+          style={{ animation: 'fadeIn 0.7s ease-out both' }}
         >
           {content.title[locale]} <span className="text-white">Pashkovsky Group</span>
         </h2>
-        <p 
-          className={`text-white/70 mb-12 text-lg transition-all duration-700 ease-out delay-150
-          ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
+        <p
+          className="text-white/70 mb-12 text-lg"
+          style={{ animation: 'fadeIn 0.7s ease-out 150ms both' }}
         >
           {content.subtitle[locale]}
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-12 justify-items-center">
           {features.map((f, i) => (
-            <div 
-              key={i} 
-              className={`flex flex-col items-center text-center max-w-xs group transition-all duration-700 ease-out
-              ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
-              style={{ transitionDelay: `${300 + i * 150}ms` }}
+            <div
+              key={i}
+              className="flex flex-col items-center text-center max-w-xs group"
+              style={{ animation: `fadeIn 0.7s ease-out ${300 + i * 150}ms both` }}
             >
               <div className="
-                w-20 h-20 flex items-center justify-center rounded-full 
+                w-20 h-20 flex items-center justify-center rounded-full
                 bg-white/10 shadow-inner mb-4 transition-all duration-500 transform
                 group-hover:scale-110 group-hover:bg-white/20 group-hover:shadow-md
               ">
