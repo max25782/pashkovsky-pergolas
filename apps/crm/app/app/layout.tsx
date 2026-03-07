@@ -1,8 +1,11 @@
 import '../globals.css'
 import type { Metadata } from 'next'
+import dynamic from 'next/dynamic'
 import { Providers } from '@/components/providers'
-import CRMSidebar from '@/components/crm/CRMSidebar'
 import { Suspense } from 'react'
+
+// CRMSidebar uses usePathname, useLanguage, createClient - defer to client to avoid hydration mismatch
+const CRMSidebar = dynamic(() => import('@/components/crm/CRMSidebar'), { ssr: false })
 
 export const metadata: Metadata = {
   title: {
