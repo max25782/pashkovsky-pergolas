@@ -1,202 +1,321 @@
 
-
 > @alumincrm/app@1.0.0 build
 > next build
 
-  [1m[38;2;173;127;168m▲ Next.js 14.2.5[39m[22m
+  ▲ Next.js 14.2.5
   - Environments: .env.local, .env.production
 
- [37m[1m [22m[39m Creating an optimized production build ...
- [32m[1m✓[22m[39m Compiled successfully
-[?25l [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G[?25h [37m[1m [22m[39m Linting and checking validity of types     [32m[1m✓[22m[39m Linting and checking validity of types 
-[?25l [37m[1m [22m[39m Collecting page data  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m...[39m[2K[1G[?25h [37m[1m [22m[39m Collecting page data     [32m[1m✓[22m[39m Collecting page data 
-[?25l [37m[1m [22m[39m Generating static pages (0/93)  [36m[    ][39m[2K[1G [37m[1m [22m[39m Generating static pages (0/93)  [36m[=   ][39m✅ Email transporter is ready to send messages
-✅ Email transporter is ready to send messages
-✅ Email transporter is ready to send messages
-✅ Email transporter is ready to send messages
-✅ Email transporter is ready to send messages
-✅ Email transporter is ready to send messages
-✅ Email transporter is ready to send messages
-✅ Email transporter is ready to send messages
-✅ Email transporter is ready to send messages
-[2K[1G [37m[1m [22m[39m Generating static pages (31/93)  [36m[==  ][39m[Models API] Returning 10 models with 60 total images
-[2K[1G [37m[1m [22m[39m Generating static pages (49/93)  [36m[=== ][39m[2K[1G [37m[1m [22m[39m Generating static pages (60/93)  [36m[ ===][39m[2K[1G [37m[1m [22m[39m Generating static pages (83/93)  [36m[  ==][39m✅ Email transporter is ready to send messages
-✅ Email transporter is ready to send messages
-[2K[1G [37m[1m [22m[39m Generating static pages (90/93)  [36m[   =][39m[2K[1G [37m[1m [22m[39m Generating static pages (90/93)  [36m[    ][39m[2K[1G [37m[1m [22m[39m Generating static pages (90/93)  [36m[   =][39m[2K[1G [37m[1m [22m[39m Generating static pages (91/93)  [36m[  ==][39m[2K[1G [37m[1m [22m[39m Generating static pages (92/93)  [36m[ ===][39m[2K[1G [37m[1m [22m[39m Generating static pages (92/93)  [36m[====][39m[2K[1G [37m[1m [22m[39m Generating static pages (92/93)  [36m[=== ][39m[2K[1G [37m[1m [22m[39m Generating static pages (92/93)  [36m[==  ][39m[2K[1G [37m[1m [22m[39m Generating static pages (92/93)  [36m[=   ][39m[2K[1G [37m[1m [22m[39m Generating static pages (92/93)  [36m[    ][39m[2K[1G [37m[1m [22m[39m Generating static pages (92/93)  [36m[=   ][39m[2K[1G[?25h [32m[1m✓[22m[39m Generating static pages (93/93)
-[?25l [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[?25l [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G[?25h [37m[1m [22m[39m Collecting build traces     [32m[1m✓[22m[39m Collecting build traces 
-[2K[1G[?25h [37m[1m [22m[39m Finalizing page optimization     [32m[1m✓[22m[39m Finalizing page optimization 
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+❌ Email transporter verification failed: Error: getaddrinfo ENOTFOUND smtp.zoho.com
+    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:122:26) {
+  errno: -3008,
+  code: 'EDNS',
+  syscall: 'getaddrinfo',
+  hostname: 'smtp.zoho.com',
+  command: 'CONN'
+}
+   Generating static pages (0/93) ...
+   Generating static pages (23/93) 
+[Models API] Returning 10 models with 60 total images
+   Generating static pages (46/93) 
+   Generating static pages (69/93) 
+[Platform Admins] Error loading: {
+  message: 'TypeError: fetch failed',
+  details: 'TypeError: fetch failed\n' +
+    '\n' +
+    'Caused by: Error: getaddrinfo ENOTFOUND kvqupacmdishpfnscnio.supabase.co (ENOTFOUND)\n' +
+    'Error: getaddrinfo ENOTFOUND kvqupacmdishpfnscnio.supabase.co\n' +
+    '    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:122:26)',
+  hint: '',
+  code: ''
+}
+[Platform Admins] Error loading: {
+  message: 'TypeError: fetch failed',
+  details: 'TypeError: fetch failed\n' +
+    '\n' +
+    'Caused by: Error: getaddrinfo ENOTFOUND kvqupacmdishpfnscnio.supabase.co (ENOTFOUND)\n' +
+    'Error: getaddrinfo ENOTFOUND kvqupacmdishpfnscnio.supabase.co\n' +
+    '    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:122:26)',
+  hint: '',
+  code: ''
+}
+[getMRR] Error: {
+  message: 'TypeError: fetch failed',
+  details: 'TypeError: fetch failed\n' +
+    '\n' +
+    'Caused by: Error: getaddrinfo ENOTFOUND kvqupacmdishpfnscnio.supabase.co (ENOTFOUND)\n' +
+    'Error: getaddrinfo ENOTFOUND kvqupacmdishpfnscnio.supabase.co\n' +
+    '    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:122:26)',
+  hint: '',
+  code: ''
+}
+[getMRR] Error: {
+  message: 'TypeError: fetch failed',
+  details: 'TypeError: fetch failed\n' +
+    '\n' +
+    'Caused by: Error: getaddrinfo ENOTFOUND kvqupacmdishpfnscnio.supabase.co (ENOTFOUND)\n' +
+    'Error: getaddrinfo ENOTFOUND kvqupacmdishpfnscnio.supabase.co\n' +
+    '    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:122:26)',
+  hint: '',
+  code: ''
+}
+[Subscriptions] Error loading: {
+  message: 'TypeError: fetch failed',
+  details: 'TypeError: fetch failed\n' +
+    '\n' +
+    'Caused by: Error: getaddrinfo ENOTFOUND kvqupacmdishpfnscnio.supabase.co (ENOTFOUND)\n' +
+    'Error: getaddrinfo ENOTFOUND kvqupacmdishpfnscnio.supabase.co\n' +
+    '    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:122:26)',
+  hint: '',
+  code: ''
+}
+[Subscriptions] Error loading: {
+  message: 'TypeError: fetch failed',
+  details: 'TypeError: fetch failed\n' +
+    '\n' +
+    'Caused by: Error: getaddrinfo ENOTFOUND kvqupacmdishpfnscnio.supabase.co (ENOTFOUND)\n' +
+    'Error: getaddrinfo ENOTFOUND kvqupacmdishpfnscnio.supabase.co\n' +
+    '    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:122:26)',
+  hint: '',
+  code: ''
+}
+[Plans] Error loading: {
+  message: 'TypeError: fetch failed',
+  details: 'TypeError: fetch failed\n' +
+    '\n' +
+    'Caused by: Error: getaddrinfo ENOTFOUND kvqupacmdishpfnscnio.supabase.co (ENOTFOUND)\n' +
+    'Error: getaddrinfo ENOTFOUND kvqupacmdishpfnscnio.supabase.co\n' +
+    '    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:122:26)',
+  hint: '',
+  code: ''
+}
+[Plans] Error loading: {
+  message: 'TypeError: fetch failed',
+  details: 'TypeError: fetch failed\n' +
+    '\n' +
+    'Caused by: Error: getaddrinfo ENOTFOUND kvqupacmdishpfnscnio.supabase.co (ENOTFOUND)\n' +
+    'Error: getaddrinfo ENOTFOUND kvqupacmdishpfnscnio.supabase.co\n' +
+    '    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:122:26)',
+  hint: '',
+  code: ''
+}
+[Companies] Error loading: {
+  message: 'TypeError: fetch failed',
+  details: 'TypeError: fetch failed\n' +
+    '\n' +
+    'Caused by: Error: getaddrinfo ENOTFOUND kvqupacmdishpfnscnio.supabase.co (ENOTFOUND)\n' +
+    'Error: getaddrinfo ENOTFOUND kvqupacmdishpfnscnio.supabase.co\n' +
+    '    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:122:26)',
+  hint: '',
+  code: ''
+}
+[Companies] Error loading: {
+  message: 'TypeError: fetch failed',
+  details: 'TypeError: fetch failed\n' +
+    '\n' +
+    'Caused by: Error: getaddrinfo ENOTFOUND kvqupacmdishpfnscnio.supabase.co (ENOTFOUND)\n' +
+    'Error: getaddrinfo ENOTFOUND kvqupacmdishpfnscnio.supabase.co\n' +
+    '    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:122:26)',
+  hint: '',
+  code: ''
+}
+[getMRR] Error: {
+  message: 'TypeError: fetch failed',
+  details: 'TypeError: fetch failed\n' +
+    '\n' +
+    'Caused by: Error: getaddrinfo ENOTFOUND kvqupacmdishpfnscnio.supabase.co (ENOTFOUND)\n' +
+    'Error: getaddrinfo ENOTFOUND kvqupacmdishpfnscnio.supabase.co\n' +
+    '    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:122:26)',
+  hint: '',
+  code: ''
+}
+[getMRR] Error: {
+  message: 'TypeError: fetch failed',
+  details: 'TypeError: fetch failed\n' +
+    '\n' +
+    'Caused by: Error: getaddrinfo ENOTFOUND kvqupacmdishpfnscnio.supabase.co (ENOTFOUND)\n' +
+    'Error: getaddrinfo ENOTFOUND kvqupacmdishpfnscnio.supabase.co\n' +
+    '    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:122:26)',
+  hint: '',
+  code: ''
+}
+ ✓ Generating static pages (93/93)
+   Finalizing page optimization ...
+   Collecting build traces ...
 
-[4mRoute (app)[24m                                      [4mSize[24m     [4mFirst Load JS[24m
-┌ ○ /_not-found                                  168 B          [37m[1m87.6 kB[22m[39m
-├ ƒ /[locale]/offers/[id]/approve                10.6 kB          [37m[1m98 kB[22m[39m
-├ ƒ /[locale]/offers/[id]/success                1.92 kB        [37m[1m96.1 kB[22m[39m
-├ ƒ /admin-api/ai-chats                          0 B                [37m[1m0 B[22m[39m
-├ ƒ /admin-api/deals                             0 B                [37m[1m0 B[22m[39m
-├ ƒ /admin-api/deals/[id]/payments               0 B                [37m[1m0 B[22m[39m
-├ ƒ /admin-api/deals/payments-summary            0 B                [37m[1m0 B[22m[39m
-├ ƒ /admin-api/deals/sketch                      0 B                [37m[1m0 B[22m[39m
-├ ƒ /admin-api/gallery/categories                0 B                [37m[1m0 B[22m[39m
-├ ƒ /admin-api/gallery/images                    0 B                [37m[1m0 B[22m[39m
-├ ƒ /admin-api/gallery/upload                    0 B                [37m[1m0 B[22m[39m
-├ ƒ /admin-api/invite-user                       0 B                [37m[1m0 B[22m[39m
-├ ƒ /admin-api/leads                             0 B                [37m[1m0 B[22m[39m
-├ ƒ /admin-api/pergola-projects                  0 B                [37m[1m0 B[22m[39m
-├ ƒ /admin-api/users                             0 B                [37m[1m0 B[22m[39m
-├ ƒ /admin-api/users/invite                      0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/admin/articles                          0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/admin/dashboard-stats                   0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/admin/inventory                         0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/admin/inventory/[id]                    0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/admin/leads                             0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/admin/orders                            0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/admin/orders/[id]                       0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/admin/orders/[id]/items/[itemId]        0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/admin/orders/[id]/pdf                   0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/admin/profiles                          0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/admin/profiles/[id]                     0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/admin/profiles/upload-image             0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/ai-chat                                 0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/ai-director/chat                        0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/ai-director/data/analytics              0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/ai-director/data/deals                  0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/ai-director/data/gallery                0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/ai-director/data/leads                  0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/ai-director/data/material-orders        0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/ai-director/data/offers                 0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/ai-director/data/workers                0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/ai/analytics                            0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/ai/improve-offer-text                   0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/ai/reports/monthly                      0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/ai/reports/weekly                       0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/auth/check-phone                        0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/auth/check-superadmin                   0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/auth/companies                          0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/auth/login                              0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/auth/logout                             0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/auth/oauth/google                       0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/auth/oauth/google/callback              0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/auth/password-reset/confirm             0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/auth/password-reset/request             0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/auth/post-login                         0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/auth/refresh                            0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/auth/register                           0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/auth/select-company                     0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/auth/setup-company                      0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/auth/superadmin-login                   0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/auth/superadmin-logout                  0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/auth/superadmin-session                 0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/auth/verify-email/confirm               0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/auth/verify-email/send                  0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/companies/me                            0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/company/logo                            0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/company/profile                         0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/cron/weekly-digest                      0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/deals/[dealId]/labor                    0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/debug/auth                              0 B                [37m[1m0 B[22m[39m
-├ ○ /api/debug/profiles-api                      0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/debug/redis                             0 B                [37m[1m0 B[22m[39m
-├ ○ /api/debug/s3-config                         0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/gallery/images                          0 B                [37m[1m0 B[22m[39m
-├ ○ /api/gallery/models                          0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/integrations/me                         0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/integrations/request-setup              0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/integrations/webhook/leads              0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/leads                                   0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/leads/[id]/score                        0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/leads/score/batch                       0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/material-orders                         0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/media/db/list                           0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/media/presign                           0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/media/query                             0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/media/s3/list                           0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/media/tag                               0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/offers                                  0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/offers/[id]                             0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/offers/[id]/approve                     0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/offers/[id]/pdf                         0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/offers/[id]/send-email                  0 B                [37m[1m0 B[22m[39m
-├ ○ /api/pergola-projects                        0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/platform/activity                       0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/platform/integrations/activate          0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/platform/integrations/list              0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/platform/integrations/rotate-secret     0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/platform/integrations/suspend           0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/platform/settings                       0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/public/ai-chat                          0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/public/leads                            0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/public/offers/[id]                      0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/public/payment-instructions             0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/public/subscriptions/plans              0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/reports/monthly                         0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/reports/weekly-digest                   0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/reports/weekly-digest/generate          0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/shifts/bulk                             0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/smm/leads                               0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/subscriptions/change-plan               0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/subscriptions/current                   0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/subscriptions/history                   0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/subscriptions/plans                     0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/subscriptions/usage                     0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/superadmin/companies/[id]               0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/superadmin/companies/[id]/settings      0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/superadmin/companies/[id]/subscription  0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/superadmin/companies/onboard            0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/superadmin/test-auth                    0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/superadmin/users/send-magic-link        0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/webhooks/whatsapp                       0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/work-shifts                             0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/work-shifts/[id]                        0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/workers                                 0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/workers/[id]                            0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/workers/[id]/pdf                        0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/workers/[id]/shifts                     0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/workers/[id]/shifts/[shiftId]           0 B                [37m[1m0 B[22m[39m
-├ ƒ /app                                         168 B          [37m[1m87.6 kB[22m[39m
-├ ƒ /app/admin                                   5.31 kB         [37m[1m161 kB[22m[39m
-├ ƒ /app/admin/ai-analytics                      3.74 kB         [37m[1m103 kB[22m[39m
-├ ƒ /app/admin/ai-chats                          4.93 kB         [37m[1m161 kB[22m[39m
-├ ƒ /app/admin/ai-director                       5.61 kB         [37m[1m149 kB[22m[39m
-├ ƒ /app/admin/articles                          3.05 kB         [37m[1m159 kB[22m[39m
-├ ƒ /app/admin/deals                             45.7 kB         [37m[1m201 kB[22m[39m
-├ ƒ /app/admin/gallery                           5.4 kB          [37m[1m167 kB[22m[39m
-├ ƒ /app/admin/inventory                         5.11 kB         [37m[1m155 kB[22m[39m
-├ ƒ /app/admin/leads                             5.08 kB         [37m[1m161 kB[22m[39m
-├ ƒ /app/admin/media                             5.34 kB         [37m[1m155 kB[22m[39m
-├ ƒ /app/admin/orders                            5.36 kB         [37m[1m149 kB[22m[39m
-├ ƒ /app/admin/reports/monthly                   3.54 kB         [37m[1m222 kB[22m[39m
-├ ƒ /app/admin/reports/weekly                    2.77 kB         [37m[1m158 kB[22m[39m
-├ ƒ /app/admin/settings                          3.1 kB         [37m[1m90.5 kB[22m[39m
-├ ƒ /app/admin/statistics                        7.46 kB         [37m[1m273 kB[22m[39m
-├ ƒ /app/admin/users                             2.34 kB         [37m[1m146 kB[22m[39m
-├ ƒ /app/admin/workers                           10.8 kB         [37m[1m166 kB[22m[39m
-├ ƒ /app/onboarding                              183 B          [37m[1m94.4 kB[22m[39m
-├ ○ /app/profiles                                6.08 kB         [37m[1m156 kB[22m[39m
-├ ○ /app/select-company                          2.8 kB         [37m[1m90.2 kB[22m[39m
-├ ○ /app/settings/company                        6.03 kB        [37m[1m99.3 kB[22m[39m
-├ ○ /app/settings/integrations                   6.73 kB         [37m[1m150 kB[22m[39m
-├ ○ /app/settings/integrations/instructions      7.1 kB          [37m[1m151 kB[22m[39m
-├ ƒ /auth/callback                               0 B                [37m[1m0 B[22m[39m
-├ ○ /login                                       3.33 kB         [37m[1m154 kB[22m[39m
-├ ○ /register                                    3.29 kB         [37m[1m154 kB[22m[39m
-├ ○ /reset-password                              1.82 kB          [37m[1m96 kB[22m[39m
-├ ƒ /superadmin                                  3.75 kB        [37m[1m91.1 kB[22m[39m
-├ ƒ /superadmin/admins                           168 B          [37m[1m87.6 kB[22m[39m
-├ ƒ /superadmin/companies                        5.61 kB          [37m[1m93 kB[22m[39m
-├ ƒ /superadmin/companies/[id]                   1.92 kB        [37m[1m96.1 kB[22m[39m
-├ ƒ /superadmin/companies/[id]/settings          3.3 kB         [37m[1m97.5 kB[22m[39m
-├ ƒ /superadmin/integrations                     6.17 kB         [37m[1m145 kB[22m[39m
-├ ƒ /superadmin/settings                         3.47 kB        [37m[1m90.9 kB[22m[39m
-├ ƒ /superadmin/subscriptions                    168 B          [37m[1m87.6 kB[22m[39m
-└ ○ /verify-email                                1.56 kB        [37m[1m95.8 kB[22m[39m
-+ First Load JS shared by all                    [37m[1m87.4 kB[22m[39m
+Route (app)                                      Size     First Load JS
+┌ ○ /_not-found                                  168 B          87.6 kB
+├ ƒ /[locale]/offers/[id]/approve                10.6 kB          98 kB
+├ ƒ /[locale]/offers/[id]/success                1.92 kB        96.1 kB
+├ ƒ /admin-api/ai-chats                          0 B                0 B
+├ ƒ /admin-api/deals                             0 B                0 B
+├ ƒ /admin-api/deals/[id]/payments               0 B                0 B
+├ ƒ /admin-api/deals/payments-summary            0 B                0 B
+├ ƒ /admin-api/deals/sketch                      0 B                0 B
+├ ƒ /admin-api/gallery/categories                0 B                0 B
+├ ƒ /admin-api/gallery/images                    0 B                0 B
+├ ƒ /admin-api/gallery/upload                    0 B                0 B
+├ ƒ /admin-api/invite-user                       0 B                0 B
+├ ƒ /admin-api/leads                             0 B                0 B
+├ ƒ /admin-api/pergola-projects                  0 B                0 B
+├ ƒ /admin-api/users                             0 B                0 B
+├ ƒ /admin-api/users/invite                      0 B                0 B
+├ ƒ /api/admin/articles                          0 B                0 B
+├ ƒ /api/admin/dashboard-stats                   0 B                0 B
+├ ƒ /api/admin/inventory                         0 B                0 B
+├ ƒ /api/admin/inventory/[id]                    0 B                0 B
+├ ƒ /api/admin/leads                             0 B                0 B
+├ ƒ /api/admin/orders                            0 B                0 B
+├ ƒ /api/admin/orders/[id]                       0 B                0 B
+├ ƒ /api/admin/orders/[id]/items/[itemId]        0 B                0 B
+├ ƒ /api/admin/orders/[id]/pdf                   0 B                0 B
+├ ƒ /api/admin/profiles                          0 B                0 B
+├ ƒ /api/admin/profiles/[id]                     0 B                0 B
+├ ƒ /api/admin/profiles/upload-image             0 B                0 B
+├ ƒ /api/ai-chat                                 0 B                0 B
+├ ƒ /api/ai-director/chat                        0 B                0 B
+├ ƒ /api/ai-director/data/analytics              0 B                0 B
+├ ƒ /api/ai-director/data/deals                  0 B                0 B
+├ ƒ /api/ai-director/data/gallery                0 B                0 B
+├ ƒ /api/ai-director/data/leads                  0 B                0 B
+├ ƒ /api/ai-director/data/material-orders        0 B                0 B
+├ ƒ /api/ai-director/data/offers                 0 B                0 B
+├ ƒ /api/ai-director/data/workers                0 B                0 B
+├ ƒ /api/ai/analytics                            0 B                0 B
+├ ƒ /api/ai/improve-offer-text                   0 B                0 B
+├ ƒ /api/ai/reports/monthly                      0 B                0 B
+├ ƒ /api/ai/reports/weekly                       0 B                0 B
+├ ƒ /api/auth/check-phone                        0 B                0 B
+├ ƒ /api/auth/check-superadmin                   0 B                0 B
+├ ƒ /api/auth/companies                          0 B                0 B
+├ ƒ /api/auth/login                              0 B                0 B
+├ ƒ /api/auth/logout                             0 B                0 B
+├ ƒ /api/auth/oauth/google                       0 B                0 B
+├ ƒ /api/auth/oauth/google/callback              0 B                0 B
+├ ƒ /api/auth/password-reset/confirm             0 B                0 B
+├ ƒ /api/auth/password-reset/request             0 B                0 B
+├ ƒ /api/auth/post-login                         0 B                0 B
+├ ƒ /api/auth/refresh                            0 B                0 B
+├ ƒ /api/auth/register                           0 B                0 B
+├ ƒ /api/auth/select-company                     0 B                0 B
+├ ƒ /api/auth/setup-company                      0 B                0 B
+├ ƒ /api/auth/superadmin-login                   0 B                0 B
+├ ƒ /api/auth/superadmin-logout                  0 B                0 B
+├ ƒ /api/auth/superadmin-session                 0 B                0 B
+├ ƒ /api/auth/verify-email/confirm               0 B                0 B
+├ ƒ /api/auth/verify-email/send                  0 B                0 B
+├ ƒ /api/companies/me                            0 B                0 B
+├ ƒ /api/company/logo                            0 B                0 B
+├ ƒ /api/company/profile                         0 B                0 B
+├ ƒ /api/cron/weekly-digest                      0 B                0 B
+├ ƒ /api/deals/[dealId]/labor                    0 B                0 B
+├ ƒ /api/debug/auth                              0 B                0 B
+├ ○ /api/debug/profiles-api                      0 B                0 B
+├ ƒ /api/debug/redis                             0 B                0 B
+├ ○ /api/debug/s3-config                         0 B                0 B
+├ ƒ /api/gallery/images                          0 B                0 B
+├ ○ /api/gallery/models                          0 B                0 B
+├ ƒ /api/integrations/me                         0 B                0 B
+├ ƒ /api/integrations/request-setup              0 B                0 B
+├ ƒ /api/integrations/webhook/leads              0 B                0 B
+├ ƒ /api/leads                                   0 B                0 B
+├ ƒ /api/leads/[id]/score                        0 B                0 B
+├ ƒ /api/leads/score/batch                       0 B                0 B
+├ ƒ /api/material-orders                         0 B                0 B
+├ ƒ /api/media/db/list                           0 B                0 B
+├ ƒ /api/media/presign                           0 B                0 B
+├ ƒ /api/media/query                             0 B                0 B
+├ ƒ /api/media/s3/list                           0 B                0 B
+├ ƒ /api/media/tag                               0 B                0 B
+├ ƒ /api/offers                                  0 B                0 B
+├ ƒ /api/offers/[id]                             0 B                0 B
+├ ƒ /api/offers/[id]/approve                     0 B                0 B
+├ ƒ /api/offers/[id]/pdf                         0 B                0 B
+├ ƒ /api/offers/[id]/send-email                  0 B                0 B
+├ ○ /api/pergola-projects                        0 B                0 B
+├ ƒ /api/platform/activity                       0 B                0 B
+├ ƒ /api/platform/integrations/activate          0 B                0 B
+├ ƒ /api/platform/integrations/list              0 B                0 B
+├ ƒ /api/platform/integrations/rotate-secret     0 B                0 B
+├ ƒ /api/platform/integrations/suspend           0 B                0 B
+├ ƒ /api/platform/settings                       0 B                0 B
+├ ƒ /api/public/ai-chat                          0 B                0 B
+├ ƒ /api/public/leads                            0 B                0 B
+├ ƒ /api/public/offers/[id]                      0 B                0 B
+├ ƒ /api/public/payment-instructions             0 B                0 B
+├ ƒ /api/public/subscriptions/plans              0 B                0 B
+├ ƒ /api/reports/monthly                         0 B                0 B
+├ ƒ /api/reports/weekly-digest                   0 B                0 B
+├ ƒ /api/reports/weekly-digest/generate          0 B                0 B
+├ ƒ /api/shifts/bulk                             0 B                0 B
+├ ƒ /api/smm/leads                               0 B                0 B
+├ ƒ /api/subscriptions/change-plan               0 B                0 B
+├ ƒ /api/subscriptions/current                   0 B                0 B
+├ ƒ /api/subscriptions/history                   0 B                0 B
+├ ƒ /api/subscriptions/plans                     0 B                0 B
+├ ƒ /api/subscriptions/usage                     0 B                0 B
+├ ƒ /api/superadmin/companies/[id]               0 B                0 B
+├ ƒ /api/superadmin/companies/[id]/settings      0 B                0 B
+├ ƒ /api/superadmin/companies/[id]/subscription  0 B                0 B
+├ ƒ /api/superadmin/companies/onboard            0 B                0 B
+├ ƒ /api/superadmin/test-auth                    0 B                0 B
+├ ƒ /api/superadmin/users/send-magic-link        0 B                0 B
+├ ƒ /api/webhooks/whatsapp                       0 B                0 B
+├ ƒ /api/work-shifts                             0 B                0 B
+├ ƒ /api/work-shifts/[id]                        0 B                0 B
+├ ƒ /api/workers                                 0 B                0 B
+├ ƒ /api/workers/[id]                            0 B                0 B
+├ ƒ /api/workers/[id]/pdf                        0 B                0 B
+├ ƒ /api/workers/[id]/shifts                     0 B                0 B
+├ ƒ /api/workers/[id]/shifts/[shiftId]           0 B                0 B
+├ ƒ /app                                         168 B          87.6 kB
+├ ƒ /app/admin                                   5.31 kB         161 kB
+├ ƒ /app/admin/ai-analytics                      3.74 kB         104 kB
+├ ƒ /app/admin/ai-chats                          4.93 kB         161 kB
+├ ƒ /app/admin/ai-director                       5.61 kB         149 kB
+├ ƒ /app/admin/articles                          3.05 kB         159 kB
+├ ƒ /app/admin/deals                             45.7 kB         202 kB
+├ ƒ /app/admin/gallery                           6.37 kB         168 kB
+├ ƒ /app/admin/inventory                         5.11 kB         155 kB
+├ ƒ /app/admin/leads                             5.08 kB         161 kB
+├ ƒ /app/admin/media                             5.34 kB         155 kB
+├ ƒ /app/admin/orders                            7.09 kB         156 kB
+├ ƒ /app/admin/reports/monthly                   3.54 kB         222 kB
+├ ƒ /app/admin/reports/weekly                    2.77 kB         159 kB
+├ ƒ /app/admin/settings                          3.1 kB         90.5 kB
+├ ƒ /app/admin/statistics                        7.46 kB         273 kB
+├ ƒ /app/admin/users                             2.34 kB         146 kB
+├ ƒ /app/admin/workers                           10.8 kB         167 kB
+├ ƒ /app/onboarding                              183 B          94.4 kB
+├ ○ /app/profiles                                6.08 kB         156 kB
+├ ○ /app/select-company                          2.8 kB         90.2 kB
+├ ○ /app/settings/company                        6.03 kB        99.3 kB
+├ ○ /app/settings/integrations                   6.73 kB         150 kB
+├ ○ /app/settings/integrations/instructions      7.1 kB          151 kB
+├ ƒ /auth/callback                               0 B                0 B
+├ ○ /login                                       3.33 kB         154 kB
+├ ○ /register                                    3.29 kB         154 kB
+├ ○ /reset-password                              1.82 kB          96 kB
+├ ƒ /superadmin                                  3.75 kB        91.1 kB
+├ ƒ /superadmin/admins                           168 B          87.6 kB
+├ ƒ /superadmin/companies                        5.61 kB          93 kB
+├ ƒ /superadmin/companies/[id]                   1.92 kB        96.1 kB
+├ ƒ /superadmin/companies/[id]/settings          3.3 kB         97.5 kB
+├ ƒ /superadmin/integrations                     6.17 kB         145 kB
+├ ƒ /superadmin/settings                         3.47 kB        90.9 kB
+├ ƒ /superadmin/subscriptions                    168 B          87.6 kB
+└ ○ /verify-email                                1.56 kB        95.8 kB
++ First Load JS shared by all                    87.4 kB
   ├ chunks/1dd3208c-a5eebfe1744c4944.js          53.6 kB
   ├ chunks/286-cef8d25fa86d8a9f.js               31.7 kB
   └ other shared chunks (total)                  2.05 kB
 
 
-ƒ Middleware                                     [37m[1m27.3 kB[22m[39m
+ƒ Middleware                                     27.3 kB
 
 ○  (Static)   prerendered as static content
 ƒ  (Dynamic)  server-rendered on demand
 
-[?25h⠙[1G[0K
