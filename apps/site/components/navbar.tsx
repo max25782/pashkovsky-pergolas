@@ -34,7 +34,7 @@ export default function Navbar({ locale }: { locale: Locale }){
             width={120}
             height={48}
             sizes="120px"
-            loading="eager"
+            priority
             className="object-contain h-[150px] w-auto invert"
           />
           <div className="leading-tight hidden sm:block min-w-[120px]">
