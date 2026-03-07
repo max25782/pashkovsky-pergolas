@@ -171,33 +171,73 @@ export default function GalleryAdminPage() {
       setError('בחר קבצים')
       return
     }
-    
+
+    const MAX_FILE_BYTES = 4 * 1024 * 1024 // 4 MB per file
+    const tooBig = files.filter(f => f.size > MAX_FILE_BYTES)
+    if (tooBig.length > 0) {
+      setError(`קבצים גדולים מדי (מעל 4 MB): ${tooBig.map(f => f.name).join(', ')}. דחוס או בחר קבצים קטנים יותר.`)
+      return
+    }
+
+    // Vercel limit 4.5 MB — split by size
+    const MAX_BATCH_BYTES = 4 * 1024 * 1024 // 4 MB to stay under 4.5 MB
+    const batches: File[][] = []
+    let current: File[] = []
+    let currentSize = 0
+    for (const f of files) {
+      if (currentSize + f.size > MAX_BATCH_BYTES && current.length > 0) {
+        batches.push(current)
+        current = []
+        currentSize = 0
+      }
+      current.push(f)
+      currentSize += f.size
+    }
+    if (current.length > 0) batches.push(current)
+
     setError(null)
     setMessage(null)
     setUploading(true)
-    setUploaded(0)
+    let totalUploaded = 0
+    const allImageUrls: string[] = []
+
     try {
-      const form = new FormData()
-      form.append('category_key', selectedCategory)
-      if (folderName.trim()) form.append('folder_name', folderName.trim())
-      files.forEach(f => form.append('files', f))
-      
-      const res = await authFetch('/admin-api/gallery/upload', {
-        method: 'POST',
-        body: form,
-      })
-      const data = await res.json()
-      
-      if (!res.ok) {
-        throw new Error(data.error || 'Upload failed')
+      for (let b = 0; b < batches.length; b++) {
+        const batch = batches[b]
+        const form = new FormData()
+        form.append('category_key', selectedCategory)
+        if (folderName.trim()) form.append('folder_name', folderName.trim())
+        batch.forEach(f => form.append('files', f))
+
+        const res = await authFetch('/admin-api/gallery/upload', {
+          method: 'POST',
+          body: form,
+        })
+
+        if (res.status === 413) {
+          throw new Error('הבקשה גדולה מדי. הקבצים נשלחים בחבילות — נסה שוב או דחוס את התמונות.')
+        }
+
+        let data: { uploaded?: number; images?: Array<{ url: string }>; error?: string }
+        try {
+          data = await res.json()
+        } catch {
+          throw new Error(res.statusText || 'Upload failed')
+        }
+
+        if (!res.ok) {
+          throw new Error(data.error || 'Upload failed')
+        }
+
+        const count = data.uploaded || 0
+        totalUploaded += count
+        setUploaded(totalUploaded)
+        if (data.images?.length) {
+          allImageUrls.push(...(data.images as Array<{ url: string }>).map(img => img.url))
+        }
       }
 
-      const uploadedCount = data.uploaded || 0
-      setUploaded(uploadedCount)
-
-      // Auto-create pergola_projects record if folder name given and category is pergulot
-      if (folderName.trim() && data.images?.length > 0) {
-        const imageUrls = (data.images as Array<{ url: string }>).map(img => img.url)
+      if (folderName.trim() && allImageUrls.length > 0) {
         try {
           const projRes = await authFetch('/admin-api/pergola-projects', {
             method: 'POST',
@@ -205,19 +245,19 @@ export default function GalleryAdminPage() {
             body: JSON.stringify({
               title_he: folderName.trim(),
               desc_he: null,
-              images: imageUrls,
+              images: allImageUrls,
             }),
           })
           if (projRes.ok) {
-            setMessage(`הועלו ${uploadedCount} קבצים לתיקייה "${folderName.trim()}" ✓ פרויקט נוצר אוטומטית`)
+            setMessage(`הועלו ${totalUploaded} קבצים לתיקייה "${folderName.trim()}" ✓ פרויקט נוצר אוטומטית`)
           } else {
-            setMessage(`הועלו ${uploadedCount} קבצים לתיקייה "${folderName.trim()}" (שגיאה ביצירת פרויקט)`)
+            setMessage(`הועלו ${totalUploaded} קבצים לתיקייה "${folderName.trim()}"`)
           }
         } catch {
-          setMessage(`הועלו ${uploadedCount} קבצים לתיקייה "${folderName.trim()}"`)
+          setMessage(`הועלו ${totalUploaded} קבצים לתיקייה "${folderName.trim()}"`)
         }
       } else {
-        setMessage(`הועלו ${uploadedCount} קבצים בהצלחה`)
+        setMessage(`הועלו ${totalUploaded} קבצים בהצלחה`)
       }
 
       setFiles([])
@@ -225,7 +265,6 @@ export default function GalleryAdminPage() {
         setTimeout(() => loadImages(), 1000)
       }
     } catch (e: any) {
-      console.error('❌ Upload error:', e)
       setError(e.message)
     } finally {
       setUploading(false)

@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
@@ -9,7 +9,10 @@ import clsx from 'clsx'
 export default function Navbar({ locale }: { locale: Locale }){
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
-  
+  // Defer active-link highlight to after hydration to prevent CLS
+  const [activePath, setActivePath] = useState<string | null>(null)
+  useEffect(() => { setActivePath(pathname) }, [pathname])
+
   const tabs = [
     { href: `/${locale}`, label: locale==='he'?'דף הבית': locale==='ru'?'Главная':'Home' },
     { href: `/${locale}/about`, label: locale==='he'?'על החברה': locale==='ru'?'О компании':'About' },
@@ -21,10 +24,10 @@ export default function Navbar({ locale }: { locale: Locale }){
   ]
 
   return (
-    <div className="sticky top-0 z-50 border-b border-white/10 backdrop-blur bg-black/40">
-      <div className="container flex items-center justify-between h-16">
+    <div className="sticky top-0 z-50 min-h-16 border-b border-white/10 backdrop-blur bg-black/40">
+      <div className="container flex items-center justify-between h-16 min-h-16">
         {/* Logo */}
-        <Link href={`/${locale}`} className="flex items-center gap-2">
+        <Link href={`/${locale}`} className="flex items-center gap-2 shrink-0">
           <Image
             src="/logo-preview.png"
             alt="Pashkovsky Group"
@@ -34,7 +37,7 @@ export default function Navbar({ locale }: { locale: Locale }){
             loading="eager"
             className="object-contain h-[150px] w-auto invert"
           />
-          <div className="leading-tight hidden sm:block">
+          <div className="leading-tight hidden sm:block min-w-[120px]">
             <div className="font-extrabold text-sm text-white">פשקובסקי גרופ</div>
             <div className="text-xs text-white/60">אלומיניום. דיוק. חדשנות.</div>
           </div>
@@ -46,7 +49,7 @@ export default function Navbar({ locale }: { locale: Locale }){
             {tabs.map(t => (
               <Link key={t.href} href={t.href}
                 className={clsx('px-3 py-2 rounded-xl text-sm font-semibold transition',
-                  pathname === t.href ? 'bg-white/10' : 'hover:bg-white/5')}>
+                  activePath === t.href ? 'bg-white/10' : 'hover:bg-white/5')}>
                 {t.label}
               </Link>
             ))}
@@ -55,7 +58,7 @@ export default function Navbar({ locale }: { locale: Locale }){
             {locales.map(l => (
               <Link key={l} href={`/${l}`} className={clsx(
                 'px-2.5 py-1.5 rounded-full text-xs font-bold border',
-                pathname?.startsWith(`/${l}`) ? 'bg-white text-black border-white' : 'border-white/20 text-white/70 hover:text-white'
+                activePath?.startsWith(`/${l}`) ? 'bg-white text-black border-white' : 'border-white/20 text-white/70 hover:text-white'
               )}>{l.toUpperCase()}</Link>
             ))}
           </div>
@@ -89,7 +92,7 @@ export default function Navbar({ locale }: { locale: Locale }){
                 href={t.href}
                 onClick={() => setIsOpen(false)}
                 className={clsx('px-4 py-3 rounded-lg text-base font-semibold transition',
-                  pathname === t.href ? 'bg-white/10' : 'hover:bg-white/5')}
+                  activePath === t.href ? 'bg-white/10' : 'hover:bg-white/5')}
               >
                 {t.label}
               </Link>
@@ -102,7 +105,7 @@ export default function Navbar({ locale }: { locale: Locale }){
                   onClick={() => setIsOpen(false)}
                   className={clsx(
                     'px-3 py-2 rounded-full text-xs font-bold border',
-                    pathname?.startsWith(`/${l}`) ? 'bg-white text-black border-white' : 'border-white/20 text-white/70'
+                    activePath?.startsWith(`/${l}`) ? 'bg-white text-black border-white' : 'border-white/20 text-white/70'
                   )}
                 >
                   {l.toUpperCase()}

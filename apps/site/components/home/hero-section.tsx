@@ -30,7 +30,7 @@ export function HeroSection({ locale }: HeroSectionProps) {
         muted
         loop
         playsInline
-        preload="metadata"
+        preload="auto"
       />
       <div className="absolute inset-0 bg-black/30" aria-hidden />
 

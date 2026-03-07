@@ -1,9 +1,6 @@
 "use client";
-import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { MessageCircle } from "lucide-react";
 import type { Locale } from "@/lib/locales";
 import { getImageProps } from "@/lib/image-props";
 
@@ -54,24 +51,17 @@ const services: ServiceItem[] = [
 ];
 
 export function ServicesSection({ locale }: { locale: Locale }) {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const timeout = setTimeout(() => setVisible(true), 200);
-    return () => clearTimeout(timeout);
-  }, []);
-
   return (
     <section
       id="services"
       className="relative py-24 text-white from-neutral-950 to-neutral-900"
     >
       <div className="container mx-auto px-4 text-center">
-        <h2 
-          className={`text-4xl font-extrabold mb-14 transition-all duration-700 ease-out
-          ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
+        <h2
+          className="text-4xl font-extrabold mb-14"
+          style={{ animation: "fadeIn 0.7s ease-out both" }}
         >
-          {locale==='he' ? 'השירותים שלנו' : locale==='ru' ? 'Наши услуги' : 'Our Services'}
+          {locale === "he" ? "השירותים שלנו" : locale === "ru" ? "Наши услуги" : "Our Services"}
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -80,9 +70,8 @@ export function ServicesSection({ locale }: { locale: Locale }) {
               key={index}
               href={`/${locale}${service.link}`}
               prefetch={false}
-              className={`group bg-[#1e293b] hover:bg-[#334155] rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-700 ease-out overflow-hidden transform-gpu md:hover:-translate-y-2 cursor-pointer
-              ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
-              style={{ transitionDelay: `${300 + index * 100}ms` }}
+              className="group bg-[#1e293b] hover:bg-[#334155] rounded-3xl shadow-lg hover:shadow-2xl overflow-hidden transform-gpu md:hover:-translate-y-2 cursor-pointer"
+              style={{ animation: `fadeIn 0.7s ease-out ${300 + index * 100}ms both` }}
             >
               <div className="relative w-full h-[300px] overflow-hidden bg-gray-800">
                 <Image
@@ -91,11 +80,10 @@ export function ServicesSection({ locale }: { locale: Locale }) {
                   fill
                   sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                   className="object-cover group-hover:scale-105 transition-transform duration-150 will-change-transform"
-                  loading={index < 1 ? "eager" : "lazy"}
+                  priority={index < 2}
                   quality={60}
                   placeholder="blur"
                   blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYGD4DwABBAEAW9JTEQAAAABJRU5ErkJggg=="
-                  decoding="async"
                 />
               </div>
               <div className="p-6 text-right">
