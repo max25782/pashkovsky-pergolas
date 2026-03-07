@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Trash2, RefreshCw, Eye } from 'lucide-react'
+import { Trash2, RefreshCw, Eye, AlertTriangle } from 'lucide-react'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
 import { ToastContainer, useToast } from '@/components/ui/toast'
 import { galleryService } from '@/lib/api/gallery-service'
@@ -10,6 +10,11 @@ import { projectService } from '@/lib/api/project-service'
 import type { GalleryCategory, GalleryImage, PergolaProject } from '@/lib/types/gallery'
 
 type ViewMode = 'upload' | 'manage' | 'projects'
+
+interface ConfirmState {
+  message: string
+  onConfirm: () => void
+}
 
 export default function GalleryAdminPage() {
   const t = useCRMTranslations()
@@ -21,6 +26,7 @@ export default function GalleryAdminPage() {
   const [uploading, setUploading] = useState(false)
   const [folderName, setFolderName] = useState('')
   const [viewMode, setViewMode] = useState<ViewMode>('upload')
+  const [confirm, setConfirm] = useState<ConfirmState | null>(null)
 
   const [images, setImages] = useState<GalleryImage[]>([])
   const [loadingImages, setLoadingImages] = useState(false)
@@ -67,38 +73,48 @@ export default function GalleryAdminPage() {
     if (viewMode === 'projects') loadProjects()
   }, [viewMode, selectedCategory, loadImages, loadProjects])
 
-  const handleDeleteImage = async (imageId: string, filename: string) => {
-    if (!window.confirm(`מחק "${filename}"?\n\nהתמונה תוסר מ-S3 ומהמסד.`)) return
-    setDeletingImageId(imageId)
-    try {
-      await galleryService.deleteImage(imageId)
-      showToast(`נמחק: ${filename}`, 'success')
-      await loadImages()
-    } catch (err) {
-      showToast((err as Error).message, 'error')
-    } finally {
-      setDeletingImageId(null)
-    }
+  const handleDeleteImage = (imageId: string, filename: string) => {
+    setConfirm({
+      message: `מחק "${filename}"?\n\nהתמונה תוסר מ-S3 ומהמסד.`,
+      onConfirm: async () => {
+        setConfirm(null)
+        setDeletingImageId(imageId)
+        try {
+          await galleryService.deleteImage(imageId)
+          showToast(`נמחק: ${filename}`, 'success')
+          await loadImages()
+        } catch (err) {
+          showToast((err as Error).message, 'error')
+        } finally {
+          setDeletingImageId(null)
+        }
+      },
+    })
   }
 
-  const handleDeleteProject = async (projectId: string, title: string, deleteS3: boolean) => {
-    const msg = deleteS3
+  const handleDeleteProject = (projectId: string, title: string, deleteS3: boolean) => {
+    const message = deleteS3
       ? `מחק פרויקט "${title}" + כל התמונות מ-S3?\n\nפעולה זו אינה הפיכה!`
       : `מחק פרויקט "${title}" מהרשימה בלבד?\n(התמונות ב-S3 יישארו)`
-    if (!window.confirm(msg)) return
-    setDeletingProjectId(projectId)
-    try {
-      const result = await projectService.deleteProject(projectId, deleteS3)
-      const s3Msg = deleteS3 && (result.s3_deleted?.length ?? 0) > 0
-        ? ` (${result.s3_deleted!.length} תמונות נמחקו מ-S3)`
-        : ''
-      showToast(`פרויקט "${title}" נמחק${s3Msg}`, 'success')
-      await loadProjects()
-    } catch (err) {
-      showToast((err as Error).message, 'error')
-    } finally {
-      setDeletingProjectId(null)
-    }
+    setConfirm({
+      message,
+      onConfirm: async () => {
+        setConfirm(null)
+        setDeletingProjectId(projectId)
+        try {
+          const result = await projectService.deleteProject(projectId, deleteS3)
+          const s3Msg = deleteS3 && (result.s3_deleted?.length ?? 0) > 0
+            ? ` (${result.s3_deleted!.length} תמונות נמחקו מ-S3)`
+            : ''
+          showToast(`פרויקט "${title}" נמחק${s3Msg}`, 'success')
+          await loadProjects()
+        } catch (err) {
+          showToast((err as Error).message, 'error')
+        } finally {
+          setDeletingProjectId(null)
+        }
+      },
+    })
   }
 
   const handleUpload = async () => {
@@ -143,6 +159,14 @@ export default function GalleryAdminPage() {
   return (
     <main className="container py-8 text-white">
       <ToastContainer toasts={toasts} onDismiss={dismiss} />
+
+      {confirm !== null && (
+        <ConfirmDialog
+          message={confirm.message}
+          onConfirm={confirm.onConfirm}
+          onCancel={() => setConfirm(null)}
+        />
+      )}
 
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold">Admin • {t.gallery.title}</h1>
@@ -384,6 +408,27 @@ function EmptyState({ title, subtitle }: { title: string; subtitle: string }) {
     <div className="text-center py-12 text-white/60">
       <p className="text-lg mb-2">{title}</p>
       <p className="text-sm">{subtitle}</p>
+    </div>
+  )
+}
+
+function ConfirmDialog({ message, onConfirm, onCancel }: { message: string; onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div className="bg-gray-800 border border-white/10 rounded-xl p-6 max-w-sm w-full shadow-2xl">
+        <div className="flex gap-3 mb-4">
+          <AlertTriangle className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5" />
+          <p className="text-white text-sm whitespace-pre-line">{message}</p>
+        </div>
+        <div className="flex gap-3 justify-end">
+          <button onClick={onCancel} className="px-4 py-2 rounded bg-white/10 hover:bg-white/20 text-sm transition">
+            ביטול
+          </button>
+          <button onClick={onConfirm} className="px-4 py-2 rounded bg-red-600 hover:bg-red-700 text-sm font-semibold transition">
+            אישור
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
