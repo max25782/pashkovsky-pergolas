@@ -3,6 +3,7 @@ import {
   Post,
   Get,
   Patch,
+  Delete,
   Body,
   Param,
   Query,
@@ -58,6 +59,15 @@ export class OrdersController {
     @CurrentUser() user: CurrentUserData,
   ) {
     return this.ordersService.update(id, updateOrderDto, user.company_id);
+  }
+
+  @Delete(":id")
+  @UseGuards(AuthGuard, CompanyGuard)
+  async delete(
+    @Param("id") id: string,
+    @CurrentUser() user: CurrentUserData,
+  ) {
+    return this.ordersService.delete(id, user.company_id);
   }
 
   @Patch(":orderId/items/:itemId")

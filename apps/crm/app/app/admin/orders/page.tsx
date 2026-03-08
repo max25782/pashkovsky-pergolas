@@ -101,6 +101,28 @@ export default function OrdersPage() {
     }
   }
 
+  async function handleDeleteOrder(order: Order) {
+    const confirmMsg =
+      lang === 'ru'
+        ? `Удалить заказ ${order.order_number}?`
+        : lang === 'en'
+          ? `Delete order ${order.order_number}?`
+          : `למחוק הזמנה ${order.order_number}?`
+    if (!confirm(confirmMsg)) return
+    try {
+      const res = await authFetch(`/api/admin/orders/${order.id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Failed to delete order')
+      toast.success(
+        lang === 'ru' ? 'Заказ удалён' : lang === 'en' ? 'Order deleted' : 'ההזמנה נמחקה'
+      )
+      await loadOrders()
+      if (editingOrder?.id === order.id) setEditingOrder(null)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to delete order'
+      toast.error(message)
+    }
+  }
+
   async function handleGeneratePdf(order: Order) {
     try {
       const res = await authFetch(`/api/admin/orders/${order.id}/pdf`, { method: 'POST' })
@@ -149,6 +171,7 @@ export default function OrdersPage() {
                 key={order.id}
                 order={order}
                 onEdit={setEditingOrder}
+                onDelete={handleDeleteOrder}
                 getStatusColor={getStatusColor}
                 getStatusLabel={getStatusLabel}
               />

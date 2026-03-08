@@ -127,12 +127,10 @@ export function ProductDetailClient({
           <span className="text-gray-500">{isRtl ? 'משקל ליחידה:' : 'Weight/unit:'}</span>
           <span className="font-medium text-gray-900">{weightPerUnit.toFixed(1)} kg</span>
         </div>
-        {thickness && (
-          <div className="flex justify-between">
-            <span className="text-gray-500">{isRtl ? 'עובי:' : 'Thickness:'}</span>
-            <span className="font-medium text-gray-900">{thickness} mm</span>
-          </div>
-        )}
+        <div className="flex justify-between">
+          <span className="text-gray-500">{isRtl ? 'עובי פרופיל:' : 'Profile thickness:'}</span>
+          <span className="font-medium text-gray-900">{thickness ? `${thickness} mm` : '—'}</span>
+        </div>
         {profile.category && (
           <div className="flex justify-between">
             <span className="text-gray-500">{isRtl ? 'קטגוריה:' : 'Category:'}</span>

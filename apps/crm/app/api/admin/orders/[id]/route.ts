@@ -109,3 +109,51 @@ export async function PATCH(
     )
   }
 }
+
+/**
+ * DELETE /api/admin/orders/[id]
+ * Delete an order
+ */
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const PROFILES_API_URL = process.env.PROFILES_API_URL || 'http://localhost:3002'
+
+  const authCheck = await requireAuthAsync(req)
+  if (!authCheck.authorized) return authCheck.error
+
+  const companyId = authCheck.context?.companyId
+  if (!companyId) {
+    return NextResponse.json({ error: 'Company ID not found' }, { status: 400 })
+  }
+
+  try {
+    const { id } = params
+    const authHeader = req.headers.get('authorization')
+
+    const response = await fetch(`${PROFILES_API_URL}/orders/${id}?company_id=${companyId}`, {
+      method: 'DELETE',
+      headers: authHeader ? { Authorization: authHeader } : {},
+      signal: AbortSignal.timeout(30000),
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Failed to delete order' }))
+      return NextResponse.json(
+        { error: error.message || 'Failed to delete order' },
+        { status: response.status }
+      )
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error: unknown) {
+    console.error('[Orders API DELETE] Error:', error)
+    const e = error as Error & { name?: string }
+    const isTimeout = e?.name === 'TimeoutError' || e?.name === 'AbortError'
+    return NextResponse.json(
+      { error: isTimeout ? 'Request to Profiles API timed out' : (e?.message ?? String(error)) || 'Internal server error' },
+      { status: isTimeout ? 504 : 500 }
+    )
+  }
+}

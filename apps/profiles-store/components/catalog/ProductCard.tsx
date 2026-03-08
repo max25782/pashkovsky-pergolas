@@ -181,12 +181,10 @@ export function ProductCard({ profile, locale, companyId }: ProductCardProps) {
           <span className="text-gray-600">משקל ליחידה:</span>
           <span className="text-gray-900 font-medium">{weightPerUnit.toFixed(3)} kg</span>
         </div>
-        {dims.thickness && (
-          <div className="flex justify-between items-center">
-            <span className="text-gray-600">עובי:</span>
-            <span className="text-gray-900 font-medium">{dims.thickness} mm</span>
-          </div>
-        )}
+        <div className="flex justify-between items-center">
+          <span className="text-gray-600">עובי פרופיל:</span>
+          <span className="text-gray-900 font-medium">{dims.thickness ? `${dims.thickness} mm` : '—'}</span>
+        </div>
         {categoryLabel && (
           <div className="flex justify-between items-center">
             <span className="text-gray-600">קטגוריה:</span>

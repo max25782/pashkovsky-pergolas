@@ -357,4 +357,31 @@ export class OrdersService {
 
     return updatedItem;
   }
+
+  async delete(id: string, companyId: string) {
+    const { data: order, error: findError } = await this.supabase
+      .from("profile_orders")
+      .select("id")
+      .eq("id", id)
+      .eq("company_id", companyId)
+      .single();
+
+    if (findError || !order) {
+      throw new NotFoundException("Order not found");
+    }
+
+    const { error: deleteError } = await this.supabase
+      .from("profile_orders")
+      .delete()
+      .eq("id", id)
+      .eq("company_id", companyId);
+
+    if (deleteError) {
+      throw new InternalServerErrorException(
+        `Failed to delete order: ${deleteError.message}`,
+      );
+    }
+
+    return { success: true };
+  }
 }

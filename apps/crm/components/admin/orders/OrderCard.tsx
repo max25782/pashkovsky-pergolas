@@ -7,11 +7,12 @@ import type { Order } from './order-types'
 interface Props {
   order: Order
   onEdit: (order: Order) => void
+  onDelete?: (order: Order) => void
   getStatusColor: (status: string) => string
   getStatusLabel: (status: string) => string
 }
 
-export function OrderCard({ order, onEdit, getStatusColor, getStatusLabel }: Props) {
+export function OrderCard({ order, onEdit, onDelete, getStatusColor, getStatusLabel }: Props) {
   const t = useCRMTranslations()
   const { language } = useLanguage()
 
@@ -52,12 +53,22 @@ export function OrderCard({ order, onEdit, getStatusColor, getStatusLabel }: Pro
               language === 'he' ? 'he-IL' : language === 'ru' ? 'ru-RU' : 'en-US'
             )}
           </p>
-          <button
-            onClick={() => onEdit(order)}
-            className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm transition"
-          >
-            {t.common.edit}
-          </button>
+          <div className="mt-2 flex gap-2">
+            <button
+              onClick={() => onEdit(order)}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm transition"
+            >
+              {t.common.edit}
+            </button>
+            {onDelete && (
+              <button
+                onClick={() => onDelete(order)}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded text-sm transition"
+              >
+                {t.common.delete}
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
