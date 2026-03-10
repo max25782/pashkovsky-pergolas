@@ -26,7 +26,7 @@ export async function POST(
   if (!auth.ok) return auth.error
 
   try {
-    const orderResult = await profilesApi.orders.get(params.id, auth.companyId)
+    const orderResult = await profilesApi.orders.get(params.id, auth.companyId, auth.authHeader)
     if (!orderResult.ok) {
       const msg = (orderResult.data as { message?: string })?.message || 'Failed to fetch order'
       console.error('[PDF API] Profiles API returned error:', orderResult.status, msg)

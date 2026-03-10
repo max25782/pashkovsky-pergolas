@@ -54,8 +54,8 @@ export const profilesApi = {
     list: (companyId: string, authHeader?: string | null) =>
       proxyRequest('/orders', { companyId, authHeader }),
 
-    get: (id: string, companyId: string) =>
-      proxyRequest(`/orders/${id}`, { companyId }),
+    get: (id: string, companyId: string, authHeader?: string | null) =>
+      proxyRequest(`/orders/${id}`, { companyId, authHeader }),
 
     patch: (id: string, companyId: string, body: unknown, authHeader?: string | null) =>
       proxyRequest(`/orders/${id}`, { method: 'PATCH', companyId, body, authHeader }),

@@ -13,7 +13,7 @@ export async function GET(
   if (!auth.ok) return auth.error
 
   try {
-    const result = await profilesApi.orders.get(params.id, auth.companyId)
+    const result = await profilesApi.orders.get(params.id, auth.companyId, auth.authHeader)
     if (!result.ok) {
       const msg = (result.data as { message?: string })?.message || 'Order not found'
       return NextResponse.json({ error: msg }, { status: result.status })
