@@ -11,7 +11,7 @@ interface UseOrdersResult {
   loading: boolean
   editingOrder: Order | null
   setEditingOrder: (order: Order | null) => void
-  loadOrders: () => Promise<void>
+  loadOrders: () => Promise<Order[]>
   handleSaveOrder: (orderId: string, form: OrderEditForm) => Promise<void>
   handleUpdateItemPrice: (orderId: string, itemId: string, pricePerPiece: number, color: string) => Promise<void>
   handleDeleteOrder: (order: Order) => Promise<void>
@@ -24,16 +24,19 @@ export function useOrders(lang: Language): UseOrdersResult {
   const [loading, setLoading] = useState(true)
   const [editingOrder, setEditingOrder] = useState<Order | null>(null)
 
-  const loadOrders = useCallback(async () => {
+  const loadOrders = useCallback(async (): Promise<Order[]> => {
     try {
       setLoading(true)
       const res = await authFetch('/api/admin/orders')
       if (!res.ok) throw new Error(`Failed to load orders: ${res.statusText}`)
       const data: unknown = await res.json()
-      setOrders(Array.isArray(data) ? data : [])
+      const fresh = Array.isArray(data) ? (data as Order[]) : []
+      setOrders(fresh)
+      return fresh
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to load orders')
       setOrders([])
+      return []
     } finally {
       setLoading(false)
     }
@@ -70,11 +73,11 @@ export function useOrders(lang: Language): UseOrdersResult {
         body: JSON.stringify({ price_per_piece: pricePerPiece, color }),
       })
       if (!res.ok) throw new Error('Failed to update item price')
-      await loadOrders()
+      const fresh = await loadOrders()
       // Sync the open modal with the refreshed order list
       setEditingOrder((prev) => {
         if (prev?.id !== orderId) return prev
-        return orders.find((o) => o.id === orderId) ?? prev
+        return fresh.find((o) => o.id === orderId) ?? prev
       })
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to update item')

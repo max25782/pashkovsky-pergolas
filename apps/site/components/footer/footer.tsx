@@ -37,7 +37,7 @@ export default function Footer({ locale = 'he' }: { locale?: Locale }) {
         <div>
           <h4 className="text-lg font-semibold mb-2">{t('צור קשר','Связаться','Contact')}</h4>
           <p className="text-sm">📍 {t('אזור תעשיה עמנואל','Промзона Эммануэль','Emmanuel Industrial Zone')}</p>
-          <p className="text-sm">📞 +972795805555</p>
+          <p className="text-sm">📞 +972524494848</p>
           <p className="text-sm">✉️ office@pashkovsky-group.com</p>
           <p className="text-sm mt-1">🕒 {t('א׳–ה׳ 08:00–18:00, ו׳ 08:00–13:00','Вс–Чт 08:00–18:00, Пт 08:00–13:00','Sun–Thu 08:00–18:00, Fri 08:00–13:00')}</p>
           <div className="flex gap-3 mt-3">

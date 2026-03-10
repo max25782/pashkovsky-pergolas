@@ -412,6 +412,8 @@
     "rotateSecret": "Rotate Secret",
     "close": "Close",
     "submit": "Submit",
+    "loading": "Loading...",
+    "submitting": "Submitting...",
     "availableOnPaid": "Available on paid plans",
     "oneTimeFee": "One-time setup fee",
     "setupRequested": "Your integration request has been received",

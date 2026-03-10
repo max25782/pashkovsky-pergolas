@@ -412,6 +412,8 @@
     "rotateSecret": "חדש סוד",
     "close": "סגור",
     "submit": "שלח",
+    "loading": "טוען...",
+    "submitting": "שולח...",
     "availableOnPaid": "זמין בתוכניות בתשלום",
     "oneTimeFee": "תשלום חד-פעמי להתקנה",
     "setupRequested": "בקשת האינטגרציה שלך התקבלה",

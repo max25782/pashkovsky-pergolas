@@ -11,6 +11,11 @@ interface LanguageContextType {
   setLanguage: (lang: Language) => void
 }
 
+interface IntlState {
+  locale: Language
+  messages: Record<string, unknown>
+}
+
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined)
 
 const messageCache: Partial<Record<Language, Record<string, unknown>>> = {
@@ -20,38 +25,44 @@ const messageCache: Partial<Record<Language, Record<string, unknown>>> = {
 async function loadMessages(lang: Language): Promise<Record<string, unknown>> {
   if (messageCache[lang]) return messageCache[lang]!
   const mod = await import(`../messages/${lang}.json`)
-  messageCache[lang] = mod.default
-  return mod.default
+  messageCache[lang] = mod.default as Record<string, unknown>
+  return messageCache[lang]!
+}
+
+function applyDocumentLocale(lang: Language) {
+  document.documentElement.lang = lang
+  document.documentElement.dir = lang === 'he' ? 'rtl' : 'ltr'
 }
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<Language>('he')
-  const [messages, setMessages] = useState<Record<string, unknown>>(
-    heMessages as Record<string, unknown>
-  )
+  const [intl, setIntl] = useState<IntlState>({
+    locale: 'he',
+    messages: heMessages as Record<string, unknown>,
+  })
 
   useEffect(() => {
     const saved = localStorage.getItem('crm_language') as Language
     const initial = saved && ['he', 'ru', 'en'].includes(saved) ? saved : 'he'
+    applyDocumentLocale(initial)
     if (initial !== 'he') {
-      setLanguageState(initial)
-      loadMessages(initial).then(setMessages)
+      // Load messages first, then update locale and messages atomically
+      loadMessages(initial).then((msgs) => {
+        setIntl({ locale: initial, messages: msgs })
+      })
     }
-    document.documentElement.lang = initial
-    document.documentElement.dir = initial === 'he' ? 'rtl' : 'ltr'
   }, [])
 
   const setLanguage = (lang: Language) => {
-    setLanguageState(lang)
     localStorage.setItem('crm_language', lang)
-    loadMessages(lang).then(setMessages)
-    document.documentElement.lang = lang
-    document.documentElement.dir = lang === 'he' ? 'rtl' : 'ltr'
+    applyDocumentLocale(lang)
+    loadMessages(lang).then((msgs) => {
+      setIntl({ locale: lang, messages: msgs })
+    })
   }
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage }}>
-      <NextIntlClientProvider locale={language} messages={messages}>
+    <LanguageContext.Provider value={{ language: intl.locale, setLanguage }}>
+      <NextIntlClientProvider locale={intl.locale} messages={intl.messages}>
         {children}
       </NextIntlClientProvider>
     </LanguageContext.Provider>
