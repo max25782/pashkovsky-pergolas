@@ -66,10 +66,10 @@ export {
 export { renderOfferHtml } from '@/lib/pdf/offer-html-template'
 
 // UI Components
-export { default as CreateOfferModal } from '@/components/offers/CreateOfferModal'
-export { default as OffersList } from '@/components/offers/OffersList'
-export { default as PergolaShapeSelector } from '@/components/offers/PergolaShapeSelector'
-export { default as LShapeInput } from '@/components/offers/shapes/LShapeInput'
-export { default as RectangleShapeInput } from '@/components/offers/shapes/RectangleShapeInput'
-export { default as UShapeInput } from '@/components/offers/shapes/UShapeInput'
-export { default as XShapeInput } from '@/components/offers/shapes/XShapeInput'
+export { CreateOfferModal } from '@/components/offers/CreateOfferModal'
+export { OffersList } from '@/components/offers/OffersList'
+export { PergolaShapeSelector } from '@/components/offers/PergolaShapeSelector'
+export { LShapeInput } from '@/components/offers/shapes/LShapeInput'
+export { RectangleShapeInput } from '@/components/offers/shapes/RectangleShapeInput'
+export { UShapeInput } from '@/components/offers/shapes/UShapeInput'
+export { XShapeInput } from '@/components/offers/shapes/XShapeInput'

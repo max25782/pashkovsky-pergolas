@@ -73,9 +73,6 @@ export {
   type UserContext,
 } from '@/lib/middleware/auth-async'
 
-// Next.js edge middleware session update
-export { updateSession } from '@/lib/middleware/auth'
-
 // SuperAdmin middleware
 export {
   checkSuperAdminAuth,

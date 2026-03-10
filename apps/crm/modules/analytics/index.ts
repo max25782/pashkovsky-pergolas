@@ -45,7 +45,7 @@ export {
 } from '@/lib/ai/analyticsTypes'
 
 // UI Components
-export { default as DealsCharts } from '@/components/admin/DealsCharts'
-export { default as MonthlyReportCharts } from '@/components/admin/MonthlyReportCharts'
-export { default as MonthlyStatsChart } from '@/components/admin/MonthlyStatsChart'
-export { default as MonthlyDealsModal } from '@/components/admin/MonthlyDealsModal'
+export { DealsCharts } from '@/components/admin/DealsCharts'
+export { MonthlyReportCharts } from '@/components/admin/MonthlyReportCharts'
+export { MonthlyStatsChart } from '@/components/admin/MonthlyStatsChart'
+export { MonthlyDealsModal } from '@/components/admin/MonthlyDealsModal'

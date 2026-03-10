@@ -28,6 +28,8 @@ export { checkIntegrationAccess } from '@/lib/middleware/integration-access'
 // Rate limiting (per-tenant)
 export {
   checkRateLimit,
-  type RateLimitConfig,
+  rateLimit,
+  rateLimiters,
+  type RateLimitOptions,
   type RateLimitResult,
 } from '@/lib/middleware/rate-limit'

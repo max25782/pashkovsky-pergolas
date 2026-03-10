@@ -33,7 +33,7 @@ export async function POST(
       return NextResponse.json({ error: msg }, { status: orderResult.status })
     }
 
-    const order = orderResult.data
+    const order = orderResult.data as Parameters<typeof generateOrderPdf>[0]
 
     let pdfBuffer: Buffer
     try {
@@ -45,7 +45,7 @@ export async function POST(
     }
 
     const filename = generateOrderPdfFilename(order)
-    const key = `orders/${(order as { id: string }).id}/${filename}`
+    const key = `orders/${order.id}/${filename}`
     const pdfUrl = await uploadToS3(pdfBuffer, key, 'application/pdf')
 
     return NextResponse.json({ pdfUrl, cached: false })

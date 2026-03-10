@@ -1,11 +1,13 @@
 /**
  * Simple calculation tests for analytics aggregators
- * 
- * Run with: npx tsx lib/analytics/__tests__/test-calculations.ts
- * 
+ *
+ * Run with: npx tsx tests/unit/analytics/test-calculations.ts
+ *
  * Tests key calculations: winRate, avgDealValue, profit, profitMargin, duplicates count
  * Ensures calculations are correct before data reaches AI
  */
+
+export {}
 
 // Test data
 const testDeals = [
