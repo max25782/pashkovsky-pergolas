@@ -8,6 +8,63 @@ import { getSupabaseAdmin } from "../config/supabase.config";
 import { CreateOrderDto } from "./dto/create-order.dto";
 import { UpdateOrderDto, UpdateOrderItemDto } from "./dto/update-order.dto";
 
+// Single source of truth for the order_items select fragment.
+// Used in findAll, findOne, and update to guarantee consistent shape.
+const ORDER_ITEMS_SELECT = `
+  order_items (
+    id,
+    profile_id,
+    color,
+    length_meters,
+    quantity_pieces,
+    weight_per_piece,
+    total_weight_kg,
+    price_per_kg,
+    price_per_piece,
+    subtotal,
+    aluminum_profiles (
+      id,
+      code,
+      name_he,
+      name_ru,
+      name_en,
+      image_url
+    )
+  )
+`.trim();
+
+interface OrderItemInput {
+  profile_id: string;
+  color: string;
+  length_meters: number;
+  quantity_pieces: number;
+  price_per_piece: number;
+}
+
+interface ProfileData {
+  id: string;
+  weight_per_meter: number;
+  price_per_kg: number;
+}
+
+interface OrderItemCalculated {
+  profile_id: string;
+  color: string;
+  length_meters: number;
+  quantity_pieces: number;
+  weight_per_piece: number;
+  total_weight_kg: number;
+  price_per_kg: number;
+  price_per_piece: number;
+  subtotal: number;
+}
+
+interface OrderTotals {
+  items: OrderItemCalculated[];
+  totalWeightKg: number;
+  totalAmount: number;
+}
+
 @Injectable()
 export class OrdersService {
   private readonly supabase = getSupabaseAdmin();
@@ -15,31 +72,7 @@ export class OrdersService {
   async findAll(companyId: string) {
     const { data: orders, error } = await this.supabase
       .from("profile_orders")
-      .select(
-        `
-        *,
-        order_items (
-          id,
-          profile_id,
-          color,
-          length_meters,
-          quantity_pieces,
-          weight_per_piece,
-          total_weight_kg,
-          price_per_kg,
-          price_per_piece,
-          subtotal,
-          aluminum_profiles (
-            id,
-            code,
-            name_he,
-            name_ru,
-            name_en,
-            image_url
-          )
-        )
-      `,
-      )
+      .select(`*, ${ORDER_ITEMS_SELECT}`)
       .eq("company_id", companyId)
       .order("created_at", { ascending: false });
 
@@ -55,31 +88,7 @@ export class OrdersService {
   async findOne(id: string, companyId: string) {
     const { data: order, error } = await this.supabase
       .from("profile_orders")
-      .select(
-        `
-        *,
-        order_items (
-          id,
-          profile_id,
-          color,
-          length_meters,
-          quantity_pieces,
-          weight_per_piece,
-          total_weight_kg,
-          price_per_kg,
-          price_per_piece,
-          subtotal,
-          aluminum_profiles (
-            id,
-            code,
-            name_he,
-            name_ru,
-            name_en,
-            image_url
-          )
-        )
-      `,
-      )
+      .select(`*, ${ORDER_ITEMS_SELECT}`)
       .eq("id", id)
       .eq("company_id", companyId)
       .single();
@@ -106,7 +115,6 @@ export class OrdersService {
       throw new BadRequestException("Order must contain at least one item");
     }
 
-    // Fetch profile weights to calculate order totals
     const profileIds = [...new Set(dto.items.map((item) => item.profile_id))];
     const { data: profiles, error: profilesError } = await this.supabase
       .from("aluminum_profiles")
@@ -124,39 +132,15 @@ export class OrdersService {
       throw new BadRequestException("One or more profiles not found");
     }
 
-    const profileMap = new Map(profiles.map((p) => [p.id, p]));
+    const profileMap = new Map<string, ProfileData>(
+      profiles.map((p) => [p.id, p]),
+    );
 
-    // Calculate order totals
-    let totalWeightKg = 0;
-    let totalAmount = 0;
+    const { items, totalWeightKg, totalAmount } = this.calculateOrderTotals(
+      dto.items,
+      profileMap,
+    );
 
-    const orderItems = dto.items.map((item) => {
-      const profile = profileMap.get(item.profile_id);
-      if (!profile) {
-        throw new BadRequestException(`Profile ${item.profile_id} not found`);
-      }
-
-      const weightPerPiece = profile.weight_per_meter * item.length_meters;
-      const itemTotalWeight = weightPerPiece * item.quantity_pieces;
-      const itemSubtotal = item.price_per_piece * item.quantity_pieces;
-
-      totalWeightKg += itemTotalWeight;
-      totalAmount += itemSubtotal;
-
-      return {
-        profile_id: item.profile_id,
-        color: item.color,
-        length_meters: item.length_meters,
-        quantity_pieces: item.quantity_pieces,
-        weight_per_piece: weightPerPiece,
-        total_weight_kg: itemTotalWeight,
-        price_per_kg: profile.price_per_kg,
-        price_per_piece: item.price_per_piece,
-        subtotal: itemSubtotal,
-      };
-    });
-
-    // Create order
     const { data: order, error: orderError } = await this.supabase
       .from("profile_orders")
       .insert({
@@ -169,7 +153,7 @@ export class OrdersService {
         status: "pending_price",
         total_weight_kg: totalWeightKg,
         total_amount: totalAmount,
-        final_amount: totalAmount, // Initially same as total, admin can adjust
+        final_amount: totalAmount,
         source: "website",
       })
       .select()
@@ -181,19 +165,12 @@ export class OrdersService {
       );
     }
 
-    // Create order items
-    const { data: items, error: itemsError } = await this.supabase
+    const { data: createdItems, error: itemsError } = await this.supabase
       .from("order_items")
-      .insert(
-        orderItems.map((item) => ({
-          order_id: order.id,
-          ...item,
-        })),
-      )
+      .insert(items.map((item) => ({ order_id: order.id, ...item })))
       .select();
 
     if (itemsError) {
-      // Rollback order if items fail
       await this.supabase.from("profile_orders").delete().eq("id", order.id);
       throw new InternalServerErrorException(
         `Failed to create order items: ${itemsError.message}`,
@@ -205,12 +182,11 @@ export class OrdersService {
       order_number: order.order_number,
       status: order.status,
       total_amount: order.total_amount,
-      items: items,
+      items: createdItems,
     };
   }
 
   async update(id: string, dto: UpdateOrderDto, companyId: string) {
-    // Verify order exists and belongs to company
     const { data: existingOrder, error: findError } = await this.supabase
       .from("profile_orders")
       .select("id, total_amount, priced_at")
@@ -222,12 +198,8 @@ export class OrdersService {
       throw new NotFoundException("Order not found");
     }
 
-    // Calculate final_amount if discount is provided
     let finalAmount = dto.final_amount;
-    if (
-      dto.discount_percent !== undefined ||
-      dto.discount_amount !== undefined
-    ) {
+    if (dto.discount_percent !== undefined || dto.discount_amount !== undefined) {
       const baseAmount = existingOrder.total_amount || 0;
       if (dto.discount_percent !== undefined) {
         finalAmount = baseAmount * (1 - dto.discount_percent / 100);
@@ -237,9 +209,7 @@ export class OrdersService {
     }
 
     const updateData: Record<string, unknown> = { ...dto };
-    if (finalAmount !== undefined) {
-      updateData.final_amount = finalAmount;
-    }
+    if (finalAmount !== undefined) updateData.final_amount = finalAmount;
     if (dto.status === "priced" && !existingOrder.priced_at) {
       updateData.priced_at = new Date().toISOString();
     }
@@ -249,30 +219,7 @@ export class OrdersService {
       .update(updateData)
       .eq("id", id)
       .eq("company_id", companyId)
-      .select(
-        `
-        *,
-        order_items (
-          id,
-          profile_id,
-          color,
-          length_meters,
-          quantity_pieces,
-          weight_per_piece,
-          total_weight_kg,
-          price_per_kg,
-          price_per_piece,
-          subtotal,
-          aluminum_profiles (
-            id,
-            code,
-            name_he,
-            name_ru,
-            name_en
-          )
-        )
-      `,
-      )
+      .select(`*, ${ORDER_ITEMS_SELECT}`)
       .single();
 
     if (error) {
@@ -290,7 +237,6 @@ export class OrdersService {
     dto: UpdateOrderItemDto,
     companyId: string,
   ) {
-    // Verify order exists and belongs to company
     const { data: order, error: orderError } = await this.supabase
       .from("profile_orders")
       .select("id")
@@ -302,7 +248,6 @@ export class OrdersService {
       throw new NotFoundException("Order not found");
     }
 
-    // Get the order item
     const { data: item, error: itemError } = await this.supabase
       .from("order_items")
       .select("quantity_pieces")
@@ -314,16 +259,12 @@ export class OrdersService {
       throw new NotFoundException("Order item not found");
     }
 
-    // Update item price, color and recalculate subtotal
     const subtotal = dto.price_per_piece * item.quantity_pieces;
-
     const updatePayload: Record<string, unknown> = {
       price_per_piece: dto.price_per_piece,
-      subtotal: subtotal,
+      subtotal,
     };
-    if (dto.color !== undefined) {
-      updatePayload.color = dto.color;
-    }
+    if (dto.color !== undefined) updatePayload.color = dto.color;
 
     const { data: updatedItem, error: updateError } = await this.supabase
       .from("order_items")
@@ -338,7 +279,6 @@ export class OrdersService {
       );
     }
 
-    // Recalculate order totals
     const { data: allItems } = await this.supabase
       .from("order_items")
       .select("subtotal")
@@ -349,10 +289,7 @@ export class OrdersService {
 
     await this.supabase
       .from("profile_orders")
-      .update({
-        total_amount: newTotalAmount,
-        final_amount: newTotalAmount, // Reset final_amount to match total, admin can adjust
-      })
+      .update({ total_amount: newTotalAmount, final_amount: newTotalAmount })
       .eq("id", orderId);
 
     return updatedItem;
@@ -383,5 +320,41 @@ export class OrdersService {
     }
 
     return { success: true };
+  }
+
+  private calculateOrderTotals(
+    items: OrderItemInput[],
+    profileMap: Map<string, ProfileData>,
+  ): OrderTotals {
+    let totalWeightKg = 0;
+    let totalAmount = 0;
+
+    const calculated = items.map((item) => {
+      const profile = profileMap.get(item.profile_id);
+      if (!profile) {
+        throw new BadRequestException(`Profile ${item.profile_id} not found`);
+      }
+
+      const weightPerPiece = profile.weight_per_meter * item.length_meters;
+      const itemTotalWeight = weightPerPiece * item.quantity_pieces;
+      const itemSubtotal = item.price_per_piece * item.quantity_pieces;
+
+      totalWeightKg += itemTotalWeight;
+      totalAmount += itemSubtotal;
+
+      return {
+        profile_id: item.profile_id,
+        color: item.color,
+        length_meters: item.length_meters,
+        quantity_pieces: item.quantity_pieces,
+        weight_per_piece: weightPerPiece,
+        total_weight_kg: itemTotalWeight,
+        price_per_kg: profile.price_per_kg,
+        price_per_piece: item.price_per_piece,
+        subtotal: itemSubtotal,
+      };
+    });
+
+    return { items: calculated, totalWeightKg, totalAmount };
   }
 }
