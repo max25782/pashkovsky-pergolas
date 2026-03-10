@@ -1,20 +1,24 @@
 'use client'
 
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
-import { useLanguage } from '@/lib/language-context'
+import { getStatusColor, getStatusLabel } from './order-constants'
+import type { Language } from './order-constants'
 import type { Order } from './order-types'
 
 interface Props {
   order: Order
+  lang: Language
   onEdit: (order: Order) => void
-  onDelete?: (order: Order) => void
-  getStatusColor: (status: string) => string
-  getStatusLabel: (status: string) => string
+  onDelete: (order: Order) => void
+  onGeneratePdf: (order: Order) => void
 }
 
-export function OrderCard({ order, onEdit, onDelete, getStatusColor, getStatusLabel }: Props) {
+export function OrderCard({ order, lang, onEdit, onDelete, onGeneratePdf }: Props) {
   const t = useCRMTranslations()
-  const { language } = useLanguage()
+
+  const phone = lang === 'ru' ? 'Телефон' : lang === 'en' ? 'Phone' : 'טלפון'
+  const city = lang === 'ru' ? 'Город' : lang === 'en' ? 'City' : 'עיר'
+  const address = lang === 'ru' ? 'Адрес' : lang === 'en' ? 'Address' : 'כתובת'
 
   return (
     <div className="bg-white/5 border border-white/10 rounded-lg p-6 hover:bg-white/10 transition">
@@ -25,49 +29,46 @@ export function OrderCard({ order, onEdit, onDelete, getStatusColor, getStatusLa
           </h2>
           <div className="text-sm text-white/60 space-y-1">
             <p><strong>{t.orders.customer}:</strong> {order.customer_name}</p>
-            <p>
-              <strong>{language === 'he' ? 'טלפון' : language === 'ru' ? 'Телефон' : 'Phone'}:</strong>{' '}
-              {order.customer_phone}
-            </p>
+            <p><strong>{phone}:</strong> {order.customer_phone}</p>
             {order.customer_email && <p><strong>Email:</strong> {order.customer_email}</p>}
-            <p>
-              <strong>{language === 'he' ? 'עיר' : language === 'ru' ? 'Город' : 'City'}:</strong>{' '}
-              {order.customer_city}
-            </p>
+            <p><strong>{city}:</strong> {order.customer_city}</p>
             {order.delivery_address && (
-              <p>
-                <strong>{language === 'he' ? 'כתובת' : language === 'ru' ? 'Адрес' : 'Address'}:</strong>{' '}
-                {order.delivery_address}
-              </p>
+              <p><strong>{address}:</strong> {order.delivery_address}</p>
             )}
           </div>
         </div>
 
         <div className="text-right shrink-0 ml-4">
           <span className={`px-3 py-1 rounded border text-sm ${getStatusColor(order.status)}`}>
-            {getStatusLabel(order.status)}
+            {getStatusLabel(order.status, lang)}
           </span>
-          <p className="mt-2 text-lg font-bold">{order.final_amount?.toLocaleString('he-IL')} ₪</p>
+          <p className="mt-2 text-lg font-bold">
+            {order.final_amount?.toLocaleString('he-IL')} ₪
+          </p>
           <p className="text-sm text-white/60">
             {new Date(order.created_at).toLocaleDateString(
-              language === 'he' ? 'he-IL' : language === 'ru' ? 'ru-RU' : 'en-US'
+              lang === 'he' ? 'he-IL' : lang === 'ru' ? 'ru-RU' : 'en-US',
             )}
           </p>
-          <div className="mt-2 flex gap-2">
+          <div className="mt-2 flex gap-2 justify-end">
+            <button
+              onClick={() => onGeneratePdf(order)}
+              className="px-3 py-2 bg-green-600 hover:bg-green-700 rounded text-sm transition"
+            >
+              {t.orders.generatePdf}
+            </button>
             <button
               onClick={() => onEdit(order)}
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm transition"
             >
               {t.common.edit}
             </button>
-            {onDelete && (
-              <button
-                onClick={() => onDelete(order)}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded text-sm transition"
-              >
-                {t.common.delete}
-              </button>
-            )}
+            <button
+              onClick={() => onDelete(order)}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded text-sm transition"
+            >
+              {t.common.delete}
+            </button>
           </div>
         </div>
       </div>

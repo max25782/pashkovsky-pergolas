@@ -9,9 +9,8 @@
 import { useState, useEffect } from 'react'
 import { Building2, Upload, Save, Mail, FileText, Palette, Phone, MapPin, CreditCard } from 'lucide-react'
 import Image from 'next/image'
-import { useLanguage } from '@/lib/language-context'
 import { LanguageSwitcher } from '@/components/admin/LanguageSwitcher'
-import { companySettingsTranslations } from '@/lib/translations/company-settings'
+import { useTranslations } from 'next-intl'
 
 interface Company {
   id: string
@@ -33,8 +32,7 @@ interface Company {
 }
 
 export default function CompanySettingsPage() {
-  const { language } = useLanguage()
-  const t = companySettingsTranslations[language]
+  const t = useTranslations('companySettings')
   
   const [company, setCompany] = useState<Company | null>(null)
   const [loading, setLoading] = useState(true)
@@ -51,12 +49,12 @@ export default function CompanySettingsPage() {
       const res = await fetch('/api/company/profile')
       if (!res.ok) {
         const error = await res.json()
-        throw new Error(error.error || t.loadFailed)
+        throw new Error(error.error || t('loadFailed'))
       }
       const data = await res.json()
       setCompany(data)
     } catch (error: unknown) {
-      showMessage('error', (error instanceof Error ? error.message : String(error)) || t.loadFailed)
+      showMessage('error', (error instanceof Error ? error.message : String(error)) || t('loadFailed'))
     } finally {
       setLoading(false)
     }
@@ -77,14 +75,14 @@ export default function CompanySettingsPage() {
 
       if (!res.ok) {
         const error = await res.json()
-        throw new Error(error.error || t.saveFailed)
+        throw new Error(error.error || t('saveFailed'))
       }
 
       const updated = await res.json()
       setCompany(updated)
-      showMessage('success', t.savedSuccess)
+      showMessage('success', t('savedSuccess'))
     } catch (error: unknown) {
-      showMessage('error', (error instanceof Error ? error.message : String(error)) || t.saveFailed)
+      showMessage('error', (error instanceof Error ? error.message : String(error)) || t('saveFailed'))
     } finally {
       setSaving(false)
     }
@@ -108,14 +106,14 @@ export default function CompanySettingsPage() {
 
       if (!res.ok) {
         const error = await res.json()
-        throw new Error(error.error || t.logoUploadFailed)
+        throw new Error(error.error || t('logoUploadFailed'))
       }
 
       const { logo_url } = await res.json()
       setCompany(prev => prev ? { ...prev, logo_url } : null)
-      showMessage('success', t.logoUploadSuccess)
+      showMessage('success', t('logoUploadSuccess'))
     } catch (error: unknown) {
-      showMessage('error', (error instanceof Error ? error.message : String(error)) || t.logoUploadFailed)
+      showMessage('error', (error instanceof Error ? error.message : String(error)) || t('logoUploadFailed'))
     } finally {
       setUploading(false)
     }
@@ -136,7 +134,7 @@ export default function CompanySettingsPage() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">{t.loading}</p>
+          <p className="text-gray-600">{t('loading')}</p>
         </div>
       </div>
     )
@@ -146,7 +144,7 @@ export default function CompanySettingsPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center text-red-600">
-          <p>{t.noCompany}</p>
+          <p>{t('noCompany')}</p>
         </div>
       </div>
     )
@@ -157,8 +155,8 @@ export default function CompanySettingsPage() {
       {/* Header with Language Switcher */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">{t.title}</h1>
-          <p className="text-gray-600 mt-1">{t.subtitle}</p>
+          <h1 className="text-3xl font-bold text-gray-900">{t('title')}</h1>
+          <p className="text-gray-600 mt-1">{t('subtitle')}</p>
         </div>
         <LanguageSwitcher />
       </div>
@@ -176,7 +174,7 @@ export default function CompanySettingsPage() {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
           <Building2 className="h-5 w-5 text-blue-600" />
-          {t.logoSection}
+          {t('logoSection')}
         </h2>
         
         <div className="flex items-center gap-6">
@@ -192,7 +190,7 @@ export default function CompanySettingsPage() {
             </div>
           ) : (
             <div className="w-48 h-24 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 border-2 border-dashed border-gray-300">
-              {t.noLogo}
+              {t('noLogo')}
             </div>
           )}
           
@@ -206,11 +204,11 @@ export default function CompanySettingsPage() {
             />
             <div className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2">
               <Upload className="h-4 w-4" />
-              {uploading ? t.uploading : t.uploadLogo}
+              {uploading ? t('uploading') : t('uploadLogo')}
             </div>
           </label>
           <p className="text-sm text-gray-500">
-            {t.logoHint}
+            {t('logoHint')}
           </p>
         </div>
       </div>
@@ -219,13 +217,13 @@ export default function CompanySettingsPage() {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
           <Phone className="h-5 w-5 text-blue-600" />
-          {t.basicInfo}
+          {t('basicInfo')}
         </h2>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t.companyName}
+              {t('companyName')}
             </label>
             <input 
               type="text"
@@ -237,7 +235,7 @@ export default function CompanySettingsPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t.email}
+              {t('email')}
             </label>
             <input 
               type="email"
@@ -249,7 +247,7 @@ export default function CompanySettingsPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t.phone}
+              {t('phone')}
             </label>
             <input 
               type="tel"
@@ -262,7 +260,7 @@ export default function CompanySettingsPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t.city}
+              {t('city')}
             </label>
             <input 
               type="text"
@@ -275,13 +273,13 @@ export default function CompanySettingsPage() {
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
               <MapPin className="h-4 w-4" />
-              {t.address}
+              {t('address')}
             </label>
             <input 
               type="text"
               value={company.address || ''}
               onChange={(e) => updateField('address', e.target.value)}
-              placeholder={t.addressPlaceholder}
+              placeholder={t('addressPlaceholder')}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
@@ -292,58 +290,58 @@ export default function CompanySettingsPage() {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
           <CreditCard className="h-5 w-5 text-blue-600" />
-          {t.banking}
+          {t('banking')}
         </h2>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t.vatNumber}
+              {t('vatNumber')}
             </label>
             <input 
               type="text"
               value={company.vat_number || ''}
               onChange={(e) => updateField('vat_number', e.target.value)}
-              placeholder={t.vatPlaceholder}
+              placeholder={t('vatPlaceholder')}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t.bankName}
+              {t('bankName')}
             </label>
             <input 
               type="text"
               value={company.bank_name || ''}
               onChange={(e) => updateField('bank_name', e.target.value)}
-              placeholder={t.bankNamePlaceholder}
+              placeholder={t('bankNamePlaceholder')}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t.branchNumber}
+              {t('branchNumber')}
             </label>
             <input 
               type="text"
               value={company.bank_branch || ''}
               onChange={(e) => updateField('bank_branch', e.target.value)}
-              placeholder={t.branchPlaceholder}
+              placeholder={t('branchPlaceholder')}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t.accountNumber}
+              {t('accountNumber')}
             </label>
             <input 
               type="text"
               value={company.bank_account || ''}
               onChange={(e) => updateField('bank_account', e.target.value)}
-              placeholder={t.accountPlaceholder}
+              placeholder={t('accountPlaceholder')}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
@@ -354,13 +352,13 @@ export default function CompanySettingsPage() {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
           <Palette className="h-5 w-5 text-blue-600" />
-          {t.branding}
+          {t('branding')}
         </h2>
         
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t.primaryColor}
+              {t('primaryColor')}
             </label>
             <div className="flex items-center gap-3">
               <input 
@@ -376,7 +374,7 @@ export default function CompanySettingsPage() {
                 placeholder="#2563EB"
                 className="px-3 py-2 border border-gray-300 rounded-lg font-mono text-sm"
               />
-              <span className="text-sm text-gray-600">{t.colorCode}</span>
+              <span className="text-sm text-gray-600">{t('colorCode')}</span>
             </div>
           </div>
         </div>
@@ -386,19 +384,17 @@ export default function CompanySettingsPage() {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
           <Mail className="h-5 w-5 text-blue-600" />
-          {t.emailSignature}
+          {t('emailSignature')}
         </h2>
         
         <textarea
           value={company.email_signature || ''}
           onChange={(e) => updateField('email_signature', e.target.value)}
-          placeholder={typeof t.emailSignaturePlaceholder === 'function' 
-            ? t.emailSignaturePlaceholder(company.name, company.phone || '[טלפון]')
-            : t.emailSignaturePlaceholder}
+          placeholder={`${company.name}\n${company.phone || ''}`}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg h-32 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
         <p className="text-sm text-gray-500 mt-2">
-          {t.emailSignatureHint}
+          {t('emailSignatureHint')}
         </p>
       </div>
 
@@ -406,19 +402,17 @@ export default function CompanySettingsPage() {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
           <FileText className="h-5 w-5 text-blue-600" />
-          {t.pdfFooter}
+          {t('pdfFooter')}
         </h2>
         
         <textarea
           value={company.pdf_footer || ''}
           onChange={(e) => updateField('pdf_footer', e.target.value)}
-          placeholder={typeof t.pdfFooterPlaceholder === 'function'
-            ? t.pdfFooterPlaceholder(company.name, company.phone || '[טלפון]', company.address || '[כתובת]', new Date().getFullYear())
-            : t.pdfFooterPlaceholder}
+          placeholder={`${company.name} | ${company.phone || ''} | ${company.address || ''}`}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg h-24 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
         <p className="text-sm text-gray-500 mt-2">
-          {t.pdfFooterHint}
+          {t('pdfFooterHint')}
         </p>
       </div>
 
@@ -430,7 +424,7 @@ export default function CompanySettingsPage() {
           className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg"
         >
           <Save className="h-5 w-5" />
-          {saving ? t.saving : t.saveChanges}
+          {saving ? t('saving') : t('saveChanges')}
         </button>
       </div>
     </div>

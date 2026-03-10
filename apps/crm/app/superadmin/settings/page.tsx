@@ -8,8 +8,10 @@
 import { useState, useEffect } from 'react'
 import { Save, Settings, DollarSign, Bot, CreditCard, Shield } from 'lucide-react'
 import type { PlatformSettings } from '@/types/platform-settings'
+import { useTranslations } from 'next-intl'
 
 export default function SettingsPage() {
+  const t = useTranslations('platformSettings')
   const [settings, setSettings] = useState<PlatformSettings | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -28,7 +30,7 @@ export default function SettingsPage() {
       const data = await res.json()
       setSettings(data)
     } catch (error: unknown) {
-      showMessage('error', (error instanceof Error ? error.message : String(error)) || 'Failed to load settings')
+      showMessage('error', (error instanceof Error ? error.message : String(error)) || t('loadFailed'))
     } finally {
       setLoading(false)
     }
@@ -50,14 +52,14 @@ export default function SettingsPage() {
 
       if (!res.ok) {
         const error = await res.json()
-        throw new Error(error.error || 'Failed to save')
+        throw new Error(error.error || t('saveFailed'))
       }
 
       const updated = await res.json()
       setSettings(updated)
-      showMessage('success', 'Settings saved successfully!')
+      showMessage('success', t('savedSuccess'))
     } catch (error: unknown) {
-      showMessage('error', (error instanceof Error ? error.message : String(error)) || 'Failed to save settings')
+      showMessage('error', (error instanceof Error ? error.message : String(error)) || t('saveFailed'))
     } finally {
       setSaving(false)
     }
@@ -78,7 +80,7 @@ export default function SettingsPage() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading settings...</p>
+          <p className="text-gray-600">{t('loading')}</p>
         </div>
       </div>
     )
@@ -88,7 +90,7 @@ export default function SettingsPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center text-red-600">
-          <p>Failed to load platform settings</p>
+          <p>{t('loadFailed')}</p>
         </div>
       </div>
     )
@@ -98,8 +100,8 @@ export default function SettingsPage() {
     <div className="max-w-5xl mx-auto space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Platform Settings</h1>
-        <p className="text-gray-600 mt-1">Configure platform-wide settings</p>
+        <h1 className="text-3xl font-bold text-gray-900">{t('title')}</h1>
+        <p className="text-gray-600 mt-1">{t('subtitle')}</p>
       </div>
 
       {/* Message */}
@@ -115,14 +117,14 @@ export default function SettingsPage() {
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
           <Shield className="h-5 w-5 text-blue-600" />
-          System Settings
+          {t('systemSettings')}
         </h2>
         
         <div className="space-y-4">
           <div className="flex items-center justify-between py-3 border-b">
             <div>
-              <p className="font-medium text-gray-900">Maintenance Mode</p>
-              <p className="text-sm text-gray-500">Block all users except SuperAdmin</p>
+              <p className="font-medium text-gray-900">{t('maintenanceMode')}</p>
+              <p className="text-sm text-gray-500">{t('maintenanceModeDesc')}</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input 
@@ -141,13 +143,13 @@ export default function SettingsPage() {
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
           <Settings className="h-5 w-5 text-blue-600" />
-          Subscription Settings
+          {t('subscriptionSettings')}
         </h2>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Default Plan
+              {t('defaultPlan')}
             </label>
             <input 
               type="text"
@@ -160,7 +162,7 @@ export default function SettingsPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Trial Days (0-90)
+              {t('trialDays')}
             </label>
             <input 
               type="number"
@@ -178,14 +180,14 @@ export default function SettingsPage() {
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
           <CreditCard className="h-5 w-5 text-blue-600" />
-          Payment Settings
+          {t('paymentSettings')}
         </h2>
         
         <div className="space-y-4">
           <div className="flex items-center justify-between py-3 border-b">
             <div>
-              <p className="font-medium text-gray-900">Manual Payments</p>
-              <p className="text-sm text-gray-500">Allow bit, paybox, bank transfers</p>
+              <p className="font-medium text-gray-900">{t('manualPayments')}</p>
+              <p className="text-sm text-gray-500">{t('manualPaymentsDesc')}</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input 
@@ -204,14 +206,14 @@ export default function SettingsPage() {
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
           <Bot className="h-5 w-5 text-blue-600" />
-          AI Configuration
+          {t('aiConfiguration')}
         </h2>
         
         <div className="space-y-4">
           <div className="flex items-center justify-between py-3 border-b">
             <div>
-              <p className="font-medium text-gray-900">AI Features</p>
-              <p className="text-sm text-gray-500">Enable AI text improvement and reports</p>
+              <p className="font-medium text-gray-900">{t('aiFeatures')}</p>
+              <p className="text-sm text-gray-500">{t('aiFeaturesDesc')}</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input 
@@ -226,7 +228,7 @@ export default function SettingsPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Daily AI Request Limit (per company)
+              {t('aiDailyLimit')}
             </label>
             <input 
               type="number"
@@ -243,12 +245,12 @@ export default function SettingsPage() {
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
           <DollarSign className="h-5 w-5 text-blue-600" />
-          Billing Settings
+          {t('billingSettings')}
         </h2>
         
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Default VAT % (0-100)
+            {t('defaultVAT')}
           </label>
           <input 
             type="number"
@@ -265,7 +267,7 @@ export default function SettingsPage() {
       {/* Last Updated */}
       {settings.updated_at && (
         <div className="text-sm text-gray-500 text-center">
-          Last updated: {new Date(settings.updated_at).toLocaleString()}
+          {t('lastUpdated')} {new Date(settings.updated_at).toLocaleString()}
         </div>
       )}
 
@@ -277,7 +279,7 @@ export default function SettingsPage() {
           className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg"
         >
           <Save className="h-5 w-5" />
-          {saving ? 'Saving...' : 'Save Changes'}
+          {saving ? t('saving') : t('saveChanges')}
         </button>
       </div>
     </div>

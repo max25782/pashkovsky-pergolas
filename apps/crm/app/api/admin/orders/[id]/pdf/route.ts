@@ -4,12 +4,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuthAsync } from '@/lib/middleware/auth-async'
+import { requireCompanyAuth } from '@/lib/middleware/require-company-auth'
+import { profilesApi } from '@/lib/profiles-api/client'
 import { generateOrderPdf, generateOrderPdfFilename } from '@/lib/pdf/generate-order-pdf'
 import { uploadToS3 } from '@/lib/s3-upload'
-
-const PROFILES_API_URL = process.env.PROFILES_API_URL || 'http://localhost:3002'
-const UPSTREAM_TIMEOUT_MS = 8000
 
 // Force Node.js runtime (not Edge) for Puppeteer/Chromium compatibility
 export const runtime = 'nodejs'
@@ -22,76 +20,38 @@ export const maxDuration = 60
  */
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string } },
 ) {
-  const authCheck = await requireAuthAsync(req)
-  if (!authCheck.authorized) return authCheck.error
-
-  const companyId = authCheck.context?.companyId
-  if (!companyId) {
-    return NextResponse.json({ error: 'Company ID not found' }, { status: 400 })
-  }
+  const auth = await requireCompanyAuth(req)
+  if (!auth.ok) return auth.error
 
   try {
-    const { id } = params
-    const authHeader = req.headers.get('authorization')
-
-    // Fetch order from Profiles API
-    let orderResponse: Response
-    const orderUrl = `${PROFILES_API_URL}/orders/${id}?company_id=${companyId}`
-    try {
-      orderResponse = await fetch(orderUrl, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(authHeader ? { Authorization: authHeader } : {}),
-        },
-        signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
-      })
-    } catch (fetchErr: any) {
-      const msg = fetchErr?.message || 'fetch failed'
-      console.error('[PDF API] Failed to reach Profiles API:', msg, { url: orderUrl })
-      return NextResponse.json(
-        { error: `Cannot reach Profiles API (${msg}). Check PROFILES_API_URL in Vercel env.` },
-        { status: 502 }
-      )
+    const orderResult = await profilesApi.orders.get(params.id, auth.companyId)
+    if (!orderResult.ok) {
+      const msg = (orderResult.data as { message?: string })?.message || 'Failed to fetch order'
+      console.error('[PDF API] Profiles API returned error:', orderResult.status, msg)
+      return NextResponse.json({ error: msg }, { status: orderResult.status })
     }
 
-    if (!orderResponse.ok) {
-      const body = await orderResponse.json().catch(() => ({ message: 'Failed to fetch order' }))
-      console.error('[PDF API] Profiles API returned error:', orderResponse.status, body)
-      return NextResponse.json(
-        { error: body.message || `Profiles API error ${orderResponse.status}` },
-        { status: orderResponse.status }
-      )
-    }
-
-    const order = await orderResponse.json()
+    const order = orderResult.data
 
     let pdfBuffer: Buffer
     try {
       pdfBuffer = await generateOrderPdf(order)
-    } catch (pdfErr: any) {
-      const msg = pdfErr?.message || 'Unknown PDF error'
+    } catch (pdfErr: unknown) {
+      const msg = pdfErr instanceof Error ? pdfErr.message : 'Unknown PDF error'
       console.error('[PDF API] PDF generation failed:', msg)
-      return NextResponse.json(
-        { error: `PDF generation failed: ${msg}` },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: `PDF generation failed: ${msg}` }, { status: 500 })
     }
 
     const filename = generateOrderPdfFilename(order)
-    const key = `orders/${order.id}/${filename}`
-
+    const key = `orders/${(order as { id: string }).id}/${filename}`
     const pdfUrl = await uploadToS3(pdfBuffer, key, 'application/pdf')
 
     return NextResponse.json({ pdfUrl, cached: false })
   } catch (error: unknown) {
     const msg = (error instanceof Error ? error.message : String(error)) || 'Internal server error'
     console.error('[PDF API] Unexpected error:', msg)
-    return NextResponse.json(
-      { error: msg },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }

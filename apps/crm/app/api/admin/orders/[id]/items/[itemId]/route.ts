@@ -1,61 +1,31 @@
-/**
- * Order Items API Route
- * Proxies requests to NestJS Profiles API
- */
-
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuthAsync } from '@/lib/middleware/auth-async'
-
-const PROFILES_API_URL = process.env.PROFILES_API_URL || 'http://localhost:3002'
+import { requireCompanyAuth } from '@/lib/middleware/require-company-auth'
+import { profilesApi, handleProxyError } from '@/lib/profiles-api/client'
 
 export const dynamic = 'force-dynamic'
 
-/**
- * PATCH /api/admin/orders/[id]/items/[itemId]
- * Update an order item price
- */
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string; itemId: string } }
+  { params }: { params: { id: string; itemId: string } },
 ) {
-  const authCheck = await requireAuthAsync(req)
-  if (!authCheck.authorized) return authCheck.error
-
-  const companyId = authCheck.context?.companyId
-  if (!companyId) {
-    return NextResponse.json({ error: 'Company ID not found' }, { status: 400 })
-  }
+  const auth = await requireCompanyAuth(req)
+  if (!auth.ok) return auth.error
 
   try {
-    const { id, itemId } = params
-    const body = await req.json()
-    const authHeader = req.headers.get('authorization')
-
-    // Forward request to NestJS API
-    const response = await fetch(`${PROFILES_API_URL}/orders/${id}/items/${itemId}?company_id=${companyId}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(authHeader ? { Authorization: authHeader } : {}),
-      },
-      body: JSON.stringify(body),
-    })
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Failed to update order item' }))
-      return NextResponse.json(
-        { error: error.message || 'Failed to update order item' },
-        { status: response.status }
-      )
-    }
-
-    const data = await response.json()
-    return NextResponse.json(data)
-  } catch (error: unknown) {
-    console.error('[Orders API] Error:', error)
-    return NextResponse.json(
-      { error: (error instanceof Error ? error.message : String(error)) || 'Internal server error' },
-      { status: 500 }
+    const body: unknown = await req.json()
+    const result = await profilesApi.orders.patchItem(
+      params.id,
+      params.itemId,
+      auth.companyId,
+      body,
+      auth.authHeader,
     )
+    if (!result.ok) {
+      const msg = (result.data as { message?: string })?.message || 'Failed to update order item'
+      return NextResponse.json({ error: msg }, { status: result.status })
+    }
+    return NextResponse.json(result.data)
+  } catch (error) {
+    return handleProxyError(error, 'PATCH /orders/[id]/items/[itemId]')
   }
 }

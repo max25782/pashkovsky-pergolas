@@ -7,16 +7,13 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useLanguage } from '@/lib/language-context'
-import { integrationsTranslations } from '@/lib/translations/integrations'
+import { useTranslations } from 'next-intl'
 import { authFetch } from '@/lib/api/auth-fetch'
 import type { CompanyIntegration } from '@/types/integration'
 
 export default function IntegrationInstructionsPage() {
   const router = useRouter()
-  const { language } = useLanguage()
-  const t = integrationsTranslations[language]
-  const dir = language === 'he' ? 'rtl' : 'ltr'
+  const t = useTranslations('integrations')
 
   const [integration, setIntegration] = useState<CompanyIntegration | null>(null)
   const [loading, setLoading] = useState(true)
@@ -50,7 +47,7 @@ export default function IntegrationInstructionsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center" dir={dir}>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading...</p>
@@ -61,10 +58,10 @@ export default function IntegrationInstructionsPage() {
 
   if (!integration) {
     return (
-      <div className="min-h-screen bg-gray-50 py-8" dir={dir}>
+      <div className="min-h-screen bg-gray-50 py-8">
         <div className="container mx-auto px-6 max-w-4xl">
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-            <p className="text-yellow-800">{t.integrationNotFound}</p>
+            <p className="text-yellow-800">{t('integrationNotFound')}</p>
             <button
               onClick={() => router.push('/app/settings/integrations')}
               className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -79,10 +76,10 @@ export default function IntegrationInstructionsPage() {
 
   if (integration.status !== 'active') {
     return (
-      <div className="min-h-screen bg-gray-50 py-8" dir={dir}>
+      <div className="min-h-screen bg-gray-50 py-8">
         <div className="container mx-auto px-6 max-w-4xl">
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-            <p className="text-yellow-800">{t.activateToSeeSecret}</p>
+            <p className="text-yellow-800">{t('activateToSeeSecret')}</p>
             <button
               onClick={() => router.push('/app/settings/integrations')}
               className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -110,7 +107,7 @@ export default function IntegrationInstructionsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8" dir={dir}>
+    <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-6 max-w-4xl">
         {/* Header */}
         <div className="mb-8">
@@ -123,34 +120,34 @@ export default function IntegrationInstructionsPage() {
             </svg>
             Back
           </button>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">{t.instructionsTitle}</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('instructionsTitle')}</h1>
           <p className="text-lg text-gray-600">Complete integration guide for your website</p>
         </div>
 
         {/* Webhook URL */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">{t.instructions.webhookUrl}</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">{t('instructions.webhookUrl')}</h2>
           <div className="bg-gray-50 rounded-lg p-4 font-mono text-sm break-all relative">
             {webhookUrl}
             <button
               onClick={() => copyToClipboard(webhookUrl, 'url')}
               className="absolute top-2 right-2 px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 transition-colors"
             >
-              {copied === 'url' ? '✓ Copied' : t.copyUrl}
+              {copied === 'url' ? '✓ Copied' : t('copyUrl')}
             </button>
           </div>
         </div>
 
         {/* Webhook Secret */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">{t.instructions.webhookSecret}</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">{t('instructions.webhookSecret')}</h2>
           <div className="bg-gray-50 rounded-lg p-4 font-mono text-sm break-all relative">
             {integration.webhook_secret}
             <button
               onClick={() => copyToClipboard(integration.webhook_secret, 'secret')}
               className="absolute top-2 right-2 px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 transition-colors"
             >
-              {copied === 'secret' ? '✓ Copied' : t.copyToken}
+              {copied === 'secret' ? '✓ Copied' : t('copyToken')}
             </button>
           </div>
           <p className="text-sm text-gray-600 mt-2">
@@ -160,7 +157,7 @@ export default function IntegrationInstructionsPage() {
 
         {/* Required Headers */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">{t.instructions.requiredHeaders}</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">{t('instructions.requiredHeaders')}</h2>
           <div className="bg-gray-50 rounded-lg p-4 font-mono text-sm">
             <div>Content-Type: application/json</div>
             <div className="text-blue-600">x-alumin-signature: YOUR_HMAC_SHA256_SIGNATURE</div>
@@ -169,7 +166,7 @@ export default function IntegrationInstructionsPage() {
 
         {/* Example Payload */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">{t.instructions.examplePayload}</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">{t('instructions.examplePayload')}</h2>
           <pre className="bg-gray-50 rounded-lg p-4 text-sm overflow-x-auto">
             {JSON.stringify(examplePayload, null, 2)}
           </pre>
@@ -177,8 +174,8 @@ export default function IntegrationInstructionsPage() {
 
         {/* Signature Generation */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">{t.instructions.signatureGeneration}</h2>
-          <p className="text-gray-600 mb-4">{t.instructions.signatureExplanation}</p>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">{t('instructions.signatureGeneration')}</h2>
+          <p className="text-gray-600 mb-4">{t('instructions.signatureExplanation')}</p>
 
           <div className="space-y-4">
             {/* Node.js Example */}

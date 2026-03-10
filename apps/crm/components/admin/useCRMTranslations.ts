@@ -1,17 +1,255 @@
 'use client'
 
-import { useLanguage } from '@/lib/language-context'
-import type { Locale } from '@/lib/locales'
-import { getCRMTranslations, type CRMTranslations } from '@/lib/admin-translations'
+import { useTranslations } from 'next-intl'
 
-export function useCRMTranslations(): CRMTranslations {
-  const { language } = useLanguage()
-  return getCRMTranslations(language as Locale)
+/**
+ * Returns a typed translation object matching the old CRMTranslations shape.
+ * Components use t.deals.title, t.common.save, etc. — same API as before.
+ */
+export function useCRMTranslations() {
+  const common = useTranslations('common')
+  const auth = useTranslations('auth')
+  const nav = useTranslations('nav')
+  const deals = useTranslations('deals')
+  const leads = useTranslations('leads')
+  const aiChats = useTranslations('aiChats')
+  const articles = useTranslations('articles')
+  const gallery = useTranslations('gallery')
+  const orders = useTranslations('orders')
+  const status = useTranslations('status')
+
+  return {
+    common: {
+      save: common('save'),
+      saving: common('saving'),
+      cancel: common('cancel'),
+      delete: common('delete'),
+      deleteConfirm: common('deleteConfirm'),
+      close: common('close'),
+      continue: common('continue'),
+      logout: common('logout'),
+      search: common('search'),
+      loading: common('loading'),
+      error: common('error'),
+      noData: common('noData'),
+      back: common('back'),
+      next: common('next'),
+      page: common('page'),
+      of: common('of'),
+      yes: common('yes'),
+      no: common('no'),
+      edit: common('edit'),
+    },
+    auth: {
+      enterAdminToken: auth('enterAdminToken'),
+      adminTokenPlaceholder: auth('adminTokenPlaceholder'),
+    },
+    nav: {
+      deals: nav('deals'),
+      statistic: nav('statistic'),
+      leads: nav('leads'),
+      articles: nav('articles'),
+      gallery: nav('gallery'),
+      aiChats: nav('aiChats'),
+      workers: nav('workers'),
+      reports: nav('reports'),
+    },
+    deals: {
+      title: deals('title'),
+      newDeal: deals('newDeal'),
+      statistics: deals('statistics'),
+      searchPlaceholder: deals('searchPlaceholder'),
+      customerName: deals('customerName'),
+      customerPhone: deals('customerPhone'),
+      customerEmail: deals('customerEmail'),
+      customerCity: deals('customerCity'),
+      projectType: deals('projectType'),
+      stage: deals('stage'),
+      width: deals('width'),
+      depth: deals('depth'),
+      shape: deals('shape'),
+      material: deals('material'),
+      colorRal: deals('colorRal'),
+      price: deals('price'),
+      myCost: deals('myCost'),
+      orderDate: deals('orderDate'),
+      materialOrderDate: deals('materialOrderDate'),
+      materialReceivedDate: deals('materialReceivedDate'),
+      installationDate: deals('installationDate'),
+      lighting: deals('lighting'),
+      manager: deals('manager'),
+      notes: deals('notes'),
+      sketch: deals('sketch'),
+      openSketch: deals('openSketch'),
+      createdAt: deals('createdAt'),
+      updatedAt: deals('updatedAt'),
+      leadId: deals('leadId'),
+      withoutName: deals('withoutName'),
+      createDeal: deals('createDeal'),
+      createNewDeal: deals('createNewDeal'),
+      customerInfo: deals('customerInfo'),
+      projectInfo: deals('projectInfo'),
+      required: deals('required'),
+      dealTitle: deals('dealTitle'),
+      dealTitleCreate: deals('dealTitleCreate'),
+      cm: deals('cm'),
+      shekel: deals('shekel'),
+      rectangle: deals('rectangle'),
+      lShape: deals('lShape'),
+      workType: deals('workType'),
+      customerType: deals('customerType'),
+      pricingModel: deals('pricingModel'),
+      paymentPlan: deals('paymentPlan'),
+      paymentPlanPreset: deals('paymentPlanPreset'),
+      railingsDetails: deals('railingsDetails'),
+      metersTotal: deals('metersTotal'),
+      heightCm: deals('heightCm'),
+      profileType: deals('profileType'),
+      color: deals('color'),
+      locationType: deals('locationType'),
+      glassType: deals('glassType'),
+      payments: deals('payments'),
+      totalPaid: deals('totalPaid'),
+      paidThisMonth: deals('paidThisMonth'),
+      paidLastMonth: deals('paidLastMonth'),
+      percentOfPrice: deals('percentOfPrice'),
+      addPayment: deals('addPayment'),
+      paidToDate: deals('paidToDate'),
+      remaining: deals('remaining'),
+      projectTypes: {
+        pergola: deals('projectTypes.pergola'),
+        railing: deals('projectTypes.railing'),
+        gates: deals('projectTypes.gates'),
+        windows: deals('projectTypes.windows'),
+        laundry_closet: deals('projectTypes.laundry_closet'),
+      },
+      workTypes: {
+        pergola: deals('workTypes.pergola'),
+        railings: deals('workTypes.railings'),
+        gates: deals('workTypes.gates'),
+        facade: deals('workTypes.facade'),
+        other: deals('workTypes.other'),
+      },
+      customerTypes: {
+        private: deals('customerTypes.private'),
+        contractor: deals('customerTypes.contractor'),
+      },
+      pricingModels: {
+        fixed: deals('pricingModels.fixed'),
+        per_meter: deals('pricingModels.per_meter'),
+        per_sqm: deals('pricingModels.per_sqm'),
+        custom: deals('pricingModels.custom'),
+      },
+      locationTypes: {
+        balcony: deals('locationTypes.balcony'),
+        stairs: deals('locationTypes.stairs'),
+        roof: deals('locationTypes.roof'),
+        yard: deals('locationTypes.yard'),
+        other: deals('locationTypes.other'),
+      },
+      stages: {
+        new: deals('stages.new'),
+        measure: deals('stages.measure'),
+        offer: deals('stages.offer'),
+        offer_approved: deals('stages.offer_approved'),
+        material_ordered: deals('stages.material_ordered'),
+        approved: deals('stages.approved'),
+        production: deals('stages.production'),
+        install: deals('stages.install'),
+        done: deals('stages.done'),
+      },
+      filters: {
+        allStages: deals('filters.allStages'),
+        allTypes: deals('filters.allTypes'),
+      },
+      viewModes: {
+        kanban: deals('viewModes.kanban'),
+        table: deals('viewModes.table'),
+      },
+    },
+    leads: {
+      title: leads('title'),
+      searchPlaceholder: leads('searchPlaceholder'),
+      name: leads('name'),
+      phone: leads('phone'),
+      email: leads('email'),
+      city: leads('city'),
+      source: leads('source'),
+      status: leads('status'),
+      notes: leads('notes'),
+      leadTitle: leads('leadTitle'),
+      notesPlaceholder: leads('notesPlaceholder'),
+      createdAt: leads('createdAt'),
+      lastMessage: leads('lastMessage'),
+      page: leads('page'),
+    },
+    aiChats: {
+      title: aiChats('title'),
+      searchPlaceholder: aiChats('searchPlaceholder'),
+      clientId: aiChats('clientId'),
+      lastActivity: aiChats('lastActivity'),
+      messages: aiChats('messages'),
+      preview: aiChats('preview'),
+      noMessages: aiChats('noMessages'),
+      deleteDialog: aiChats('deleteDialog'),
+      realtime: aiChats('realtime'),
+      realtimeOff: aiChats('realtimeOff'),
+      refresh: aiChats('refresh'),
+      back: aiChats('back'),
+      user: aiChats('user'),
+      assistant: aiChats('assistant'),
+    },
+    articles: {
+      title: articles('title'),
+      createArticle: articles('createArticle'),
+      editArticle: articles('editArticle'),
+      deleteArticle: articles('deleteArticle'),
+      deleteConfirm: articles('deleteConfirm'),
+      titleLabel: articles('titleLabel'),
+      contentLabel: articles('contentLabel'),
+      slugLabel: articles('slugLabel'),
+      publishedLabel: articles('publishedLabel'),
+      save: articles('save'),
+      cancel: articles('cancel'),
+    },
+    gallery: {
+      title: gallery('title'),
+      unavailable: gallery('unavailable'),
+    },
+    orders: {
+      title: orders('title'),
+      orderNumber: orders('orderNumber'),
+      customer: orders('customer'),
+      status: orders('status'),
+      totalWeight: orders('totalWeight'),
+      totalAmount: orders('totalAmount'),
+      finalAmount: orders('finalAmount'),
+      createdAt: orders('createdAt'),
+      items: orders('items'),
+      notes: orders('notes'),
+      deliveryDate: orders('deliveryDate'),
+      paymentStatus: orders('paymentStatus'),
+      discount: orders('discount'),
+      save: orders('save'),
+      cancel: orders('cancel'),
+      generatePdf: orders('generatePdf'),
+      colorLabel: orders('colorLabel'),
+      colorPlaceholder: orders('colorPlaceholder'),
+      statuses: {
+        pending_price: orders('statuses.pending_price'),
+        priced: orders('statuses.priced'),
+        confirmed: orders('statuses.confirmed'),
+        in_production: orders('statuses.in_production'),
+        ready: orders('statuses.ready'),
+        delivered: orders('statuses.delivered'),
+        cancelled: orders('statuses.cancelled'),
+      },
+    },
+    status: {
+      loading: status('loading'),
+      error: status('error'),
+      noDeals: status('noDeals'),
+      noLeads: status('noLeads'),
+    },
+  }
 }
-
-
-
-
-
-
-

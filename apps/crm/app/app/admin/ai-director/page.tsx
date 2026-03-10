@@ -4,8 +4,7 @@ import { useToast } from '@/components/ui/toast'
 import { useState, useEffect, useRef } from 'react'
 import { authFetch } from '@/lib/api/auth-fetch'
 import { Brain, Send, Loader2, Sparkles } from 'lucide-react'
-import { useLanguage } from '@/lib/language-context'
-import { aiDirectorTranslations } from '@/lib/translations/ai-director'
+import { useTranslations } from 'next-intl'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -14,9 +13,8 @@ interface Message {
 }
 
 export default function AIDirectorPage() {
-  const { language } = useLanguage()
+  const t = useTranslations('aiDirector')
   const { error: toastError } = useToast()
-  const t = aiDirectorTranslations[language]
   
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -98,7 +96,7 @@ export default function AIDirectorPage() {
           throw new Error(`${upgradeMessage}${currentPlan}${upgradeHint}`)
         }
         
-        const message = json?.error || t.error
+        const message = json?.error || t('error')
         const hint = json?.hint ? `\n\n${json.hint}` : ''
         const checkedUrl = json?.checkedUrl ? `\n\nChecked: ${json.checkedUrl}` : ''
         throw new Error(`${message}${hint}${checkedUrl}`)
@@ -113,7 +111,7 @@ export default function AIDirectorPage() {
       console.error('Error:', error)
       // Remove optimistic message on error
       setMessages(prev => prev.slice(0, -1))
-      toastError(error instanceof Error ? error.message : t.error)
+      toastError(error instanceof Error ? error.message : t('error'))
     } finally {
       setLoading(false)
     }
@@ -135,33 +133,33 @@ export default function AIDirectorPage() {
           <Sparkles className="w-4 h-4 text-yellow-500 absolute -top-1 -right-1" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{t.title}</h1>
-          <p className="text-sm text-gray-600">{t.subtitle}</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('title')}</h1>
+          <p className="text-sm text-gray-600">{t('subtitle')}</p>
         </div>
       </header>
       
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
         {messages.length === 0 && (
-          <div className={`text-center text-gray-500 mt-12 ${language === 'he' ? 'rtl' : 'ltr'}`}>
+          <div className="text-center text-gray-500 mt-12">
             <div className="relative inline-block">
               <Brain className="w-20 h-20 mx-auto mb-4 text-gray-300" />
               <Sparkles className="w-6 h-6 text-yellow-400 absolute top-0 right-0" />
             </div>
-            <p className="text-lg font-medium mb-2">{t.emptyState}</p>
-            <p className="text-sm mt-4 mb-2 font-semibold">{t.examples.title}</p>
+            <p className="text-lg font-medium mb-2">{t('emptyState')}</p>
+            <p className="text-sm mt-4 mb-2 font-semibold">{t('examples.title')}</p>
             <ul className="text-sm mt-2 space-y-2 max-w-md mx-auto text-left">
               <li className="bg-white p-3 rounded-lg shadow-sm border">
-                💼 "{t.examples.deals}"
+                💼 &ldquo;{t('examples.deals')}&rdquo;
               </li>
               <li className="bg-white p-3 rounded-lg shadow-sm border">
-                📊 "{t.examples.conversion}"
+                📊 &ldquo;{t('examples.conversion')}&rdquo;
               </li>
               <li className="bg-white p-3 rounded-lg shadow-sm border">
-                ⚠️ "{t.examples.attention}"
+                ⚠️ &ldquo;{t('examples.attention')}&rdquo;
               </li>
               <li className="bg-white p-3 rounded-lg shadow-sm border">
-                👷 "{t.examples.workers}"
+                👷 &ldquo;{t('examples.workers')}&rdquo;
               </li>
             </ul>
           </div>
@@ -188,7 +186,7 @@ export default function AIDirectorPage() {
           <div className="flex justify-start">
             <div className="bg-white rounded-lg px-4 py-3 shadow-sm border flex items-center gap-2">
               <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-              <span className="text-gray-600">{t.loading}</span>
+              <span className="text-gray-600">{t('loading')}</span>
             </div>
           </div>
         )}
@@ -198,16 +196,15 @@ export default function AIDirectorPage() {
       
       {/* Input */}
       <div className="bg-white border-t p-4 shadow-lg">
-        <div className={`max-w-4xl mx-auto flex gap-2 ${language === 'he' ? 'rtl' : 'ltr'}`}>
+        <div className="max-w-4xl mx-auto flex gap-2">
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder={t.placeholder}
-            className={`flex-1 border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none ${language === 'he' ? 'text-right' : 'text-left'}`}
+            placeholder={t('placeholder')}
+            className="flex-1 border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             rows={2}
             disabled={loading}
-            dir={language === 'he' ? 'rtl' : 'ltr'}
           />
           <button
             onClick={sendMessage}
@@ -219,11 +216,11 @@ export default function AIDirectorPage() {
             ) : (
               <Send className="w-5 h-5" />
             )}
-            <span className="hidden sm:inline">{t.send}</span>
+            <span className="hidden sm:inline">{t('send')}</span>
           </button>
         </div>
-        <p className={`text-xs text-gray-500 text-center mt-2 ${language === 'he' ? 'rtl' : 'ltr'}`}>
-          {t.footer}
+        <p className="text-xs text-gray-500 text-center mt-2">
+          {t('footer')}
         </p>
       </div>
     </div>

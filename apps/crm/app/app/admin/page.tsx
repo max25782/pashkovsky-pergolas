@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { authFetch } from '@/lib/api/auth-fetch'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
 import { LanguageSwitcher } from '@/components/admin/LanguageSwitcher'
-import { useLanguage } from '@/lib/language-context'
+import { useTranslations } from 'next-intl'
 import { 
   Briefcase, 
   BarChart3, 
@@ -30,7 +30,8 @@ interface DashboardStats {
 
 export default function AdminPage() {
   const t = useCRMTranslations()
-  const { language } = useLanguage()
+  const tAdmin = useTranslations('admin')
+  const tNav = useTranslations('nav')
   const router = useRouter()
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isChecking, setIsChecking] = useState(true)
@@ -110,7 +111,7 @@ export default function AdminPage() {
       <main className="container py-16 text-white">
         <div className="max-w-md mx-auto text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-          <p className="text-white/60">Checking authentication...</p>
+          <p className="text-white/60">{tAdmin('checkingAuth')}</p>
         </div>
       </main>
     )
@@ -179,24 +180,24 @@ export default function AdminPage() {
     },
     {
       id: 'profiles',
-      title: 'Профили',
-      description: 'Управление алюминиевыми профилями',
+      title: tNav('profiles'),
+      description: tAdmin('profilesDescription'),
       href: `/app/profiles`,
       icon: Box,
       color: 'bg-orange-600 hover:bg-orange-700',
     },
     {
       id: 'orders',
-      title: language === 'ru' ? 'Заказы' : language === 'en' ? 'Orders' : 'הזמנות',
-      description: language === 'ru' ? 'Заказы профилей' : language === 'en' ? 'Profile Orders' : 'הזמנות פרופילים',
+      title: tNav('orders'),
+      description: tAdmin('ordersDescription'),
       href: `/app/admin/orders`,
       icon: ShoppingCart,
       color: 'bg-pink-600 hover:bg-pink-700',
     },
     {
       id: 'inventory',
-      title: language === 'ru' ? 'Инвентаризация' : language === 'en' ? 'Inventory' : 'ספירת מלאי',
-      description: language === 'ru' ? 'Учёт остатков профилей' : language === 'en' ? 'Stock count' : 'ניהול מלאי פרופילים',
+      title: tNav('inventory'),
+      description: tAdmin('inventoryDescription'),
       href: `/app/admin/inventory`,
       icon: Package,
       color: 'bg-teal-600 hover:bg-teal-700',
@@ -210,10 +211,10 @@ export default function AdminPage() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-4xl font-bold mb-2">
-              {language === 'ru' ? 'Панель администратора' : language === 'en' ? 'Admin Panel' : 'פאנל ניהול'}
+              {tAdmin('title')}
             </h1>
             <p className="text-white/60">
-              {language === 'ru' ? 'Группа Пашковский' : language === 'en' ? 'Pashkovsky Group' : 'פאנל ניהול - Pashkovsky Group'}
+              {tAdmin('subtitle')}
             </p>
           </div>
           <div className="flex items-center gap-4">
@@ -258,21 +259,21 @@ export default function AdminPage() {
           <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-6 hover:bg-green-500/20 transition-colors">
             <h3 className="text-sm text-green-300 mb-2 flex items-center gap-2">
               <Briefcase className="w-4 h-4" />
-              {language === 'ru' ? 'Активные сделки' : language === 'en' ? 'Active Deals' : 'עסקאות פעילות'}
+              {tAdmin('activeDeals')}
             </h3>
             <p className="text-3xl font-bold text-green-400">{stats.activeDeals}</p>
           </div>
           <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-6 hover:bg-blue-500/20 transition-colors">
             <h3 className="text-sm text-blue-300 mb-2 flex items-center gap-2">
               <TrendingUp className="w-4 h-4" />
-              {language === 'ru' ? 'Новые лиды (30 дней)' : language === 'en' ? 'New Leads (30 days)' : 'לידים חדשים (30 יום)'}
+              {tAdmin('newLeads')}
             </h3>
             <p className="text-3xl font-bold text-blue-400">{stats.newLeads}</p>
           </div>
           <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-6 hover:bg-yellow-500/20 transition-colors">
             <h3 className="text-sm text-yellow-300 mb-2 flex items-center gap-2">
               <UserCog className="w-4 h-4" />
-              {language === 'ru' ? 'Активные работники' : language === 'en' ? 'Active Workers' : 'עובדים פעילים'}
+              {tAdmin('activeWorkers')}
             </h3>
             <p className="text-3xl font-bold text-yellow-400">{stats.activeWorkers}</p>
           </div>

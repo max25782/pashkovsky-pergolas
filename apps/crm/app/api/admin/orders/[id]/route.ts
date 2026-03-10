@@ -1,159 +1,64 @@
-/**
- * Orders API Route - Individual Order Operations
- * Proxies requests to NestJS Profiles API
- */
-
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuthAsync } from '@/lib/middleware/auth-async'
+import { requireCompanyAuth } from '@/lib/middleware/require-company-auth'
+import { profilesApi, handleProxyError } from '@/lib/profiles-api/client'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-/**
- * GET /api/admin/orders/[id]
- * Fetch a single order by ID
- */
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string } },
 ) {
-  const PROFILES_API_URL = process.env.PROFILES_API_URL || 'http://localhost:3002'
-
-  const authCheck = await requireAuthAsync(req)
-  if (!authCheck.authorized) return authCheck.error
-
-  const companyId = authCheck.context?.companyId
-  if (!companyId) {
-    return NextResponse.json({ error: 'Company ID not found' }, { status: 400 })
-  }
+  const auth = await requireCompanyAuth(req)
+  if (!auth.ok) return auth.error
 
   try {
-    const { id } = params
-
-    const response = await fetch(
-      `${PROFILES_API_URL}/orders/${id}?company_id=${companyId}`,
-      { signal: AbortSignal.timeout(30000) }
-    )
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Order not found' }))
-      return NextResponse.json(
-        { error: error.message || 'Order not found' },
-        { status: response.status }
-      )
+    const result = await profilesApi.orders.get(params.id, auth.companyId)
+    if (!result.ok) {
+      const msg = (result.data as { message?: string })?.message || 'Order not found'
+      return NextResponse.json({ error: msg }, { status: result.status })
     }
-
-    const data = await response.json()
-    return NextResponse.json(data)
-  } catch (error: unknown) {
-    console.error('[Orders API GET] Error:', error)
-    const e = error as Error & { name?: string }
-    const isTimeout = e?.name === 'TimeoutError' || e?.name === 'AbortError'
-    return NextResponse.json(
-      { error: isTimeout ? 'Request to Profiles API timed out' : (e?.message ?? String(error)) || 'Internal server error' },
-      { status: isTimeout ? 504 : 500 }
-    )
+    return NextResponse.json(result.data)
+  } catch (error) {
+    return handleProxyError(error, 'GET /orders/[id]')
   }
 }
 
-/**
- * PATCH /api/admin/orders/[id]
- * Update an order
- */
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string } },
 ) {
-  const PROFILES_API_URL = process.env.PROFILES_API_URL || 'http://localhost:3002'
-
-  const authCheck = await requireAuthAsync(req)
-  if (!authCheck.authorized) return authCheck.error
-
-  const companyId = authCheck.context?.companyId
-  if (!companyId) {
-    return NextResponse.json({ error: 'Company ID not found' }, { status: 400 })
-  }
+  const auth = await requireCompanyAuth(req)
+  if (!auth.ok) return auth.error
 
   try {
-    const { id } = params
-    const body = await req.json()
-    const authHeader = req.headers.get('authorization')
-
-    const response = await fetch(`${PROFILES_API_URL}/orders/${id}?company_id=${companyId}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(authHeader ? { Authorization: authHeader } : {}),
-      },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(30000),
-    })
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Failed to update order' }))
-      return NextResponse.json(
-        { error: error.message || 'Failed to update order' },
-        { status: response.status }
-      )
+    const body: unknown = await req.json()
+    const result = await profilesApi.orders.patch(params.id, auth.companyId, body, auth.authHeader)
+    if (!result.ok) {
+      const msg = (result.data as { message?: string })?.message || 'Failed to update order'
+      return NextResponse.json({ error: msg }, { status: result.status })
     }
-
-    const data = await response.json()
-    return NextResponse.json(data)
-  } catch (error: unknown) {
-    console.error('[Orders API PATCH] Error:', error)
-    const e = error as Error & { name?: string }
-    const isTimeout = e?.name === 'TimeoutError' || e?.name === 'AbortError'
-    return NextResponse.json(
-      { error: isTimeout ? 'Request to Profiles API timed out' : (e?.message ?? String(error)) || 'Internal server error' },
-      { status: isTimeout ? 504 : 500 }
-    )
+    return NextResponse.json(result.data)
+  } catch (error) {
+    return handleProxyError(error, 'PATCH /orders/[id]')
   }
 }
 
-/**
- * DELETE /api/admin/orders/[id]
- * Delete an order
- */
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string } },
 ) {
-  const PROFILES_API_URL = process.env.PROFILES_API_URL || 'http://localhost:3002'
-
-  const authCheck = await requireAuthAsync(req)
-  if (!authCheck.authorized) return authCheck.error
-
-  const companyId = authCheck.context?.companyId
-  if (!companyId) {
-    return NextResponse.json({ error: 'Company ID not found' }, { status: 400 })
-  }
+  const auth = await requireCompanyAuth(req)
+  if (!auth.ok) return auth.error
 
   try {
-    const { id } = params
-    const authHeader = req.headers.get('authorization')
-
-    const response = await fetch(`${PROFILES_API_URL}/orders/${id}?company_id=${companyId}`, {
-      method: 'DELETE',
-      headers: authHeader ? { Authorization: authHeader } : {},
-      signal: AbortSignal.timeout(30000),
-    })
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Failed to delete order' }))
-      return NextResponse.json(
-        { error: error.message || 'Failed to delete order' },
-        { status: response.status }
-      )
+    const result = await profilesApi.orders.delete(params.id, auth.companyId, auth.authHeader)
+    if (!result.ok) {
+      const msg = (result.data as { message?: string })?.message || 'Failed to delete order'
+      return NextResponse.json({ error: msg }, { status: result.status })
     }
-
     return NextResponse.json({ success: true })
-  } catch (error: unknown) {
-    console.error('[Orders API DELETE] Error:', error)
-    const e = error as Error & { name?: string }
-    const isTimeout = e?.name === 'TimeoutError' || e?.name === 'AbortError'
-    return NextResponse.json(
-      { error: isTimeout ? 'Request to Profiles API timed out' : (e?.message ?? String(error)) || 'Internal server error' },
-      { status: isTimeout ? 504 : 500 }
-    )
+  } catch (error) {
+    return handleProxyError(error, 'DELETE /orders/[id]')
   }
 }

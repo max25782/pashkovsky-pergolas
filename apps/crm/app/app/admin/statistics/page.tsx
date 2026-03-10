@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import type { Locale } from '@/lib/locales'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
 import { DealsStatistics } from '@/components/admin/DealsStatistics'
 import type { Deal } from '@/components/admin/deal-types'

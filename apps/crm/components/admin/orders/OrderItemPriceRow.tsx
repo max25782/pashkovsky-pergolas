@@ -1,15 +1,19 @@
 'use client'
 
 import { useState } from 'react'
+import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
 import type { OrderItem } from './order-types'
 
 interface Props {
   item: OrderItem
   orderId: string
+  lang: string
   onUpdate: (orderId: string, itemId: string, pricePerPiece: number, color: string) => Promise<void>
 }
 
 export function OrderItemPriceRow({ item, orderId, onUpdate }: Props) {
+  const t = useCRMTranslations()
+
   const initialPricePerKg =
     item.weight_per_piece > 0 ? item.price_per_piece / item.weight_per_piece : 0
 
@@ -39,13 +43,13 @@ export function OrderItemPriceRow({ item, orderId, onUpdate }: Props) {
 
       <div className="flex items-center gap-3">
         <div className="flex-1 flex items-center gap-2">
-          <span className="text-white/60 text-xs whitespace-nowrap">גוון:</span>
+          <span className="text-white/60 text-xs whitespace-nowrap">{t.orders.colorLabel}</span>
           <input
             type="text"
             value={color}
             onChange={(e) => setColor(e.target.value)}
             onBlur={handleBlur}
-            placeholder="לבן / שחור / RAL..."
+            placeholder={t.orders.colorPlaceholder}
             className="flex-1 px-2 py-1 bg-black/30 border border-white/20 rounded text-white text-sm placeholder:text-white/30"
           />
         </div>
