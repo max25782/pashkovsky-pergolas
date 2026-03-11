@@ -306,7 +306,18 @@
     "totalRevenue": "Total Revenue",
     "totalExpenses": "Total Expenses",
     "totalProfit": "Total Profit",
-    "totalDeals": "Total Deals"
+    "totalDeals": "Total Deals",
+    "modalTitle": "Deals for {month}",
+    "dealCount": "Deal Count",
+    "noDealsThisMonth": "No deals for this month",
+    "customer": "Customer",
+    "phone": "Phone",
+    "projectType": "Project Type",
+    "stage": "Stage",
+    "installationDate": "Installation Date",
+    "price": "Price",
+    "cost": "Cost",
+    "close": "Close"
   },
   "aiDirector": {
     "title": "AI Business Director",

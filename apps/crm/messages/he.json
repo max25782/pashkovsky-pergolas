@@ -306,7 +306,17 @@
     "totalRevenue": "סה\"כ הכנסות",
     "totalExpenses": "סה\"כ הוצאות",
     "totalProfit": "סה\"כ רווח",
-    "totalDeals": "סה\"כ עסקאות"
+    "totalDeals": "סה\"כ עסקאות",
+    "modalTitle": "עסקאות לחודש {month}",
+    "noDealsThisMonth": "אין עסקאות לחודש זה",
+    "customer": "לקוח",
+    "phone": "טלפון",
+    "projectType": "סוג פרויקט",
+    "stage": "שלב",
+    "installationDate": "תאריך התקנה",
+    "price": "מחיר",
+    "cost": "עלות",
+    "close": "סגור"
   },
   "aiDirector": {
     "title": "AI-מנהל עסקי",

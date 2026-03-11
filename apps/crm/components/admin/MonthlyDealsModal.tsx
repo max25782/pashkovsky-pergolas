@@ -4,6 +4,7 @@ import type { Deal } from './deal-types'
 import { formatCurrency, formatDate } from './deal-utils'
 import { getStages } from './deal-types'
 import { useCRMTranslations } from './useCRMTranslations'
+import { useTranslations } from 'next-intl'
 
 interface MonthlyDealsModalProps {
   month: string
@@ -22,21 +23,29 @@ export function MonthlyDealsModal({
   onClose,
   onDealClick
 }: MonthlyDealsModalProps) {
-  const t = useCRMTranslations()
-  const stages = getStages(t.deals)
-  
-  // Фильтруем сделки за выбранный месяц
+  const t = useTranslations('statistics')
+  const tCRM = useCRMTranslations()
+  const stages = getStages(tCRM.deals)
+
   const monthlyDeals = useMemo(() => {
     return deals.filter(deal => {
       if (!deal || !deal.id) return false
-      
-      // Если выбран тип 'money', показываем только завершенные сделки (done)
-      if (statisticType === 'money' && deal.stage !== 'done') {
-        return false
+
+      // Mirror the exact same filter logic used in DealsStatistics validDeals
+      if (statisticType === 'money') {
+        const isContractor = deal.customer_type === 'contractor'
+        if (!isContractor) {
+          // Non-contractors: must be done AND have an installation_date
+          if (deal.stage !== 'done' || deal.installation_date == null) return false
+        }
+        // Contractors: always included (their revenue comes from payments, not deal.price)
       }
-      
-      // Используем ту же логику, что и в статистике
-      let dateToUse: string | null | undefined = deal.installation_date || deal.order_date || deal.created_at
+
+      // Date bucketing — same logic as DealsStatistics monthlyStats
+      const dateToUse: string | null | undefined = statisticType === 'money'
+        ? deal.installation_date
+        : (deal.installation_date || deal.order_date || deal.created_at)
+
       if (!dateToUse) return false
 
       const date = new Date(dateToUse)
@@ -45,7 +54,7 @@ export function MonthlyDealsModal({
       const year = date.getUTCFullYear()
       const dealMonth = date.getUTCMonth() + 1
       const dealMonthKey = `${year}-${String(dealMonth).padStart(2, '0')}`
-      
+
       return dealMonthKey === month
     })
   }, [deals, month, statisticType])
@@ -78,7 +87,7 @@ export function MonthlyDealsModal({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-white/10">
           <h2 className="text-2xl font-bold text-white">
-            עסקאות לחודש {monthLabel} (Сделки за {monthLabel})
+            {t('modalTitle', { month: monthLabel })}
           </h2>
           <button
             onClick={onClose}
@@ -93,19 +102,19 @@ export function MonthlyDealsModal({
         <div className="p-6 border-b border-white/10 bg-white/5">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center">
-              <div className="text-sm text-white/60 mb-1">כמות עסקאות (Кол-во сделок)</div>
+              <div className="text-sm text-white/60 mb-1">{t('dealCount')}</div>
               <div className="text-2xl font-bold text-blue-400">{totals.dealCount}</div>
             </div>
             <div className="text-center">
-              <div className="text-sm text-white/60 mb-1">הכנסות (Доходы)</div>
+              <div className="text-sm text-white/60 mb-1">{t('revenue')}</div>
               <div className="text-2xl font-bold text-green-400">{formatCurrency(totals.revenue)}</div>
             </div>
             <div className="text-center">
-              <div className="text-sm text-white/60 mb-1">הוצאות (Расходы)</div>
+              <div className="text-sm text-white/60 mb-1">{t('expenses')}</div>
               <div className="text-2xl font-bold text-red-400">{formatCurrency(totals.expenses)}</div>
             </div>
             <div className="text-center">
-              <div className="text-sm text-white/60 mb-1">רווח (Прибыль)</div>
+              <div className="text-sm text-white/60 mb-1">{t('profit')}</div>
               <div className={`text-2xl font-bold ${totals.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                 {formatCurrency(totals.profit)}
               </div>
@@ -117,21 +126,21 @@ export function MonthlyDealsModal({
         <div className="flex-1 overflow-y-auto p-6">
           {monthlyDeals.length === 0 ? (
             <div className="text-center text-white/60 py-12">
-              אין עסקאות לחודש זה (Нет сделок за этот месяц)
+              {t('noDealsThisMonth')}
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead className="bg-white/5 sticky top-0">
                   <tr>
-                    <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">לקוח (Клиент)</th>
-                    <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">טלפון (Телефон)</th>
-                    <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">סוג פרויקט (Тип проекта)</th>
-                    <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">שלב (Этап)</th>
-                    <th className="p-3 text-right text-xs font-semibold text-white/70 uppercase">תאריך התקנה (Дата установки)</th>
-                    <th className="p-3 text-right text-xs font-semibold text-white/70 uppercase">מחיר (Цена)</th>
-                    <th className="p-3 text-right text-xs font-semibold text-white/70 uppercase">עלות (Стоимость)</th>
-                    <th className="p-3 text-right text-xs font-semibold text-white/70 uppercase">רווח (Прибыль)</th>
+                    <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">{t('customer')}</th>
+                    <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">{t('phone')}</th>
+                    <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">{t('projectType')}</th>
+                    <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">{t('stage')}</th>
+                    <th className="p-3 text-right text-xs font-semibold text-white/70 uppercase">{t('installationDate')}</th>
+                    <th className="p-3 text-right text-xs font-semibold text-white/70 uppercase">{t('price')}</th>
+                    <th className="p-3 text-right text-xs font-semibold text-white/70 uppercase">{t('cost')}</th>
+                    <th className="p-3 text-right text-xs font-semibold text-white/70 uppercase">{t('profit')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -198,7 +207,7 @@ export function MonthlyDealsModal({
             onClick={onClose}
             className="px-6 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white font-medium transition-colors"
           >
-            סגור (Закрыть)
+            {t('close')}
           </button>
         </div>
       </div>

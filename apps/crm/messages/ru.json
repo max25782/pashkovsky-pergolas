@@ -306,7 +306,17 @@
     "totalRevenue": "Общий доход",
     "totalExpenses": "Общие расходы",
     "totalProfit": "Общая прибыль",
-    "totalDeals": "Всего сделок"
+    "totalDeals": "Всего сделок",
+    "modalTitle": "Сделки за {month}",
+    "noDealsThisMonth": "Нет сделок за этот месяц",
+    "customer": "Клиент",
+    "phone": "Телефон",
+    "projectType": "Тип проекта",
+    "stage": "Этап",
+    "installationDate": "Дата установки",
+    "price": "Цена",
+    "cost": "Стоимость",
+    "close": "Закрыть"
   },
   "aiDirector": {
     "title": "AI-директор по бизнес-решениям",

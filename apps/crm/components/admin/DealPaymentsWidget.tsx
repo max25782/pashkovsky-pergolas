@@ -51,6 +51,17 @@ const defaultTranslations = {
   saving: 'Saving...',
 }
 
+function nowLocalDatetime() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+function toDatetimeLocal(iso: string) {
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return nowLocalDatetime()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
 export function DealPaymentsWidget({
   dealId,
   dealPrice,
@@ -61,14 +72,23 @@ export function DealPaymentsWidget({
   const toast = useToast()
   const [payments, setPayments] = useState<DealPayment[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Add form
   const [showForm, setShowForm] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [formAmount, setFormAmount] = useState('')
-  const [formPaidAt, setFormPaidAt] = useState(() => {
-    const d = new Date()
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-  })
+  const [formPaidAt, setFormPaidAt] = useState(nowLocalDatetime)
   const [formNotes, setFormNotes] = useState('')
+
+  // Edit state — which payment is being edited
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editAmount, setEditAmount] = useState('')
+  const [editPaidAt, setEditPaidAt] = useState('')
+  const [editNotes, setEditNotes] = useState('')
+  const [editSaving, setEditSaving] = useState(false)
+
+  // Delete confirmation
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   async function fetchPayments() {
     setLoading(true)
@@ -114,10 +134,7 @@ export function DealPaymentsWidget({
       }
 
       setFormAmount('')
-      setFormPaidAt(() => {
-        const d = new Date()
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-      })
+      setFormPaidAt(nowLocalDatetime())
       setFormNotes('')
       setShowForm(false)
       await fetchPayments()
@@ -126,6 +143,67 @@ export function DealPaymentsWidget({
       toast.error(e instanceof Error ? e.message : 'Failed to add payment')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  function startEdit(payment: DealPayment) {
+    setEditingId(payment.id)
+    setEditAmount(String(payment.amount))
+    setEditPaidAt(toDatetimeLocal(payment.paid_at))
+    setEditNotes(payment.notes ?? '')
+  }
+
+  function cancelEdit() {
+    setEditingId(null)
+  }
+
+  async function handleSaveEdit(paymentId: string) {
+    const amount = parseFloat(editAmount)
+    if (!Number.isFinite(amount) || amount <= 0) return
+
+    setEditSaving(true)
+    try {
+      const res = await authFetch(`/admin-api/deals/${dealId}/payments/${paymentId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount,
+          paid_at: new Date(editPaidAt).toISOString(),
+          notes: editNotes.trim() || undefined,
+        }),
+      })
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.error || `Failed to update payment: ${res.status}`)
+      }
+
+      setEditingId(null)
+      await fetchPayments()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to update payment')
+    } finally {
+      setEditSaving(false)
+    }
+  }
+
+  async function handleDelete(paymentId: string) {
+    setDeletingId(paymentId)
+    try {
+      const res = await authFetch(`/admin-api/deals/${dealId}/payments/${paymentId}`, {
+        method: 'DELETE',
+      })
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.error || `Failed to delete payment: ${res.status}`)
+      }
+
+      await fetchPayments()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to delete payment')
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -164,6 +242,8 @@ export function DealPaymentsWidget({
   return (
     <div className="pt-4 border-t border-white/10">
       <h3 className="text-lg font-semibold text-white mb-3">{t.title}</h3>
+
+      {/* Summary stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
         <div>
           <div className="text-white/60 text-sm">{t.totalPaid}</div>
@@ -183,6 +263,100 @@ export function DealPaymentsWidget({
         </div>
       </div>
 
+      {/* Payments list */}
+      {payments.length > 0 && (
+        <div className="mb-4 space-y-2">
+          {payments.map((payment) =>
+            editingId === payment.id ? (
+              // Inline edit row
+              <div key={payment.id} className="p-3 rounded-lg bg-white/5 border border-amber-500/40 space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={labelClass}>{t.amount}</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editAmount}
+                      onChange={(e) => setEditAmount(e.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className={labelClass}>{t.paidAt}</label>
+                    <input
+                      type="datetime-local"
+                      value={editPaidAt}
+                      onChange={(e) => setEditPaidAt(e.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className={labelClass}>{t.notes}</label>
+                  <input
+                    value={editNotes}
+                    onChange={(e) => setEditNotes(e.target.value)}
+                    className={inputClass}
+                    placeholder={t.notes}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleSaveEdit(payment.id)}
+                    disabled={editSaving || !editAmount || parseFloat(editAmount) <= 0}
+                    className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {editSaving ? t.saving : '✓ Save'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={cancelEdit}
+                    className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white text-sm font-medium"
+                  >
+                    {t.cancel}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              // Display row
+              <div key={payment.id} className="flex items-center justify-between px-3 py-2 rounded-lg bg-white/5 border border-white/10 group">
+                <div className="flex items-center gap-4 min-w-0">
+                  <span className="text-white font-semibold">{formatCurrency(Number(payment.amount))}</span>
+                  <span className="text-white/50 text-sm">
+                    {new Date(payment.paid_at).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                  </span>
+                  {payment.notes && (
+                    <span className="text-white/40 text-sm truncate max-w-[160px]">{payment.notes}</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    type="button"
+                    onClick={() => startEdit(payment)}
+                    className="p-1.5 rounded hover:bg-white/10 text-white/60 hover:text-amber-300 transition-colors"
+                    title="Edit"
+                  >
+                    ✏️
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(payment.id)}
+                    disabled={deletingId === payment.id}
+                    className="p-1.5 rounded hover:bg-white/10 text-white/60 hover:text-red-400 transition-colors disabled:opacity-50"
+                    title="Delete"
+                  >
+                    {deletingId === payment.id ? '…' : '🗑️'}
+                  </button>
+                </div>
+              </div>
+            )
+          )}
+        </div>
+      )}
+
+      {/* Add payment form */}
       {!showForm ? (
         <button
           type="button"
