@@ -117,7 +117,20 @@ export default function PrivacyPage({ params }: { params: { locale: Locale } }) 
 
           <section>
             <h2 className="text-2xl font-semibold mb-4">
-              {isHebrew ? '7. עוגיות' : isRussian ? '7. Файлы cookie' : '7. Cookies'}
+              {isHebrew ? '7. לידים מפרסום בפייסבוק' : isRussian ? '7. Лиды из рекламы Facebook' : '7. Facebook Lead Ads'}
+            </h2>
+            <p className="text-white/80">
+              {isHebrew
+                ? 'כאשר אתה ממלא טופס לידים בפרסומות שלנו בפייסבוק (Meta), המידע שאתה שולח (שם, טלפון, אימייל) מועבר אלינו דרך שירותי Meta ומאוחסן במערכת CRM שלנו. אנו משתמשים במידע זה כדי ליצור איתך קשר בהתאם לבקשתך. העברת הנתונים מ-Meta אלינו מתבצעת בהתאם למדיניות הפרטיות של Meta ולמדיניות זו.'
+                : isRussian
+                ? 'Когда вы заполняете форму лидов в нашей рекламе на Facebook (Meta), информация, которую вы отправляете (имя, телефон, email), передается нам через сервисы Meta и хранится в нашей CRM-системе. Мы используем эту информацию для связи с вами в соответствии с вашим запросом. Передача данных от Meta к нам осуществляется в соответствии с политикой конфиденциальности Meta и настоящей политикой.'
+                : 'When you submit a lead form in our Facebook (Meta) ads, the information you provide (name, phone, email) is transferred to us via Meta services and stored in our CRM system. We use this information to contact you in accordance with your request. Data transfer from Meta to us is carried out in accordance with Meta\'s privacy policy and this policy.'}
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-semibold mb-4">
+              {isHebrew ? '8. עוגיות' : isRussian ? '8. Файлы cookie' : '8. Cookies'}
             </h2>
             <p className="text-white/80">
               {isHebrew
@@ -130,7 +143,7 @@ export default function PrivacyPage({ params }: { params: { locale: Locale } }) 
 
           <section>
             <h2 className="text-2xl font-semibold mb-4">
-              {isHebrew ? '8. עדכונים למדיניות' : isRussian ? '8. Обновления политики' : '8. Policy Updates'}
+              {isHebrew ? '9. עדכונים למדיניות' : isRussian ? '9. Обновления политики' : '9. Policy Updates'}
             </h2>
             <p className="text-white/80">
               {isHebrew
@@ -143,7 +156,7 @@ export default function PrivacyPage({ params }: { params: { locale: Locale } }) 
 
           <section>
             <h2 className="text-2xl font-semibold mb-4">
-              {isHebrew ? '9. יצירת קשר' : isRussian ? '9. Контакты' : '9. Contact'}
+              {isHebrew ? '10. יצירת קשר' : isRussian ? '10. Контакты' : '10. Contact'}
             </h2>
             <p className="text-white/80">
               {isHebrew

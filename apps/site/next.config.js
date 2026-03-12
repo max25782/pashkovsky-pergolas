@@ -3,6 +3,13 @@ const path = require('path')
 
 const nextConfig = {
   transpilePackages: ['framer-motion'],
+  async redirects() {
+    return [
+      { source: '/he/privacy', destination: '/he/legal/privacy', permanent: true },
+      { source: '/en/privacy', destination: '/en/legal/privacy', permanent: true },
+      { source: '/ru/privacy', destination: '/ru/legal/privacy', permanent: true },
+    ]
+  },
   webpack: (config) => {
     // Ensure proper path resolution for @ alias
     config.resolve.alias = {

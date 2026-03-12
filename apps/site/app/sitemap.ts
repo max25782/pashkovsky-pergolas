@@ -5,7 +5,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const lastmod = new Date()
   const locales: Array<'he'|'ru'|'en'> = ['he','ru','en']
 
-  const paths = ['', '/about', '/contact', '/pergulas', '/railings', '/fences', '/mistora', '/services', '/models']
+  const paths = ['', '/about', '/contact', '/pergulas', '/railings', '/fences', '/mistora', '/services', '/models', '/legal/privacy', '/legal/terms']
 
   const entries: MetadataRoute.Sitemap = []
   for (const l of locales){
