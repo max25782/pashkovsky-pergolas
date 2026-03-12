@@ -50,20 +50,22 @@ export async function POST(req: NextRequest) {
     return new Response('OK', { status: 200 })
   }
 
-  const entries: Array<{
-    id: string
-    time: number
-    changes?: Array<{ field: string; value: { leadgen_id: string } }>
-  }> = body.entry || []
-
   const leadgenIds: string[] = []
+
+  // Production format: body.entry[].changes[].value.leadgen_id
+  const entries: Array<{ changes?: Array<{ field: string; value?: { leadgen_id?: string } }> }> =
+    body.entry || []
   for (const entry of entries) {
-    const changes = entry.changes || []
-    for (const ch of changes) {
+    for (const ch of entry.changes || []) {
       if (ch.field === 'leadgen' && ch.value?.leadgen_id) {
         leadgenIds.push(ch.value.leadgen_id)
       }
     }
+  }
+
+  // Test format from Meta panel: body.sample.value.leadgen_id
+  if (leadgenIds.length === 0 && body.sample?.field === 'leadgen' && body.sample?.value?.leadgen_id) {
+    leadgenIds.push(body.sample.value.leadgen_id)
   }
 
   if (leadgenIds.length === 0 || !supabase || !COMPANY_ID) {
