@@ -257,7 +257,7 @@ export function DealModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 bg-gray-900/95 backdrop-blur border-b border-white/10 px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-white">{t.deals.dealTitle}: {deal.customer_name || t.deals.withoutName}</h2>
+          <h2 className="text-lg sm:text-2xl font-bold text-white truncate">{t.deals.dealTitle}: {deal.customer_name || t.deals.withoutName}</h2>
           <button
             onClick={onClose}
             className="text-white/60 hover:text-white text-2xl leading-none"

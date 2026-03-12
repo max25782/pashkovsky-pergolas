@@ -35,7 +35,7 @@ export default function Navbar({ locale }: { locale: Locale }){
             height={48}
             sizes="120px"
             priority
-            className="object-contain h-[150px] w-auto invert"
+            className="object-contain h-10 sm:h-12 w-auto invert"
           />
           <div className="leading-tight hidden sm:block min-w-[120px]">
             <div className="font-extrabold text-sm text-white">פשקובסקי גרופ</div>

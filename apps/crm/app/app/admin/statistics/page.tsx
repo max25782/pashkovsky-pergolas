@@ -55,8 +55,8 @@ export default function StatisticsPage() {
 
   return (
     <main className="container py-8 text-white">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">Admin • {t.nav.statistic}</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+        <h1 className="text-xl sm:text-3xl font-bold">Admin • {t.nav.statistic}</h1>
         <div className="flex gap-2 flex-wrap">
           <Link
             href="/app/admin/deals"

@@ -221,7 +221,7 @@ export function CreateDealModal({
           {/* Customer Info */}
           <div>
             <h3 className="text-lg font-semibold text-white mb-4">{t.deals.customerInfo}</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-white/70 mb-2">
                   {t.deals.customerName} <span className="text-red-400">{t.deals.required}</span>
@@ -271,7 +271,7 @@ export function CreateDealModal({
           {/* Project Info (pergola/other: width, depth, shape, etc.; railings: price, my_cost, dates) */}
           <div>
             <h3 className="text-lg font-semibold text-white mb-4">{t.deals.projectInfo}</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.projectType}</label>
                 <select

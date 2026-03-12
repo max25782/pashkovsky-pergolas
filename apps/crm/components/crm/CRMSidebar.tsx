@@ -102,11 +102,11 @@ export default function CRMSidebar() {
           'fixed inset-y-0 z-40 w-64 bg-gradient-to-b from-gray-900 to-gray-950 border-white/10 transition-all duration-300 ease-in-out shadow-2xl',
           borderSide,
           sidePosition,
-          // Desktop: show on hover
+          // Desktop: always rendered, slide in/out on hover
           'hidden lg:block',
-          isHovered ? 'translate-x-0' : (isRTL ? 'translate-x-full' : '-translate-x-full'),
-          // Mobile: controlled by isOpen
-          'lg:' + (isHovered ? 'translate-x-0' : (isRTL ? 'translate-x-full' : '-translate-x-full'))
+          isRTL
+            ? (isHovered ? 'translate-x-0' : 'translate-x-full')
+            : (isHovered ? 'translate-x-0' : '-translate-x-full')
         )}
         style={{
           [isRTL ? 'right' : 'left']: 0

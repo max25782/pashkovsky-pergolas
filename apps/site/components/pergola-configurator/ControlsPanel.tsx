@@ -77,8 +77,8 @@ export function ControlsPanel({
   const isRTL = locale === 'he'
   
   return (
-    <div 
-      className="absolute right-4 top-4 z-50 w-72 rounded-2xl bg-white/95 backdrop-blur-md p-4 shadow-xl space-y-3 text-sm text-gray-800"
+    <div
+      className="absolute bottom-0 sm:bottom-auto sm:top-4 right-0 sm:right-4 z-50 w-full sm:w-72 rounded-t-2xl sm:rounded-2xl bg-white/95 backdrop-blur-md p-4 shadow-xl space-y-3 text-sm text-gray-800 max-h-[55vh] sm:max-h-none overflow-y-auto"
       dir={isRTL ? 'rtl' : 'ltr'}
     >
       <div className="font-semibold text-gray-900">{t.title}</div>

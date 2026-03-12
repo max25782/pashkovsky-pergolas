@@ -156,7 +156,7 @@ export default function ContactSection({ locale = 'he', pageName = 'unknown' }: 
         {/* Кнопка "Свяжитесь с нами" */}
         <button
           onClick={() => { setIsOpen(true); trackClick(`contact_section_open_${pageName}`) }}
-          className="inline-flex items-center justify-center gap-3 px-12 py-4 rounded-full text-lg font-semibold text-white bg-gradient-to-r from-green-700 to-green-600 hover:from-green-600 hover:to-green-500 shadow-lg shadow-green-600/20 transition-all duration-300"
+          className="inline-flex items-center justify-center gap-3 px-6 sm:px-12 py-4 rounded-full text-base sm:text-lg font-semibold text-white bg-gradient-to-r from-green-700 to-green-600 hover:from-green-600 hover:to-green-500 shadow-lg shadow-green-600/20 transition-all duration-300"
         >
           <FaWhatsapp size={26} />
           {copy.buttonCta}
@@ -179,7 +179,7 @@ export default function ContactSection({ locale = 'he', pageName = 'unknown' }: 
               exit={{ scale: 0.9, opacity: 0 }}
               transition={{ duration: 0.3 }}
               dir={locale === 'he' ? 'rtl' : 'ltr'}
-              className="bg-white text-gray-900 rounded-3xl p-8 w-full max-w-md shadow-2xl relative"
+              className="bg-white text-gray-900 rounded-3xl p-5 sm:p-8 w-full max-w-md shadow-2xl relative"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Закрытие */}

@@ -33,7 +33,7 @@ export function PartnersLogos({ locale = 'he' }: PartnersLogosProps) {
             {[...LOGOS, ...LOGOS].map((logo, idx) => (
               <div
                 key={`a-${logo.src}-${idx}`}
-                className="relative shrink-0 px-16 w-40 sm:w-56 lg:w-64 h-24 sm:h-36 lg:h-40 flex items-center justify-center"
+                className="relative shrink-0 px-4 sm:px-8 lg:px-16 w-40 sm:w-56 lg:w-64 h-24 sm:h-36 lg:h-40 flex items-center justify-center"
               >
                 <Image
                   {...getImageProps(logo.src)}
@@ -50,7 +50,7 @@ export function PartnersLogos({ locale = 'he' }: PartnersLogosProps) {
             {[...LOGOS, ...LOGOS].map((logo, idx) => (
               <div
                 key={`b-${logo.src}-${idx}`}
-                className="relative shrink-0 px-16 w-40 sm:w-56 lg:w-64 h-24 sm:h-36 lg:h-40 flex items-center justify-center"
+                className="relative shrink-0 px-4 sm:px-8 lg:px-16 w-40 sm:w-56 lg:w-64 h-24 sm:h-36 lg:h-40 flex items-center justify-center"
               >
                 <Image
                   {...getImageProps(logo.src)}

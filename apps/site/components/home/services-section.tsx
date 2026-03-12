@@ -58,7 +58,7 @@ export function ServicesSection({ locale }: { locale: Locale }) {
     >
       <div className="container mx-auto px-4 text-center">
         <h2
-          className="text-4xl font-extrabold mb-14"
+          className="text-2xl sm:text-3xl md:text-4xl font-extrabold mb-8 sm:mb-14"
           style={{ animation: "fadeIn 0.7s ease-out both" }}
         >
           {locale === "he" ? "השירותים שלנו" : locale === "ru" ? "Наши услуги" : "Our Services"}

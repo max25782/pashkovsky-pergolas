@@ -22,8 +22,8 @@ export function OrderCard({ order, lang, onEdit, onDelete, onGeneratePdf }: Prop
 
   return (
     <div className="bg-white/5 border border-white/10 rounded-lg p-6 hover:bg-white/10 transition">
-      <div className="flex items-start justify-between mb-4">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+        <div className="min-w-0">
           <h2 className="text-xl font-bold mb-2">
             {order.order_number || order.id.slice(0, 8)}
           </h2>
@@ -38,19 +38,21 @@ export function OrderCard({ order, lang, onEdit, onDelete, onGeneratePdf }: Prop
           </div>
         </div>
 
-        <div className="text-right shrink-0 ml-4">
-          <span className={`px-3 py-1 rounded border text-sm ${getStatusColor(order.status)}`}>
-            {getStatusLabel(order.status, lang)}
-          </span>
-          <p className="mt-2 text-lg font-bold">
-            {order.final_amount?.toLocaleString('he-IL')} ₪
-          </p>
-          <p className="text-sm text-white/60">
-            {new Date(order.created_at).toLocaleDateString(
-              lang === 'he' ? 'he-IL' : lang === 'ru' ? 'ru-RU' : 'en-US',
-            )}
-          </p>
-          <div className="mt-2 flex gap-2 justify-end">
+        <div className="flex flex-row sm:flex-col items-start sm:items-end gap-3 sm:gap-0 flex-wrap">
+          <div className="sm:text-right">
+            <span className={`px-3 py-1 rounded border text-sm ${getStatusColor(order.status)}`}>
+              {getStatusLabel(order.status, lang)}
+            </span>
+            <p className="mt-2 text-lg font-bold">
+              {order.final_amount?.toLocaleString('he-IL')} ₪
+            </p>
+            <p className="text-sm text-white/60">
+              {new Date(order.created_at).toLocaleDateString(
+                lang === 'he' ? 'he-IL' : lang === 'ru' ? 'ru-RU' : 'en-US',
+              )}
+            </p>
+          </div>
+          <div className="mt-0 sm:mt-2 flex flex-wrap gap-2 justify-start sm:justify-end">
             <button
               onClick={() => onGeneratePdf(order)}
               className="px-3 py-2 bg-green-600 hover:bg-green-700 rounded text-sm transition"

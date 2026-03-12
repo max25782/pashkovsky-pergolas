@@ -35,7 +35,7 @@ export function HeroSection({ locale }: HeroSectionProps) {
       <div className="absolute inset-0 bg-black/30" aria-hidden />
 
       <div className="relative z-10 text-center px-6 max-w-4xl mx-auto h-full grid place-content-center">
-        <h1 className="text-4xl md:text-6xl font-bold mb-4 drop-shadow-lg">
+        <h1 className="text-2xl sm:text-4xl md:text-6xl font-bold mb-4 drop-shadow-lg">
           {TITLE[locale]}
         </h1>
         <p className="text-lg md:text-2xl mb-6 drop-shadow-md">

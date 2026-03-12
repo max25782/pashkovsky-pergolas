@@ -66,34 +66,38 @@ function getClientIp(request: NextRequest): string {
   )
 }
 
-async function getOrCreateSession(clientId: string): Promise<string> {
-  if (!supabase) throw new Error('Supabase not configured')
-  
-  // Try to find existing session for this client
-  const { data: existing } = await supabase
+/** Get existing session only — does not create. Used for loading history. */
+async function getSession(clientId: string): Promise<string | null> {
+  if (!supabase) return null
+  const { data } = await supabase
     .from('ai_sessions')
     .select('id')
     .eq('client_id', clientId)
-    .eq('source', 'website')
     .order('created_at', { ascending: false })
     .limit(1)
     .single()
-  
+  return data?.id ?? null
+}
+
+/** Get or create session — creates only when user sends first message. */
+async function getOrCreateSession(clientId: string, ip: string): Promise<string> {
+  if (!supabase) throw new Error('Supabase not configured')
+  const existing = await getSession(clientId)
   if (existing) {
-    return existing.id
+    await supabase
+      .from('ai_sessions')
+      .update({ last_activity: new Date().toISOString() })
+      .eq('id', existing)
+    return existing
   }
-  
-  // Create new session
   const { data: newSession, error } = await supabase
     .from('ai_sessions')
     .insert({
       client_id: clientId,
-      source: 'website',
-      metadata: { ip: getClientIp({ headers: { get: () => null } } as any) }
+      metadata: { ip, source: 'website' },
     })
     .select('id')
     .single()
-  
   if (error) throw error
   return newSession.id
 }
@@ -243,9 +247,11 @@ export async function GET(req: NextRequest) {
   }
   
   try {
-    const sessionId = await getOrCreateSession(clientId)
+    const sessionId = await getSession(clientId)
+    if (!sessionId) {
+      return jsonResponse({ messages: [], sessionId: null }, {}, req)
+    }
     const messages = await getChatHistory(sessionId)
-    
     return jsonResponse({ messages, sessionId }, {}, req)
   } catch (error) {
     console.error('[Public AI Chat] GET error:', error)
@@ -312,7 +318,8 @@ export async function POST(req: NextRequest) {
     }
     
     // 4. Get or create session
-    const sessionId = await getOrCreateSession(clientId)
+    const ip = getClientIp(req)
+    const sessionId = await getOrCreateSession(clientId, ip)
     
     // 5. Get chat history
     const history = await getChatHistory(sessionId)

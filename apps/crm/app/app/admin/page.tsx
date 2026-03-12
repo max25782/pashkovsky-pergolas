@@ -208,9 +208,9 @@ export default function AdminPage() {
     <main className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-950 text-white">
       <div className="container py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-4xl font-bold mb-2">
+            <h1 className="text-2xl sm:text-4xl font-bold mb-2">
               {tAdmin('title')}
             </h1>
             <p className="text-white/60">
