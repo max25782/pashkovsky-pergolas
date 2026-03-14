@@ -59,6 +59,7 @@ export function LeadsTable() {
         onSearchChange={handleSearchChange}
         onPageChange={setPage}
         currentPage={page}
+        onImportComplete={reload}
       />
       
       <DealsStatus loading={loading || updating} error={error} />

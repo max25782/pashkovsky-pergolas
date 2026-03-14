@@ -170,6 +170,9 @@ export function useCRMTranslations() {
     leads: {
       title: leads('title'),
       searchPlaceholder: leads('searchPlaceholder'),
+      import: leads('import'),
+      importSuccess: (count: number) => leads('importSuccess', { count }),
+      importError: leads('importError'),
       name: leads('name'),
       phone: leads('phone'),
       email: leads('email'),

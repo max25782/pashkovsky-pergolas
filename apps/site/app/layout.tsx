@@ -18,6 +18,7 @@ export default function RootLayout({
   return (
     <html lang="he" dir="rtl" suppressHydrationWarning>
       <head>
+        <meta name="facebook-domain-verification" content="84pmzynj4vxn26yjc163h1obz80f" />
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />
         <Script
           async

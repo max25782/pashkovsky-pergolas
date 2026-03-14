@@ -207,6 +207,9 @@
   "leads": {
     "title": "לידים",
     "searchPlaceholder": "🔍 חיפוש לפי שם, טלפון, הערות...",
+    "import": "ייבוא CSV",
+    "importSuccess": "יובאו {{count}} לידים",
+    "importError": "שגיאה בייבוא",
     "name": "שם",
     "phone": "טלפון",
     "email": "אימייל",

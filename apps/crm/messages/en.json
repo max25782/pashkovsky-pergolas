@@ -207,6 +207,9 @@
   "leads": {
     "title": "Leads",
     "searchPlaceholder": "🔍 Search by name, phone, notes...",
+    "import": "Import CSV",
+    "importSuccess": "Imported {{count}} leads",
+    "importError": "Import error",
     "name": "Name",
     "phone": "Phone",
     "email": "Email",

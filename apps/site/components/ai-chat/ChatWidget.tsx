@@ -24,18 +24,15 @@ export function ChatWidget() {
   const [isInitialized, setIsInitialized] = useState(false)
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [imageFile, setImageFile] = useState<File | null>(null)
-  const [clientId] = useState(() => {
-    // Generate or get client ID from localStorage
-    if (typeof window !== 'undefined') {
-      let id = localStorage.getItem('pashkovsky_ai_client_id')
-      if (!id) {
-        id = `client_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`
-        localStorage.setItem('pashkovsky_ai_client_id', id)
-      }
-      return id
+  const [clientId, setClientId] = useState<string | null>(null)
+  useEffect(() => {
+    let id = localStorage.getItem('pashkovsky_ai_client_id')
+    if (!id) {
+      id = `client_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`
+      localStorage.setItem('pashkovsky_ai_client_id', id)
     }
-    return `client_${Date.now()}`
-  })
+    setClientId(id)
+  }, [])
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -50,10 +47,10 @@ export function ChatWidget() {
   }, [messages, scrollToBottom])
   
   useEffect(() => {
-    if (isOpen && !isInitialized) {
+    if (isOpen && !isInitialized && clientId) {
       loadHistory()
     }
-  }, [isOpen, isInitialized])
+  }, [isOpen, isInitialized, clientId])
   
   useEffect(() => {
     if (isOpen) {
@@ -125,7 +122,7 @@ export function ChatWidget() {
   }
   
   const sendMessage = async () => {
-    if ((!input.trim() && !selectedImage) || isLoading || isStreaming) return
+    if ((!input.trim() && !selectedImage) || isLoading || isStreaming || !clientId) return
     
     const userMessage = input.trim()
     const imageData = selectedImage

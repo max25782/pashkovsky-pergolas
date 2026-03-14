@@ -207,6 +207,9 @@
   "leads": {
     "title": "Лиды",
     "searchPlaceholder": "🔍 Поиск по имени, телефону, заметкам...",
+    "import": "Импорт CSV",
+    "importSuccess": "Импортировано {{count}} лидов",
+    "importError": "Ошибка импорта",
     "name": "Имя",
     "phone": "Телефон",
     "email": "Email",
