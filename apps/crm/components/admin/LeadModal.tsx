@@ -32,7 +32,17 @@ export function LeadModal({
   async function handleSave() {
     setSaving(true)
     try {
-      await onUpdate(localLead)
+      // Only send editable form fields (avoid score columns if migration not applied)
+      const updates: Partial<Lead> = {
+        name: localLead.name,
+        phone: localLead.phone,
+        email: localLead.email ?? null,
+        city: localLead.city ?? null,
+        source: localLead.source ?? null,
+        status: localLead.status ?? null,
+        notes: localLead.notes ?? null,
+      }
+      await onUpdate(updates)
       onClose()
     } catch (e) {
       console.error('Save error:', e)

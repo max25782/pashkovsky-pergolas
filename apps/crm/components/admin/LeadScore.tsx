@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { Lead } from './lead-types'
+import { authFetch } from '@/lib/api/auth-fetch'
 
 interface LeadScoreProps {
   lead: Lead
@@ -24,7 +25,7 @@ export function LeadScore({ lead, adminToken, onScoreUpdated }: LeadScoreProps) 
     setError(null)
 
     try {
-      const res = await fetch(`/api/leads/${lead.id}/score`, {
+      const res = await authFetch(`/api/leads/${lead.id}/score`, {
         method: 'POST',
       })
 

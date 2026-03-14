@@ -11,6 +11,8 @@ interface DealsHeaderProps {
   stageFilter: string
   projectTypeFilter: string
   viewMode: ViewMode
+  dealsCount?: number
+  totalCount?: number | null
   onSearchChange: (value: string) => void
   onStageFilterChange: (value: string) => void
   onProjectTypeFilterChange: (value: string) => void
@@ -24,6 +26,8 @@ export function DealsHeader({
   stageFilter,
   projectTypeFilter,
   viewMode,
+  dealsCount = 0,
+  totalCount,
   onSearchChange,
   onStageFilterChange,
   onProjectTypeFilterChange,
@@ -35,6 +39,11 @@ export function DealsHeader({
   
   return (
     <div className="mb-6 space-y-4">
+      {totalCount !== null && totalCount !== undefined && totalCount > 0 && (
+        <div className="text-sm text-white/60">
+          {totalCount > 500 ? `${dealsCount} / ${totalCount}` : totalCount}
+        </div>
+      )}
       <div className="flex flex-wrap items-center gap-4 justify-between">
         <div className="flex flex-wrap items-center gap-2 flex-1">
           <SearchBar

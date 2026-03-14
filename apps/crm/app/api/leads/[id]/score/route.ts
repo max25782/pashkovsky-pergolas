@@ -2,10 +2,12 @@
  * Score a single lead
  * 
  * POST /api/leads/[id]/score
+ * Auth: JWT (Bearer) or x-admin-token
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { scoreLead } from '@/lib/leads/scoring'
 import type { Lead } from '@/components/admin/lead-types'
 
@@ -16,7 +18,11 @@ const supabase = SUPABASE_URL && SERVICE_KEY
   ? createClient(SUPABASE_URL, SERVICE_KEY, { db: { schema: 'public' } })
   : null
 
-function auth(req: NextRequest): boolean {
+async function isAuthorized(req: NextRequest): Promise<boolean> {
+  // JWT (authFetch from logged-in user)
+  const authCheck = await requireAuthAsync(req)
+  if (authCheck.authorized) return true
+  // Legacy: ADMIN_TOKEN
   const token = req.headers.get('x-admin-token') || req.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
   const expected = process.env.ADMIN_TOKEN
   return !!expected && token === expected
@@ -27,8 +33,8 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    // 1. Check auth
-    if (!auth(req)) {
+    // 1. Check auth (JWT or admin token)
+    if (!(await isAuthorized(req))) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }

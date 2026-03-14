@@ -25,12 +25,12 @@ export function DealsTable() {
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
 
-  const { deals, loading, error, reload } = useDeals({
+  const { deals, totalCount, loading, error, reload } = useDeals({
     searchQuery: q,
     stageFilter,
     projectTypeFilter,
     page,
-    limit: 100
+    limit: 500
   })
 
   const { create, patch, del, creating, updating, deleting } = useDealActions({
@@ -95,6 +95,8 @@ export function DealsTable() {
         stageFilter={stageFilter}
         projectTypeFilter={projectTypeFilter}
         viewMode={viewMode}
+        dealsCount={deals.length}
+        totalCount={totalCount}
         onSearchChange={handleSearchChange}
         onStageFilterChange={handleStageFilterChange}
         onProjectTypeFilterChange={handleProjectTypeFilterChange}
