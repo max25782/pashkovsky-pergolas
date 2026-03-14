@@ -1,6 +1,7 @@
 import type { Lead } from './lead-types'
 import { LEAD_STATUSES } from './lead-types'
 import { formatDate } from './deal-utils'
+import { PhoneActions } from './PhoneActions'
 
 interface LeadCardProps {
   lead: Lead
@@ -30,15 +31,8 @@ export function LeadCard({ lead, onClick }: LeadCardProps) {
           </span>
         </div>
         
-        <div className="text-sm text-white/70">
-          📞{' '}
-          <a
-            href={`tel:${lead.phone}`}
-            onClick={(e) => e.stopPropagation()}
-            className="hover:text-white underline"
-          >
-            {lead.phone}
-          </a>
+        <div className="text-sm" onClick={(e) => e.stopPropagation()}>
+          <PhoneActions phone={lead.phone ?? ''} variant="full" />
         </div>
         
         {lead.email && (

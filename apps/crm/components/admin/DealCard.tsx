@@ -1,5 +1,6 @@
 import type { Deal } from './deal-types'
 import { useCRMTranslations } from './useCRMTranslations'
+import { PhoneActions } from './PhoneActions'
 
 interface DealCardProps {
   deal: Deal
@@ -44,15 +45,8 @@ export function DealCard({
         </div>
         
         {deal.customer_phone && (
-          <div className="text-sm text-white/70">
-            📞{' '}
-            <a
-              href={`tel:${deal.customer_phone}`}
-              onClick={(e) => e.stopPropagation()}
-              className="hover:text-white underline"
-            >
-              {deal.customer_phone}
-            </a>
+          <div className="text-sm" onClick={(e) => e.stopPropagation()}>
+            <PhoneActions phone={deal.customer_phone} variant="full" />
           </div>
         )}
         

@@ -5,6 +5,7 @@ import { LEAD_STATUSES } from './lead-types'
 import { formatDate } from './deal-utils'
 import { useCRMTranslations } from './useCRMTranslations'
 import { LeadScore } from './LeadScore'
+import { PhoneActions } from './PhoneActions'
 
 interface LeadModalProps {
   lead: Lead
@@ -94,6 +95,11 @@ export function LeadModal({
                 className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
                 placeholder="+972..."
               />
+              {localLead.phone && (
+                <div className="mt-2">
+                  <PhoneActions phone={localLead.phone} variant="full" />
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-white/70 mb-2">{t.leads.email}</label>

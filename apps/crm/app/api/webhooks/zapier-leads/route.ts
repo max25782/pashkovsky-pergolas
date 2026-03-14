@@ -16,6 +16,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { normalizePhoneIL } from '@/lib/middleware/integration-access'
+import { sendWhatsAppTemplate } from '@/lib/whatsapp-send'
 
 const SECRET = process.env.ZAPIER_LEADS_SECRET
 const COMPANY_ID = process.env.FB_LEADS_COMPANY_ID || process.env.DEFAULT_COMPANY_ID
@@ -59,7 +60,7 @@ export async function POST(req: NextRequest) {
   }
 
   const name =
-    getString(body, 'full_name', 'fullName', 'first_name', 'name', 'Full Name', 'First Name') ||
+    getString(body, 'full_name', 'ful_name', 'fullName', 'first_name', 'name', 'Full Name', 'First Name') ||
     'Unknown'
   const phoneRaw =
     getString(body, 'phone_number', 'phone', 'Phone Number', 'Phone', 'מספר טלפון') || ''
@@ -77,6 +78,7 @@ export async function POST(req: NextRequest) {
   const extraFields: string[] = []
   const skipKeys = new Set([
     'full_name',
+    'ful_name',
     'fullName',
     'first_name',
     'name',
@@ -132,6 +134,13 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     )
   }
+
+  const templateName = process.env.WHATSAPP_TEMPLATE_NAME || 'hi'
+  sendWhatsAppTemplate(phone, templateName, [name])
+    .then((r) => {
+      if (!r.ok) console.warn('[Zapier Leads] WhatsApp send failed:', r.error)
+    })
+    .catch((e) => console.warn('[Zapier Leads] WhatsApp send error:', e))
 
   return NextResponse.json({ success: true }, { status: 201 })
 }

@@ -5,6 +5,7 @@ import { LEAD_STATUSES } from './lead-types'
 import { formatDate } from './deal-utils'
 import { useCRMTranslations } from './useCRMTranslations'
 import { getScoreCategory } from '@/lib/leads/scoring'
+import { PhoneActions } from './PhoneActions'
 
 interface LeadsTableViewProps {
   leads: Lead[]
@@ -93,14 +94,8 @@ function LeadTableRow({
           <div className="text-xs text-white/50">{lead.city}</div>
         )}
       </td>
-      <td className="p-3 text-white/70" onClick={onClick}>
-        <a
-          href={`tel:${lead.phone}`}
-          onClick={(e) => e.stopPropagation()}
-          className="hover:text-white underline"
-        >
-          {lead.phone}
-        </a>
+      <td className="p-3 cursor-pointer" onClick={onClick}>
+        <PhoneActions phone={lead.phone ?? ''} variant="compact" />
       </td>
       <td className="p-3 text-white/70 cursor-pointer" onClick={onClick}>{lead.email || '-'}</td>
       <td className="p-3 text-white/70 cursor-pointer" onClick={onClick}>{lead.source || '-'}</td>
