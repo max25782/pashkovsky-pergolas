@@ -59,7 +59,8 @@ export async function POST(req: NextRequest) {
   }
 
   const name =
-    getString(body, 'full_name', 'first_name', 'name', 'Full Name', 'First Name') || 'Unknown'
+    getString(body, 'full_name', 'fullName', 'first_name', 'name', 'Full Name', 'First Name') ||
+    'Unknown'
   const phoneRaw =
     getString(body, 'phone_number', 'phone', 'Phone Number', 'Phone', 'מספר טלפון') || ''
   const phone = normalizePhoneIL(phoneRaw)
@@ -76,6 +77,7 @@ export async function POST(req: NextRequest) {
   const extraFields: string[] = []
   const skipKeys = new Set([
     'full_name',
+    'fullName',
     'first_name',
     'name',
     'phone_number',
@@ -109,20 +111,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, duplicate: true }, { status: 200 })
   }
 
-  const { error } = await supabase.from('leads').insert({
-    company_id: COMPANY_ID,
-    name,
-    phone,
-    email: email || null,
-    message,
-    source: 'facebook',
-    status: 'pending',
-    metadata: { zapier: true, raw: obj },
-  })
+  const { error } = await supabase
+    .from('leads')
+    .insert({
+      company_id: COMPANY_ID,
+      name,
+      phone,
+      email: email || null,
+      message,
+      source: 'facebook',
+      status: 'pending',
+      google_conv_sent: false,
+      metadata: { zapier: true },
+    })
 
   if (error) {
     console.error('[Zapier Leads] Insert error:', error)
-    return NextResponse.json({ error: 'Failed to save lead' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Failed to save lead', code: error.code },
+      { status: 500 }
+    )
   }
 
   return NextResponse.json({ success: true }, { status: 201 })
