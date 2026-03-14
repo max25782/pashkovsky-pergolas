@@ -1,28 +1,18 @@
 import type { NextRequest } from 'next/server'
 
-// Helper to read env safely
-function getEnv(name: string): string {
-  const v = process.env[name]
-  if (!v) throw new Error(`Missing env ${name}`)
-  return v
-}
-
 export async function GET(req: NextRequest) {
-  // Meta (Facebook) webhook verification
   const { searchParams } = new URL(req.url)
   const mode = searchParams.get('hub.mode')
   const token = searchParams.get('hub.verify_token')
   const challenge = searchParams.get('hub.challenge')
 
-  try {
-    const verifyToken = getEnv('WHATSAPP_VERIFY_TOKEN')
-    if (mode === 'subscribe' && token === verifyToken && challenge) {
-      return new Response(challenge, { status: 200 })
-    }
-    return new Response('Forbidden', { status: 403 })
-  } catch {
-    return new Response('Server misconfigured', { status: 500 })
+  const verifyToken =
+    process.env.WHATSAPP_VERIFY_TOKEN || process.env.FB_LEADS_VERIFY_TOKEN || 'pashkovsky-leads-verify-2024'
+
+  if (mode === 'subscribe' && token === verifyToken && challenge) {
+    return new Response(challenge, { status: 200 })
   }
+  return new Response('Forbidden', { status: 403 })
 }
 
 export async function POST(req: NextRequest) {
@@ -57,27 +47,44 @@ export async function POST(req: NextRequest) {
         phone: phone ?? null,
         message: text ?? null,
         source: 'whatsapp',
-        wa_from_id: phone ?? null,
-        wa_timestamp: ts,
+        metadata: { wa_from_id: phone ?? null, wa_timestamp: ts },
       })
     }
   }
 
   if (!leads.length) return new Response('No leads', { status: 200 })
 
-  try {
-    const SUPABASE_URL = getEnv('SUPABASE_URL')
-    const SERVICE_KEY = getEnv('SUPABASE_SERVICE_ROLE_KEY')
+  const supabaseUrl =
+    process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const companyId =
+    process.env.FB_LEADS_COMPANY_ID || process.env.DEFAULT_COMPANY_ID
 
-    const resp = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
+  if (!supabaseUrl || !serviceKey || !companyId) {
+    console.error('[WhatsApp] Missing SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, or company ID')
+    return new Response('Server misconfigured', { status: 500 })
+  }
+
+  try {
+    const payload = leads.map((l) => {
+      const { metadata, ...rest } = l
+      return {
+        ...rest,
+        company_id: companyId,
+        status: 'pending',
+        metadata: metadata ?? {},
+      }
+    })
+
+    const resp = await fetch(`${supabaseUrl}/rest/v1/leads`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        apikey: SERVICE_KEY,
-        Authorization: `Bearer ${SERVICE_KEY}`,
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
         Prefer: 'return=representation',
       },
-      body: JSON.stringify(leads),
+      body: JSON.stringify(payload),
       cache: 'no-store',
     })
 
