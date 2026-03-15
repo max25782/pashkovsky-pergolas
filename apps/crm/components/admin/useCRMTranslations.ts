@@ -185,6 +185,10 @@ export function useCRMTranslations() {
       createdAt: leads('createdAt'),
       lastMessage: leads('lastMessage'),
       page: leads('page'),
+      whatsappGreeting: (name: string, company: string) =>
+        leads('whatsappGreeting', { name, company }),
+      whatsappGreetingNoName: (company: string) =>
+        leads('whatsappGreetingNoName', { company }),
     },
     aiChats: {
       title: aiChats('title'),

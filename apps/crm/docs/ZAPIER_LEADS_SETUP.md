@@ -23,13 +23,15 @@ Map Facebook Lead Ads fields to the request body:
 | full_name or first_name | `full_name` or `name` | Yes |
 | phone_number or phone | `phone_number` or `phone` | Yes |
 | email | `email` | No |
+| city | `city` | No |
 
 Example Data in Zapier:
 ```json
 {
   "full_name": "{{trigger.full_name}}",
   "phone_number": "{{trigger.phone_number}}",
-  "email": "{{trigger.email}}"
+  "email": "{{trigger.email}}",
+  "city": "{{trigger.city}}"
 }
 ```
 

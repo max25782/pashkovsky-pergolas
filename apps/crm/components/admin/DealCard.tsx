@@ -46,7 +46,7 @@ export function DealCard({
         
         {deal.customer_phone && (
           <div className="text-sm" onClick={(e) => e.stopPropagation()}>
-            <PhoneActions phone={deal.customer_phone} variant="full" />
+            <PhoneActions phone={deal.customer_phone} leadName={deal.customer_name ?? undefined} variant="full" />
           </div>
         )}
         

@@ -221,7 +221,9 @@
     "notesPlaceholder": "הערות על הליד...",
     "createdAt": "נוצר",
     "lastMessage": "הודעה אחרונה",
-    "page": "עמוד"
+    "page": "עמוד",
+    "whatsappGreeting": "שלום {name} שמי מקסים מחברת {company}, איך אני יכול לעזור לך?",
+    "whatsappGreetingNoName": "שלום! שמי מקסים מחברת {company}, איך אני יכול לעזור לך?"
   },
   "aiChats": {
     "title": "צ'אטים AI",

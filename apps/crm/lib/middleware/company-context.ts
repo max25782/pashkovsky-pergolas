@@ -4,7 +4,7 @@
  */
 
 import { NextRequest } from 'next/server'
-import { verifyToken, extractToken } from '@/lib/auth/jwt'
+import { verifyToken, extractToken, decodeToken } from '@/lib/auth/jwt'
 import { createClient } from '@supabase/supabase-js'
 
 const PASHKOVSKY_COMPANY_ID = '00000000-0000-0000-0000-000000000001'
@@ -29,19 +29,21 @@ const supabase = SUPABASE_URL && SERVICE_KEY
 */
 export function getCompanyId(req: NextRequest): string | null {
   const authHeader = req.headers.get('authorization')
-  
-  // Try custom JWT token first (legacy)
-  if (authHeader) {
-    const token = extractToken(authHeader)
-    if (token) {
-      const payload = verifyToken(token)
-      if (payload && payload.companyId) {
-        return payload.companyId
-      }
-    }
+  if (!authHeader) return null
+
+  const token = extractToken(authHeader)
+  if (!token) return null
+
+  const decoded = decodeToken(token) as Record<string, unknown> | null
+  if (!decoded) return null
+  if (decoded.sub !== undefined && decoded.userId === undefined) {
+    return null
   }
-  
-  // NOTE: Supabase Auth JWT validation must be done async - use getCompanyIdAsync
+
+  const payload = verifyToken(token)
+  if (payload && payload.companyId) {
+    return payload.companyId
+  }
   return null
 }
 

@@ -221,7 +221,9 @@
     "notesPlaceholder": "Notes about lead...",
     "createdAt": "Created",
     "lastMessage": "Last Message",
-    "page": "Page"
+    "page": "Page",
+    "whatsappGreeting": "Hello {name}! I'm from {company}. How can I help you?",
+    "whatsappGreetingNoName": "Hello! I'm from {company}. How can I help you?"
   },
   "aiChats": {
     "title": "AI Chats",

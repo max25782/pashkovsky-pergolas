@@ -30,9 +30,10 @@ export function useLeads({
         .order('created_at', { ascending: false })
         .range(page * limit, (page + 1) * limit - 1)
       
-      // Search filter
+      // Search filter (name, phone, email, city)
       if (searchQuery && searchQuery.trim()) {
-        query = query.or(`name.ilike.%${searchQuery}%,phone.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`)
+        const q = searchQuery.trim()
+        query = query.or(`name.ilike.%${q}%,phone.ilike.%${q}%,email.ilike.%${q}%,city.ilike.%${q}%`)
       }
       
       const { data, error: dbError } = await query

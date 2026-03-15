@@ -32,6 +32,7 @@ export function LeadsTableView({
           <tr>
             <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">{t.leads.createdAt}</th>
             <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">{t.leads.name}</th>
+            <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">{t.leads.city}</th>
             <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">{t.leads.phone}</th>
             <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">{t.leads.email}</th>
             <th className="p-3 text-left text-xs font-semibold text-white/70 uppercase">{t.leads.source}</th>
@@ -54,7 +55,7 @@ export function LeadsTableView({
           ))}
           {leads.length === 0 && !loading && (
             <tr>
-              <td className="p-8 text-center text-white/40" colSpan={9}>
+              <td className="p-8 text-center text-white/40" colSpan={10}>
                 {t.status.noLeads}
               </td>
             </tr>
@@ -90,12 +91,12 @@ function LeadTableRow({
       </td>
       <td className="p-3 cursor-pointer" onClick={onClick}>
         <div className="font-medium">{lead.name}</div>
-        {lead.city && (
-          <div className="text-xs text-white/50">{lead.city}</div>
-        )}
+      </td>
+      <td className="p-3 text-white/70 cursor-pointer" onClick={onClick}>
+        {lead.city || '—'}
       </td>
       <td className="p-3 cursor-pointer" onClick={onClick}>
-        <PhoneActions phone={lead.phone ?? ''} variant="compact" />
+        <PhoneActions phone={lead.phone ?? ''} leadName={lead.name ?? undefined} variant="compact" />
       </td>
       <td className="p-3 text-white/70 cursor-pointer" onClick={onClick}>{lead.email || '-'}</td>
       <td className="p-3 text-white/70 cursor-pointer" onClick={onClick}>{lead.source || '-'}</td>

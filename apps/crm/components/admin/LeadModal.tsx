@@ -97,7 +97,7 @@ export function LeadModal({
               />
               {localLead.phone && (
                 <div className="mt-2">
-                  <PhoneActions phone={localLead.phone} variant="full" />
+                  <PhoneActions phone={localLead.phone} leadName={localLead.name ?? undefined} variant="full" />
                 </div>
               )}
             </div>

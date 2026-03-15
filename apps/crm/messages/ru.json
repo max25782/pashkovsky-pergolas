@@ -221,7 +221,9 @@
     "notesPlaceholder": "Заметки о лиде...",
     "createdAt": "Создано",
     "lastMessage": "Последнее сообщение",
-    "page": "Страница"
+    "page": "Страница",
+    "whatsappGreeting": "Здравствуйте, {name}! Я из компании {company}. Чем могу помочь?",
+    "whatsappGreetingNoName": "Здравствуйте! Я из компании {company}. Чем могу помочь?"
   },
   "aiChats": {
     "title": "AI Чаты",

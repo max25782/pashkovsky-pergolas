@@ -1,6 +1,8 @@
 'use client'
 
 import { Phone, MessageCircle } from 'lucide-react'
+import { useCRMTranslations } from './useCRMTranslations'
+import { useCompanyName } from './hooks/useCompanyName'
 
 function toWhatsAppNumber(phone: string): string {
   const digits = phone.replace(/\D/g, '')
@@ -12,16 +14,33 @@ function toWhatsAppNumber(phone: string): string {
 
 interface PhoneActionsProps {
   phone: string
+  /** Lead/customer name for personalized WhatsApp greeting */
+  leadName?: string
+  /** Override company name (default: from useCompanyName) */
+  companyName?: string
   className?: string
   /** Compact: icons only. Full: icons + labels */
   variant?: 'compact' | 'full'
 }
 
-export function PhoneActions({ phone, className = '', variant = 'full' }: PhoneActionsProps) {
+export function PhoneActions({
+  phone,
+  leadName,
+  companyName: companyProp,
+  className = '',
+  variant = 'full'
+}: PhoneActionsProps) {
+  const t = useCRMTranslations()
+  const companyFromApi = useCompanyName()
+  const companyName = companyProp ?? companyFromApi
+
   if (!phone?.trim()) return <span className="text-white/50">—</span>
 
   const waNumber = toWhatsAppNumber(phone)
-  const waLink = `https://wa.me/${waNumber}`
+  const greeting = leadName?.trim()
+    ? t.leads.whatsappGreeting(leadName.trim(), companyName)
+    : t.leads.whatsappGreetingNoName(companyName)
+  const waLink = `https://wa.me/${waNumber}?text=${encodeURIComponent(greeting)}`
 
   return (
     <div className={`flex items-center gap-2 flex-wrap ${className}`}>

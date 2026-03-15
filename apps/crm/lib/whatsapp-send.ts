@@ -27,7 +27,6 @@ export async function sendWhatsAppTemplate(
   const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID
 
   if (!token || !phoneId) {
-    console.warn('[WhatsApp] Missing WHATSAPP_ACCESS_TOKEN or WHATSAPP_PHONE_NUMBER_ID')
     return { ok: false, error: 'WhatsApp not configured' }
   }
 

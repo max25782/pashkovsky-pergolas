@@ -32,7 +32,7 @@ export function LeadCard({ lead, onClick }: LeadCardProps) {
         </div>
         
         <div className="text-sm" onClick={(e) => e.stopPropagation()}>
-          <PhoneActions phone={lead.phone ?? ''} variant="full" />
+          <PhoneActions phone={lead.phone ?? ''} leadName={lead.name ?? undefined} variant="full" />
         </div>
         
         {lead.email && (

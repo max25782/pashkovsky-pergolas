@@ -66,6 +66,7 @@ export async function POST(req: NextRequest) {
     getString(body, 'phone_number', 'phone', 'Phone Number', 'Phone', 'מספר טלפון') || ''
   const phone = normalizePhoneIL(phoneRaw)
   const email = getString(body, 'email', 'Email', 'אימייל')
+  const city = getString(body, 'city', 'City', 'עיר')
 
   if (!phone || phone.replace(/\D/g, '').length < 9) {
     return NextResponse.json(
@@ -90,6 +91,9 @@ export async function POST(req: NextRequest) {
     'Phone Number',
     'Phone',
     'Email',
+    'city',
+    'City',
+    'עיר',
     'created_time',
     'id',
     'leadgen_id',
@@ -120,6 +124,7 @@ export async function POST(req: NextRequest) {
       name,
       phone,
       email: email || null,
+      city: city || null,
       message,
       source: 'facebook',
       status: 'pending',
@@ -136,11 +141,13 @@ export async function POST(req: NextRequest) {
   }
 
   const templateName = process.env.WHATSAPP_TEMPLATE_NAME || 'hi'
-  sendWhatsAppTemplate(phone, templateName, [name])
-    .then((r) => {
-      if (!r.ok) console.warn('[Zapier Leads] WhatsApp send failed:', r.error)
-    })
-    .catch((e) => console.warn('[Zapier Leads] WhatsApp send error:', e))
+  if (process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID) {
+    sendWhatsAppTemplate(phone, templateName, [name])
+      .then((r) => {
+        if (!r.ok) console.warn('[Zapier Leads] WhatsApp send failed:', r.error)
+      })
+      .catch((e) => console.warn('[Zapier Leads] WhatsApp send error:', e))
+  }
 
   return NextResponse.json({ success: true }, { status: 201 })
 }
