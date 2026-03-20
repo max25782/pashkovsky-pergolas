@@ -223,7 +223,9 @@
     "lastMessage": "Последнее сообщение",
     "page": "Страница",
     "whatsappGreeting": "Здравствуйте, {name}! Я из компании {company}. Чем могу помочь?",
-    "whatsappGreetingNoName": "Здравствуйте! Я из компании {company}. Чем могу помочь?"
+    "whatsappGreetingNoName": "Здравствуйте! Я из компании {company}. Чем могу помочь?",
+    "groupByStatus": "По статусу",
+    "groupBySource": "По источнику"
   },
   "aiChats": {
     "title": "AI Чаты",

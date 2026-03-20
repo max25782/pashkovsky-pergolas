@@ -30,3 +30,19 @@ export const LEAD_STATUSES = [
   { id: 'lost', label: 'Проигран', color: 'bg-red-500' },
 ] as const
 
+export const LEAD_SOURCES = [
+  { id: 'facebook', label: 'Facebook', color: 'bg-blue-600' },
+  { id: 'website', label: 'Сайт', color: 'bg-emerald-600' },
+  { id: 'tiktok', label: 'TikTok', color: 'bg-black' },
+  { id: 'other', label: 'Другое', color: 'bg-gray-600' },
+] as const
+
+export function normalizeLeadSource(source: string | null | undefined): string {
+  if (!source?.trim()) return 'other'
+  const s = source.trim().toLowerCase()
+  if (s === 'facebook' || s === 'fb') return 'facebook'
+  if (s === 'website' || s === 'site' || s === 'сайт') return 'website'
+  if (s === 'tiktok' || s === 'tik-tok') return 'tiktok'
+  return 'other'
+}
+

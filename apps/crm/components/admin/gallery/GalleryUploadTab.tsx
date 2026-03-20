@@ -5,6 +5,25 @@ import { authFetch } from '@/lib/api/auth-fetch'
 import { useToast } from '@/components/ui/toast'
 import type { GalleryCategory } from './gallery-types'
 
+const MAX_BATCH_BYTES = 4 * 1024 * 1024 // 4 MB — stay under Vercel/proxy limits
+
+function buildBatches(files: File[]): File[][] {
+  const batches: File[][] = []
+  let current: File[] = []
+  let currentSize = 0
+  for (const file of files) {
+    if (currentSize + file.size > MAX_BATCH_BYTES && current.length > 0) {
+      batches.push(current)
+      current = []
+      currentSize = 0
+    }
+    current.push(file)
+    currentSize += file.size
+  }
+  if (current.length > 0) batches.push(current)
+  return batches
+}
+
 interface Props {
   categories: GalleryCategory[]
   selectedCategory: string
@@ -23,35 +42,51 @@ export function GalleryUploadTab({ categories, selectedCategory, onCategoryChang
 
     setUploading(true)
     try {
-      const form = new FormData()
-      form.append('category_key', selectedCategory)
-      if (folderName.trim()) form.append('folder_name', folderName.trim())
-      files.forEach((f) => form.append('files', f))
+      const batches = buildBatches(files)
+      let totalUploaded = 0
+      const allImageUrls: string[] = []
 
-      const res = await authFetch('/admin-api/gallery/upload', { method: 'POST', body: form })
-      const data = await res.json() as { uploaded?: number; images?: Array<{ url: string }>; error?: string }
-      if (!res.ok) throw new Error(data.error ?? 'Upload failed')
+      for (let i = 0; i < batches.length; i++) {
+        const batch = batches[i]
+        const form = new FormData()
+        form.append('category_key', selectedCategory)
+        if (folderName.trim()) form.append('folder_name', folderName.trim())
+        batch.forEach((f) => form.append('files', f))
 
-      const count = data.uploaded ?? 0
+        const res = await authFetch('/admin-api/gallery/upload', { method: 'POST', body: form })
+        const data = await res.json() as { uploaded?: number; images?: Array<{ url: string }>; error?: string }
 
-      if (folderName.trim() && data.images && data.images.length > 0) {
-        const imageUrls = data.images.map((img) => img.url)
+        if (!res.ok) {
+          if (res.status === 413) {
+            throw new Error('הבקשה גדולה מדי. מעלה בחבילות קטנות יותר...')
+          }
+          throw new Error(data.error ?? 'Upload failed')
+        }
+
+        const count = data.uploaded ?? 0
+        totalUploaded += count
+        if (data.images) {
+          data.images.forEach((img) => allImageUrls.push(img.url))
+        }
+      }
+
+      if (folderName.trim() && allImageUrls.length > 0) {
         try {
           const projRes = await authFetch('/admin-api/pergola-projects', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title_he: folderName.trim(), desc_he: null, images: imageUrls }),
+            body: JSON.stringify({ title_he: folderName.trim(), desc_he: null, images: allImageUrls }),
           })
           if (projRes.ok) {
-            toast.success(`הועלו ${count} קבצים לתיקייה "${folderName.trim()}" — פרויקט נוצר`)
+            toast.success(`הועלו ${totalUploaded} קבצים לתיקייה "${folderName.trim()}" — פרויקט נוצר`)
           } else {
-            toast.success(`הועלו ${count} קבצים לתיקייה "${folderName.trim()}"`)
+            toast.success(`הועלו ${totalUploaded} קבצים לתיקייה "${folderName.trim()}"`)
           }
         } catch {
-          toast.success(`הועלו ${count} קבצים לתיקייה "${folderName.trim()}"`)
+          toast.success(`הועלו ${totalUploaded} קבצים לתיקייה "${folderName.trim()}"`)
         }
       } else {
-        toast.success(`הועלו ${count} קבצים בהצלחה`)
+        toast.success(`הועלו ${totalUploaded} קבצים בהצלחה`)
       }
 
       setFiles([])

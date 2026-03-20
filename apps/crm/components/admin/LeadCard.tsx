@@ -6,15 +6,22 @@ import { PhoneActions } from './PhoneActions'
 interface LeadCardProps {
   lead: Lead
   onClick: () => void
+  /** When provided, card becomes draggable (for Kanban) */
+  onDragStart?: () => void
 }
 
-export function LeadCard({ lead, onClick }: LeadCardProps) {
+export function LeadCard({ lead, onClick, onDragStart }: LeadCardProps) {
   const status = LEAD_STATUSES.find(s => s.id === lead.status) || LEAD_STATUSES[0]
+  const isDraggable = onDragStart != null
 
   return (
     <div
+      draggable={isDraggable}
+      onDragStart={onDragStart}
       onClick={onClick}
-      className="bg-white/5 border border-white/10 rounded-lg p-4 cursor-pointer hover:bg-white/10 hover:border-white/20 transition-all shadow-lg hover:shadow-xl"
+      className={`bg-white/5 border border-white/10 rounded-lg p-4 hover:bg-white/10 hover:border-white/20 transition-all shadow-lg hover:shadow-xl ${
+        isDraggable ? 'cursor-move' : 'cursor-pointer'
+      }`}
     >
       <div className="space-y-2">
         <div className="flex items-start justify-between">

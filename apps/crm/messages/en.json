@@ -223,7 +223,9 @@
     "lastMessage": "Last Message",
     "page": "Page",
     "whatsappGreeting": "Hello {name}! I'm from {company}. How can I help you?",
-    "whatsappGreetingNoName": "Hello! I'm from {company}. How can I help you?"
+    "whatsappGreetingNoName": "Hello! I'm from {company}. How can I help you?",
+    "groupByStatus": "By status",
+    "groupBySource": "By source"
   },
   "aiChats": {
     "title": "AI Chats",

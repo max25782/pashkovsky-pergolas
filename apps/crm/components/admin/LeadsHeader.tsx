@@ -3,15 +3,24 @@
 import { useRef, useState } from 'react'
 import { Upload } from 'lucide-react'
 import { SearchBar } from './SearchBar'
+import { ViewToggle } from './ViewToggle'
+import { GroupByToggle } from './GroupByToggle'
 import { useCRMTranslations } from './useCRMTranslations'
+import type { KanbanGroupBy } from './GroupByToggle'
 import { authFetch } from '@/lib/api/auth-fetch'
 import { useToast } from '@/components/ui/toast'
+
+type ViewMode = 'kanban' | 'table'
 
 interface LeadsHeaderProps {
   searchQuery: string
   onSearchChange: (value: string) => void
   onPageChange: (page: number) => void
   currentPage: number
+  viewMode: ViewMode
+  onViewModeChange: (mode: ViewMode) => void
+  kanbanGroupBy?: KanbanGroupBy
+  onKanbanGroupByChange?: (mode: KanbanGroupBy) => void
   onImportComplete?: () => void
 }
 
@@ -20,6 +29,10 @@ export function LeadsHeader({
   onSearchChange,
   onPageChange,
   currentPage,
+  viewMode,
+  onViewModeChange,
+  kanbanGroupBy,
+  onKanbanGroupByChange,
   onImportComplete
 }: LeadsHeaderProps) {
   const t = useCRMTranslations()
@@ -82,21 +95,29 @@ export function LeadsHeader({
           </button>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => onPageChange(Math.max(0, currentPage - 1))}
-            className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
-          >
-            ← {t.common.back}
-          </button>
-          <span className="px-4 py-2 text-white/70 text-sm">
-            {t.leads.page} {currentPage + 1}
-          </span>
-          <button
-            onClick={() => onPageChange(currentPage + 1)}
-            className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
-          >
-            {t.common.next} →
-          </button>
+          {viewMode === 'kanban' && kanbanGroupBy != null && onKanbanGroupByChange != null && (
+            <GroupByToggle groupBy={kanbanGroupBy} onGroupByChange={onKanbanGroupByChange} />
+          )}
+          <ViewToggle viewMode={viewMode} onViewModeChange={onViewModeChange} />
+          {viewMode === 'table' && (
+            <>
+              <button
+                onClick={() => onPageChange(Math.max(0, currentPage - 1))}
+                className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+              >
+                ← {t.common.back}
+              </button>
+              <span className="px-4 py-2 text-white/70 text-sm">
+                {t.leads.page} {currentPage + 1}
+              </span>
+              <button
+                onClick={() => onPageChange(currentPage + 1)}
+                className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+              >
+                {t.common.next} →
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -67,6 +67,8 @@ export async function POST(req: NextRequest) {
   const phone = normalizePhoneIL(phoneRaw)
   const email = getString(body, 'email', 'Email', 'אימייל')
   const city = getString(body, 'city', 'City', 'עיר')
+  const sourceRaw = getString(body, 'source', 'Source')
+  const source = sourceRaw ? sourceRaw.toLowerCase() : 'facebook'
 
   if (!phone || phone.replace(/\D/g, '').length < 9) {
     return NextResponse.json(
@@ -94,6 +96,8 @@ export async function POST(req: NextRequest) {
     'city',
     'City',
     'עיר',
+    'source',
+    'Source',
     'created_time',
     'id',
     'leadgen_id',
@@ -126,7 +130,7 @@ export async function POST(req: NextRequest) {
       email: email || null,
       city: city || null,
       message,
-      source: 'facebook',
+      source,
       status: 'pending',
       google_conv_sent: false,
       metadata: { zapier: true },

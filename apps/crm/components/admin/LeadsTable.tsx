@@ -3,20 +3,29 @@ import { useState } from "react"
 import type { Lead } from './lead-types'
 import { LeadModal } from './LeadModal'
 import { LeadsHeader } from './LeadsHeader'
+import { LeadsKanbanBoard } from './LeadsKanbanBoard'
 import { LeadsTableView } from './LeadsTableView'
+import type { KanbanGroupBy } from './GroupByToggle'
 import { DealsStatus } from './DealsStatus'
 import { useLeads } from './hooks/useLeads'
 import { useLeadActions } from './hooks/useLeadActions'
+import { useLeadDragDrop } from './hooks/useLeadDragDrop'
+
+type ViewMode = 'kanban' | 'table'
 
 export function LeadsTable() {
   const [q, setQ] = useState("")
   const [page, setPage] = useState(0)
+  const [viewMode, setViewMode] = useState<ViewMode>('kanban')
+  const [kanbanGroupBy, setKanbanGroupBy] = useState<KanbanGroupBy>('status')
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
-  const limit = 20
+
+  const limit = viewMode === 'kanban' ? 500 : 20
+  const effectivePage = viewMode === 'kanban' ? 0 : page
 
   const { leads, loading, error, reload } = useLeads({
     searchQuery: q,
-    page,
+    page: effectivePage,
     limit
   })
 
@@ -52,6 +61,12 @@ export function LeadsTable() {
     del(lead.id)
   }
 
+  const { handleDragOver, handleDrop, handleDragStart } = useLeadDragDrop({
+    onStatusChange: async (leadId, newStatus) => {
+      await patch(leadId, { status: newStatus as Lead['status'] })
+    }
+  })
+
   return (
     <section className="p-4">
       <LeadsHeader
@@ -59,19 +74,37 @@ export function LeadsTable() {
         onSearchChange={handleSearchChange}
         onPageChange={setPage}
         currentPage={page}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        kanbanGroupBy={kanbanGroupBy}
+        onKanbanGroupByChange={setKanbanGroupBy}
         onImportComplete={reload}
       />
       
       <DealsStatus loading={loading || updating} error={error} />
 
-      <LeadsTableView
-        leads={leads}
-        loading={loading}
-        onLeadClick={setSelectedLead}
-        onLeadDelete={handleLeadDelete}
-        onStatusChange={handleStatusChange}
-        onNotesChange={handleNotesChange}
-      />
+      {viewMode === 'kanban' && (
+        <LeadsKanbanBoard
+          key={`kanban-${kanbanGroupBy}-${leads.length}-${leads.map(l => l.id).join(',')}`}
+          leads={leads}
+          groupBy={kanbanGroupBy}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+          onLeadDragStart={handleDragStart}
+          onLeadClick={setSelectedLead}
+        />
+      )}
+
+      {viewMode === 'table' && (
+        <LeadsTableView
+          leads={leads}
+          loading={loading}
+          onLeadClick={setSelectedLead}
+          onLeadDelete={handleLeadDelete}
+          onStatusChange={handleStatusChange}
+          onNotesChange={handleNotesChange}
+        />
+      )}
 
       {selectedLead && (
         <LeadModal

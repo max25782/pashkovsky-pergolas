@@ -1,12 +1,14 @@
 # Zapier Leads Integration
 
-Receive Facebook Lead Ads leads via Zapier into CRM.
+Receive leads from Facebook Lead Ads, TikTok Lead Generation, or other sources via Zapier into CRM.
 
 ## 1. Create Zap
 
 1. Go to [zapier.com](https://zapier.com) → Create Zap
-2. **Trigger:** Facebook Lead Ads → **New Lead**
-3. Connect your Facebook account, select Page and Form
+2. **Trigger:** Choose one:
+   - **Facebook Lead Ads** → **New Lead** (for Facebook)
+   - **TikTok Lead Generation** → **New Lead** (for TikTok)
+3. Connect your account, select Advertiser/Lead Source
 4. **Action:** Webhooks by Zapier → **POST**
 5. Configure:
    - **URL:** `https://crm.pashkovsky-group.com/api/webhooks/zapier-leads`
@@ -16,26 +18,44 @@ Receive Facebook Lead Ads leads via Zapier into CRM.
 
 ## 2. Field Mapping
 
-Map Facebook Lead Ads fields to the request body:
+Map trigger fields to the request body:
 
-| Facebook field | Map to key | Required |
-|----------------|------------|----------|
-| full_name or first_name | `full_name` or `name` | Yes |
-| phone_number or phone | `phone_number` or `phone` | Yes |
+| Trigger field | Map to key | Required |
+|---------------|------------|----------|
+| full_name / first_name / name | `full_name` or `name` | Yes |
+| phone_number / phone | `phone_number` or `phone` | Yes |
 | email | `email` | No |
 | city | `city` | No |
+| — | `source` | No (see below) |
 
-Example Data in Zapier:
+**Source:** Add `source` so leads appear in the correct Kanban column:
+- Facebook: `source` = `facebook` (or omit, default)
+- TikTok: `source` = `tiktok`
+- Website: `source` = `website`
+
+**Example for TikTok:**
 ```json
 {
-  "full_name": "{{trigger.full_name}}",
-  "phone_number": "{{trigger.phone_number}}",
-  "email": "{{trigger.email}}",
-  "city": "{{trigger.city}}"
+  "full_name": "{{1.Full Name}}",
+  "phone_number": "{{1.Phone Number}}",
+  "email": "{{1.Email}}",
+  "city": "{{1.City}}",
+  "source": "tiktok"
 }
 ```
 
-If your form uses different field names, map them. The endpoint accepts: `full_name`, `first_name`, `name`, `phone_number`, `phone`, `email`.
+**Example for Facebook:**
+```json
+{
+  "full_name": "{{1.Full Name}}",
+  "phone_number": "{{1.Phone Number}}",
+  "email": "{{1.Email}}",
+  "city": "{{1.City}}",
+  "source": "facebook"
+}
+```
+
+If your form uses different field names, map them. The endpoint accepts: `full_name`, `first_name`, `name`, `phone_number`, `phone`, `email`, `city`, `source`.
 
 ## 3. Environment Variables (CRM)
 
