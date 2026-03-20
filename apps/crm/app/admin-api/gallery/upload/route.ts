@@ -1,4 +1,7 @@
 import { NextRequest } from 'next/server'
+
+/** Allow slow Sharp + S3 for large images (Vercel / serverless). */
+export const maxDuration = 120
 import { createClient } from '@supabase/supabase-js'
 import sharp from 'sharp'
 import { uploadToS3, isS3Configured } from '@/lib/s3-upload'

@@ -5,23 +5,39 @@ import { authFetch } from '@/lib/api/auth-fetch'
 import { useToast } from '@/components/ui/toast'
 import type { GalleryCategory } from './gallery-types'
 
-const MAX_BATCH_BYTES = 4 * 1024 * 1024 // 4 MB — stay under Vercel/proxy limits
-
-function buildBatches(files: File[]): File[][] {
-  const batches: File[][] = []
-  let current: File[] = []
-  let currentSize = 0
-  for (const file of files) {
-    if (currentSize + file.size > MAX_BATCH_BYTES && current.length > 0) {
-      batches.push(current)
-      current = []
-      currentSize = 0
+/** One file per request — avoids 413 from strict proxies (e.g. nginx 1m, Cloudflare). */
+async function parseUploadResponse(res: Response): Promise<{
+  ok: boolean
+  status: number
+  data: { uploaded?: number; images?: Array<{ url: string }>; error?: string }
+}> {
+  const text = await res.text()
+  if (res.status === 413) {
+    return {
+      ok: false,
+      status: 413,
+      data: {
+        error:
+          'הקובץ גדול מדי לשרת (413). נסה תמונה קטנה יותר או בקש מהמנהל להגדיל client_max_body_size ב-Nginx.',
+      },
     }
-    current.push(file)
-    currentSize += file.size
   }
-  if (current.length > 0) batches.push(current)
-  return batches
+  try {
+    const data = JSON.parse(text) as { uploaded?: number; images?: Array<{ url: string }>; error?: string }
+    return { ok: res.ok, status: res.status, data }
+  } catch {
+    const snippet = text.trim().slice(0, 80)
+    return {
+      ok: false,
+      status: res.status,
+      data: {
+        error:
+          res.status === 413 || /too large|413/i.test(text)
+            ? 'העלאה נחסמה — הקובץ או הבקשה גדולים מדי לשרת.'
+            : snippet || `שגיאת שרת (${res.status})`,
+      },
+    }
+  }
 }
 
 interface Props {
@@ -42,25 +58,24 @@ export function GalleryUploadTab({ categories, selectedCategory, onCategoryChang
 
     setUploading(true)
     try {
-      const batches = buildBatches(files)
       let totalUploaded = 0
       const allImageUrls: string[] = []
 
-      for (let i = 0; i < batches.length; i++) {
-        const batch = batches[i]
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
         const form = new FormData()
         form.append('category_key', selectedCategory)
         if (folderName.trim()) form.append('folder_name', folderName.trim())
-        batch.forEach((f) => form.append('files', f))
+        form.append('files', file)
 
         const res = await authFetch('/admin-api/gallery/upload', { method: 'POST', body: form })
-        const data = await res.json() as { uploaded?: number; images?: Array<{ url: string }>; error?: string }
+        const { ok, data } = await parseUploadResponse(res)
 
-        if (!res.ok) {
-          if (res.status === 413) {
-            throw new Error('הבקשה גדולה מדי. מעלה בחבילות קטנות יותר...')
-          }
-          throw new Error(data.error ?? 'Upload failed')
+        if (!ok) {
+          throw new Error(
+            data.error ??
+              `העלאה נכשלה (${file.name}). נסה קובץ קטן יותר או העלה פחות תמונות בכל פעם.`,
+          )
         }
 
         const count = data.uploaded ?? 0
@@ -155,7 +170,8 @@ export function GalleryUploadTab({ categories, selectedCategory, onCategoryChang
       </button>
 
       <p className="text-white/60 text-sm">
-        - קבצים מומלצים: עד 10MB, תמונות באיכות טובה<br />
+        - קבצים מומלצים: עד 10MB לכל תמונה (אם יש שגיאת 413 — הקטן את הקבצים או הגדל את מגבלת Nginx)<br />
+        - העלאה: קובץ אחד בכל בקשה (מונע חסימה של שרת/פרוקסי)<br />
         - נשמרים ב-S3 עם פרוססינג ל-WebP<br />
         - המטא-דאטה נשמר ב-Supabase בטבלת gallery_images
       </p>
