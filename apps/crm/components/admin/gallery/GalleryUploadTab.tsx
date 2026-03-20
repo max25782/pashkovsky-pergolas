@@ -170,10 +170,10 @@ export function GalleryUploadTab({ categories, selectedCategory, onCategoryChang
       </button>
 
       <p className="text-white/60 text-sm">
-        - קבצים מומלצים: עד 10MB לכל תמונה (אם יש שגיאת 413 — הקטן את הקבצים או הגדל את מגבלת Nginx)<br />
-        - העלאה: קובץ אחד בכל בקשה (מונע חסימה של שרת/פרוקסי)<br />
-        - נשמרים ב-S3 עם פרוססינג ל-WebP<br />
-        - המטא-דאטה נשמר ב-Supabase בטבלת gallery_images
+        - iPhone (HEIC/HEIF): מתקבלים אוטומטית — המרה ל-WebP בשרת (כיוון לפי EXIF)<br />
+        - עד 10MB לכל תמונה (שגיאת 413 — הקטן קובץ או הגדל client_max_body_size ב-Nginx)<br />
+        - העלאה: קובץ אחד לבקשה<br />
+        - אחסון ב-S3 כ-WebP, מטא-דאטה ב-Supabase (gallery_images)
       </p>
     </div>
   )

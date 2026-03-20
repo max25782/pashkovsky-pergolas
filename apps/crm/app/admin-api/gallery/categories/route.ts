@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
+import { getSupabaseUrlForServiceRole } from '@/lib/supabase-admin-url'
 
 function env(name: string): string {
   const v = process.env[name]
@@ -8,7 +9,7 @@ function env(name: string): string {
   return v
 }
 
-const SUPABASE_URL = process.env.SUPABASE_URL
+const SUPABASE_URL = getSupabaseUrlForServiceRole()
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 const supabase = SUPABASE_URL && SERVICE_KEY

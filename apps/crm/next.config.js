@@ -8,6 +8,8 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '25mb', // Gallery upload allows up to 10MB per file; 25MB for multiple files
     },
+    // Native module: avoid bundling Sharp incorrectly on Vercel/serverless (fixes runtime 500 on gallery upload)
+    serverComponentsExternalPackages: ['sharp'],
   },
   images: {
     formats: ['image/webp', 'image/avif'],

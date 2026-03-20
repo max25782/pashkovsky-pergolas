@@ -1,13 +1,15 @@
 import { NextRequest } from 'next/server'
-
-/** Allow slow Sharp + S3 for large images (Vercel / serverless). */
-export const maxDuration = 120
 import { createClient } from '@supabase/supabase-js'
 import sharp from 'sharp'
 import { uploadToS3, isS3Configured } from '@/lib/s3-upload'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
+import { getSupabaseUrlForServiceRole } from '@/lib/supabase-admin-url'
+import { shouldAcceptImageUpload, describeAcceptedFormats } from '@/lib/gallery/accept-upload-image'
 
-const SUPABASE_URL = process.env.SUPABASE_URL
+/** Allow slow Sharp + S3 for large images (Vercel / serverless). */
+export const maxDuration = 120
+
+const SUPABASE_URL = getSupabaseUrlForServiceRole()
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 const supabase = SUPABASE_URL && SERVICE_KEY
@@ -15,7 +17,6 @@ const supabase = SUPABASE_URL && SERVICE_KEY
   : undefined
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 MB
-const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif']
 
 function jsonError(message: string, status: number, details?: string) {
   return new Response(
@@ -53,19 +54,34 @@ export async function POST(req: NextRequest) {
     }
 
     const uploadedImages = []
+    const skippedReasons: string[] = []
 
     for (const file of files) {
-      if (!ALLOWED_MIME_TYPES.includes(file.type)) continue
-      if (file.size > MAX_FILE_SIZE) continue
+      if (!shouldAcceptImageUpload(file)) {
+        skippedReasons.push(
+          `${file.name}: unsupported (${file.type || 'no MIME'} — ${describeAcceptedFormats()})`,
+        )
+        continue
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        skippedReasons.push(`${file.name}: over ${MAX_FILE_SIZE / (1024 * 1024)}MB`)
+        continue
+      }
 
       try {
         const arrayBuffer = await file.arrayBuffer()
         const buffer = Buffer.from(arrayBuffer)
 
-        const image = sharp(buffer)
-        const metadata = await image.metadata()
+        // HEIC (iPhone) + JPEG/PNG/… → WebP (auto orientation via EXIF)
+        const pipeline = sharp(buffer, { failOn: 'truncated' }).rotate()
+        const metadata = await pipeline.metadata()
 
-        const optimizedBuffer = await image
+        if (!metadata.width && !metadata.height) {
+          skippedReasons.push(`${file.name}: not a readable image (HEIC may need libheif on server)`)
+          continue
+        }
+
+        const optimizedBuffer = await pipeline
           .resize(1920, 1920, { fit: 'inside', withoutEnlargement: true })
           .webp({ quality: 85, effort: 6 })
           .toBuffer()
@@ -107,6 +123,14 @@ export async function POST(req: NextRequest) {
         console.error(`[gallery/upload] Error processing ${file.name}:`, message)
         return jsonError(`Error processing ${file.name}`, 500, message)
       }
+    }
+
+    if (uploadedImages.length === 0 && files.length > 0) {
+      return jsonError(
+        `No images were processed. ${describeAcceptedFormats()} — עד 10MB לכל קובץ.`,
+        400,
+        skippedReasons.slice(0, 8).join('; ') || undefined,
+      )
     }
 
     return new Response(
