@@ -3,7 +3,7 @@ const withNextIntl = createNextIntlPlugin('./lib/i18n.ts')
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ['framer-motion'],
+  transpilePackages: ['framer-motion', '@pashkovsky/pergola-configurator'],
   experimental: {
     serverActions: {
       bodySizeLimit: '25mb', // Gallery upload allows up to 10MB per file; 25MB for multiple files

@@ -439,7 +439,9 @@ function transformOfferFromDB(data: any) {
     paymentTerms: data.payment_terms,
     warranty: data.warranty,
     images: data.images,
-    
+
+    configuratorMeta: data.configurator_meta ?? undefined,
+
     approval: {
       approved: data.approved,
       approvedAt: data.approved_at,

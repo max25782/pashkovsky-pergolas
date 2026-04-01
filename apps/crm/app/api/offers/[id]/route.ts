@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import type { PergolaShape } from '@/types/offer'
+import type { Pergola, PergolaShape } from '@/types/offer'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { requireCompanyAccess } from '@/lib/auth'
 
@@ -11,11 +11,64 @@ const supabase = SUPABASE_URL && SERVICE_KEY
   ? createClient(SUPABASE_URL, SERVICE_KEY, { db: { schema: 'public' } })
   : undefined
 
+type OfferRouteParams = { id: string }
+
+async function resolveOfferParams(
+  params: OfferRouteParams | Promise<OfferRouteParams>,
+): Promise<OfferRouteParams> {
+  return await Promise.resolve(params)
+}
+
+/** True if table/column is missing in this database (old migrations). */
+function isIgnorableSchemaError(err: { code?: string; message?: string } | null): boolean {
+  if (err === null) return false
+  const c = err.code ?? ''
+  const m = err.message ?? ''
+  return (
+    c === '42P01' ||
+    c === 'PGRST205' ||
+    m.includes('does not exist') ||
+    m.includes('schema cache')
+  )
+}
+
+/**
+ * Remove / detach rows that reference offers so DELETE is not blocked by FKs
+ * (e.g. DBs where ON DELETE CASCADE / SET NULL was never applied).
+ */
+async function detachOfferRelations(offerId: string): Promise<{ errorMessage: string | null }> {
+  if (!supabase) return { errorMessage: 'Server not configured' }
+
+  let { error: subErr } = await supabase
+    .from('pergola_config_submissions')
+    .update({ offer_id: null })
+    .eq('offer_id', offerId)
+  if (subErr !== null && !isIgnorableSchemaError(subErr)) {
+    const { error: delSubErr } = await supabase.from('pergola_config_submissions').delete().eq('offer_id', offerId)
+    if (delSubErr !== null && !isIgnorableSchemaError(delSubErr)) {
+      return { errorMessage: delSubErr.message }
+    }
+  }
+
+  const { error: tokErr } = await supabase.from('configurator_link_tokens').delete().eq('offer_id', offerId)
+  if (tokErr !== null && !isIgnorableSchemaError(tokErr)) {
+    return { errorMessage: tokErr.message }
+  }
+
+  const { error: moErr } = await supabase.from('material_orders').update({ offer_id: null }).eq('offer_id', offerId)
+  if (moErr !== null && !isIgnorableSchemaError(moErr)) {
+    return { errorMessage: moErr.message }
+  }
+
+  return { errorMessage: null }
+}
+
 // GET - Get single offer by ID
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: OfferRouteParams | Promise<OfferRouteParams> },
 ) {
+  const params = await resolveOfferParams(context.params)
   // 🔒 Security: Require authentication
   const auth = await requireAuthAsync(req)
   if (!auth.authorized) return auth.error
@@ -63,7 +116,7 @@ export async function GET(
 // DELETE - Remove single offer by ID
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: OfferRouteParams | Promise<OfferRouteParams> },
 ) {
   // 🔒 Security: Require authentication
   const auth = await requireAuthAsync(req)
@@ -77,14 +130,20 @@ export async function DELETE(
   }
 
   try {
+    const params = await resolveOfferParams(context.params)
+    const offerId = params.id
+    if (offerId === undefined || offerId === '') {
+      return NextResponse.json({ error: 'Missing offer id' }, { status: 400 })
+    }
+
     // 🔒 Security: Fetch offer first to verify ownership
     const { data: offer, error: fetchError } = await supabase
       .from('offers')
       .select('company_id')
-      .eq('id', params.id)
+      .eq('id', offerId)
       .single()
 
-    if (fetchError || !offer) {
+    if (fetchError !== null || offer === null || offer === undefined) {
       console.error('Error fetching offer for deletion:', fetchError)
       return NextResponse.json(
         { error: 'Offer not found' },
@@ -96,17 +155,22 @@ export async function DELETE(
     const access = await requireCompanyAccess(req, offer.company_id)
     if (!access.authorized) return access.error
 
-    // Now safe to delete
-    const { error } = await supabase
-      .from('offers')
-      .delete()
-      .eq('id', params.id)
-
-    if (error) {
-      console.error('Error deleting offer:', error)
+    const detach = await detachOfferRelations(offerId)
+    if (detach.errorMessage !== null) {
+      console.error('[DELETE offer] detach relations failed:', detach.errorMessage)
       return NextResponse.json(
-        { error: 'Failed to delete offer' },
-        { status: 500 }
+        { error: 'Failed to detach related records', details: detach.errorMessage },
+        { status: 500 },
+      )
+    }
+
+    const { error: delErr } = await supabase.from('offers').delete().eq('id', offerId)
+
+    if (delErr !== null) {
+      console.error('Error deleting offer:', delErr)
+      return NextResponse.json(
+        { error: 'Failed to delete offer', details: delErr.message, code: delErr.code },
+        { status: 500 },
       )
     }
 
@@ -122,30 +186,35 @@ export async function DELETE(
 
 // Helper function to transform DB row to Offer object
 function transformOfferFromDB(data: any) {
+  const pergolasData = data.pergolas_data as Pergola[] | null | undefined
+  const hasPergolasArray = pergolasData && Array.isArray(pergolasData) && pergolasData.length > 0
+
+  const pergolaSingle = hasPergolasArray
+    ? pergolasData![0]
+    : {
+        shape: data.pergola_shape_data
+          ? (data.pergola_shape_data as PergolaShape)
+          : {
+              type: 'rectangle' as const,
+              width: data.pergola_width || 0,
+              length: data.pergola_length || 0,
+            },
+        height: data.pergola_height,
+        location: data.pergola_location,
+        pricePerSqm: data.pergola_price_per_sqm,
+        width: data.pergola_width,
+        length: data.pergola_length,
+      }
+
   return {
     id: data.id,
     dealId: data.deal_id,
     customerName: data.customer_name,
     customerPhone: data.customer_phone,
     customerCity: data.customer_city,
-    
-    pergola: {
-      // New shape-based structure
-      shape: data.pergola_shape_data 
-        ? (data.pergola_shape_data as PergolaShape)
-        : {
-            // Fallback to legacy format if shape_data is missing
-            type: 'rectangle' as const,
-            width: data.pergola_width || 0,
-            length: data.pergola_length || 0,
-          },
-      height: data.pergola_height,
-      location: data.pergola_location,
-      pricePerSqm: data.pergola_price_per_sqm,
-      // Legacy fields for backward compatibility
-      width: data.pergola_width,
-      length: data.pergola_length,
-    },
+
+    pergolas: hasPergolasArray ? pergolasData : undefined,
+    pergola: pergolaSingle,
     
     color: {
       type: data.color_type,
@@ -236,7 +305,9 @@ function transformOfferFromDB(data: any) {
     paymentTerms: data.payment_terms,
     warranty: data.warranty,
     images: data.images,
-    
+
+    configuratorMeta: data.configurator_meta ?? undefined,
+
     approval: {
       approved: data.approved,
       approvedAt: data.approved_at,

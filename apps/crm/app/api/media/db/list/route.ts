@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('media_assets')
-    .select('s3_key, tags, caption')
+    .select('s3_key, tags, caption, category')
     .eq('company_id', companyId)
     .like('s3_key', `${prefix}%`)
     .order('updated_at', { ascending: false })

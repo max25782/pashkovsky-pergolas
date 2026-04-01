@@ -1,0 +1,53 @@
+/* Catalog + manual print / Puppeteer PDF */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #111111 !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .catalog-root {
+    background: #ffffff !important;
+    color: #111111 !important;
+  }
+
+  /*
+   * Chrome PDF + RTL multi-column grids often fragment so images from one section
+   * appear visually under the next section heading. Force a single column in print
+   * and keep each photo block unbroken.
+   */
+  .catalog-section-wrap {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    isolation: isolate;
+  }
+
+  .catalog-section-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .catalog-image-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    flex-wrap: nowrap !important;
+    gap: 0.75rem !important;
+  }
+
+  .catalog-image-cell {
+    width: 100% !important;
+    max-width: 100% !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .catalog-cover {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}

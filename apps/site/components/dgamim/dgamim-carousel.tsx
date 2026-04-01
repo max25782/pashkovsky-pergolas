@@ -8,7 +8,7 @@ import { processImageArray } from '@/lib/image-url-array-client'
 
 interface DgamimItem { type: string; degem: string; images: string[] }
 
-export function DgamimCarousel(){
+function DgamimCarousel() {
   const staticItems = (dgamim as { items: DgamimItem[] }).items
   const [dynamicItems, setDynamicItems] = useState<DgamimItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -123,3 +123,6 @@ export function DgamimCarousel(){
     </div>
   )
 }
+
+export { DgamimCarousel }
+export default DgamimCarousel

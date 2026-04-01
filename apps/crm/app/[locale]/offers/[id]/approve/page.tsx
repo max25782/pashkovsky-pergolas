@@ -196,6 +196,49 @@ export default function OfferApprovePage() {
               </div>
             )}
 
+            {(offer.configuratorMeta?.previewImageUrl?.startsWith('http') ||
+              offer.images?.[0]?.startsWith('http') ||
+              offer.configuratorMeta?.viewUrl?.startsWith('http') ||
+              offer.configuratorMeta?.editUrl?.startsWith('http')) && (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <h2 className="text-lg font-semibold mb-3 text-gray-900">תצוגת הפרגולה בתלת־ממד</h2>
+                <p className="text-sm text-gray-600 mb-3">
+                  תצוגה לסיבוב והתרשמות בלבד — לשינוי ההצעה פנו אלינו.
+                </p>
+                {(offer.configuratorMeta?.previewImageUrl?.startsWith('http') ||
+                  offer.images?.[0]?.startsWith('http')) && (
+                  <img
+                    src={
+                      offer.configuratorMeta?.previewImageUrl?.startsWith('http')
+                        ? offer.configuratorMeta.previewImageUrl!
+                        : (offer.images![0] as string)
+                    }
+                    alt=""
+                    className="max-h-56 w-full rounded-md border border-slate-200 object-contain bg-white"
+                  />
+                )}
+                {(() => {
+                  const view =
+                    offer.configuratorMeta?.viewUrl?.startsWith('http')
+                      ? offer.configuratorMeta.viewUrl
+                      : offer.configuratorMeta?.editUrl?.startsWith('http')
+                        ? `${offer.configuratorMeta.editUrl}${offer.configuratorMeta.editUrl.includes('?') ? '&' : '?'}view=1`
+                        : null
+                  if (!view) return null
+                  return (
+                    <a
+                      href={view}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-3 inline-block text-sm font-semibold text-blue-700 underline"
+                    >
+                      פתיחת תצוגת 3D (לצפייה בלבד)
+                    </a>
+                  )
+                })()}
+              </div>
+            )}
+
             {/* Client Info */}
             <div className="bg-gray-50 rounded-lg p-4">
               <h2 className="text-lg font-semibold mb-3 text-gray-900">פרטי לקוח</h2>

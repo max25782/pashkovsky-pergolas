@@ -1,10 +1,11 @@
 /**
  * POST /api/media/query
- * Query media_assets by tag(s) for a company, returning presigned GET URLs.
- * Used by the AI chat tool "get_images_by_tags" and the admin media page.
+ * Query media_assets by catalog category and/or legacy tags for a company, returning presigned GET URLs.
+ * Prefer `category` (pergolas | railings | fences | laundry_covers); tags are optional/legacy.
  *
- * Body: { tags: string[]; limit?: number; prefix?: string; random?: boolean }
- * Response: { items: Array<{ key, tags, caption, url }> }
+ * Body: { category?: string; tags?: string[]; limit?: number; prefix?: string; random?: boolean }
+ * Provide at least one of `category` or `tags`.
+ * Response: { items: Array<{ key, tags, caption, category, url }> }
  *
  * Auth: accepts both admin JWT (Authorization header) and internal server calls
  * (no auth header — used server-side from AI chat route which runs in same process).
@@ -14,6 +15,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { presignGetObject } from '@/lib/s3-upload'
+import { isValidCatalogCategory } from '@/lib/media/catalog-categories'
 
 const SUPABASE_URL = process.env.SUPABASE_URL!
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -28,6 +30,7 @@ export interface MediaQueryItem {
   key: string
   tags: string[]
   caption: string | null
+  category: string | null
   url: string
 }
 
@@ -49,28 +52,46 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Company ID not resolved' }, { status: 400 })
   }
 
-  let body: { tags?: string[]; limit?: number; prefix?: string; random?: boolean }
+  let body: {
+    category?: string
+    tags?: string[]
+    limit?: number
+    prefix?: string
+    random?: boolean
+  }
   try {
     body = await req.json()
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
-  const { tags = [], limit = 3, prefix, random = true } = body
+  const { category, tags = [], limit = 3, prefix, random = true } = body
 
-  if (!Array.isArray(tags) || tags.length === 0) {
-    return NextResponse.json({ error: 'tags array is required and must not be empty' }, { status: 400 })
+  const hasCategory =
+    typeof category === 'string' && category.trim() !== '' && isValidCatalogCategory(category)
+  const hasTags = Array.isArray(tags) && tags.length > 0
+
+  if (!hasCategory && !hasTags) {
+    return NextResponse.json(
+      { error: 'Provide a valid category or a non-empty tags array' },
+      { status: 400 },
+    )
   }
 
   const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
 
   try {
-    // Build query: tags @> ARRAY[...] means "row tags contains all requested tags"
     let query = supabase
       .from('media_assets')
-      .select('s3_key, tags, caption')
+      .select('s3_key, tags, caption, category')
       .eq('company_id', companyId)
-      .contains('tags', tags)
+
+    if (hasCategory) {
+      query = query.eq('category', category)
+    }
+    if (hasTags) {
+      query = query.contains('tags', tags)
+    }
 
     // Optional S3 prefix filter (e.g. "images/pergulot/")
     if (prefix) {
@@ -106,7 +127,13 @@ export async function POST(req: NextRequest) {
         } catch (e) {
           console.error('[Media Query] Failed to presign key:', row.s3_key, e)
         }
-        return { key: row.s3_key, tags: row.tags ?? [], caption: row.caption, url }
+        return {
+          key: row.s3_key,
+          tags: row.tags ?? [],
+          caption: row.caption,
+          category: row.category ?? null,
+          url,
+        }
       }),
     )
 

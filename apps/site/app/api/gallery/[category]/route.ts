@@ -27,10 +27,9 @@ interface MediaItem {
 
 export async function GET(
   req: NextRequest,
-  context: { params: Promise<{ category: string }> }
+  context: { params: { category: string } }
 ) {
-  const params = await context.params
-  const category = params.category
+  const { category } = context.params
 
   const s3Client = getS3Client()
 

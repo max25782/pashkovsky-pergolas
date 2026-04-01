@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { generateOfferPdf, generateOfferPdfFilename } from '@/lib/pdf/generate-offer-pdf'
 import { uploadToS3 } from '@/lib/s3-upload'
-import type { Offer, PergolaShape } from '@/types/offer'
+import type { Offer, Pergola, PergolaShape } from '@/types/offer'
 
 // Force Node.js runtime (not Edge) for Puppeteer/Chromium compatibility
 export const runtime = 'nodejs'
@@ -28,6 +28,25 @@ async function fetchOffer(id: string): Promise<Offer | null> {
 
   // Log raw shape data for debugging
 
+  const pergolasFromDb = data.pergolas_data as Pergola[] | null | undefined
+  const pergolaSingle =
+    pergolasFromDb && pergolasFromDb.length > 0
+      ? pergolasFromDb[0]
+      : {
+          shape: data.pergola_shape_data
+            ? (data.pergola_shape_data as PergolaShape)
+            : {
+                type: 'rectangle' as const,
+                width: data.pergola_width || 0,
+                length: data.pergola_length || 0,
+              },
+          height: data.pergola_height,
+          location: data.pergola_location,
+          pricePerSqm: data.pergola_price_per_sqm,
+          width: data.pergola_width,
+          length: data.pergola_length,
+        }
+
   return {
     id: data.id,
     dealId: data.deal_id,
@@ -35,23 +54,10 @@ async function fetchOffer(id: string): Promise<Offer | null> {
     customerPhone: data.customer_phone,
     customerCity: data.customer_city,
 
-    pergola: {
-      // New shape-based structure
-      shape: data.pergola_shape_data 
-        ? (data.pergola_shape_data as PergolaShape)
-        : {
-            // Fallback to legacy format if shape_data is missing
-            type: 'rectangle' as const,
-            width: data.pergola_width || 0,
-            length: data.pergola_length || 0,
-          },
-      height: data.pergola_height,
-      location: data.pergola_location,
-      pricePerSqm: data.pergola_price_per_sqm,
-      // Legacy fields for backward compatibility
-      width: data.pergola_width,
-      length: data.pergola_length,
-    },
+    pergolas: pergolasFromDb && pergolasFromDb.length > 0 ? pergolasFromDb : undefined,
+    pergola: pergolaSingle,
+
+    configuratorMeta: data.configurator_meta ?? undefined,
     color: {
       type: data.color_type,
       ralCode: data.color_ral_code,

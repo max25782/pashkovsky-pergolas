@@ -1,5 +1,20 @@
 // Offer Types - Updated Structure for הצעת מחיר
 
+// Pergola Product Types
+export type PergolaProductType = 'fixed' | 'electricPvc' | 'electricBioclimatic'
+
+export const PERGOLA_TYPE_NAMES: Record<PergolaProductType, string> = {
+  fixed: 'פרגולה קבועה',
+  electricPvc: 'פרגולה חשמלית PVC',
+  electricBioclimatic: 'פרגולה חשמלית ביוקלמטיק',
+}
+
+export const PERGOLA_TYPE_DEFAULT_PRICES: Record<PergolaProductType, number> = {
+  fixed: 750,
+  electricPvc: 1500,
+  electricBioclimatic: 3400,
+}
+
 // Pergola Shape Types
 export type PergolaShapeType = 'rectangle' | 'L' | 'X' | 'U'
 
@@ -37,6 +52,7 @@ export type PergolaShape = RectangleShape | LShape | XShape | UShape
 
 export interface Pergola {
   shape: PergolaShape // Новая структура с поддержкой сложных форм
+  pergolaType?: PergolaProductType // סוג פרגולה: קבועה / חשמלית PVC / ביוקלמטיק
   height?: number
   location?: string // מקום בבית
   pricePerSqm: number // Editable, default 750
@@ -78,7 +94,7 @@ export interface ZipScreen {
 }
 
 export interface WinterClosureItem {
-  type: 'foldingGlass' | 'windows7000' | 'windows9000' | 'fixedGlass' | 'slidingShowcase7000' | 'slidingShowcase9000'
+  type: 'foldingGlass' | 'windows7000' | 'windows9000' | 'fixedGlass' | 'slidingShowcase7000' | 'slidingShowcase9000' | 'sliderGlass'
   area: number // שטח למ"ר
   pricePerSqm: number // מחיר למ"ר
   notes?: string // הערות (לאיזה צד, למשל)
@@ -153,6 +169,35 @@ export interface PDF {
   createdAt?: string
 }
 
+export interface ConfiguratorParams {
+  widthCm: number
+  depthCm: number
+  heightCm: number
+  color: string
+  lamellaAngleDeg: number
+  attachedToWall: boolean
+  lamellaGapCm: number
+  beamLed: boolean
+  lamellaStanding: boolean
+  lamellaAlongWidth: boolean
+  postProfileId?: string | null
+  beamProfileId?: string | null
+  lamellaProfileId?: string | null
+}
+
+export interface ConfiguratorMeta {
+  /** Read-only 3D viewer URL for customers (PDF, public page) — includes `view=1`. */
+  viewUrl?: string | null
+  /** Full editor URL for staff (CRM) — same token, no `view=1`. */
+  editUrl?: string | null
+  previewImageUrl?: string | null
+  lastSubmissionId?: string | null
+  updatedAt?: string | null
+  skippedNonRectangle?: boolean
+  /** Full technical params from the last 3D configurator submission */
+  params?: ConfiguratorParams | null
+}
+
 export interface OfferDraft {
   dealId: string
   customerName: string
@@ -180,6 +225,8 @@ export interface OfferDraft {
   discountPercent: number
   
   images?: string[]
+
+  configuratorMeta?: ConfiguratorMeta | null
 }
 
 export interface OfferCalculation {
@@ -218,6 +265,7 @@ export const DEFAULT_OFFER_VALUES = {
       width: 4,
       length: 6,
     },
+    pergolaType: 'fixed' as PergolaProductType,
     height: undefined,
     location: undefined,
     pricePerSqm: 750, // Default price

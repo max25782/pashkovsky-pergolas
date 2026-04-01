@@ -15,6 +15,9 @@ export const WINTER_CLOSURE_PRICES = {
   slidingShowcase7000: 1200,  // ₪ למטר מרובע
   slidingShowcase9000: 1800,  // ₪ למטר מרובע
   
+  // זכוכית סליידר
+  sliderGlass: 1650,   // ₪ למטר מרובע
+
   // זכוכית מתקפלת (מחיר ישן - לשמירה על תאימות)
   foldingGlass: 0,     // ₪ למטר מרובע - צריך להזין ידנית
 } as const
@@ -61,6 +64,7 @@ export function getWinterClosureTypeName(type: WinterClosureType | undefined): s
     fixedGlass: 'זכוכית קבועה',
     slidingShowcase7000: 'ויטרינה הזזה דגם 7000',
     slidingShowcase9000: 'ויטרינה הזזה דגם 9000',
+    sliderGlass: 'זכוכית סליידר',
   }
   return type ? names[type] : ''
 }

@@ -1,7 +1,7 @@
 "use client"
 import { useState } from "react"
+import dynamic from "next/dynamic"
 import type { Deal } from './deal-types'
-import { DealModal } from './DealModal'
 import { CreateDealModal } from './CreateDealModal'
 import { DealsHeader } from './DealsHeader'
 import { DealsStatus } from './DealsStatus'
@@ -13,6 +13,11 @@ import { useDeals } from './hooks/useDeals'
 import { useDealActions } from './hooks/useDealActions'
 import { useDealDragDrop } from './hooks/useDealDragDrop'
 import { useDealPaymentsMap } from './hooks/useDealPaymentsMap'
+
+const DealModal = dynamic(
+  () => import('./DealModal').then((mod) => ({ default: mod.DealModal })),
+  { ssr: false, loading: () => null },
+)
 
 type ViewMode = 'kanban' | 'table'
 
@@ -33,7 +38,7 @@ export function DealsTable() {
     limit: 500
   })
 
-  const { create, patch, del, creating, updating, deleting } = useDealActions({
+  const { create, patch, del } = useDealActions({
     onUpdate: async (updatedDeal) => {
       if (selectedDeal?.id === updatedDeal.id) {
         setSelectedDeal(updatedDeal)
@@ -105,11 +110,10 @@ export function DealsTable() {
         onShowStatistics={() => {}}
       />
       
-      <DealsStatus loading={loading || updating || creating || deleting} error={error} />
+      <DealsStatus loading={loading} error={error} />
 
       {viewMode === 'kanban' && (
         <KanbanBoard
-          key={`kanban-${deals.length}-${deals.map(d => d.id).join(',')}`}
           deals={deals}
           paymentsMap={paymentsMap}
           onDragOver={handleDragOver}

@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import type { PergolaShape } from '@/types/offer'
+import type { Pergola, PergolaShape } from '@/types/offer'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -58,18 +58,30 @@ export async function GET(
 }
 
 function transformOfferFromDB(data: any) {
-  // Parse pergola shape data
+  const pergolasData = data.pergolas_data as Pergola[] | null | undefined
+  const hasPergolasArray = pergolasData && Array.isArray(pergolasData) && pergolasData.length > 0
+
   let pergolaShape: PergolaShape
   if (data.pergola_shape_data) {
     pergolaShape = data.pergola_shape_data as PergolaShape
   } else {
-    // Fallback to legacy format
     pergolaShape = {
       type: 'rectangle',
       width: data.pergola_width || 0,
       length: data.pergola_length || 0,
     }
   }
+
+  const pergolaSingle = hasPergolasArray
+    ? pergolasData![0]
+    : {
+        shape: pergolaShape,
+        height: data.pergola_height,
+        location: data.pergola_location,
+        pricePerSqm: data.pergola_price_per_sqm,
+        width: data.pergola_width,
+        length: data.pergola_length,
+      }
 
   return {
     id: data.id,
@@ -78,14 +90,8 @@ function transformOfferFromDB(data: any) {
     customerPhone: data.customer_phone,
     customerCity: data.customer_city,
 
-    pergola: {
-      shape: pergolaShape,
-      height: data.pergola_height,
-      location: data.pergola_location,
-      pricePerSqm: data.pergola_price_per_sqm,
-      width: data.pergola_width,
-      length: data.pergola_length,
-    },
+    pergolas: hasPergolasArray ? pergolasData : undefined,
+    pergola: pergolaSingle,
     color: {
       type: data.color_type,
       ralCode: data.color_ral_code,
@@ -164,6 +170,8 @@ function transformOfferFromDB(data: any) {
     paymentTerms: data.payment_terms,
     warranty: data.warranty,
     images: data.images,
+
+    configuratorMeta: data.configurator_meta ?? undefined,
 
     approval: {
       approved: data.approved,

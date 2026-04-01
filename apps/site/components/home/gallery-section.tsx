@@ -2,9 +2,7 @@
 import type { Locale } from '@/lib/locales'
 import dynamic from 'next/dynamic'
 
-const DgamimCarousel = dynamic(
-  () => import('@/components/dgamim/dgamim-carousel').then(m => m.DgamimCarousel),
-  {
+const DgamimCarousel = dynamic(() => import('@/components/dgamim/dgamim-carousel'), {
     ssr: false,
     loading: () => (
       <div className="flex gap-4 overflow-hidden pb-4">
@@ -16,7 +14,7 @@ const DgamimCarousel = dynamic(
         ))}
       </div>
     ),
-  }
+  },
 )
 
 interface GallerySectionProps {

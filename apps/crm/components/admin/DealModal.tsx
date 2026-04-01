@@ -1,13 +1,12 @@
 "use client"
 import { useEffect, useState } from "react"
+import dynamic from "next/dynamic"
 import type { Deal } from './deal-types'
 import { getStages } from './deal-types'
 import { SketchModal } from './SketchModal'
 import { FileImage, FileText } from 'lucide-react'
 import { useCRMTranslations } from './useCRMTranslations'
 import { useToast } from '@/components/ui/toast'
-import { CreateOfferModal } from '../offers/CreateOfferModal'
-import { OffersList } from '../offers/OffersList'
 import { WorkLogSection } from '../workers/WorkLogSection'
 import { ProfitWidget } from '../workers/ProfitWidget'
 import { useProjectRevenue } from '@/hooks/useProjectRevenue'
@@ -17,6 +16,23 @@ import { RailingsFormFields, type RailingsFormValue } from './RailingsFormFields
 import { DealPaymentsWidget } from './DealPaymentsWidget'
 import { ContractorPaymentPlan } from './deals/templates/ContractorPaymentPlan'
 import { authFetch } from '@/lib/api/auth-fetch'
+
+const OffersList = dynamic(
+  () => import('../offers/OffersList').then((m) => ({ default: m.OffersList })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex min-h-[200px] items-center justify-center text-center text-sm text-white/50">
+        טוען הצעות…
+      </div>
+    ),
+  },
+)
+
+const CreateOfferModal = dynamic(
+  () => import('../offers/CreateOfferModal').then((m) => ({ default: m.CreateOfferModal })),
+  { ssr: false, loading: () => null },
+)
 
 interface DealModalProps {
   deal: Deal
@@ -653,8 +669,8 @@ export function DealModal({
 
           {/* Offers List */}
           {deal.customer_name && (
-            <div className="pt-4 border-t border-white/10">
-              <h3 className="text-lg font-semibold mb-3">הצעות מחיר</h3>
+            <div className="min-h-[200px] border-t border-white/10 pt-4">
+              <h3 className="mb-3 text-lg font-semibold">הצעות מחיר</h3>
               <OffersList 
                 dealId={deal.id} 
                 refreshTrigger={offersRefreshTrigger} 
@@ -799,9 +815,8 @@ export function DealModal({
           customerCity={localDeal.customer_city || undefined}
           isOpen={showOfferModal}
           onClose={() => setShowOfferModal(false)}
-          onCreated={(offer) => {
-            setOffersRefreshTrigger(prev => prev + 1)
-            setShowOfferModal(false)
+          onCreated={() => {
+            setOffersRefreshTrigger((prev) => prev + 1)
           }}
         />
       )}

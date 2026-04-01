@@ -12,7 +12,7 @@ interface Message {
   created_at?: string
 }
 
-export function ChatWidget() {
+function ChatWidget() {
   const toast = useToast()
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
@@ -270,7 +270,7 @@ export function ChatWidget() {
       {/* Floating Button */}
       <button
         onClick={() => setIsOpen(true)}
-        className={`fixed bottom-24 left-4 sm:bottom-6 sm:left-6 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 text-white shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300 flex items-center justify-center ${isOpen ? 'scale-0 opacity-0' : 'scale-100 opacity-100'}`}
+        className={`no-print fixed bottom-24 left-4 sm:bottom-6 sm:left-6 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 text-white shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300 flex items-center justify-center ${isOpen ? 'scale-0 opacity-0' : 'scale-100 opacity-100'}`}
         aria-label="פתח צ'אט"
       >
         <MessageCircle className="w-6 h-6" />
@@ -279,7 +279,7 @@ export function ChatWidget() {
       
       {/* Chat Window */}
       <div
-        className={`fixed bottom-0 left-0 sm:bottom-6 sm:left-6 z-50 w-full sm:w-[400px] h-[100dvh] sm:h-[600px] sm:max-h-[80vh] bg-gray-900 sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 ${
+        className={`no-print fixed bottom-0 left-0 sm:bottom-6 sm:left-6 z-50 w-full sm:w-[400px] h-[100dvh] sm:h-[600px] sm:max-h-[80vh] bg-gray-900 sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 ${
           isOpen ? 'translate-y-0 opacity-100' : 'translate-y-full sm:translate-y-8 opacity-0 pointer-events-none'
         }`}
       >
@@ -483,3 +483,5 @@ export function ChatWidget() {
   )
 }
 
+export { ChatWidget }
+export default ChatWidget

@@ -8,7 +8,7 @@
  * Zap setup: Facebook Lead Ads (New Lead) → Webhooks by Zapier (POST)
  * URL: https://crm.pashkovsky-group.com/api/webhooks/zapier-leads
  * Payload Type: JSON
- * Headers: x-zapier-secret = <ZAPIER_LEADS_SECRET>
+ * Headers: x-zapier-secret = <ZAPIER_LEADS_SECRET> (or Authorization: Bearer <same>)
  *
  * Map fields: full_name or first_name → name, phone_number or phone → phone, email → email
  */
@@ -18,7 +18,8 @@ import { createClient } from '@supabase/supabase-js'
 import { normalizePhoneIL } from '@/lib/middleware/integration-access'
 import { sendWhatsAppTemplate } from '@/lib/whatsapp-send'
 
-const SECRET = process.env.ZAPIER_LEADS_SECRET
+const SECRET_RAW = process.env.ZAPIER_LEADS_SECRET
+const SECRET = SECRET_RAW?.trim() || undefined
 const COMPANY_ID = process.env.FB_LEADS_COMPANY_ID || process.env.DEFAULT_COMPANY_ID
 
 const supabase =
@@ -29,6 +30,18 @@ const supabase =
         { auth: { autoRefreshToken: false, persistSession: false } }
       )
     : null
+
+/** Zapier "Custom Request Headers" must send one of these when ZAPIER_LEADS_SECRET is set. */
+function getProvidedWebhookSecret(req: NextRequest): string | null {
+  const fromHeader = req.headers.get('x-zapier-secret')?.trim()
+  if (fromHeader) return fromHeader
+  const auth = req.headers.get('authorization')
+  if (auth?.toLowerCase().startsWith('bearer ')) {
+    const token = auth.slice(7).trim()
+    if (token) return token
+  }
+  return null
+}
 
 function getString(obj: unknown, ...keys: string[]): string | null {
   if (obj === null || typeof obj !== 'object') return null
@@ -46,9 +59,16 @@ export async function POST(req: NextRequest) {
   }
 
   if (SECRET) {
-    const provided = req.headers.get('x-zapier-secret')
+    const provided = getProvidedWebhookSecret(req)
     if (provided !== SECRET) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json(
+        {
+          error: 'Unauthorized',
+          hint:
+            'Send header x-zapier-secret matching ZAPIER_LEADS_SECRET, or Authorization: Bearer <same secret>. No extra spaces.',
+        },
+        { status: 401 },
+      )
     }
   }
 
@@ -160,6 +180,6 @@ export async function GET() {
   return NextResponse.json({
     service: 'zapier-leads',
     status: 'ok',
-    hint: 'POST JSON with name, phone, email. Auth: x-zapier-secret header',
+    hint: 'POST JSON with name, phone, email. Auth: x-zapier-secret or Authorization: Bearer (see ZAPIER_LEADS_SETUP.md)',
   })
 }

@@ -1,16 +1,23 @@
 import type { Metadata } from 'next'
+import dynamic from 'next/dynamic'
+import { headers } from 'next/headers'
 import { Providers } from '@/components/providers'
 import Navbar from '@/components/navbar'
 import UTMTracker from '@/components/utm-tracker'
-import { Locale, isRTL } from '@/lib/locales'
+import type { Locale } from '@/lib/locales'
 import { Analytics } from "@vercel/analytics/react"
 import { GoogleAnalytics } from '@/components/google-analytics'
 import GA from '@/components/ga'
 import { Suspense } from 'react'
 import FloatingWhatsApp from '@/components/contact/FloatingWhatsApp'
-import { ChatWidget } from '@/components/ai-chat/ChatWidget'
 import { getOgImageUrl } from '@/lib/image-url'
 import { StructuredData } from '@/components/seo/structured-data'
+import { CookieConsentBanner } from '@/components/cookie-consent-banner'
+
+const ChatWidget = dynamic(() => import('@/components/ai-chat/ChatWidget'), {
+  ssr: false,
+  loading: () => null,
+})
 
 // Generate absolute URL for Open Graph image
 const ogImagePath = '/images/pergulot/ashkelon2/IMG_20240312_134433.webp'
@@ -69,24 +76,33 @@ export default function PublicLayout({
   params: { locale: Locale }
 }) {
   const locale = params.locale
+  const isCatalogPdf = headers().get('x-catalog-pdf-mode') === '1'
 
   return (
-    <Providers>
+    <>
+      {/* Outside client Providers so JSON-LD scripts never compete with next-themes' inline script (hydration). */}
       <StructuredData locale={locale} />
-      <Suspense fallback={null}>
-        <UTMTracker />
-      </Suspense>
-      
-      <Navbar locale={locale} />
-      
-      {children}
-      
-      <ChatWidget />
-      <FloatingWhatsApp />
-      
-      <Analytics />
-      <GoogleAnalytics />
-      <GA />
-    </Providers>
+      <Providers>
+        <Suspense fallback={null}>
+          <UTMTracker />
+        </Suspense>
+
+        {!isCatalogPdf ? <Navbar locale={locale} /> : null}
+
+        {children}
+
+        {!isCatalogPdf ? <ChatWidget /> : null}
+        {!isCatalogPdf ? <FloatingWhatsApp /> : null}
+        {!isCatalogPdf ? <CookieConsentBanner locale={locale} /> : null}
+
+        {!isCatalogPdf && process.env.NODE_ENV === 'production' ? (
+          <>
+            <Analytics />
+            <GoogleAnalytics />
+            <GA />
+          </>
+        ) : null}
+      </Providers>
+    </>
   )
 }

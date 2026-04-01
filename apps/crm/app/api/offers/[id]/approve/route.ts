@@ -40,6 +40,9 @@ export async function POST(
         signature_image: signatureImage,
         approval_customer_name: customerName,
         approval_customer_phone: customerPhone || null,
+        // Force next PDF generation to include the digital signature
+        pdf_url: null,
+        pdf_created_at: null,
       })
       .eq('id', params.id)
       .select()

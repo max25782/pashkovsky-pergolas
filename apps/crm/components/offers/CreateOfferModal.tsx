@@ -1,15 +1,19 @@
 "use client"
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useParams } from 'next/navigation'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { X } from 'lucide-react'
-import type { OfferDraft, Offer, PergolaShape, Pergola } from '@/types/offer'
-import { DEFAULT_OFFER_VALUES } from '@/types/offer'
+import { X, Copy, Loader2, Box } from 'lucide-react'
+import type { OfferDraft, Offer, PergolaShape, Pergola, PergolaProductType } from '@/types/offer'
+import { DEFAULT_OFFER_VALUES, PERGOLA_TYPE_NAMES, PERGOLA_TYPE_DEFAULT_PRICES } from '@/types/offer'
 import { calculateOffer, formatPrice } from '@/lib/offer-calculator'
 import { PergolaShapeSelector } from './PergolaShapeSelector'
 import { calculatePergolaArea, validatePergolaShape } from '@/lib/calculations/pergola-area'
 import { authFetch } from '@/lib/api/auth-fetch'
+import type { Locale } from '@/lib/locales'
+import { useToast } from '@/components/ui/toast'
+import { OfferConfiguratorEmbed } from '@/components/offers/OfferConfiguratorEmbed'
 
 interface CreateOfferModalProps {
   dealId: string
@@ -21,7 +25,21 @@ interface CreateOfferModalProps {
   onCreated?: (offer: Offer) => void
 }
 
+type PostCreateStep = 'form' | 'configurator'
+
 export function CreateOfferModal({ dealId, customerName, customerPhone, customerCity, isOpen, onClose, onCreated }: CreateOfferModalProps) {
+  const params = useParams()
+  const locale = (params?.locale as Locale) || 'he'
+  const toast = useToast()
+
+  const [postCreateStep, setPostCreateStep] = useState<PostCreateStep>('form')
+  const [createdOffer, setCreatedOffer] = useState<Offer | null>(null)
+  const [configuratorUrls, setConfiguratorUrls] = useState<{ edit: string; customer: string } | null>(
+    null,
+  )
+  const [configuratorLinkLoading, setConfiguratorLinkLoading] = useState(false)
+  const [configuratorLinkError, setConfiguratorLinkError] = useState<string | null>(null)
+
   const [draft, setDraft] = useState<OfferDraft>({
     dealId,
     customerName,
@@ -86,16 +104,88 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
         throw new Error(errorMessage)
       }
 
-      const newOffer = await response.json()
+      const newOffer = (await response.json()) as Offer
       onCreated?.(newOffer)
-      onClose()
+      setCreatedOffer(newOffer)
+      setConfiguratorUrls(null)
+      setConfiguratorLinkError(null)
+      setPostCreateStep('configurator')
     } catch (err: unknown) {
       console.error('Error creating offer:', err)
       setError((err instanceof Error ? err.message : String(err)) || 'Failed to create offer. Please check console for details.')
     } finally {
       setIsSubmitting(false)
     }
-  }, [draft, calculation, onCreated, onClose])
+  }, [draft, calculation, onCreated])
+
+  useEffect(() => {
+    if (!isOpen) {
+      setPostCreateStep('form')
+      setCreatedOffer(null)
+      setConfiguratorUrls(null)
+      setConfiguratorLinkError(null)
+      setConfiguratorLinkLoading(false)
+    }
+  }, [isOpen])
+
+  useEffect(() => {
+    if (postCreateStep !== 'configurator' || createdOffer === null || configuratorUrls !== null) return
+    let cancelled = false
+    setConfiguratorLinkLoading(true)
+    setConfiguratorLinkError(null)
+    void (async () => {
+      try {
+        const res = await authFetch(`/api/offers/${createdOffer.id}/configurator-link`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ locale }),
+        })
+        if (!res.ok) {
+          const err = (await res.json().catch(() => ({}))) as { error?: string }
+          throw new Error(err.error ?? `HTTP ${res.status}`)
+        }
+        const data = (await res.json()) as { url?: string; customerUrl?: string }
+        if (cancelled) return
+        if (!data.url) throw new Error('No URL')
+        const customer =
+          data.customerUrl ??
+          `${data.url}${data.url.includes('?') ? '&' : '?'}view=1`
+        setConfiguratorUrls({ edit: data.url, customer })
+      } catch (e) {
+        if (!cancelled) {
+          setConfiguratorLinkError(e instanceof Error ? e.message : 'שגיאה ביצירת קישור')
+        }
+      } finally {
+        if (!cancelled) setConfiguratorLinkLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [postCreateStep, createdOffer, configuratorUrls, locale])
+
+  const handleFinishConfigurator = useCallback(() => {
+    setPostCreateStep('form')
+    setCreatedOffer(null)
+    setConfiguratorUrls(null)
+    setConfiguratorLinkError(null)
+    onClose()
+  }, [onClose])
+
+  const handleCopyCustomerConfiguratorLink = useCallback(async () => {
+    if (!configuratorUrls?.customer) return
+    try {
+      await navigator.clipboard.writeText(configuratorUrls.customer)
+      toast.success('קישור תצוגת 3D ללקוח הועתק')
+    } catch {
+      toast.error('העתקה ללוח נכשלה')
+    }
+  }, [configuratorUrls?.customer, toast])
+
+  const retryConfiguratorLink = useCallback(() => {
+    setConfiguratorUrls(null)
+    setConfiguratorLinkError(null)
+  }, [])
 
   // Helper to get current pergolas array (support both new and legacy format)
   const getPergolas = useCallback(() => {
@@ -317,22 +407,38 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
     }
   }, [aiSuggestion, updateOptions])
 
+  const pergolasSaveDisabled =
+    getPergolas().some(
+      (p) => !validatePergolaShape(p.shape).valid || calculatePergolaArea(p.shape) <= 0,
+    )
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { if (!open && !isSubmitting) onClose() }}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open && !isSubmitting) {
+          if (postCreateStep === 'configurator') handleFinishConfigurator()
+          else onClose()
+        }
+      }}
+    >
       <DialogContent 
-        className="w-screen max-w-screen h-screen max-h-screen bg-[#1e293b] text-white border border-white/20 p-0 flex flex-col rounded-none md:w-[98vw] md:max-w-[1600px] md:h-[95vh] md:max-h-[95vh] md:rounded-2xl"
+        className="!translate-x-0 !translate-y-0 max-md:!inset-0 max-md:!left-0 max-md:!top-0 max-md:!h-screen max-md:!w-screen max-md:!max-h-screen md:!left-[max(0px,calc((100vw-min(1600px,98vw))/2))] md:!top-[2.5vh] md:!right-auto md:!h-[95vh] md:!max-h-[95vh] md:!w-[min(1600px,98vw)] md:!max-w-[1600px] w-screen max-w-screen h-screen max-h-screen bg-[#1e293b] text-white border border-white/20 p-0 flex flex-col rounded-none md:rounded-2xl"
         onPointerDownOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogHeader className="flex flex-row items-start justify-between gap-3" onClick={(e) => e.stopPropagation()}>
-          <DialogTitle className="text-2xl font-bold">יצירת הצעת מחיר חדשה</DialogTitle>
+          <DialogTitle className="text-2xl font-bold">
+            {postCreateStep === 'form' ? 'יצירת הצעת מחיר חדשה' : 'קונפיגורטור 3D — הצעה חדשה'}
+          </DialogTitle>
           <DialogDescription className="sr-only">Create new offer for client</DialogDescription>
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation()
-              onClose()
+              if (postCreateStep === 'configurator') handleFinishConfigurator()
+              else onClose()
             }}
             data-dialog-close
             className="p-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white transition"
@@ -342,7 +448,15 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
           </button>
         </DialogHeader>
 
-        <div className="h-full overflow-y-auto p-6 space-y-6" onClick={(e) => e.stopPropagation()}>
+        <div
+          className={
+            'flex min-h-0 flex-1 flex-col space-y-6 p-6 ' +
+            (postCreateStep === 'form' ? 'overflow-y-auto' : 'overflow-hidden')
+          }
+          onClick={(e) => e.stopPropagation()}
+        >
+          {postCreateStep === 'form' ? (
+          <>
           {/* Client Info */}
           <div className="bg-white/5 rounded-lg p-4 border border-white/10">
             <h3 className="text-lg font-semibold mb-3">פרטי לקוח</h3>
@@ -395,6 +509,28 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
                         <h4 className="text-md font-semibold text-white/90">
                           פרגולה #{index + 1}
                         </h4>
+                      </div>
+
+                      {/* Pergola Type */}
+                      <div className="mb-4">
+                        <label className="block text-sm text-white/80 mb-1">סוג פרגולה</label>
+                        <select
+                          value={pergola.pergolaType ?? 'fixed'}
+                          onChange={(e) => {
+                            const t = e.target.value as PergolaProductType
+                            updatePergola(index, {
+                              pergolaType: t,
+                              pricePerSqm: PERGOLA_TYPE_DEFAULT_PRICES[t],
+                            })
+                          }}
+                          className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400"
+                        >
+                          {(Object.keys(PERGOLA_TYPE_NAMES) as PergolaProductType[]).map((key) => (
+                            <option key={key} value={key} className="bg-gray-800">
+                              {PERGOLA_TYPE_NAMES[key]} ({PERGOLA_TYPE_DEFAULT_PRICES[key].toLocaleString()} ₪/מ״ר)
+                            </option>
+                          ))}
+                        </select>
                       </div>
 
                       {/* Shape Selector */}
@@ -463,6 +599,24 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
                       <span className="mr-2 font-bold text-green-300">{calculation.pergolaTotal ? formatPrice(calculation.pergolaTotal) : '₪0'}</span>
                     </div>
                   </div>
+                </div>
+
+                <div className="mt-4 flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="min-w-0 flex-1 text-xs text-white/55">
+                    שומר את ההצעה ופותח קונפיגורטור 3D מקושר (מידות מההצעה יסתנכרנו אחרי שמירה ב־3D).
+                  </p>
+                  <Button
+                    type="button"
+                    className="shrink-0 self-stretch bg-teal-600 hover:bg-teal-500 text-white flex items-center justify-center gap-2 sm:self-auto"
+                    disabled={isSubmitting || pergolasSaveDisabled}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      void handleSubmit()
+                    }}
+                  >
+                    <Box className="w-4 h-4" />
+                    {isSubmitting ? 'שומר...' : '3D — שמור ופתח קונפיגורטור'}
+                  </Button>
                 </div>
               </div>
             )}
@@ -754,7 +908,8 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
                             windows9000: 1050,
                             slidingShowcase7000: 1200,
                             slidingShowcase9000: 1800,
-                            foldingGlass: 0
+                            sliderGlass: 1650,
+                            foldingGlass: 0,
                           }
                           newItems[index] = { ...item, type, pricePerSqm: prices[type] }
                           updateWinterClosure({ items: newItems })
@@ -766,6 +921,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
                         <option value="windows9000">חלונות 9000 (1,050 ₪/מ"ר)</option>
                         <option value="slidingShowcase7000">ויטרינה הזזה 7000 (1,200 ₪/מ"ר)</option>
                         <option value="slidingShowcase9000">ויטרינה הזזה 9000 (1,800 ₪/מ"ר)</option>
+                        <option value="sliderGlass">זכוכית סליידר (1,650 ₪/מ"ר)</option>
                         <option value="foldingGlass">זכוכית מתקפלת (אחר)</option>
                       </select>
                     </div>
@@ -1016,10 +1172,19 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
             <div className="space-y-2 text-sm">
               {/* Components */}
               {calculation.pergolaTotal ? (
-                <div className="flex justify-between text-white/70">
-                  <span>פרגולה:</span>
-                  <span>{formatPrice(calculation.pergolaTotal)}</span>
-                </div>
+                <>
+                  {getPergolas().map((pg, idx) => {
+                    const area = pg?.shape ? calculatePergolaArea(pg.shape) : 0
+                    const total = area * pg.pricePerSqm
+                    const typeName = pg.pergolaType ? PERGOLA_TYPE_NAMES[pg.pergolaType] : 'פרגולה'
+                    return (
+                      <div key={idx} className="flex justify-between text-white/70">
+                        <span>{typeName}{getPergolas().length > 1 ? ` #${idx + 1}` : ''}:</span>
+                        <span>{formatPrice(total)}</span>
+                      </div>
+                    )
+                  })}
+                </>
               ) : null}
               {calculation.santafTotal > 0 && (
                 <div className="flex justify-between text-white/70">
@@ -1054,6 +1219,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
                       windows9000: 'חלונות 9000',
                       slidingShowcase7000: 'ויטרינה הזזה 7000',
                       slidingShowcase9000: 'ויטרינה הזזה 9000',
+                      sliderGlass: 'זכוכית סליידר',
                       foldingGlass: 'זכוכית מתקפלת'
                     };
                     const typeName = typeNames[item.type] || item.type;
@@ -1136,13 +1302,92 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
             <Button type="button" variant="default" onClick={(e) => { e.stopPropagation(); onClose() }} disabled={isSubmitting} data-dialog-close className="bg-white/10 hover:bg-white/20 text-white border-white/20">ביטול</Button>
             <Button 
               type="button" 
-              onClick={(e) => { e.stopPropagation(); handleSubmit() }} 
-              disabled={isSubmitting || getPergolas().some(p => !validatePergolaShape(p.shape).valid || calculatePergolaArea(p.shape) <= 0)} 
+              onClick={(e) => { e.stopPropagation(); void handleSubmit() }} 
+              disabled={isSubmitting || pergolasSaveDisabled} 
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               {isSubmitting ? 'שומר...' : 'שמור הצעת מחיר'}
             </Button>
           </div>
+          </>
+          ) : (
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
+            <div className="rounded-lg border border-teal-500/40 bg-teal-950/30 p-4 text-sm text-white/90">
+              <p className="font-semibold text-teal-200 mb-2">ההצעה נוצרה בהצלחה</p>
+              <p className="text-white/75">
+                קונפיגורטור 3D למטה מחובר להצעה. שמירה ב־3D מעדכנת מידות, תמונת תצוגה ומחירים. לשיתוף עם
+                הלקוח השתמשו ב־&quot;העתק קישור ללקוח&quot; (תצוגה בלבד).
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2 shrink-0">
+              <Button
+                type="button"
+                className="bg-teal-600 hover:bg-teal-500 text-white"
+                disabled={configuratorUrls?.edit === undefined}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (configuratorUrls?.edit) window.open(configuratorUrls.edit, '_blank', 'noopener,noreferrer')
+                }}
+              >
+                פתיחה בלשונית חדשה
+              </Button>
+              <Button
+                type="button"
+                className="border-cyan-500/50 text-cyan-200 bg-transparent hover:bg-cyan-950/40"
+                disabled={configuratorUrls?.customer === undefined}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  void handleCopyCustomerConfiguratorLink()
+                }}
+              >
+                <Copy className="w-4 h-4 ml-2" />
+                העתק קישור ללקוח
+              </Button>
+              <Button
+                type="button"
+                variant="default"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleFinishConfigurator()
+                }}
+                className="bg-white/10 hover:bg-white/20 text-white border-white/20 ms-auto"
+              >
+                סיום וסגירה
+              </Button>
+            </div>
+            {configuratorLinkLoading ? (
+              <div className="flex items-center justify-center gap-2 py-16 text-white/70">
+                <Loader2 className="w-6 h-6 animate-spin" />
+                <span>טוען קונפיגורטור...</span>
+              </div>
+            ) : null}
+            {configuratorLinkError ? (
+              <div className="rounded-lg border border-red-500/40 bg-red-950/30 p-4 text-red-200 text-sm flex flex-wrap items-center gap-3">
+                <span>{configuratorLinkError}</span>
+                <Button
+                  type="button"
+                  className="border-red-400/50 bg-transparent py-2 px-3 text-sm"
+                  onClick={() => retryConfiguratorLink()}
+                >
+                  נסה שוב
+                </Button>
+              </div>
+            ) : null}
+            {configuratorUrls?.edit && createdOffer ? (
+              <div className="flex min-h-[400px] flex-1 basis-0 flex-col overflow-hidden rounded-xl border border-white/15 bg-black/40 p-2 sm:p-3">
+                <OfferConfiguratorEmbed
+                  offerId={createdOffer.id}
+                  locale={locale}
+                  editUrl={configuratorUrls.edit}
+                  offer={createdOffer}
+                  onSaved={() => {
+                    toast.success('נשמר מהקונפיגורטור — מידות והצעה עודכנו')
+                  }}
+                />
+              </div>
+            ) : null}
+          </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

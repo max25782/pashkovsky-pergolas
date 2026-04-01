@@ -7,7 +7,6 @@ $publicFolders = @(
     "components\fences",
     "components\dgamim",
     "components\video",
-    "components\pergola-configurator",
     "components\navbar.tsx",
     "components\contact-section.tsx",
     "components\carousel.tsx",

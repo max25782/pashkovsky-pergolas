@@ -29,7 +29,7 @@ export function LeadsTable() {
     limit
   })
 
-  const { patch, del, updating } = useLeadActions({
+  const { patch, del } = useLeadActions({
     onUpdate: (updatedLead) => {
       if (selectedLead?.id === updatedLead.id) {
         setSelectedLead(updatedLead)
@@ -81,11 +81,11 @@ export function LeadsTable() {
         onImportComplete={reload}
       />
       
-      <DealsStatus loading={loading || updating} error={error} />
+      <DealsStatus loading={loading} error={error} />
 
       {viewMode === 'kanban' && (
         <LeadsKanbanBoard
-          key={`kanban-${kanbanGroupBy}-${leads.length}-${leads.map(l => l.id).join(',')}`}
+          key={kanbanGroupBy}
           leads={leads}
           groupBy={kanbanGroupBy}
           onDragOver={handleDragOver}
