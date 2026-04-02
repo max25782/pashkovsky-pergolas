@@ -103,6 +103,10 @@ function Pergola3DInner({
               : prev.postProfileId,
           beamProfileId:
             typeof p.beamProfileId === 'string' ? p.beamProfileId : prev.beamProfileId,
+          dividerProfileId:
+            typeof p.dividerProfileId === 'string' || p.dividerProfileId === null
+              ? p.dividerProfileId ?? prev.dividerProfileId
+              : prev.dividerProfileId,
           lamellaProfileId:
             typeof p.lamellaProfileId === 'string' ? p.lamellaProfileId : prev.lamellaProfileId,
         }))
@@ -178,9 +182,11 @@ function Pergola3DInner({
             candidates={candidates}
             postProfileId={params.postProfileId}
             beamProfileId={params.beamProfileId}
+            dividerProfileId={params.dividerProfileId}
             lamellaProfileId={params.lamellaProfileId}
             onPostProfileChange={(id) => update('postProfileId', id)}
             onBeamProfileChange={(id) => update('beamProfileId', id)}
+            onDividerProfileChange={(id) => update('dividerProfileId', id)}
             onLamellaProfileChange={(id) => update('lamellaProfileId', id)}
             postSizeCm={postSizeCm}
             beamHeightCm={beamHeightCm}

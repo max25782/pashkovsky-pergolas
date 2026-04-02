@@ -14,6 +14,7 @@ export function defaultPergolaParams(initial?: Partial<PergolaParams>): PergolaP
     lamellaAlongWidth: initial?.lamellaAlongWidth ?? false,
     postProfileId: initial?.postProfileId ?? null,
     beamProfileId: initial?.beamProfileId ?? 'f10040',
+    dividerProfileId: initial?.dividerProfileId ?? null,
     lamellaProfileId: initial?.lamellaProfileId ?? 'f10020',
   }
 }

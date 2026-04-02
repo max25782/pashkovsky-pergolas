@@ -13,9 +13,12 @@ export function MaterialOrdersList({ dealId, adminToken = '' }: MaterialOrdersLi
   const [orders, setOrders] = useState<MaterialOrder[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [offerId, setOfferId] = useState<string | null>(null)
+  const [generatingPdf, setGeneratingPdf] = useState(false)
 
   useEffect(() => {
     loadOrders()
+    loadOfferId()
   }, [dealId])
 
   async function loadOrders() {
@@ -36,6 +39,54 @@ export function MaterialOrdersList({ dealId, adminToken = '' }: MaterialOrdersLi
     }
   }
 
+  async function loadOfferId() {
+    try {
+      const res = await authFetch(`/api/offers?dealId=${dealId}`)
+      if (!res.ok) return
+      const data = await res.json()
+      const offers: { id: string }[] = data.offers ?? data ?? []
+      if (offers.length > 0) setOfferId(offers[0].id)
+    } catch {
+      // non-critical — button stays hidden
+    }
+  }
+
+  async function handleGenerateCutListPdf() {
+    if (!offerId) return
+    setGeneratingPdf(true)
+    try {
+      const res = await authFetch(`/api/offers/${offerId}/cut-list-pdf`)
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        alert(`שגיאה ביצירת PDF: ${err.error ?? res.statusText}`)
+        return
+      }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `cut-list-${offerId}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      setTimeout(() => URL.revokeObjectURL(url), 10_000)
+    } catch (e) {
+      alert(`שגיאה ביצירת PDF: ${e instanceof Error ? e.message : String(e)}`)
+    } finally {
+      setGeneratingPdf(false)
+    }
+  }
+
+  const cutListButton = offerId ? (
+    <button
+      onClick={handleGenerateCutListPdf}
+      disabled={generatingPdf}
+      className="flex items-center gap-2 rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-60 transition-colors"
+    >
+      {generatingPdf ? 'מייצר...' : 'הפק רשימת חומר PDF'}
+    </button>
+  ) : null
+
   if (loading) {
     return <div className="text-white/60">טוען הזמנות חומר...</div>
   }
@@ -46,15 +97,21 @@ export function MaterialOrdersList({ dealId, adminToken = '' }: MaterialOrdersLi
 
   if (orders.length === 0) {
     return (
-      <div className="text-white/60 p-4 bg-white/5 rounded-lg">
-        אין הזמנות חומר עבור עסקה זו
+      <div className="space-y-3">
+        <div className="text-white/60 p-4 bg-white/5 rounded-lg">
+          אין הזמנות חומר עבור עסקה זו
+        </div>
+        {cutListButton && <div>{cutListButton}</div>}
       </div>
     )
   }
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-white">הזמנות חומר (חומר הוזמן)</h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-white">הזמנות חומר (חומר הוזמן)</h3>
+        {cutListButton}
+      </div>
       
       <div className="overflow-x-auto">
         <table className="w-full border-collapse">

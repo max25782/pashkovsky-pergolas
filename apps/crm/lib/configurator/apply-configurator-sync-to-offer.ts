@@ -15,6 +15,7 @@ export interface PergolaParamsPayload {
   lamellaAlongWidth?: boolean
   postProfileId?: string | null
   beamProfileId?: string | null
+  dividerProfileId?: string | null
   lamellaProfileId?: string | null
 }
 
@@ -242,6 +243,7 @@ export async function applyConfiguratorSyncToOffer(
       lamellaAlongWidth: params.lamellaAlongWidth ?? false,
       postProfileId: params.postProfileId ?? null,
       beamProfileId: params.beamProfileId ?? null,
+      dividerProfileId: params.dividerProfileId ?? null,
       lamellaProfileId: params.lamellaProfileId ?? null,
     },
   }

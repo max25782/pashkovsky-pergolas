@@ -680,11 +680,9 @@ export function DealModal({
           )}
 
           {/* Material Orders List */}
-          {(localDeal.stage === 'material_ordered' || localDeal.stage === 'approved' || localDeal.stage === 'production' || localDeal.stage === 'install' || localDeal.stage === 'done') && (
-            <div className="pt-4 border-t border-white/10">
-              <MaterialOrdersList dealId={deal.id} adminToken={adminToken} />
-            </div>
-          )}
+          <div className="pt-4 border-t border-white/10">
+            <MaterialOrdersList dealId={deal.id} adminToken={adminToken} />
+          </div>
 
           {/* Payment Plan (contractor only) */}
           {localDeal.customer_type === 'contractor' && (

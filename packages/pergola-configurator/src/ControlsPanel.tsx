@@ -16,9 +16,11 @@ interface ControlsPanelProps {
   candidates: Array<{ p: ProfileMeta; dims: { a: number; b: number } | null }>
   postProfileId: string | null
   beamProfileId: string | null
+  dividerProfileId: string | null
   lamellaProfileId: string | null
   onPostProfileChange: (id: string | null) => void
   onBeamProfileChange: (id: string | null) => void
+  onDividerProfileChange: (id: string | null) => void
   onLamellaProfileChange: (id: string | null) => void
   postSizeCm: number
   beamHeightCm: number
@@ -36,9 +38,11 @@ export function ControlsPanel({
   candidates,
   postProfileId,
   beamProfileId,
+  dividerProfileId,
   lamellaProfileId,
   onPostProfileChange,
   onBeamProfileChange,
+  onDividerProfileChange,
   onLamellaProfileChange,
   postSizeCm,
   beamHeightCm,
@@ -221,6 +225,18 @@ export function ControlsPanel({
             </option>
           ))}
         </select>
+        <label className={lbl}>{t.dividerProfile}</label>
+        <select className={sel} value={dividerProfileId || ''} disabled={profilesLoading}
+          onChange={(e) => onDividerProfileChange(e.target.value || null)}
+        >
+          <option value="">{t.defaultDivider}</option>
+          {profilesLoading && <option disabled>{t.loadingProfiles}</option>}
+          {candidates.map((c, idx) => (
+            <option key={`divider-${c.p.id}-${idx}`} value={c.p.id}>
+              {c.p.id}{c.dims ? ` (${c.dims.a.toFixed(1)}x${c.dims.b.toFixed(1)})` : ''}
+            </option>
+          ))}
+        </select>
         <label className={lbl}>{t.lamellaProfile}</label>
         <select className={sel} value={lamellaProfileId || ''} disabled={profilesLoading}
           onChange={(e) => onLamellaProfileChange(e.target.value || null)}
@@ -238,6 +254,11 @@ export function ControlsPanel({
       <p className="text-[10px] leading-tight text-gray-400">
         {t.selectedPost} {postSizeCm.toFixed(1)} cm &middot; {t.selectedBeam} {beamHeightCm.toFixed(1)}×{beamDepthCm.toFixed(1)} cm &middot; {t.selectedLamella} {lamellaHeightCm.toFixed(1)}×{lamellaDepthCm.toFixed(1)} cm
       </p>
+      {dividerProfileId && (
+        <p className="text-[10px] leading-tight text-gray-400">
+          {t.selectedDivider}: {dividerProfileId}
+        </p>
+      )}
     </div>
   )
 }

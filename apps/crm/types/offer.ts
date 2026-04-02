@@ -182,6 +182,7 @@ export interface ConfiguratorParams {
   lamellaAlongWidth: boolean
   postProfileId?: string | null
   beamProfileId?: string | null
+  dividerProfileId?: string | null
   lamellaProfileId?: string | null
 }
 

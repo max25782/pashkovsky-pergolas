@@ -7,7 +7,7 @@ import path from 'path'
  */
 export function createOptimizedFontDataUri(fontPath: string): string {
   try {
-    const fullPath = path.join(process.cwd(), fontPath)
+    const fullPath = path.isAbsolute(fontPath) ? fontPath : path.join(process.cwd(), fontPath)
     
     
     if (!fs.existsSync(fullPath)) {
@@ -28,12 +28,24 @@ export function createOptimizedFontDataUri(fontPath: string): string {
 }
 
 /**
+ * Resolve a font path, trying the app-local public/fonts/ first,
+ * then falling back to the monorepo root public/fonts/.
+ */
+function resolveFontPath(filename: string): string {
+  const localPath = path.join(process.cwd(), 'public', 'fonts', filename)
+  if (fs.existsSync(localPath)) return path.join('public', 'fonts', filename)
+  // Try two levels up (monorepo root)
+  const rootPath = path.join(process.cwd(), '..', '..', 'public', 'fonts', filename)
+  if (fs.existsSync(rootPath)) return rootPath
+  return path.join('public', 'fonts', filename) // will fail gracefully in createOptimizedFontDataUri
+}
+
+/**
  * Get embedded fonts CSS for Noto Sans Hebrew
  */
 export function getHebrewFontsCss(): string {
-  // Use fonts from public/fonts/
-  const regularUri = createOptimizedFontDataUri('public/fonts/NotoSansHebrew-Regular.ttf')
-  const boldUri = createOptimizedFontDataUri('public/fonts/NotoSansHebrew-Bold.ttf')
+  const regularUri = createOptimizedFontDataUri(resolveFontPath('NotoSansHebrew-Regular.ttf'))
+  const boldUri = createOptimizedFontDataUri(resolveFontPath('NotoSansHebrew-Bold.ttf'))
 
   if (!regularUri && !boldUri) {
     console.error('[Font] ❌ No fonts loaded! Using system fallback.')

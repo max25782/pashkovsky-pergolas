@@ -34,6 +34,7 @@ function parseParams(body: Record<string, unknown>): PergolaParamsPayload | null
     lamellaAlongWidth: Boolean(body.lamellaAlongWidth),
     postProfileId: typeof body.postProfileId === 'string' ? body.postProfileId : null,
     beamProfileId: typeof body.beamProfileId === 'string' ? body.beamProfileId : null,
+    dividerProfileId: typeof body.dividerProfileId === 'string' ? body.dividerProfileId : null,
     lamellaProfileId: typeof body.lamellaProfileId === 'string' ? body.lamellaProfileId : null,
   }
 }

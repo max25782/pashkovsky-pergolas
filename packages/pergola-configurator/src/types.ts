@@ -11,6 +11,9 @@ export interface PergolaParams {
   lamellaAlongWidth: boolean
   postProfileId: string | null
   beamProfileId: string | null
+  /** חוצץ פנימי — intermediate/divider beam profile */
+  dividerProfileId: string | null
+  /** הצללה — shading lamella profile */
   lamellaProfileId: string | null
 }
 

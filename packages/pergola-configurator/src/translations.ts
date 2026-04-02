@@ -9,15 +9,18 @@ export interface ConfiguratorTranslations {
   lamellaGap: string
   postProfile: string
   beamProfile: string
+  dividerProfile: string
   lamellaProfile: string
   defaultPost: string
   defaultBeam: string
+  defaultDivider: string
   defaultLamella: string
   loadingProfiles: string
   dimensionsUnknown: string
   selected: string
   selectedPost: string
   selectedBeam: string
+  selectedDivider: string
   selectedLamella: string
   attachedToWall: string
   beamLed: string
@@ -39,16 +42,19 @@ export function getTranslations(locale: ConfiguratorLocale): ConfiguratorTransla
       lamellaGap: 'Зазор между ламелями (см)',
       postProfile: 'Профиль столба',
       beamProfile: 'Профиль балки',
-      lamellaProfile: 'Профиль ламели',
+      dividerProfile: 'Профиль перегородки',
+      lamellaProfile: 'Профиль затенения',
       defaultPost: 'По умолчанию (8x8 см)',
       defaultBeam: 'По умолчанию (4x10 см)',
+      defaultDivider: 'По умолчанию (как балка)',
       defaultLamella: 'По умолчанию (2x10 см)',
       loadingProfiles: 'Загрузка профилей...',
       dimensionsUnknown: '(размеры неизвестны)',
       selected: 'Выбрано:',
       selectedPost: 'столб',
       selectedBeam: 'балка',
-      selectedLamella: 'ламель',
+      selectedDivider: 'перегородка',
+      selectedLamella: 'затенение',
       attachedToWall: 'Крепится к стене',
       beamLed: 'LED подсветка в балках',
       lamellaStanding: 'Ламели вертикально',
@@ -69,16 +75,19 @@ export function getTranslations(locale: ConfiguratorLocale): ConfiguratorTransla
       lamellaGap: 'Gap between lamellas (cm)',
       postProfile: 'Post profile',
       beamProfile: 'Beam profile',
-      lamellaProfile: 'Lamella profile',
+      dividerProfile: 'Divider profile',
+      lamellaProfile: 'Shading profile',
       defaultPost: 'Default (8x8 cm)',
       defaultBeam: 'Default (4x10 cm)',
+      defaultDivider: 'Default (same as beam)',
       defaultLamella: 'Default (2x10 cm)',
       loadingProfiles: 'Loading profiles...',
       dimensionsUnknown: '(dimensions unknown)',
       selected: 'Selected:',
       selectedPost: 'post',
       selectedBeam: 'beam',
-      selectedLamella: 'lamella',
+      selectedDivider: 'divider',
+      selectedLamella: 'shading',
       attachedToWall: 'Attached to wall',
       beamLed: 'LED lighting in beams',
       lamellaStanding: 'Lamellas vertical',
@@ -98,16 +107,19 @@ export function getTranslations(locale: ConfiguratorLocale): ConfiguratorTransla
     lamellaGap: 'מרווח בין הלמילות (ס"מ)',
     postProfile: 'פרופיל עמוד',
     beamProfile: 'פרופיל קורה',
-    lamellaProfile: 'פרופיל למילה',
+    dividerProfile: 'פרופיל חוצץ פנימי',
+    lamellaProfile: 'פרופיל הצללה',
     defaultPost: 'ברירת מחדל (8x8 ס"מ)',
     defaultBeam: 'ברירת מחדל (4x10 ס"מ)',
+    defaultDivider: 'ברירת מחדל (כמו קורה)',
     defaultLamella: 'ברירת מחדל (2x10 ס"מ)',
     loadingProfiles: 'טוען פרופילים...',
     dimensionsUnknown: '(מידות לא ידועות)',
     selected: 'נבחר:',
     selectedPost: 'עמוד',
     selectedBeam: 'קורה',
-    selectedLamella: 'למילה',
+    selectedDivider: 'חוצץ',
+    selectedLamella: 'הצללה',
     attachedToWall: 'מחובר לקיר',
     beamLed: 'תאורת LED בקורות',
     lamellaStanding: 'למלות בעמידה',
