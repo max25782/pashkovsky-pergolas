@@ -5,6 +5,7 @@ import { X, Save } from 'lucide-react'
 import { authFetch } from '@/lib/api/auth-fetch'
 import { useToast } from '@/components/ui/toast'
 import type { Worker } from '@/types/workers'
+import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
 
 interface WorkerFormData {
   firstName: string
@@ -23,6 +24,7 @@ interface Props {
 
 export function WorkerModal({ worker, onClose, onSave }: Props) {
   const toast = useToast()
+  const t = useCRMTranslations()
   const [form, setForm] = useState<WorkerFormData>({
     firstName: worker?.firstName ?? '',
     lastName: worker?.lastName ?? '',
@@ -40,11 +42,11 @@ export function WorkerModal({ worker, onClose, onSave }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!form.firstName || !form.lastName || !form.dailyRate) {
-      toast.error('שם פרטי, שם משפחה ותעריף יומי הם שדות חובה')
+      toast.error(t.workers.requiredFields)
       return
     }
     if (form.dailyRate <= 0) {
-      toast.error('תעריף יומי חייב להיות גדול מ-0')
+      toast.error(t.workers.dailyRatePositive)
       return
     }
 
@@ -80,6 +82,13 @@ export function WorkerModal({ worker, onClose, onSave }: Props) {
     }
   }
 
+  const fields: { label: string; key: keyof WorkerFormData; type: string; required: boolean }[] = [
+    { label: t.workers.firstName, key: 'firstName', type: 'text', required: true },
+    { label: t.workers.lastName, key: 'lastName', type: 'text', required: true },
+    { label: t.workers.phone, key: 'phone', type: 'tel', required: false },
+    { label: t.workers.role, key: 'role', type: 'text', required: false },
+  ]
+
   return (
     <div
       className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
@@ -91,7 +100,7 @@ export function WorkerModal({ worker, onClose, onSave }: Props) {
       >
         <div className="flex items-center justify-between p-6 border-b border-white/10">
           <h2 className="text-2xl font-bold text-white">
-            {worker ? 'ערוך עובד' : 'הוסף עובד'}
+            {worker ? t.workers.editTitle : t.workers.addTitle}
           </h2>
           <button onClick={onClose} type="button" className="text-white/60 hover:text-white transition">
             <X className="w-5 h-5" />
@@ -99,12 +108,7 @@ export function WorkerModal({ worker, onClose, onSave }: Props) {
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {[
-            { label: 'שם פרטי *', key: 'firstName' as const, type: 'text', required: true },
-            { label: 'שם משפחה *', key: 'lastName' as const, type: 'text', required: true },
-            { label: 'טלפון', key: 'phone' as const, type: 'tel', required: false },
-            { label: 'תפקיד', key: 'role' as const, type: 'text', required: false },
-          ].map(({ label, key, type, required }) => (
+          {fields.map(({ label, key, type, required }) => (
             <div key={key}>
               <label className="block text-sm font-medium text-white/80 mb-2">{label}</label>
               <input
@@ -118,7 +122,7 @@ export function WorkerModal({ worker, onClose, onSave }: Props) {
           ))}
 
           <div>
-            <label className="block text-sm font-medium text-white/80 mb-2">תעריף יומי (₪) *</label>
+            <label className="block text-sm font-medium text-white/80 mb-2">{t.workers.dailyRate}</label>
             <input
               type="number"
               min="0"
@@ -137,7 +141,7 @@ export function WorkerModal({ worker, onClose, onSave }: Props) {
               onChange={(e) => update('isActive', e.target.checked)}
               className="w-4 h-4 rounded"
             />
-            <span className="text-sm text-white/80">עובד פעיל</span>
+            <span className="text-sm text-white/80">{t.workers.isActive}</span>
           </label>
 
           <div className="flex gap-3 pt-4">
@@ -147,7 +151,7 @@ export function WorkerModal({ worker, onClose, onSave }: Props) {
               disabled={submitting}
               className="flex-1 px-4 py-2 rounded bg-white/10 hover:bg-white/20 text-white transition disabled:opacity-50"
             >
-              ביטול
+              {t.common.cancel}
             </button>
             <button
               type="submit"
@@ -155,7 +159,7 @@ export function WorkerModal({ worker, onClose, onSave }: Props) {
               className="flex-1 px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white font-medium transition disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <Save className="w-4 h-4" />
-              {submitting ? 'שומר...' : 'שמור'}
+              {submitting ? t.workers.saving : t.common.save}
             </button>
           </div>
         </form>

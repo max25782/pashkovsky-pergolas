@@ -7,6 +7,8 @@ import type { WorkerShift, WorkerShiftSummary } from '@/types/workers'
 import { authFetch } from '@/lib/api/auth-fetch'
 import { formatCurrencyILS } from '@/lib/workers/calculations'
 import { ShiftForm } from './ShiftForm'
+import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
+import { useLanguage } from '@/lib/language-context'
 
 interface TimesheetPanelProps {
   workerId: string
@@ -14,9 +16,11 @@ interface TimesheetPanelProps {
   month: string
 }
 
-function formatDate(dateStr: string) {
+const LOCALE_MAP: Record<string, string> = { ru: 'ru-RU', en: 'en-US', he: 'he-IL' }
+
+function formatDate(dateStr: string, locale: string) {
   const d = new Date(dateStr + 'T00:00:00')
-  return d.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  return d.toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 function formatTime(timeStr: string | null) {
@@ -43,6 +47,9 @@ function getDaysInMonth(month: string): string[] {
 
 export function TimesheetPanel({ workerId, workerName, month }: TimesheetPanelProps) {
   const toast = useToast()
+  const t = useCRMTranslations()
+  const { language } = useLanguage()
+  const dateLocale = LOCALE_MAP[language] ?? 'en-US'
   const [shifts, setShifts] = useState<WorkerShift[]>([])
   const [summary, setSummary] = useState<WorkerShiftSummary | null>(null)
   const [loading, setLoading] = useState(false)
@@ -151,41 +158,41 @@ export function TimesheetPanel({ workerId, workerName, month }: TimesheetPanelPr
               <div className="space-y-2 mb-4">
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-gray-900/50 rounded">
                   <div>
-                    <span className="text-white/60 text-sm">ימי עבודה</span>
+                    <span className="text-white/60 text-sm">{t.workers.timesheetDaysWorked}</span>
                     <div className="font-semibold text-white">{summary.daysWorked}</div>
                   </div>
                   <div>
-                    <span className="text-white/60 text-sm">שעות</span>
+                    <span className="text-white/60 text-sm">{t.workers.timesheetHours}</span>
                     <div className="font-semibold text-white">{summary.totalHours.toFixed(1)}</div>
                   </div>
                   <div>
-                    <span className="text-white/60 text-sm">עלות עבודה</span>
+                    <span className="text-white/60 text-sm">{t.workers.timesheetLaborCost}</span>
                     <div className="font-semibold text-white">
                       {formatCurrencyILS(summary.totalCost)}
                     </div>
                   </div>
                   <div>
-                    <span className="text-white/60 text-sm">יציאות מאוחרות</span>
+                    <span className="text-white/60 text-sm">{t.workers.timesheetLateExits}</span>
                     <div className="font-semibold text-white">{summary.lateDaysCount}</div>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-gray-900/50 rounded">
                   <div>
-                    <span className="text-white/60 text-sm">חגים</span>
+                    <span className="text-white/60 text-sm">{t.workers.timesheetHolidays}</span>
                     <div className="font-semibold text-purple-300">{summary.holidayDays ?? 0}</div>
                   </div>
                   <div>
-                    <span className="text-white/60 text-sm">תשלום חגים</span>
+                    <span className="text-white/60 text-sm">{t.workers.timesheetHolidayPay}</span>
                     <div className="font-semibold text-purple-300">
                       {formatCurrencyILS(summary.holidayPay ?? 0)}
                     </div>
                   </div>
                   <div>
-                    <span className="text-white/60 text-sm">ימי חופש (ללא תשלום)</span>
+                    <span className="text-white/60 text-sm">{t.workers.timesheetDaysOff}</span>
                     <div className="font-semibold text-amber-300">{summary.dayOffDays ?? 0}</div>
                   </div>
                   <div className="border-r border-green-500/30 pr-3">
-                    <span className="text-white/60 text-sm">סה&quot;כ לתשלום</span>
+                    <span className="text-white/60 text-sm">{t.workers.timesheetTotalPayable}</span>
                     <div className="font-bold text-green-300 text-lg">
                       {formatCurrencyILS(summary.totalPayable ?? summary.totalCost)}
                     </div>
@@ -196,7 +203,7 @@ export function TimesheetPanel({ workerId, workerName, month }: TimesheetPanelPr
 
             <div className="flex justify-between items-center mb-3 flex-wrap gap-2">
               <div className="flex items-center gap-3">
-                <h4 className="font-medium text-white">משמרות</h4>
+                <h4 className="font-medium text-white">{t.workers.shifts}</h4>
                 <label className="flex items-center gap-2 text-white/70 text-sm cursor-pointer">
                   <input
                     type="checkbox"
@@ -204,7 +211,7 @@ export function TimesheetPanel({ workerId, workerName, month }: TimesheetPanelPr
                     onChange={(e) => setShowAllDays(e.target.checked)}
                     className="rounded"
                   />
-                  הצג את כל הימים
+                  {t.workers.showAllDays}
                 </label>
               </div>
               <div className="flex items-center gap-2">
@@ -213,14 +220,14 @@ export function TimesheetPanel({ workerId, workerName, month }: TimesheetPanelPr
                   onClick={handleExportPdf}
                   disabled={pdfLoading || shifts.length === 0}
                   className="flex items-center gap-2 px-3 py-1.5 rounded bg-emerald-700 hover:bg-emerald-600 text-white text-sm disabled:opacity-50"
-                  title="ייצא דוח PDF לחודש זה"
+                  title={t.workers.exportPdfTitle}
                 >
                   {pdfLoading ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
                     <FileText className="w-4 h-4" />
                   )}
-                  {pdfLoading ? 'מייצר PDF...' : 'ייצא PDF'}
+                  {pdfLoading ? t.workers.exportingPdf : t.workers.exportPdf}
                 </button>
                 <button
                   type="button"
@@ -232,13 +239,13 @@ export function TimesheetPanel({ workerId, workerName, month }: TimesheetPanelPr
                   className="flex items-center gap-2 px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-sm"
                 >
                   <Plus className="w-4 h-4" />
-                  הוסף רשומה
+                  {t.workers.addRecord}
                 </button>
               </div>
             </div>
             {pdfError && (
               <div className="mb-3 p-2 bg-red-500/20 border border-red-500/40 rounded text-red-200 text-sm">
-                שגיאה ביצירת PDF: {pdfError}
+                {t.workers.exportPdf}: {pdfError}
               </div>
             )}
 
@@ -261,22 +268,22 @@ export function TimesheetPanel({ workerId, workerName, month }: TimesheetPanelPr
 
             {shifts.length === 0 && !showForm ? (
               <div className="text-white/60 py-4 text-center">
-                אין רשומות לחודש זה. לחץ &quot;הוסף רשומה&quot; כדי להוסיף.
+                {t.workers.noRecords}
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-right text-white/60 border-b border-white/10">
-                      <th className="py-2 px-2 text-right">תאריך</th>
-                      <th className="py-2 px-2 text-right">סוג</th>
-                      <th className="py-2 px-2 text-right">עסקה</th>
-                      <th className="py-2 px-2 text-right">עיר</th>
-                      <th className="py-2 px-2 text-right">כניסה</th>
-                      <th className="py-2 px-2 text-right">יציאה</th>
-                      <th className="py-2 px-2 text-right">שעות</th>
-                      <th className="py-2 px-2 text-right">עלות</th>
-                      <th className="py-2 px-2 text-center">פעולות</th>
+                      <th className="py-2 px-2 text-right">{t.workers.colDate}</th>
+                      <th className="py-2 px-2 text-right">{t.workers.colType}</th>
+                      <th className="py-2 px-2 text-right">{t.workers.colDeal}</th>
+                      <th className="py-2 px-2 text-right">{t.workers.colCity}</th>
+                      <th className="py-2 px-2 text-right">{t.workers.colStart}</th>
+                      <th className="py-2 px-2 text-right">{t.workers.colEnd}</th>
+                      <th className="py-2 px-2 text-right">{t.workers.colHours}</th>
+                      <th className="py-2 px-2 text-right">{t.workers.colCost}</th>
+                      <th className="py-2 px-2 text-center">{t.workers.colActions}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -289,7 +296,7 @@ export function TimesheetPanel({ workerId, workerName, month }: TimesheetPanelPr
                           if (!showAllDays) return null
                           return (
                             <tr key={dateStr} className="border-b border-white/5 text-white/40">
-                              <td className="py-2 px-2 text-right">{formatDate(dateStr)}</td>
+                              <td className="py-2 px-2 text-right">{formatDate(dateStr, dateLocale)}</td>
                               <td colSpan={8} className="py-2 px-2 text-right">
                                 —
                               </td>
@@ -298,8 +305,8 @@ export function TimesheetPanel({ workerId, workerName, month }: TimesheetPanelPr
                         }
                         const shiftTypeBadge = {
                           work: null,
-                          holiday: <span className="px-1.5 py-0.5 rounded text-xs bg-purple-600/40 text-purple-200">חג</span>,
-                          day_off: <span className="px-1.5 py-0.5 rounded text-xs bg-amber-600/40 text-amber-200">יום חופש</span>,
+                          holiday: <span className="px-1.5 py-0.5 rounded text-xs bg-purple-600/40 text-purple-200">{t.workers.shiftHoliday}</span>,
+                          day_off: <span className="px-1.5 py-0.5 rounded text-xs bg-amber-600/40 text-amber-200">{t.workers.shiftDayOff}</span>,
                         }[s.shiftType ?? 'work']
 
                         return (
@@ -314,7 +321,7 @@ export function TimesheetPanel({ workerId, workerName, month }: TimesheetPanelPr
                             }`}
                           >
                             <td className="py-2 px-2 text-white font-medium">
-                              {formatDate(s.shiftDate)}
+                              {formatDate(s.shiftDate, dateLocale)}
                             </td>
                             <td className="py-2 px-2">
                               {shiftTypeBadge ?? <span className="text-white/40 text-xs">—</span>}
@@ -336,7 +343,7 @@ export function TimesheetPanel({ workerId, workerName, month }: TimesheetPanelPr
                                   {s.computedCost != null ? formatCurrencyILS(s.computedCost) : '—'}
                                 </span>
                               ) : s.shiftType === 'day_off' ? (
-                                <span className="text-amber-400/70 text-xs">ללא תשלום</span>
+                                <span className="text-amber-400/70 text-xs">{t.workers.unpaid}</span>
                               ) : s.computedCost != null ? (
                                 <span className="text-white">{formatCurrencyILS(s.computedCost)}</span>
                               ) : (

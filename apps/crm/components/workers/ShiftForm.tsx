@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { Save, X } from 'lucide-react'
 import type { WorkerShiftDraft, WorkerShift, WorkerShiftType } from '@/types/workers'
 import { authFetch } from '@/lib/api/auth-fetch'
+import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
 
 const TIME_PRESETS = [
   { label: '07:00–16:00', start: '07:00', end: '16:00' },
@@ -38,6 +39,7 @@ export function ShiftForm({
   onCancel,
   onCopyYesterday,
 }: ShiftFormProps) {
+  const t = useCRMTranslations()
   const today = new Date().toISOString().split('T')[0]
   const [deals, setDeals] = useState<DealOption[]>([])
   const [dealsLoading, setDealsLoading] = useState(false)
@@ -214,9 +216,9 @@ export function ShiftForm({
   }
 
   const shiftTypeOptions: { value: WorkerShiftType; label: string; color: string }[] = [
-    { value: 'work', label: 'משמרת עבודה', color: 'bg-blue-600 hover:bg-blue-700' },
-    { value: 'holiday', label: 'חג', color: 'bg-purple-600 hover:bg-purple-700' },
-    { value: 'day_off', label: 'יום חופש', color: 'bg-amber-600 hover:bg-amber-700' },
+    { value: 'work', label: t.workers.shiftWork, color: 'bg-blue-600 hover:bg-blue-700' },
+    { value: 'holiday', label: t.workers.shiftHoliday, color: 'bg-purple-600 hover:bg-purple-700' },
+    { value: 'day_off', label: t.workers.shiftDayOff, color: 'bg-amber-600 hover:bg-amber-700' },
   ]
 
   const currentType = formData.shiftType ?? 'work'
@@ -232,7 +234,7 @@ export function ShiftForm({
 
       {/* Shift type selector */}
       <div>
-        <label className="block text-sm font-medium text-white/80 mb-2">סוג יום</label>
+        <label className="block text-sm font-medium text-white/80 mb-2">{t.workers.shiftTypeLabel}</label>
         <div className="flex gap-2 flex-wrap">
           {shiftTypeOptions.map((opt) => (
             <button

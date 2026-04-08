@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
 import type { Worker } from '@/types/workers'
 import { authFetch } from '@/lib/api/auth-fetch'
+import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
 
 interface AddWorkShiftModalProps {
   isOpen: boolean
@@ -18,6 +19,7 @@ export function AddWorkShiftModal({
   projectId,
   onShiftAdded,
 }: AddWorkShiftModalProps) {
+  const t = useCRMTranslations()
   const [workers, setWorkers] = useState<Worker[]>([])
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -100,7 +102,7 @@ export function AddWorkShiftModal({
       >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-white/10">
-          <h2 className="text-2xl font-bold text-white">הוסף משמרת</h2>
+          <h2 className="text-2xl font-bold text-white">{t.workers.addShiftTitle}</h2>
           <button
             onClick={onClose}
             className="text-white/60 hover:text-white transition"
@@ -121,10 +123,10 @@ export function AddWorkShiftModal({
           {/* Worker Select */}
           <div>
             <label className="block text-sm font-medium text-white/80 mb-2">
-              עובד *
+              {t.workers.workerLabel}
             </label>
             {loading ? (
-              <div className="text-white/60 text-sm">טוען עובדים...</div>
+              <div className="text-white/60 text-sm">{t.workers.loadingWorkers}</div>
             ) : (
               <select
                 value={formData.workerId}
@@ -134,13 +136,13 @@ export function AddWorkShiftModal({
                 className="w-full px-3 py-2 rounded bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               >
-                <option value="">בחר עובד</option>
+                <option value="">{t.workers.selectWorker}</option>
                 {workers
                   .filter((w) => w.isActive)
                   .map((worker) => (
                     <option key={worker.id} value={worker.id}>
                       {worker.firstName} {worker.lastName}
-                      {worker.role ? ` - ${worker.role}` : ''} ({worker.dailyRate} ₪/יום)
+                      {worker.role ? ` - ${worker.role}` : ''} ({worker.dailyRate} {t.workers.perDay})
                     </option>
                   ))}
               </select>
@@ -150,7 +152,7 @@ export function AddWorkShiftModal({
           {/* Date */}
           <div>
             <label className="block text-sm font-medium text-white/80 mb-2">
-              תאריך *
+              {t.workers.dateLabel}
             </label>
             <input
               type="date"
@@ -167,7 +169,7 @@ export function AddWorkShiftModal({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
-                התחלה
+                {t.workers.startLabel}
               </label>
               <input
                 type="time"
@@ -181,7 +183,7 @@ export function AddWorkShiftModal({
             </div>
             <div>
               <label className="block text-sm font-medium text-white/80 mb-2">
-                סיום
+                {t.workers.endLabel}
               </label>
               <input
                 type="time"
@@ -198,7 +200,7 @@ export function AddWorkShiftModal({
           {/* Notes */}
           <div>
             <label className="block text-sm font-medium text-white/80 mb-2">
-              הערות (אופציונלי)
+              {t.workers.notesLabel}
             </label>
             <textarea
               value={formData.notes || ''}
@@ -218,14 +220,14 @@ export function AddWorkShiftModal({
               disabled={submitting}
               className="flex-1 px-4 py-2 rounded bg-white/10 hover:bg-white/20 text-white transition disabled:opacity-50"
             >
-              ביטול
+              {t.common.cancel}
             </button>
             <button
               type="submit"
               disabled={submitting || !formData.workerId || !formData.date || !formData.startTime || !formData.endTime}
               className="flex-1 px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {submitting ? 'שומר...' : 'שמור'}
+              {submitting ? t.workers.saving : t.common.save}
             </button>
           </div>
         </form>

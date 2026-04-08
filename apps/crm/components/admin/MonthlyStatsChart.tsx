@@ -22,8 +22,19 @@ interface MonthlyStats {
   dealCount: number
 }
 
+interface MonthlyStatsLabels {
+  revenueVsExpenses: string
+  profitTrend: string
+  dealCount: string
+  revenue: string
+  expenses: string
+  profit: string
+  dealCountLabel: string
+}
+
 interface MonthlyStatsChartProps {
   monthlyStats: MonthlyStats[]
+  labels: MonthlyStatsLabels
 }
 
 const COLORS = {
@@ -32,7 +43,7 @@ const COLORS = {
   profit: '#10b981', // green
 }
 
-export function MonthlyStatsChart({ monthlyStats }: MonthlyStatsChartProps) {
+export function MonthlyStatsChart({ monthlyStats, labels }: MonthlyStatsChartProps) {
   if (monthlyStats.length === 0) {
     return null
   }
@@ -53,21 +64,21 @@ export function MonthlyStatsChart({ monthlyStats }: MonthlyStatsChartProps) {
     <div className="space-y-6 mt-6">
       {/* Revenue and Expenses by Month */}
       <div className="bg-white/5 border border-white/10 rounded-lg p-6">
-        <h3 className="text-lg font-bold mb-4 text-right">הכנסות והוצאות לפי חודש</h3>
+        <h3 className="text-lg font-bold mb-4 text-right">{labels.revenueVsExpenses}</h3>
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={sortedStats}>
             <CartesianGrid strokeDasharray="3 3" stroke="#ffffff20" />
-            <XAxis 
-              dataKey="monthLabel" 
+            <XAxis
+              dataKey="monthLabel"
               tick={{ fill: '#ffffff80' }}
               angle={-45}
               textAnchor="end"
               height={100}
             />
             <YAxis tick={{ fill: '#ffffff80' }} />
-            <Tooltip 
-              contentStyle={{ 
-                backgroundColor: '#1f2937', 
+            <Tooltip
+              contentStyle={{
+                backgroundColor: '#1f2937',
                 border: '1px solid #ffffff20',
                 borderRadius: '8px',
                 color: '#ffffff'
@@ -75,29 +86,29 @@ export function MonthlyStatsChart({ monthlyStats }: MonthlyStatsChartProps) {
               formatter={formatTooltipValue}
             />
             <Legend />
-            <Bar dataKey="revenue" fill={COLORS.revenue} name="הכנסות" />
-            <Bar dataKey="expenses" fill={COLORS.expenses} name="הוצאות" />
+            <Bar dataKey="revenue" fill={COLORS.revenue} name={labels.revenue} />
+            <Bar dataKey="expenses" fill={COLORS.expenses} name={labels.expenses} />
           </BarChart>
         </ResponsiveContainer>
       </div>
 
       {/* Profit Trend */}
       <div className="bg-white/5 border border-white/10 rounded-lg p-6">
-        <h3 className="text-lg font-bold mb-4 text-right">מגמת רווח</h3>
+        <h3 className="text-lg font-bold mb-4 text-right">{labels.profitTrend}</h3>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={sortedStats}>
             <CartesianGrid strokeDasharray="3 3" stroke="#ffffff20" />
-            <XAxis 
-              dataKey="monthLabel" 
+            <XAxis
+              dataKey="monthLabel"
               tick={{ fill: '#ffffff80' }}
               angle={-45}
               textAnchor="end"
               height={100}
             />
             <YAxis tick={{ fill: '#ffffff80' }} />
-            <Tooltip 
-              contentStyle={{ 
-                backgroundColor: '#1f2937', 
+            <Tooltip
+              contentStyle={{
+                backgroundColor: '#1f2937',
                 border: '1px solid #ffffff20',
                 borderRadius: '8px',
                 color: '#ffffff'
@@ -105,20 +116,20 @@ export function MonthlyStatsChart({ monthlyStats }: MonthlyStatsChartProps) {
               formatter={formatTooltipValue}
             />
             <Legend />
-            <Line 
-              type="monotone" 
-              dataKey="profit" 
-              stroke={COLORS.profit} 
+            <Line
+              type="monotone"
+              dataKey="profit"
+              stroke={COLORS.profit}
               strokeWidth={2}
-              name="רווח"
+              name={labels.profit}
             />
-            <Line 
-              type="monotone" 
-              dataKey="revenue" 
-              stroke={COLORS.revenue} 
+            <Line
+              type="monotone"
+              dataKey="revenue"
+              stroke={COLORS.revenue}
               strokeWidth={2}
               strokeDasharray="5 5"
-              name="הכנסות"
+              name={labels.revenue}
             />
           </LineChart>
         </ResponsiveContainer>
@@ -126,35 +137,30 @@ export function MonthlyStatsChart({ monthlyStats }: MonthlyStatsChartProps) {
 
       {/* Deal Count by Month */}
       <div className="bg-white/5 border border-white/10 rounded-lg p-6">
-        <h3 className="text-lg font-bold mb-4 text-right">מספר עסקאות לפי חודש</h3>
+        <h3 className="text-lg font-bold mb-4 text-right">{labels.dealCount}</h3>
         <ResponsiveContainer width="100%" height={250}>
           <BarChart data={sortedStats}>
             <CartesianGrid strokeDasharray="3 3" stroke="#ffffff20" />
-            <XAxis 
-              dataKey="monthLabel" 
+            <XAxis
+              dataKey="monthLabel"
               tick={{ fill: '#ffffff80' }}
               angle={-45}
               textAnchor="end"
               height={100}
             />
             <YAxis tick={{ fill: '#ffffff80' }} />
-            <Tooltip 
-              contentStyle={{ 
-                backgroundColor: '#1f2937', 
+            <Tooltip
+              contentStyle={{
+                backgroundColor: '#1f2937',
                 border: '1px solid #ffffff20',
                 borderRadius: '8px',
                 color: '#ffffff'
               }}
             />
-            <Bar dataKey="dealCount" fill="#8b5cf6" name="מספר עסקאות" />
+            <Bar dataKey="dealCount" fill="#8b5cf6" name={labels.dealCountLabel} />
           </BarChart>
         </ResponsiveContainer>
       </div>
     </div>
   )
 }
-
-
-
-
-

@@ -8,6 +8,7 @@ import {
   CategorySelector,
   CATALOG_CATEGORIES,
 } from '@/components/admin/media/CategorySelector'
+import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -35,6 +36,15 @@ interface DisplayItem extends S3Item {
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function MediaAdminPage() {
+  const t = useCRMTranslations()
+
+  const categoryLabels: Record<string, string> = {
+    pergolas: t.gallery.catPergolas,
+    railings: t.gallery.catRailings,
+    fences: t.gallery.catFences,
+    laundry_covers: t.gallery.catLaundryCover,
+  }
+
   const [prefix, setPrefix] = useState('images/')
   const [prefixInput, setPrefixInput] = useState('images/')
   const [showUncategorizedFirst, setShowUncategorizedFirst] = useState(true)
@@ -295,9 +305,9 @@ export default function MediaAdminPage() {
     <main className="container py-8 text-white">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">ניהול מדיה לבינה מלאכותית</h1>
+          <h1 className="text-2xl font-bold">{t.gallery.mediaTitle}</h1>
           <p className="text-white/50 text-sm mt-1">
-            קבע קטגוריית קטלוג לכל תמונה (ללא תגיות). הקטלוג הציבורי מבוסס תיקיות S3.
+            {t.gallery.mediaSubtitle}
           </p>
         </div>
       </div>
@@ -327,7 +337,7 @@ export default function MediaAdminPage() {
             }}
             className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-sm font-medium"
           >
-            חפש
+            {t.gallery.search}
           </button>
         </div>
 
@@ -338,7 +348,7 @@ export default function MediaAdminPage() {
             onChange={(e) => setShowUncategorizedFirst(e.target.checked)}
             className="accent-blue-500"
           />
-          ללא קטגוריית קטלוג קודם
+          {t.gallery.uncategorizedFirst}
         </label>
 
         <button
@@ -348,7 +358,7 @@ export default function MediaAdminPage() {
           className="flex items-center gap-2 px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-sm font-medium"
         >
           <Download className="w-4 h-4" />
-          {importing ? 'מייבא...' : 'ייבא מ-S3'}
+          {importing ? t.gallery.importing : t.gallery.importFromS3}
         </button>
 
         <button
@@ -358,22 +368,24 @@ export default function MediaAdminPage() {
           className="flex items-center gap-2 px-4 py-2 rounded bg-white/10 hover:bg-white/20 disabled:opacity-50 text-sm"
         >
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          רענן
+          {t.gallery.refresh}
         </button>
       </div>
 
       {selected.size > 0 && (
         <div className="bg-blue-900/30 border border-blue-500/40 rounded-lg p-4 mb-4 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-blue-200">{selected.size} פריטים נבחרו</span>
+            <span className="text-sm font-medium text-blue-200">{t.gallery.selectedItems.replace('{count}', String(selected.size))}</span>
             <button type="button" onClick={clearSelection} className="text-xs text-white/50 hover:text-white">
-              בטל בחירה
+              {t.gallery.clearSelection}
             </button>
           </div>
           <CategorySelector
             value={bulkCategory}
             onChange={setBulkCategory}
-            label="קטגוריית קטלוג לכל הפריטים הנבחרים"
+            label={t.gallery.bulkCategoryLabel}
+            noCategoryLabel={t.gallery.noCategory}
+            categoryLabels={categoryLabels}
           />
           <button
             type="button"
@@ -381,7 +393,7 @@ export default function MediaAdminPage() {
             disabled={applyingBulk || bulkCategory == null}
             className="flex items-center gap-2 px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-sm font-medium"
           >
-            {applyingBulk ? 'שומר...' : `החל קטגוריה על ${selected.size} פריטים`}
+            {applyingBulk ? t.gallery.applying : `${t.gallery.applyCategory.replace('{count}', String(selected.size))}`}
           </button>
         </div>
       )}
@@ -401,26 +413,26 @@ export default function MediaAdminPage() {
       {displayItems.length > 0 && (
         <div className="flex items-center gap-4 mb-3 text-sm text-white/60">
           <button type="button" onClick={selectAll} className="hover:text-white flex items-center gap-1">
-            <CheckSquare className="w-4 h-4" /> בחר הכל ({displayItems.length})
+            <CheckSquare className="w-4 h-4" /> {t.gallery.selectAll.replace('{count}', String(displayItems.length))}
           </button>
           <span>•</span>
-          <span>{displayItems.filter((i) => i.category != null).length} עם קטגוריית קטלוג</span>
+          <span>{t.gallery.withCategory.replace('{count}', String(displayItems.filter((i) => i.category != null).length))}</span>
           <span>•</span>
-          <span>{displayItems.filter((i) => i.category == null).length} ללא קטגוריה</span>
+          <span>{t.gallery.withoutCategory.replace('{count}', String(displayItems.filter((i) => i.category == null).length))}</span>
         </div>
       )}
 
       {loading && !displayItems.length && (
         <div className="text-center py-16 text-white/50">
           <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-3" />
-          <p>טוען תמונות מ-S3...</p>
+          <p>{t.gallery.loadingImages}</p>
         </div>
       )}
 
       {!loading && displayItems.length === 0 && (
         <div className="text-center py-16 text-white/50">
-          <p className="text-lg mb-2">לא נמצאו קבצים</p>
-          <p className="text-sm">נסה prefix אחר (לדוגמה: images/pergulot/)</p>
+          <p className="text-lg mb-2">{t.gallery.noFiles}</p>
+          <p className="text-sm">{t.gallery.noFilesHint}</p>
         </div>
       )}
 
@@ -484,7 +496,7 @@ export default function MediaAdminPage() {
 
                 {item.category != null && !isEditing && (
                   <span className="text-[10px] bg-green-600/50 text-green-200 px-1.5 py-0.5 rounded-full">
-                    {CATALOG_CATEGORIES.find((c) => c.id === item.category)?.labelHe ?? item.category}
+                    {categoryLabels[item.category ?? ''] ?? CATALOG_CATEGORIES.find((c) => c.id === item.category)?.labelHe ?? item.category}
                   </span>
                 )}
 
@@ -493,7 +505,9 @@ export default function MediaAdminPage() {
                     <CategorySelector
                       value={editCategory}
                       onChange={setEditCategory}
-                      label="קטלוג:"
+                      label={t.gallery.catalogLabel}
+                      noCategoryLabel={t.gallery.noCategory}
+                      categoryLabels={categoryLabels}
                     />
                     <div className="flex gap-1">
                       <button
@@ -502,7 +516,7 @@ export default function MediaAdminPage() {
                         disabled={isSaving}
                         className="flex-1 py-1 rounded bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-xs"
                       >
-                        {isSaving ? '...' : 'שמור'}
+                        {isSaving ? '...' : t.gallery.save}
                       </button>
                       <button
                         type="button"
@@ -523,7 +537,7 @@ export default function MediaAdminPage() {
                     className="w-full py-1 rounded bg-white/5 hover:bg-white/15 text-xs text-white/60 hover:text-white transition-all flex items-center justify-center gap-1"
                   >
                     <Pencil className="w-3 h-3" />
-                    {item.category != null ? 'ערוך קטגוריה' : 'הוסף קטגוריית קטלוג'}
+                    {item.category != null ? t.gallery.editCategory : t.gallery.addCategory}
                   </button>
                 )}
               </div>
@@ -540,7 +554,7 @@ export default function MediaAdminPage() {
             disabled={loading}
             className="px-6 py-2 rounded bg-white/10 hover:bg-white/20 disabled:opacity-50 text-sm"
           >
-            {loading ? 'טוען...' : 'טען עוד'}
+            {loading ? t.gallery.loading : t.gallery.loadMore}
           </button>
         </div>
       )}

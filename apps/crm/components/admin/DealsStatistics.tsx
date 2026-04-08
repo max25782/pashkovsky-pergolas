@@ -8,6 +8,7 @@ import { MonthlyStatsChart } from './MonthlyStatsChart'
 import { useTranslations } from 'next-intl'
 import { LanguageSwitcher } from './LanguageSwitcher'
 import { authFetch } from '@/lib/api/auth-fetch'
+import { useLanguage } from '@/lib/language-context'
 
 interface DealsStatisticsProps {
   deals: Deal[]
@@ -25,8 +26,16 @@ interface MonthlyStats {
   dealCount: number
 }
 
+const LOCALE_MAP: Record<string, string> = {
+  ru: 'ru-RU',
+  en: 'en-US',
+  he: 'he-IL',
+}
+
 export function DealsStatistics({ deals, onDealClick }: DealsStatisticsProps) {
   const t = useTranslations('statistics')
+  const { language } = useLanguage()
+  const dateLocale = LOCALE_MAP[language] ?? 'en-US'
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null)
   const [selectedMonthLabel, setSelectedMonthLabel] = useState<string>('')
   const [statisticType, setStatisticType] = useState<StatisticType>('money')
@@ -74,7 +83,7 @@ export function DealsStatistics({ deals, onDealClick }: DealsStatisticsProps) {
     const addToMonth = (monthKey: string, revenue: number, expenses: number, dealCount: number) => {
       const [y, m] = monthKey.split('-').map(Number)
       const localDate = new Date(y, m - 1, 1)
-      const monthLabel = localDate.toLocaleDateString('he-IL', { year: 'numeric', month: 'long' })
+      const monthLabel = localDate.toLocaleDateString(dateLocale, { year: 'numeric', month: 'long' })
       const existing = statsMap.get(monthKey) || {
         month: monthKey,
         monthLabel,
@@ -128,7 +137,7 @@ export function DealsStatistics({ deals, onDealClick }: DealsStatisticsProps) {
     return Array.from(statsMap.values())
       .sort((a, b) => a.month.localeCompare(b.month))
       .reverse()
-  }, [validDeals, paymentsByDeal, statisticType])
+  }, [validDeals, paymentsByDeal, statisticType, dateLocale])
 
   const totals = useMemo(() => {
     return monthlyStats.reduce(
@@ -285,10 +294,35 @@ export function DealsStatistics({ deals, onDealClick }: DealsStatisticsProps) {
           </div>
 
           {/* Monthly Stats Charts */}
-          <MonthlyStatsChart monthlyStats={monthlyStats} />
+          <MonthlyStatsChart
+            monthlyStats={monthlyStats}
+            labels={{
+              revenueVsExpenses: t('chartRevenueVsExpenses'),
+              profitTrend: t('chartProfitTrend'),
+              dealCount: t('chartDealCount'),
+              revenue: t('revenue'),
+              expenses: t('expenses'),
+              profit: t('profit'),
+              dealCountLabel: t('chartDealCountLabel'),
+            }}
+          />
 
           {/* Charts */}
-          <DealsCharts deals={validDeals} />
+          <DealsCharts
+            deals={validDeals}
+            labels={{
+              revenueVsExpensesTop10: t('chartRevenueVsExpensesTop10'),
+              profitByDeal: t('chartProfitByDeal'),
+              revenueDistribution: t('chartRevenueDistribution'),
+              revenue: t('revenue'),
+              expenses: t('expenses'),
+              profit: t('profit'),
+              totalRevenue: t('chartTotalRevenue'),
+              totalExpenses: t('chartTotalExpenses'),
+              totalProfit: t('chartTotalProfit'),
+              noName: t('noName'),
+            }}
+          />
         </>
       )}
 

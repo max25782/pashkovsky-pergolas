@@ -3,6 +3,7 @@
 import React from 'react'
 import { ChevronDown, ChevronRight, Edit2, Trash2 } from 'lucide-react'
 import type { Worker } from '@/types/workers'
+import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
 
 interface Props {
   workers: Worker[]
@@ -23,6 +24,8 @@ export function WorkersTable({
   onToggleActive,
   renderTimesheetPanel,
 }: Props) {
+  const t = useCRMTranslations()
+
   return (
     <div className="bg-gray-800 rounded-lg border border-white/10 overflow-hidden">
       <div className="overflow-x-auto">
@@ -30,12 +33,12 @@ export function WorkersTable({
           <thead className="bg-gray-900/50">
             <tr>
               <th className="px-2 py-3 w-8" />
-              <th className="px-4 py-3 text-right text-sm font-semibold text-white/80">שם</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold text-white/80">תפקיד</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold text-white/80">טלפון</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold text-white/80">תעריף יומי (₪)</th>
-              <th className="px-4 py-3 text-center text-sm font-semibold text-white/80">סטטוס</th>
-              <th className="px-4 py-3 text-center text-sm font-semibold text-white/80">פעולות</th>
+              <th className="px-4 py-3 text-right text-sm font-semibold text-white/80">{t.workers.colName}</th>
+              <th className="px-4 py-3 text-right text-sm font-semibold text-white/80">{t.workers.colRole}</th>
+              <th className="px-4 py-3 text-right text-sm font-semibold text-white/80">{t.workers.colPhone}</th>
+              <th className="px-4 py-3 text-right text-sm font-semibold text-white/80">{t.workers.colDailyRate}</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold text-white/80">{t.workers.colStatus}</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold text-white/80">{t.workers.colActions}</th>
             </tr>
           </thead>
           <tbody>
@@ -69,7 +72,7 @@ export function WorkersTable({
                           : 'bg-gray-500/20 text-gray-400 hover:bg-gray-500/30'
                       }`}
                     >
-                      {worker.isActive ? 'פעיל' : 'לא פעיל'}
+                      {worker.isActive ? t.workers.active : t.workers.inactive}
                     </button>
                   </td>
                   <td className="px-4 py-3">
@@ -78,7 +81,7 @@ export function WorkersTable({
                         onClick={() => onEdit(worker)}
                         type="button"
                         className="p-2 rounded hover:bg-blue-500/20 text-blue-400 transition"
-                        title="ערוך"
+                        title={t.common.edit}
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
@@ -86,7 +89,7 @@ export function WorkersTable({
                         onClick={() => onDelete(worker.id)}
                         type="button"
                         className="p-2 rounded hover:bg-red-500/20 text-red-400 transition"
-                        title="מחק"
+                        title={t.common.delete}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>

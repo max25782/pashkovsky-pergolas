@@ -15,8 +15,22 @@ import {
 } from 'recharts'
 import type { Deal } from './deal-types'
 
+interface DealsChartsLabels {
+  revenueVsExpensesTop10: string
+  profitByDeal: string
+  revenueDistribution: string
+  revenue: string
+  expenses: string
+  profit: string
+  totalRevenue: string
+  totalExpenses: string
+  totalProfit: string
+  noName: string
+}
+
 interface DealsChartsProps {
   deals: Deal[]
+  labels: DealsChartsLabels
 }
 
 const COLORS = {
@@ -26,7 +40,7 @@ const COLORS = {
   profitNegative: '#ef4444', // red
 }
 
-export function DealsCharts({ deals }: DealsChartsProps) {
+export function DealsCharts({ deals, labels }: DealsChartsProps) {
   // Calculate totals
   const totals = deals.reduce(
     (acc, deal) => {
@@ -48,10 +62,10 @@ export function DealsCharts({ deals }: DealsChartsProps) {
   const chartData = deals
     .filter(deal => (deal.price || 0) > 0 || (deal.my_cost || 0) > 0)
     .map((deal) => {
-      const customerName = deal.customer_name || 'ללא שם'
+      const customerName = deal.customer_name || labels.noName
       return {
-        name: customerName.length > 15 
-          ? customerName.substring(0, 15) + '...' 
+        name: customerName.length > 15
+          ? customerName.substring(0, 15) + '...'
           : customerName,
         fullName: customerName,
         revenue: deal.price || 0,
@@ -64,8 +78,8 @@ export function DealsCharts({ deals }: DealsChartsProps) {
 
   // Summary data for pie chart
   const summaryData = [
-    { name: 'רווח', value: Math.max(0, totals.profit), color: COLORS.profit },
-    { name: 'הוצאות', value: totals.expenses, color: COLORS.expenses },
+    { name: labels.profit, value: Math.max(0, totals.profit), color: COLORS.profit },
+    { name: labels.expenses, value: totals.expenses, color: COLORS.expenses },
   ]
 
   // Format currency for tooltip
@@ -85,20 +99,20 @@ export function DealsCharts({ deals }: DealsChartsProps) {
     <div className="space-y-6 mt-6">
       {/* Revenue vs Expenses Bar Chart */}
       <div className="bg-white/5 border border-white/10 rounded-lg p-6">
-        <h3 className="text-lg font-bold mb-4 text-right">הכנסות מול הוצאות - Top 10</h3>
+        <h3 className="text-lg font-bold mb-4 text-right">{labels.revenueVsExpensesTop10}</h3>
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={chartData} layout="vertical">
             <CartesianGrid strokeDasharray="3 3" stroke="#ffffff20" />
             <XAxis type="number" tick={{ fill: '#ffffff80' }} />
-            <YAxis 
-              type="category" 
-              dataKey="name" 
+            <YAxis
+              type="category"
+              dataKey="name"
               tick={{ fill: '#ffffff80' }}
               width={120}
             />
-            <Tooltip 
-              contentStyle={{ 
-                backgroundColor: '#1f2937', 
+            <Tooltip
+              contentStyle={{
+                backgroundColor: '#1f2937',
                 border: '1px solid #ffffff20',
                 borderRadius: '8px',
                 color: '#ffffff'
@@ -106,39 +120,39 @@ export function DealsCharts({ deals }: DealsChartsProps) {
               formatter={formatTooltipValue}
             />
             <Legend />
-            <Bar dataKey="revenue" fill={COLORS.revenue} name="הכנסות" />
-            <Bar dataKey="expenses" fill={COLORS.expenses} name="הוצאות" />
+            <Bar dataKey="revenue" fill={COLORS.revenue} name={labels.revenue} />
+            <Bar dataKey="expenses" fill={COLORS.expenses} name={labels.expenses} />
           </BarChart>
         </ResponsiveContainer>
       </div>
 
       {/* Profit Chart */}
       <div className="bg-white/5 border border-white/10 rounded-lg p-6">
-        <h3 className="text-lg font-bold mb-4 text-right">רווח לפי עסקה</h3>
+        <h3 className="text-lg font-bold mb-4 text-right">{labels.profitByDeal}</h3>
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={chartData} layout="vertical">
             <CartesianGrid strokeDasharray="3 3" stroke="#ffffff20" />
             <XAxis type="number" tick={{ fill: '#ffffff80' }} />
-            <YAxis 
-              type="category" 
-              dataKey="name" 
+            <YAxis
+              type="category"
+              dataKey="name"
               tick={{ fill: '#ffffff80' }}
               width={120}
             />
-            <Tooltip 
-              contentStyle={{ 
-                backgroundColor: '#1f2937', 
+            <Tooltip
+              contentStyle={{
+                backgroundColor: '#1f2937',
                 border: '1px solid #ffffff20',
                 borderRadius: '8px',
                 color: '#ffffff'
               }}
               formatter={formatTooltipValue}
             />
-            <Bar dataKey="profit" name="רווח">
+            <Bar dataKey="profit" name={labels.profit}>
               {chartData.map((entry, index) => (
-                <Cell 
-                  key={`cell-${index}`} 
-                  fill={entry.profit >= 0 ? COLORS.profit : COLORS.profitNegative} 
+                <Cell
+                  key={`cell-${index}`}
+                  fill={entry.profit >= 0 ? COLORS.profit : COLORS.profitNegative}
                 />
               ))}
             </Bar>
@@ -149,7 +163,7 @@ export function DealsCharts({ deals }: DealsChartsProps) {
       {/* Summary Pie Chart */}
       {totals.revenue > 0 && (
         <div className="bg-white/5 border border-white/10 rounded-lg p-6">
-          <h3 className="text-lg font-bold mb-4 text-right">חלוקת הכנסות</h3>
+          <h3 className="text-lg font-bold mb-4 text-right">{labels.revenueDistribution}</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <ResponsiveContainer width="100%" height={250}>
               <PieChart>
@@ -167,9 +181,9 @@ export function DealsCharts({ deals }: DealsChartsProps) {
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: '#1f2937', 
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#1f2937',
                     border: '1px solid #ffffff20',
                     borderRadius: '8px',
                     color: '#ffffff'
@@ -179,17 +193,17 @@ export function DealsCharts({ deals }: DealsChartsProps) {
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
-            
+
             {/* Summary Stats */}
             <div className="flex flex-col justify-center space-y-3">
               <div className="bg-green-500/20 border border-green-500/50 rounded-lg p-3">
-                <div className="text-sm text-green-200 mb-1">סה״כ הכנסות</div>
+                <div className="text-sm text-green-200 mb-1">{labels.totalRevenue}</div>
                 <div className="text-xl font-bold text-green-400">
                   {formatTooltipValue(totals.revenue)}
                 </div>
               </div>
               <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-3">
-                <div className="text-sm text-red-200 mb-1">סה״כ הוצאות</div>
+                <div className="text-sm text-red-200 mb-1">{labels.totalExpenses}</div>
                 <div className="text-xl font-bold text-red-400">
                   {formatTooltipValue(totals.expenses)}
                 </div>
@@ -202,7 +216,7 @@ export function DealsCharts({ deals }: DealsChartsProps) {
                 <div className={`text-sm mb-1 ${
                   totals.profit >= 0 ? 'text-green-200' : 'text-red-200'
                 }`}>
-                  סה״כ רווח
+                  {labels.totalProfit}
                 </div>
                 <div className={`text-xl font-bold ${
                   totals.profit >= 0 ? 'text-green-400' : 'text-red-400'
@@ -217,4 +231,3 @@ export function DealsCharts({ deals }: DealsChartsProps) {
     </div>
   )
 }
-

@@ -8,9 +8,11 @@ interface CategorySelectorProps {
   value: string | null
   onChange: (value: string | null) => void
   label?: string
+  noCategoryLabel?: string
+  categoryLabels?: Record<string, string>
 }
 
-export function CategorySelector({ value, onChange, label }: CategorySelectorProps) {
+export function CategorySelector({ value, onChange, label, noCategoryLabel = 'No category', categoryLabels }: CategorySelectorProps) {
   return (
     <div>
       {label && <p className="text-sm text-white/70 mb-2">{label}</p>}
@@ -24,10 +26,11 @@ export function CategorySelector({ value, onChange, label }: CategorySelectorPro
               : 'bg-white/5 border-white/20 text-white/60 hover:border-white/40 hover:text-white'
           }`}
         >
-          ללא קטגוריה
+          {noCategoryLabel}
         </button>
         {CATALOG_CATEGORIES.map((c) => {
           const active = value === c.id
+          const label = categoryLabels?.[c.id] ?? c.labelHe
           return (
             <button
               key={c.id}
@@ -39,7 +42,7 @@ export function CategorySelector({ value, onChange, label }: CategorySelectorPro
                   : 'bg-white/5 border-white/20 text-white/60 hover:border-white/40 hover:text-white'
               }`}
             >
-              {c.labelHe}
+              {label}
             </button>
           )
         })}

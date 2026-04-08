@@ -17,15 +17,20 @@ import { DealPaymentsWidget } from './DealPaymentsWidget'
 import { ContractorPaymentPlan } from './deals/templates/ContractorPaymentPlan'
 import { authFetch } from '@/lib/api/auth-fetch'
 
+const OffersListLoading = () => {
+  const t = useCRMTranslations()
+  return (
+    <div className="flex min-h-[200px] items-center justify-center text-center text-sm text-white/50">
+      {t.deals.loadingOffers}
+    </div>
+  )
+}
+
 const OffersList = dynamic(
   () => import('../offers/OffersList').then((m) => ({ default: m.OffersList })),
   {
     ssr: false,
-    loading: () => (
-      <div className="flex min-h-[200px] items-center justify-center text-center text-sm text-white/50">
-        טוען הצעות…
-      </div>
-    ),
+    loading: () => <OffersListLoading />,
   },
 )
 
@@ -384,7 +389,7 @@ export function DealModal({
                   onClick={() => setShowLaundryClosetModal(true)}
                   className="mt-2 px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 text-sm text-white"
                 >
-                  פתח פרטי מסתור כביסה
+                  {t.deals.laundryDetails}
                 </button>
               )}
             </div>
@@ -518,7 +523,7 @@ export function DealModal({
               <>
                 {localDeal.laundry_model && (
                   <div>
-                    <label className="block text-sm font-medium text-white/70 mb-2">דגם מסתור</label>
+                    <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.laundryModel}</label>
                     <div className="px-3 py-2 rounded-lg bg-white/5 border border-white/20 text-white">
                       {localDeal.laundry_model}
                     </div>
@@ -526,21 +531,21 @@ export function DealModal({
                 )}
                 {localDeal.laundry_distance && (
                   <div>
-                    <label className="block text-sm font-medium text-white/70 mb-2">מרחק (ס"מ)</label>
+                    <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.laundryDistance}</label>
                     <div className="px-3 py-2 rounded-lg bg-white/5 border border-white/20 text-white">
                       {localDeal.laundry_distance}
                     </div>
                   </div>
                 )}
                 <div>
-                  <label className="block text-sm font-medium text-white/70 mb-2">אור</label>
+                  <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.laundryLight}</label>
                   <div className="px-3 py-2 rounded-lg bg-white/5 border border-white/20 text-white">
-                    {localDeal.laundry_lighting ? 'כן' : 'לא'}
+                    {localDeal.laundry_lighting ? t.common.yes : t.common.no}
                   </div>
                 </div>
                 {localDeal.shape && ['ר', 'ח', 'מקיר לקיר'].includes(localDeal.shape) && (
                   <div>
-                    <label className="block text-sm font-medium text-white/70 mb-2">צורה</label>
+                    <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.shape}</label>
                     <div className="px-3 py-2 rounded-lg bg-white/5 border border-white/20 text-white">
                       {localDeal.shape}
                     </div>
@@ -567,7 +572,7 @@ export function DealModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">הצללה</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.shading}</label>
               <select
                 value={localDeal.shading_ratio || ''}
                 onChange={(e) => {
@@ -576,14 +581,14 @@ export function DealModal({
                 }}
                 className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
               >
-                <option value="">בחר</option>
+                <option value="">{t.deals.selectOption}</option>
                 <option value="40/20">40/20</option>
                 <option value="50/20">50/20</option>
                 <option value="70/20">70/20</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">גמר (RAL / דמוי עץ)</label>
+              <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.finishType}</label>
               <select
                 value={localDeal.finish_type || ''}
                 onChange={(e) => {
@@ -592,15 +597,15 @@ export function DealModal({
                 }}
                 className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
               >
-                <option value="">בחר</option>
+                <option value="">{t.deals.selectOption}</option>
                 <option value="ral">RAL</option>
-                <option value="wood">דמוי עץ</option>
+                <option value="wood">{t.deals.woodOption}</option>
               </select>
               <input
                 value={localDeal.finish_value || ''}
                 onChange={(e) => updateField('finish_value', e.target.value || null)}
                 className="mt-2 w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
-                placeholder="קוד RAL או שם העץ"
+                placeholder={t.deals.ralPlaceholder}
               />
             </div>
             <div>
@@ -663,14 +668,14 @@ export function DealModal({
               className="px-4 py-2 rounded-lg bg-green-600/20 hover:bg-green-600/30 text-green-200 font-medium flex items-center justify-center gap-2"
             >
               <FileText className="w-4 h-4" />
-              יצירת הצעת מחיר
+              {t.deals.btnCreateOffer2}
             </button>
           </div>
 
           {/* Offers List */}
           {deal.customer_name && (
             <div className="min-h-[200px] border-t border-white/10 pt-4">
-              <h3 className="mb-3 text-lg font-semibold">הצעות מחיר</h3>
+              <h3 className="mb-3 text-lg font-semibold">{t.deals.offersTitle}</h3>
               <OffersList 
                 dealId={deal.id} 
                 refreshTrigger={offersRefreshTrigger} 

@@ -6,6 +6,8 @@ import { Plus, Trash2 } from 'lucide-react'
 import { AddWorkShiftModal } from './AddWorkShiftModal'
 import { formatCurrencyILS } from '@/lib/workers/calculations'
 import { authFetch } from '@/lib/api/auth-fetch'
+import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
+import { useLanguage } from '@/lib/language-context'
 
 interface DealShift {
   id: string
@@ -36,8 +38,13 @@ function groupByDate(shifts: DealShift[]) {
     .sort((a, b) => b.date.localeCompare(a.date))
 }
 
+const LOCALE_MAP: Record<string, string> = { ru: 'ru-RU', en: 'en-US', he: 'he-IL' }
+
 export function WorkLogSection({ projectId, onShiftAdded }: WorkLogSectionProps) {
   const toast = useToast()
+  const t = useCRMTranslations()
+  const { language } = useLanguage()
+  const dateLocale = LOCALE_MAP[language] ?? 'en-US'
   const [shifts, setShifts] = useState<DealShift[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -63,7 +70,7 @@ export function WorkLogSection({ projectId, onShiftAdded }: WorkLogSectionProps)
   }, [fetchShifts])
 
   const handleDeleteShift = async (shiftId: string, workerId: string) => {
-    if (!confirm('האם אתה בטוח שברצונך למחוק משמרת זו?')) return
+    if (!confirm(t.workers.deleteShiftConfirm)) return
 
     try {
       const response = await authFetch(`/api/workers/${workerId}/shifts/${shiftId}`, {
@@ -75,7 +82,7 @@ export function WorkLogSection({ projectId, onShiftAdded }: WorkLogSectionProps)
       fetchShifts()
       onShiftAdded?.()
     } catch (err: unknown) {
-      toast.error('שגיאה במחיקת משמרת: ' + (err instanceof Error ? err.message : 'Unknown'))
+      toast.error((err instanceof Error ? err.message : 'Unknown'))
     }
   }
 
@@ -83,7 +90,7 @@ export function WorkLogSection({ projectId, onShiftAdded }: WorkLogSectionProps)
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr + 'T00:00:00')
-    return date.toLocaleDateString('he-IL', {
+    return date.toLocaleDateString(dateLocale, {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -93,24 +100,24 @@ export function WorkLogSection({ projectId, onShiftAdded }: WorkLogSectionProps)
   return (
     <div className="bg-gray-800 rounded-lg p-6 border border-white/10">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-xl font-bold text-white">יומן עבודה</h3>
+        <h3 className="text-xl font-bold text-white">{t.workers.workLog}</h3>
         <button
           onClick={() => setIsModalOpen(true)}
           className="flex items-center gap-2 px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition"
           type="button"
         >
           <Plus className="w-4 h-4" />
-          הוסף משמרת
+          {t.workers.addShift}
         </button>
       </div>
 
       {loading ? (
-        <div className="text-white/60 text-center py-8">טוען משמרות...</div>
+        <div className="text-white/60 text-center py-8">{t.workers.loadingShifts}</div>
       ) : error ? (
         <div className="text-red-400 text-center py-8">{error}</div>
       ) : groupedShifts.length === 0 ? (
         <div className="text-white/60 text-center py-8">
-          אין משמרות. לחץ על &quot;הוסף משמרת&quot; כדי להתחיל.
+          {t.workers.noShifts}
         </div>
       ) : (
         <div className="space-y-4">
@@ -125,7 +132,7 @@ export function WorkLogSection({ projectId, onShiftAdded }: WorkLogSectionProps)
                     {formatDate(group.date)}
                   </span>
                   <span className="text-sm text-white/60">
-                    ({group.shifts.length} עובד{group.shifts.length > 1 ? 'ים' : ''})
+                    ({group.shifts.length} {group.shifts.length > 1 ? t.workers.workers_plural : t.workers.worker})
                   </span>
                 </div>
                 <span className="text-lg font-bold text-green-400">
@@ -171,7 +178,7 @@ export function WorkLogSection({ projectId, onShiftAdded }: WorkLogSectionProps)
                         onClick={() => handleDeleteShift(shift.id, shift.workerId)}
                         className="p-2 rounded hover:bg-red-500/20 text-red-400 hover:text-red-300 transition"
                         type="button"
-                        title="מחק משמרת"
+                        title={t.common.delete}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
