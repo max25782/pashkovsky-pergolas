@@ -170,9 +170,12 @@ export interface PDF {
 }
 
 export interface ConfiguratorParams {
+  shapeType?: 'rectangle' | 'L' | 'U'
   widthCm: number
   depthCm: number
   heightCm: number
+  arm1WidthCm?: number
+  arm1DepthCm?: number
   color: string
   lamellaAngleDeg: number
   attachedToWall: boolean

@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { authFetch } from '@/lib/api/auth-fetch'
 import { useToast } from '@/components/ui/toast'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
+import { useTranslations } from 'next-intl'
 import { WorkersTable } from '@/components/workers/WorkersTable'
 import { WorkerModal } from '@/components/workers/WorkerModal'
 import { BulkPlanForm } from '@/components/workers/BulkPlanForm'
@@ -14,6 +15,7 @@ import type { Worker } from '@/types/workers'
 
 export default function WorkersAdminPage() {
   const t = useCRMTranslations()
+  const tWorkers = useTranslations('workers')
   const toast = useToast()
   const [workers, setWorkers] = useState<Worker[]>([])
   const [loading, setLoading] = useState(false)
@@ -46,14 +48,14 @@ export default function WorkersAdminPage() {
   useEffect(() => { fetchWorkers() }, [fetchWorkers])
 
   async function handleDelete(workerId: string) {
-    if (!confirm('האם אתה בטוח שברצונך למחוק עובד זה?')) return
+    if (!confirm(tWorkers('deleteConfirm'))) return
     try {
       const res = await authFetch(`/api/workers/${workerId}`, { method: 'DELETE' })
       if (!res.ok) {
         const data = await res.json().catch(() => ({})) as { error?: string }
         throw new Error(data.error ?? 'Failed to delete')
       }
-      toast.success('עובד נמחק בהצלחה')
+      toast.success(tWorkers('deleted'))
       fetchWorkers()
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to delete worker'
@@ -99,8 +101,8 @@ export default function WorkersAdminPage() {
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-3xl font-bold mb-2">ניהול עובדים</h2>
-            <p className="text-white/60">הוסף, ערוך ומחק עובדים</p>
+            <h2 className="text-3xl font-bold mb-2">{tWorkers('title')}</h2>
+            <p className="text-white/60">{tWorkers('subtitle')}</p>
           </div>
           <button
             onClick={() => setShowAddModal(true)}
@@ -108,7 +110,7 @@ export default function WorkersAdminPage() {
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition"
           >
             <Plus className="w-5 h-5" />
-            הוסף עובד
+            {tWorkers('addWorker')}
           </button>
         </div>
 
@@ -120,11 +122,11 @@ export default function WorkersAdminPage() {
               onChange={(e) => setShowInactive(e.target.checked)}
               className="w-4 h-4 rounded"
             />
-            <span className="text-white/80">הצג גם עובדים לא פעילים</span>
+            <span className="text-white/80">{tWorkers('showInactive')}</span>
           </label>
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-white/60" />
-            <label htmlFor="month-select" className="text-white/80 text-sm">חודש:</label>
+            <label htmlFor="month-select" className="text-white/80 text-sm">{tWorkers('month')}</label>
             <input
               id="month-select"
               type="month"
@@ -140,7 +142,7 @@ export default function WorkersAdminPage() {
               onChange={(e) => setPlanTomorrow(e.target.checked)}
               className="w-4 h-4 rounded"
             />
-            <span className="text-white/80">תכנן מחר (החלה מרובה)</span>
+            <span className="text-white/80">{tWorkers('planTomorrow')}</span>
           </label>
         </div>
 
@@ -153,10 +155,10 @@ export default function WorkersAdminPage() {
         )}
 
         {loading ? (
-          <div className="text-center py-12 text-white/60">טוען עובדים...</div>
+          <div className="text-center py-12 text-white/60">{tWorkers('loading')}</div>
         ) : workers.length === 0 ? (
           <div className="text-center py-12 text-white/60">
-            אין עובדים. לחץ על &quot;הוסף עובד&quot; כדי להתחיל.
+            {tWorkers('noWorkers')}
           </div>
         ) : (
           <WorkersTable

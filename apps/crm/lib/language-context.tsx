@@ -3,6 +3,8 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { NextIntlClientProvider } from 'next-intl'
 import heMessages from '../messages/he.json'
+import ruMessages from '../messages/ru.json'
+import enMessages from '../messages/en.json'
 
 export type Language = 'he' | 'ru' | 'en'
 
@@ -18,15 +20,14 @@ interface IntlState {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined)
 
-const messageCache: Partial<Record<Language, Record<string, unknown>>> = {
+const allMessages: Record<Language, Record<string, unknown>> = {
   he: heMessages as Record<string, unknown>,
+  ru: ruMessages as Record<string, unknown>,
+  en: enMessages as Record<string, unknown>,
 }
 
-async function loadMessages(lang: Language): Promise<Record<string, unknown>> {
-  if (messageCache[lang]) return messageCache[lang]!
-  const mod = await import(`../messages/${lang}.json`)
-  messageCache[lang] = mod.default as Record<string, unknown>
-  return messageCache[lang]!
+function loadMessages(lang: Language): Record<string, unknown> {
+  return allMessages[lang]
 }
 
 function applyDocumentLocale(lang: Language) {
@@ -45,19 +46,14 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     const initial = saved && ['he', 'ru', 'en'].includes(saved) ? saved : 'he'
     applyDocumentLocale(initial)
     if (initial !== 'he') {
-      // Load messages first, then update locale and messages atomically
-      loadMessages(initial).then((msgs) => {
-        setIntl({ locale: initial, messages: msgs })
-      })
+      setIntl({ locale: initial, messages: loadMessages(initial) })
     }
   }, [])
 
   const setLanguage = (lang: Language) => {
     localStorage.setItem('crm_language', lang)
     applyDocumentLocale(lang)
-    loadMessages(lang).then((msgs) => {
-      setIntl({ locale: lang, messages: msgs })
-    })
+    setIntl({ locale: lang, messages: loadMessages(lang) })
   }
 
   return (

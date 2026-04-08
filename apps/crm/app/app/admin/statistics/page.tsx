@@ -4,12 +4,14 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
+import { useTranslations } from 'next-intl'
 import { DealsStatistics } from '@/components/admin/DealsStatistics'
 import type { Deal } from '@/components/admin/deal-types'
 import { createClient } from '@/lib/supabase/client'
 
 export default function StatisticsPage() {
   const t = useCRMTranslations()
+  const tStats = useTranslations('statistics')
   const router = useRouter()
   const [deals, setDeals] = useState<Deal[]>([])
   const [loading, setLoading] = useState(true)
@@ -26,6 +28,7 @@ export default function StatisticsPage() {
         const { data, error: dbError } = await supabase
           .from('deals')
           .select('*')
+          .or('source.is.null,source.neq.quick_offer')
           .order('created_at', { ascending: false })
           .limit(1000)
         
@@ -110,13 +113,13 @@ export default function StatisticsPage() {
             href="/app/admin/reports/weekly"
             className="px-4 py-2 rounded bg-purple-600 hover:bg-purple-700 font-semibold"
           >
-            Weekly Digests
+            {tStats('weeklyDigests')}
           </Link>
         </div>
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-white/60">טוען נתונים...</div>
+        <div className="text-center py-12 text-white/60">{tStats('loading')}</div>
       ) : error ? (
         <div className="text-center py-12 text-red-400">{error}</div>
       ) : (

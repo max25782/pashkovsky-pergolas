@@ -3,9 +3,12 @@ import type { OfferDraft, Pergola, PergolaShape, RectangleShape } from '@/types/
 import { calculateOffer } from '@/lib/offer-calculator'
 
 export interface PergolaParamsPayload {
+  shapeType?: 'rectangle' | 'L' | 'U'
   widthCm: number
   depthCm: number
   heightCm: number
+  arm1WidthCm?: number
+  arm1DepthCm?: number
   color: string
   lamellaAngleDeg: number
   attachedToWall: boolean
@@ -231,9 +234,12 @@ export async function applyConfiguratorSyncToOffer(
     updatedAt: new Date().toISOString(),
     skippedNonRectangle,
     params: {
+      shapeType: params.shapeType ?? 'rectangle',
       widthCm: params.widthCm,
       depthCm: params.depthCm,
       heightCm: params.heightCm,
+      arm1WidthCm: params.arm1WidthCm ?? 200,
+      arm1DepthCm: params.arm1DepthCm ?? 200,
       color: params.color,
       lamellaAngleDeg: params.lamellaAngleDeg,
       attachedToWall: params.attachedToWall,

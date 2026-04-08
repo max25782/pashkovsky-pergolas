@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
+import { useTranslations } from 'next-intl'
 import { ORDER_STATUSES, getStatusLabel } from './order-constants'
 import { OrderItemPriceRow } from './OrderItemPriceRow'
 import type { Language } from './order-constants'
@@ -17,6 +18,7 @@ interface Props {
 
 export function OrderEditModal({ order, lang, onClose, onSave, onUpdateItemPrice }: Props) {
   const t = useCRMTranslations()
+  const tOrders = useTranslations('orders')
 
   const [form, setForm] = useState<OrderEditForm>({
     status: order.status,
@@ -56,29 +58,18 @@ export function OrderEditModal({ order, lang, onClose, onSave, onUpdateItemPrice
     }))
   }
 
-  const statusLabel = lang === 'ru' ? 'Статус' : lang === 'en' ? 'Status' : 'סטטוס'
-  const finalAmountLabel = lang === 'ru' ? 'Итоговая сумма' : lang === 'en' ? 'Final Amount' : 'סכום סופי'
-  const discountPctLabel = lang === 'ru' ? 'Скидка %' : lang === 'en' ? 'Discount %' : 'הנחה %'
-  const discountAmtLabel = lang === 'ru' ? 'Скидка (₪)' : lang === 'en' ? 'Discount (₪)' : 'הנחה (₪)'
-  const paymentLabel = lang === 'ru' ? 'Статус оплаты' : lang === 'en' ? 'Payment Status' : 'סטטוס תשלום'
-  const deliveryLabel = lang === 'ru' ? 'Дата доставки' : lang === 'en' ? 'Delivery Date' : 'תאריך משלוח'
-  const notesLabel = lang === 'ru' ? 'Примечания' : lang === 'en' ? 'Notes' : 'הערות'
-  const customerNotesLabel = lang === 'ru' ? 'Примечания клиента' : lang === 'en' ? 'Customer Notes' : 'הערות לקוח'
-  const itemsLabel = lang === 'ru' ? 'Товары — цена за кг' : lang === 'en' ? 'Items — price per kg' : 'פריטים — מחיר לק"ג'
-
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b border-white/10">
           <h2 className="text-2xl font-bold">
-            {lang === 'ru' ? 'Редактировать заказ' : lang === 'en' ? 'Edit Order' : 'ערוך הזמנה'}:{' '}
-            {order.order_number}
+            {tOrders('editOrder')}: {order.order_number}
           </h2>
         </div>
 
         <div className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-2">{statusLabel}</label>
+            <label className="block text-sm font-medium mb-2">{tOrders('status')}</label>
             <select
               value={form.status}
               onChange={(e) => setForm({ ...form, status: e.target.value as OrderStatus })}
@@ -91,7 +82,7 @@ export function OrderEditModal({ order, lang, onClose, onSave, onUpdateItemPrice
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">{finalAmountLabel} (₪)</label>
+            <label className="block text-sm font-medium mb-2">{tOrders('finalAmountLabel')} (₪)</label>
             <input
               type="number"
               step="0.01"
@@ -103,7 +94,7 @@ export function OrderEditModal({ order, lang, onClose, onSave, onUpdateItemPrice
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-2">{discountPctLabel}</label>
+              <label className="block text-sm font-medium mb-2">{tOrders('discountPercent')}</label>
               <input
                 type="number"
                 step="0.1"
@@ -115,7 +106,7 @@ export function OrderEditModal({ order, lang, onClose, onSave, onUpdateItemPrice
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">{discountAmtLabel}</label>
+              <label className="block text-sm font-medium mb-2">{tOrders('discountAmount')}</label>
               <input
                 type="number"
                 step="0.01"
@@ -128,20 +119,20 @@ export function OrderEditModal({ order, lang, onClose, onSave, onUpdateItemPrice
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">{paymentLabel}</label>
+            <label className="block text-sm font-medium mb-2">{tOrders('paymentStatus')}</label>
             <select
               value={form.payment_status}
               onChange={(e) => setForm({ ...form, payment_status: e.target.value as PaymentStatus })}
               className="w-full px-4 py-2 bg-black/30 border border-white/20 rounded text-white"
             >
-              <option value="pending">{lang === 'ru' ? 'Ожидает' : lang === 'en' ? 'Pending' : 'ממתין'}</option>
-              <option value="paid">{lang === 'ru' ? 'Оплачено' : lang === 'en' ? 'Paid' : 'שולם'}</option>
-              <option value="refunded">{lang === 'ru' ? 'Возврат' : lang === 'en' ? 'Refunded' : 'הוחזר'}</option>
+              <option value="pending">{tOrders('paymentStatuses.pending')}</option>
+              <option value="paid">{tOrders('paymentStatuses.paid')}</option>
+              <option value="refunded">{tOrders('paymentStatuses.refunded')}</option>
             </select>
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">{deliveryLabel}</label>
+            <label className="block text-sm font-medium mb-2">{tOrders('deliveryDate')}</label>
             <input
               type="date"
               value={form.delivery_date}
@@ -151,7 +142,7 @@ export function OrderEditModal({ order, lang, onClose, onSave, onUpdateItemPrice
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">{notesLabel}</label>
+            <label className="block text-sm font-medium mb-2">{tOrders('notes')}</label>
             <textarea
               value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
@@ -161,7 +152,7 @@ export function OrderEditModal({ order, lang, onClose, onSave, onUpdateItemPrice
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">{customerNotesLabel}</label>
+            <label className="block text-sm font-medium mb-2">{tOrders('customerNotes')}</label>
             <textarea
               value={form.customer_notes}
               onChange={(e) => setForm({ ...form, customer_notes: e.target.value })}
@@ -171,7 +162,7 @@ export function OrderEditModal({ order, lang, onClose, onSave, onUpdateItemPrice
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">{itemsLabel}</label>
+            <label className="block text-sm font-medium mb-2">{tOrders('itemsPricePerKg')}</label>
             <div className="space-y-2">
               {order.order_items?.map((item) => (
                 <OrderItemPriceRow

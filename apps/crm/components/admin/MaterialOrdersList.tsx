@@ -3,13 +3,16 @@
 import { useState, useEffect } from 'react'
 import type { MaterialOrder } from '@/types/material-order'
 import { authFetch } from '@/lib/api/auth-fetch'
+import { useTranslations } from 'next-intl'
 
 interface MaterialOrdersListProps {
   dealId: string
   adminToken?: string
+  refreshKey?: number
 }
 
-export function MaterialOrdersList({ dealId, adminToken = '' }: MaterialOrdersListProps) {
+export function MaterialOrdersList({ dealId, adminToken = '', refreshKey = 0 }: MaterialOrdersListProps) {
+  const tMat = useTranslations('materialOrders')
   const [orders, setOrders] = useState<MaterialOrder[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -19,7 +22,8 @@ export function MaterialOrdersList({ dealId, adminToken = '' }: MaterialOrdersLi
   useEffect(() => {
     loadOrders()
     loadOfferId()
-  }, [dealId])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dealId, refreshKey])
 
   async function loadOrders() {
     try {
@@ -58,7 +62,7 @@ export function MaterialOrdersList({ dealId, adminToken = '' }: MaterialOrdersLi
       const res = await authFetch(`/api/offers/${offerId}/cut-list-pdf`)
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        alert(`שגיאה ביצירת PDF: ${err.error ?? res.statusText}`)
+        alert(`${tMat('errorGenerating')} ${err.error ?? res.statusText}`)
         return
       }
       const blob = await res.blob()
@@ -71,7 +75,7 @@ export function MaterialOrdersList({ dealId, adminToken = '' }: MaterialOrdersLi
       document.body.removeChild(a)
       setTimeout(() => URL.revokeObjectURL(url), 10_000)
     } catch (e) {
-      alert(`שגיאה ביצירת PDF: ${e instanceof Error ? e.message : String(e)}`)
+      alert(`${tMat('errorGenerating')} ${e instanceof Error ? e.message : String(e)}`)
     } finally {
       setGeneratingPdf(false)
     }
@@ -83,23 +87,23 @@ export function MaterialOrdersList({ dealId, adminToken = '' }: MaterialOrdersLi
       disabled={generatingPdf}
       className="flex items-center gap-2 rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-60 transition-colors"
     >
-      {generatingPdf ? 'מייצר...' : 'הפק רשימת חומר PDF'}
+      {generatingPdf ? tMat('generating') : tMat('generateCutList')}
     </button>
   ) : null
 
   if (loading) {
-    return <div className="text-white/60">טוען הזמנות חומר...</div>
+    return <div className="text-white/60">{tMat('loading')}</div>
   }
 
   if (error) {
-    return <div className="text-red-400">שגיאה: {error}</div>
+    return <div className="text-red-400">{tMat('error')} {error}</div>
   }
 
   if (orders.length === 0) {
     return (
       <div className="space-y-3">
         <div className="text-white/60 p-4 bg-white/5 rounded-lg">
-          אין הזמנות חומר עבור עסקה זו
+          {tMat('noOrders')}
         </div>
         {cutListButton && <div>{cutListButton}</div>}
       </div>
@@ -109,7 +113,7 @@ export function MaterialOrdersList({ dealId, adminToken = '' }: MaterialOrdersLi
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-white">הזמנות חומר (חומר הוזמן)</h3>
+        <h3 className="text-lg font-semibold text-white">{tMat('title')}</h3>
         {cutListButton}
       </div>
       
@@ -117,12 +121,12 @@ export function MaterialOrdersList({ dealId, adminToken = '' }: MaterialOrdersLi
         <table className="w-full border-collapse">
           <thead>
             <tr className="border-b border-white/20">
-              <th className="text-right p-2 text-sm font-semibold text-white/70">סוג חומר</th>
-              <th className="text-right p-2 text-sm font-semibold text-white/70">כמות</th>
-              <th className="text-right p-2 text-sm font-semibold text-white/70">ספק</th>
-              <th className="text-right p-2 text-sm font-semibold text-white/70">תאריך הזמנה</th>
-              <th className="text-right p-2 text-sm font-semibold text-white/70">סטטוס</th>
-              <th className="text-right p-2 text-sm font-semibold text-white/70">מחיר</th>
+              <th className="text-right p-2 text-sm font-semibold text-white/70">{tMat('materialType')}</th>
+              <th className="text-right p-2 text-sm font-semibold text-white/70">{tMat('quantity')}</th>
+              <th className="text-right p-2 text-sm font-semibold text-white/70">{tMat('supplier')}</th>
+              <th className="text-right p-2 text-sm font-semibold text-white/70">{tMat('orderDate')}</th>
+              <th className="text-right p-2 text-sm font-semibold text-white/70">{tMat('status')}</th>
+              <th className="text-right p-2 text-sm font-semibold text-white/70">{tMat('price')}</th>
             </tr>
           </thead>
           <tbody>
@@ -135,7 +139,7 @@ export function MaterialOrdersList({ dealId, adminToken = '' }: MaterialOrdersLi
                   )}
                 </td>
                 <td className="p-2 text-white">
-                  {order.quantity} {order.unit || 'יח'}
+                  {order.quantity} {order.unit || tMat('unit')}
                 </td>
                 <td className="p-2 text-white">
                   <div>{order.supplier_name || '-'}</div>
@@ -158,11 +162,7 @@ export function MaterialOrdersList({ dealId, adminToken = '' }: MaterialOrdersLi
                     order.status === 'confirmed' ? 'bg-yellow-500/20 text-yellow-300' :
                     'bg-gray-500/20 text-gray-300'
                   }`}>
-                    {order.status === 'ordered' ? 'הוזמן' :
-                     order.status === 'confirmed' ? 'אושר' :
-                     order.status === 'in_transit' ? 'בדרך' :
-                     order.status === 'delivered' ? 'התקבל' :
-                     'בוטל'}
+                    {tMat(`statuses.${order.status as 'ordered' | 'confirmed' | 'in_transit' | 'delivered' | 'cancelled'}` as const)}
                   </span>
                 </td>
                 <td className="p-2 text-white">

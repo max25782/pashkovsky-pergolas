@@ -2,6 +2,12 @@ import type { ConfiguratorLocale } from './locale'
 
 export interface ConfiguratorTranslations {
   title: string
+  shapeLabel: string
+  shapeRectangle: string
+  shapeL: string
+  shapeU: string
+  armWidth: string
+  armDepth: string
   width: string
   depth: string
   height: string
@@ -29,12 +35,20 @@ export interface ConfiguratorTranslations {
   saveButton: string
   saveSuccess: string
   saveFailed: string
+  readOnlyLabel: string
+  settingsAriaLabel: string
 }
 
 export function getTranslations(locale: ConfiguratorLocale): ConfiguratorTranslations {
   if (locale === 'ru') {
     return {
       title: 'Настройки перголы',
+      shapeLabel: 'Форма',
+      shapeRectangle: '▭ Прямоугольник',
+      shapeL: '⌐ Г-образная',
+      shapeU: '⊓ П-образная',
+      armWidth: 'Ширина крыла (см)',
+      armDepth: 'Глубина крыла (см)',
       width: 'Ширина (см)',
       depth: 'Глубина (см)',
       height: 'Высота (см)',
@@ -62,12 +76,20 @@ export function getTranslations(locale: ConfiguratorLocale): ConfiguratorTransla
       saveButton: 'Сохранить конфигурацию',
       saveSuccess: 'Сохранено!',
       saveFailed: 'Ошибка сохранения',
+      readOnlyLabel: 'Только просмотр — вращайте сцену мышью',
+      settingsAriaLabel: 'Настройки навеса',
     }
   }
 
   if (locale === 'en') {
     return {
       title: 'Pergola settings',
+      shapeLabel: 'Shape',
+      shapeRectangle: '▭ Rectangle',
+      shapeL: '⌐ L-shape',
+      shapeU: '⊓ U-shape',
+      armWidth: 'Arm width (cm)',
+      armDepth: 'Arm depth (cm)',
       width: 'Width (cm)',
       depth: 'Depth (cm)',
       height: 'Height (cm)',
@@ -95,11 +117,19 @@ export function getTranslations(locale: ConfiguratorLocale): ConfiguratorTransla
       saveButton: 'Save configuration',
       saveSuccess: 'Saved!',
       saveFailed: 'Save failed',
+      readOnlyLabel: 'View only — drag to rotate',
+      settingsAriaLabel: 'Canopy settings',
     }
   }
 
   return {
     title: 'הגדרות פרגולה',
+    shapeLabel: 'צורה',
+    shapeRectangle: '▭ מלבן',
+    shapeL: '⌐ צורת ר',
+    shapeU: '⊓ צורת ח',
+    armWidth: 'רוחב כנף (ס"מ)',
+    armDepth: 'עומק כנף (ס"מ)',
     width: 'רוחב (ס"מ)',
     depth: 'עומק (ס"מ)',
     height: 'גובה (ס"מ)',
@@ -127,5 +157,7 @@ export function getTranslations(locale: ConfiguratorLocale): ConfiguratorTransla
     saveButton: 'שמור קונפיגורציה',
     saveSuccess: 'נשמר!',
     saveFailed: 'שמירה נכשלה',
+    readOnlyLabel: 'תצוגה בלבד — לסיבוב התמונה גררו בעכבר',
+    settingsAriaLabel: 'הגדרות פרגולה',
   }
 }

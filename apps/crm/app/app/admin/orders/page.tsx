@@ -1,6 +1,7 @@
 'use client'
 
 import { useLanguage } from '@/lib/language-context'
+import { useTranslations } from 'next-intl'
 import { OrderCard } from '@/components/admin/orders/OrderCard'
 import { OrderEditModal } from '@/components/admin/orders/OrderEditModal'
 import { useOrders } from '@/components/admin/orders/useOrders'
@@ -9,6 +10,7 @@ import type { Language } from '@/components/admin/orders/order-constants'
 export default function OrdersPage() {
   const { language } = useLanguage()
   const lang = language as Language
+  const tOrders = useTranslations('orders')
 
   const {
     orders,
@@ -26,7 +28,7 @@ export default function OrdersPage() {
       <main className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-950 text-white">
         <div className="container py-8 text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4" />
-          <p className="text-white/60">Loading orders...</p>
+          <p className="text-white/60">{tOrders('loadingOrders')}</p>
         </div>
       </main>
     )
@@ -36,12 +38,12 @@ export default function OrdersPage() {
     <main className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-950 text-white">
       <div className="container py-8">
         <h1 className="text-4xl font-bold mb-8">
-          {lang === 'ru' ? 'Заказы профилей' : lang === 'en' ? 'Profile Orders' : 'הזמנות פרופילים'}
+          {tOrders('profileOrdersTitle')}
         </h1>
 
         {orders.length === 0 ? (
           <div className="bg-white/5 border border-white/10 rounded-lg p-8 text-center text-white/60">
-            {lang === 'ru' ? 'Нет заказов' : lang === 'en' ? 'No orders' : 'אין הזמנות'}
+            {tOrders('noOrders')}
           </div>
         ) : (
           <div className="space-y-6">

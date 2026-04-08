@@ -352,11 +352,15 @@ function configuratorParamsTechHtml(offer: Offer): string {
 
 /**
  * Technical appendix block — aligned with classic quote PDFs: "הדמיה מוצר" + schematic area on מפרט טכני.
+ * @param previewImageDataUrl - Optional pre-fetched base64 data URL for the 3D preview image.
+ *   Pass this to avoid Puppeteer being unable to load external URLs during PDF generation.
  */
-function configuratorTechnicalAppendixHtml(offer: Offer): string {
+function configuratorTechnicalAppendixHtml(offer: Offer, previewImageDataUrl?: string | null): string {
   const meta = offer.configuratorMeta
   let img: string | null = null
-  if (meta?.previewImageUrl?.startsWith('http')) img = meta.previewImageUrl
+  // Prefer pre-fetched base64 data URL (works in Puppeteer without network access)
+  if (previewImageDataUrl?.startsWith('data:image/')) img = previewImageDataUrl
+  else if (meta?.previewImageUrl?.startsWith('http')) img = meta.previewImageUrl
   else if (offer.images?.[0]?.startsWith('http')) img = offer.images[0]
   const link = customer3dViewerHref(meta)
   const planSvg = rectanglePlanSvgFragment(offer)
@@ -374,7 +378,7 @@ function configuratorTechnicalAppendixHtml(offer: Offer): string {
 
   let body = ''
   if (img !== null) {
-    body += `<div class="viz-img-wrap"><img src="${escapeHtml(img)}" alt="הדמיית פרגולה" /></div>`
+    body += `<div class="viz-img-wrap"><img src="${escapeAttr(img)}" alt="הדמיית פרגולה" /></div>`
   }
   if (link !== null) {
     body += `<div class="viz-link"><a href="${escapeHtml(link)}">פתיחת תצוגה תלת־ממדית אינטראקטיבית</a></div>`
@@ -450,8 +454,15 @@ function winterClosureTechRows(offer: Offer): string {
 /**
  * Render HTML template for offer (הצעת מחיר) — layout aligned with classic Israeli quote PDFs:
  * header + offer no. + validity, לכבוד, priced line table, VAT summary, signature, technical appendix page.
+ *
+ * @param omitSignatureSection - when true the signature block is replaced with an empty placeholder
+ *   (used by the digital approval page which renders its own interactive signature pad below the iframe).
  */
-export function renderOfferHtml(offer: Offer): string {
+export function renderOfferHtml(
+  offer: Offer,
+  previewImageDataUrl?: string | null,
+  omitSignatureSection = false,
+): string {
   const fontsCss = getHebrewFontsCss()
   const logoDataUri = getLogoDataUri()
   const notesText = offer.options?.notes?.trim() || ''
@@ -782,7 +793,7 @@ export function renderOfferHtml(offer: Offer): string {
     }
   </table>
 
-  ${customerSignatureSectionHtml(offer, offerNo, docDate)}
+  ${omitSignatureSection ? '' : customerSignatureSectionHtml(offer, offerNo, docDate)}
 
   <div class="page-foot">
     <span>Pashkovsky Group · www.pashkovsky-group.com</span>
@@ -807,7 +818,7 @@ export function renderOfferHtml(offer: Offer): string {
 
   ${configuratorParamsTechHtml(offer)}
 
-  ${configuratorTechnicalAppendixHtml(offer)}
+  ${configuratorTechnicalAppendixHtml(offer, previewImageDataUrl)}
 
   <div class="terms">
     <strong>תנאים כלליים</strong>

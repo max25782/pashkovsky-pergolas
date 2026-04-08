@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import type { Locale } from '@/lib/locales'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
+import { useTranslations } from 'next-intl'
 import type { AnalyticsContext } from '@/lib/ai/analyticsTypes'
 import { authFetch } from '@/lib/api/auth-fetch'
 
@@ -19,33 +20,39 @@ interface WeeklyDigest {
   createdAt?: string
 }
 
-function extractKeyMetrics(context: AnalyticsContext): string[] {
-  const metrics: string[] = []
+function useExtractKeyMetrics() {
+  const tWeekly = useTranslations('reports.weekly')
 
-  if (context.leads) {
-    metrics.push(`Лидов: ${context.leads.totalLeads}`)
-    metrics.push(`Квалифицированных: ${context.leads.qualifiedLeads}`)
-    metrics.push(`Конверсия: ${context.leads.conversionRate}%`)
+  return function extractKeyMetrics(context: AnalyticsContext): string[] {
+    const metrics: string[] = []
+
+    if (context.leads) {
+      metrics.push(tWeekly('metricsLeads', { count: context.leads.totalLeads }))
+      metrics.push(tWeekly('metricsQualified', { count: context.leads.qualifiedLeads }))
+      metrics.push(tWeekly('metricsConversion', { rate: context.leads.conversionRate }))
+    }
+
+    if (context.deals) {
+      metrics.push(tWeekly('metricsDeals', { count: context.deals.totalDeals }))
+      metrics.push(tWeekly('metricsActive', { count: context.deals.activeDeals }))
+      metrics.push(tWeekly('metricsCompleted', { count: context.deals.completedDeals }))
+      metrics.push(tWeekly('metricsWinRate', { rate: context.deals.winRate }))
+    }
+
+    if (context.finance) {
+      metrics.push(tWeekly('metricsRevenue', { amount: context.finance.totalRevenue.toLocaleString() }))
+      metrics.push(tWeekly('metricsProfit', { amount: context.finance.totalProfit.toLocaleString() }))
+      metrics.push(tWeekly('metricsMargin', { rate: context.finance.profitMargin }))
+    }
+
+    return metrics
   }
-
-  if (context.deals) {
-    metrics.push(`Сделок: ${context.deals.totalDeals}`)
-    metrics.push(`Активных: ${context.deals.activeDeals}`)
-    metrics.push(`Завершено: ${context.deals.completedDeals}`)
-    metrics.push(`Win rate: ${context.deals.winRate}%`)
-  }
-
-  if (context.finance) {
-    metrics.push(`Выручка: ${context.finance.totalRevenue.toLocaleString()} ILS`)
-    metrics.push(`Прибыль: ${context.finance.totalProfit.toLocaleString()} ILS`)
-    metrics.push(`Маржа: ${context.finance.profitMargin}%`)
-  }
-
-  return metrics
 }
 
 export default function WeeklyDigestsPage() {
   const t = useCRMTranslations()
+  const tWeekly = useTranslations('reports.weekly')
+  const extractKeyMetrics = useExtractKeyMetrics()
   const [digests, setDigests] = useState<WeeklyDigest[]>([])
   const [selectedDigest, setSelectedDigest] = useState<WeeklyDigest | null>(null)
   const [loading, setLoading] = useState(false)
@@ -69,7 +76,7 @@ export default function WeeklyDigestsPage() {
       const data = await res.json()
       setDigests(data.digests || [])
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Ошибка загрузки дайджестов')
+      setError(err instanceof Error ? err.message : tWeekly('errorLoadingDigests'))
     } finally {
       setLoading(false)
     }
@@ -106,7 +113,7 @@ export default function WeeklyDigestsPage() {
         }
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Ошибка генерации дайджеста')
+      setError(err instanceof Error ? err.message : tWeekly('errorGenerating'))
     } finally {
       setGenerating(false)
     }
@@ -123,14 +130,14 @@ export default function WeeklyDigestsPage() {
       const data = await res.json()
       setSelectedDigest(data.digest)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Ошибка загрузки дайджеста')
+      setError(err instanceof Error ? err.message : tWeekly('errorLoadingDigest'))
     }
   }
 
   return (
     <main className="container py-8 text-white">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">Weekly Digests</h1>
+        <h1 className="text-3xl font-bold">{tWeekly('title')}</h1>
         <div className="flex gap-2 flex-wrap">
           <Link
             href="/app/admin/deals"
@@ -149,7 +156,7 @@ export default function WeeklyDigestsPage() {
             disabled={generating}
             className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 font-semibold disabled:opacity-50"
           >
-            {generating ? 'Генерирую...' : 'Сгенерировать сейчас'}
+            {generating ? tWeekly('generating') : tWeekly('generateNow')}
           </button>
         </div>
       </div>
@@ -164,11 +171,11 @@ export default function WeeklyDigestsPage() {
         {/* Left: Digest list */}
         <div className="lg:col-span-1">
           <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-            <h2 className="text-lg font-bold mb-4">История дайджестов</h2>
+            <h2 className="text-lg font-bold mb-4">{tWeekly('history')}</h2>
             {loading ? (
-              <div className="text-white/60 text-sm">Загрузка...</div>
+              <div className="text-white/60 text-sm">{tWeekly('loading')}</div>
             ) : digests.length === 0 ? (
-              <div className="text-white/60 text-sm">Нет дайджестов</div>
+              <div className="text-white/60 text-sm">{tWeekly('noDigests')}</div>
             ) : (
               <div className="space-y-2 max-h-[600px] overflow-y-auto">
                 {digests.map((digest) => (
@@ -187,11 +194,11 @@ export default function WeeklyDigestsPage() {
                     <div className={`text-xs font-semibold mb-1 ${
                       digest.status === 'failed' ? 'text-red-400' : 'text-green-400'
                     }`}>
-                      {digest.status === 'failed' ? 'Ошибка' : 'Готово'}
+                      {digest.status === 'failed' ? tWeekly('failed') : tWeekly('done')}
                     </div>
                     {digest.createdAt && (
                       <div className="text-xs text-white/60">
-                        {new Date(digest.createdAt).toLocaleDateString('ru-RU')}
+                        {new Date(digest.createdAt).toLocaleDateString()}
                       </div>
                     )}
                   </button>
@@ -211,14 +218,14 @@ export default function WeeklyDigestsPage() {
                 </h2>
                 {selectedDigest.status === 'failed' && (
                   <span className="px-3 py-1 rounded bg-red-900/30 text-red-200 text-sm">
-                    Ошибка генерации
+                    {tWeekly('generationFailed')}
                   </span>
                 )}
               </div>
 
               {selectedDigest.status === 'failed' ? (
                 <div className="text-red-200">
-                  {selectedDigest.errorMessage || 'Неизвестная ошибка'}
+                  {selectedDigest.errorMessage || tWeekly('unknownError')}
                 </div>
               ) : (
                 <>
@@ -226,7 +233,7 @@ export default function WeeklyDigestsPage() {
                   {selectedDigest.summaryJson && (
                     <div className="mb-6 pb-6 border-b border-white/10">
                       <h3 className="text-sm font-semibold mb-3 text-white/60">
-                        Ключевые метрики:
+                        {tWeekly('keyMetrics')}
                       </h3>
                       <div className="flex flex-wrap gap-2">
                         {extractKeyMetrics(selectedDigest.summaryJson).map((metric, idx) => (
@@ -252,7 +259,7 @@ export default function WeeklyDigestsPage() {
             </div>
           ) : (
             <div className="bg-white/5 border border-white/10 rounded-lg p-6 text-center text-white/60">
-              Выберите дайджест из списка для просмотра
+              {tWeekly('selectDigest')}
             </div>
           )}
         </div>

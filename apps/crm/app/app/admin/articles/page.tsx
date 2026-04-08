@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
+import { useTranslations } from 'next-intl'
 import { useToast } from '@/components/ui/toast'
 import { authFetch } from '@/lib/api/auth-fetch'
 
@@ -18,6 +19,7 @@ interface Article {
 
 export default function AdminArticlesPage() {
   const t = useCRMTranslations()
+  const tArticles = useTranslations('articles')
   const toast = useToast()
   const [articles, setArticles] = useState<Article[]>([])
   const [loading, setLoading] = useState(true)
@@ -68,7 +70,7 @@ export default function AdminArticlesPage() {
         throw new Error('Failed to save article')
       }
 
-      toast.success(t.common.save === 'Save' ? 'Article saved!' : t.common.save === 'Сохранить' ? 'Статья сохранена!' : 'המאמר נשמר!')
+      toast.success(tArticles('saved'))
       loadArticles()
       setShowForm(false)
       setEditingArticle(null)
@@ -90,7 +92,7 @@ export default function AdminArticlesPage() {
         throw new Error('Failed to delete article')
       }
 
-      toast.success(t.articles.deleteArticle === 'Delete' ? 'Article deleted!' : t.articles.deleteArticle === 'Удалить' ? 'Статья удалена!' : 'המאמר נמחק!')
+      toast.success(tArticles('deleted'))
       loadArticles()
     } catch (error) {
       console.error('Error deleting article:', error)
@@ -250,7 +252,7 @@ export default function AdminArticlesPage() {
               {(['he', 'ru', 'en'] as const).map((lang) => (
                 <div key={`summary-${lang}`}>
                   <label className="block mb-2 font-semibold">
-                    Краткое описание ({lang.toUpperCase()})
+                    {tArticles('summaryLabel')} ({lang.toUpperCase()})
                   </label>
                   <textarea
                     value={editingArticle?.summary[lang] || ''}
@@ -269,19 +271,19 @@ export default function AdminArticlesPage() {
               {/* Sections */}
               <div>
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-xl font-bold">Секции</h3>
+                  <h3 className="text-xl font-bold">{tArticles('sectionsLabel')}</h3>
                   <button
                     onClick={addSection}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg"
                   >
-                    + Добавить секцию
+                    + {tArticles('addSection')}
                   </button>
                 </div>
 
                 {editingArticle?.sections.map((section, index) => (
                   <div key={index} className="mb-6 p-4 bg-white/5 rounded-lg">
                     <div className="flex justify-between items-center mb-4">
-                      <h4 className="font-bold">Секция {index + 1}</h4>
+                      <h4 className="font-bold">{tArticles('sectionLabel')} {index + 1}</h4>
                       <button
                         onClick={() => {
                           const newSections = [...editingArticle.sections]
@@ -290,14 +292,14 @@ export default function AdminArticlesPage() {
                         }}
                         className="text-red-400 hover:text-red-300"
                       >
-                        Удалить
+                        {tArticles('deleteSection')}
                       </button>
                     </div>
 
                     {(['he', 'ru', 'en'] as const).map((lang) => (
                       <div key={`section-${index}-${lang}`} className="mb-4">
                         <label className="block mb-1 text-sm">
-                          Подзаголовок ({lang.toUpperCase()})
+                          {tArticles('subheadingLabel')} ({lang.toUpperCase()})
                         </label>
                         <input
                           type="text"
@@ -310,7 +312,7 @@ export default function AdminArticlesPage() {
                           className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-sm"
                         />
                         <label className="block mb-1 mt-2 text-sm">
-                          Текст ({lang.toUpperCase()})
+                          {tArticles('textLabel')} ({lang.toUpperCase()})
                         </label>
                         <textarea
                           value={section.body[lang] || ''}

@@ -2,17 +2,17 @@
 
 import { useEffect, useState } from 'react'
 import { User, Building2, Bell, Shield, Palette } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 export default function SettingsPage() {
-  const [user, setUser] = useState<any>(null)
+  const tSettings = useTranslations('settings')
+  const tCommon = useTranslations('common')
+  const [user, setUser] = useState<{ name: string; email: string } | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Load user data from localStorage
     const token = localStorage.getItem('token') || localStorage.getItem('admin_token')
     if (token) {
-      // In production, fetch user data from API
-      // For now, just show placeholder
       setUser({ name: 'Admin User', email: 'admin@example.com' })
     }
     setLoading(false)
@@ -23,7 +23,7 @@ export default function SettingsPage() {
       <div className="min-h-screen bg-gradient-to-b from-neutral-950 to-neutral-900 text-white flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-          <p className="text-white/70">טוען...</p>
+          <p className="text-white/70">{tSettings('loading')}</p>
         </div>
       </div>
     )
@@ -32,13 +32,11 @@ export default function SettingsPage() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-neutral-950 to-neutral-900 text-white py-20">
       <div className="container mx-auto px-6 max-w-4xl">
-        {/* Header */}
         <div className="mb-12">
-          <h1 className="text-4xl md:text-5xl font-extrabold mb-4">הגדרות</h1>
-          <p className="text-xl text-white/70">נהל את החשבון והעדפות המערכת שלך</p>
+          <h1 className="text-4xl md:text-5xl font-extrabold mb-4">{tSettings('title')}</h1>
+          <p className="text-xl text-white/70">{tSettings('subtitle')}</p>
         </div>
 
-        {/* Settings Sections */}
         <div className="space-y-6">
           {/* Profile Section */}
           <div className="bg-white/5 rounded-2xl border border-white/10 p-8 hover:bg-white/10 transition-all">
@@ -47,31 +45,31 @@ export default function SettingsPage() {
                 <User className="w-6 h-6 text-blue-400" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold">פרופיל אישי</h2>
-                <p className="text-white/60">ערוך את פרטי החשבון שלך</p>
+                <h2 className="text-2xl font-bold">{tSettings('profile.title')}</h2>
+                <p className="text-white/60">{tSettings('profile.subtitle')}</p>
               </div>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-white/70 mb-2">שם מלא</label>
+                <label className="block text-sm text-white/70 mb-2">{tSettings('profile.fullName')}</label>
                 <input
                   type="text"
                   defaultValue={user?.name || ''}
                   className="w-full px-4 py-3 bg-black/30 border border-white/20 rounded-lg text-white focus:border-blue-500 focus:outline-none"
-                  placeholder="הזן שם מלא"
+                  placeholder={tSettings('profile.fullNamePlaceholder')}
                 />
               </div>
               <div>
-                <label className="block text-sm text-white/70 mb-2">אימייל</label>
+                <label className="block text-sm text-white/70 mb-2">{tCommon('email')}</label>
                 <input
                   type="email"
                   defaultValue={user?.email || ''}
                   className="w-full px-4 py-3 bg-black/30 border border-white/20 rounded-lg text-white focus:border-blue-500 focus:outline-none"
-                  placeholder="הזן אימייל"
+                  placeholder={tSettings('profile.emailPlaceholder')}
                 />
               </div>
               <button className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold transition-colors">
-                שמור שינויים
+                {tSettings('profile.save')}
               </button>
             </div>
           </div>
@@ -83,30 +81,30 @@ export default function SettingsPage() {
                 <Building2 className="w-6 h-6 text-green-400" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold">הגדרות חברה</h2>
-                <p className="text-white/60">נהל את פרטי החברה</p>
+                <h2 className="text-2xl font-bold">{tSettings('company.title')}</h2>
+                <p className="text-white/60">{tSettings('company.subtitle')}</p>
               </div>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-white/70 mb-2">שם החברה</label>
+                <label className="block text-sm text-white/70 mb-2">{tSettings('company.companyName')}</label>
                 <input
                   type="text"
                   className="w-full px-4 py-3 bg-black/30 border border-white/20 rounded-lg text-white focus:border-green-500 focus:outline-none"
-                  placeholder="הזן שם חברה"
+                  placeholder={tSettings('company.companyNamePlaceholder')}
                 />
               </div>
               <div>
-                <label className="block text-sm text-white/70 mb-2">תעשייה</label>
+                <label className="block text-sm text-white/70 mb-2">{tSettings('company.industry')}</label>
                 <select className="w-full px-4 py-3 bg-black/30 border border-white/20 rounded-lg text-white focus:border-green-500 focus:outline-none">
-                  <option value="pergola">פרגולות ואלומיניום</option>
-                  <option value="construction">בנייה</option>
-                  <option value="design">עיצוב</option>
-                  <option value="other">אחר</option>
+                  <option value="pergola">{tSettings('company.industryPergola')}</option>
+                  <option value="construction">{tSettings('company.industryConstruction')}</option>
+                  <option value="design">{tSettings('company.industryDesign')}</option>
+                  <option value="other">{tSettings('company.industryOther')}</option>
                 </select>
               </div>
               <button className="px-6 py-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition-colors">
-                שמור שינויים
+                {tSettings('company.save')}
               </button>
             </div>
           </div>
@@ -118,21 +116,21 @@ export default function SettingsPage() {
                 <Bell className="w-6 h-6 text-purple-400" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold">התראות</h2>
-                <p className="text-white/60">התאם את העדפות ההתראות</p>
+                <h2 className="text-2xl font-bold">{tSettings('notifications.title')}</h2>
+                <p className="text-white/60">{tSettings('notifications.subtitle')}</p>
               </div>
             </div>
             <div className="space-y-4">
               <label className="flex items-center justify-between cursor-pointer">
-                <span className="text-white">התראות אימייל</span>
+                <span className="text-white">{tSettings('notifications.emailNotifications')}</span>
                 <input type="checkbox" className="w-5 h-5 rounded" defaultChecked />
               </label>
               <label className="flex items-center justify-between cursor-pointer">
-                <span className="text-white">התראות לידים חדשים</span>
+                <span className="text-white">{tSettings('notifications.newLeadNotifications')}</span>
                 <input type="checkbox" className="w-5 h-5 rounded" defaultChecked />
               </label>
               <label className="flex items-center justify-between cursor-pointer">
-                <span className="text-white">דיווחים שבועיים</span>
+                <span className="text-white">{tSettings('notifications.weeklyReports')}</span>
                 <input type="checkbox" className="w-5 h-5 rounded" />
               </label>
             </div>
@@ -145,16 +143,16 @@ export default function SettingsPage() {
                 <Shield className="w-6 h-6 text-red-400" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold">אבטחה</h2>
-                <p className="text-white/60">נהל הגדרות אבטחה</p>
+                <h2 className="text-2xl font-bold">{tSettings('security.title')}</h2>
+                <p className="text-white/60">{tSettings('security.subtitle')}</p>
               </div>
             </div>
             <div className="space-y-4">
               <button className="w-full px-6 py-3 bg-red-600/20 hover:bg-red-600/30 border border-red-500/50 rounded-lg font-semibold transition-colors text-right">
-                שנה סיסמה
+                {tSettings('security.changePassword')}
               </button>
               <button className="w-full px-6 py-3 bg-red-600/20 hover:bg-red-600/30 border border-red-500/50 rounded-lg font-semibold transition-colors text-right">
-                התנתק מכל המכשירים
+                {tSettings('security.logoutAll')}
               </button>
             </div>
           </div>
@@ -166,17 +164,17 @@ export default function SettingsPage() {
                 <Palette className="w-6 h-6 text-yellow-400" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold">מראה</h2>
-                <p className="text-white/60">התאם את מראה המערכת</p>
+                <h2 className="text-2xl font-bold">{tSettings('appearance.title')}</h2>
+                <p className="text-white/60">{tSettings('appearance.subtitle')}</p>
               </div>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-white/70 mb-2">ערכת צבעים</label>
+                <label className="block text-sm text-white/70 mb-2">{tSettings('appearance.colorScheme')}</label>
                 <select className="w-full px-4 py-3 bg-black/30 border border-white/20 rounded-lg text-white focus:border-yellow-500 focus:outline-none">
-                  <option value="dark">כהה (ברירת מחדל)</option>
-                  <option value="light">בהיר</option>
-                  <option value="auto">אוטומטי (לפי מערכת)</option>
+                  <option value="dark">{tSettings('appearance.dark')}</option>
+                  <option value="light">{tSettings('appearance.light')}</option>
+                  <option value="auto">{tSettings('appearance.auto')}</option>
                 </select>
               </div>
             </div>

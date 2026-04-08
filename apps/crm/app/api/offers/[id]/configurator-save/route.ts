@@ -21,10 +21,16 @@ const supabase =
 
 function parseParams(body: Record<string, unknown>): PergolaParamsPayload | null {
   if (typeof body.widthCm !== 'number' || typeof body.depthCm !== 'number') return null
+  const shapeRaw = body.shapeType
+  const shapeType: 'rectangle' | 'L' | 'U' =
+    shapeRaw === 'L' ? 'L' : shapeRaw === 'U' ? 'U' : 'rectangle'
   return {
+    shapeType,
     widthCm: Number(body.widthCm),
     depthCm: Number(body.depthCm),
     heightCm: Number(body.heightCm) || 260,
+    arm1WidthCm: typeof body.arm1WidthCm === 'number' ? Number(body.arm1WidthCm) : 200,
+    arm1DepthCm: typeof body.arm1DepthCm === 'number' ? Number(body.arm1DepthCm) : 200,
     color: String(body.color ?? '#9aa0a6'),
     lamellaAngleDeg: Number(body.lamellaAngleDeg) || 0,
     attachedToWall: Boolean(body.attachedToWall),
@@ -110,9 +116,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         : null
 
     const prefill = {
+      shapeType: pergolaParams.shapeType,
       widthCm: pergolaParams.widthCm,
       depthCm: pergolaParams.depthCm,
       heightCm: pergolaParams.heightCm,
+      arm1WidthCm: pergolaParams.arm1WidthCm,
+      arm1DepthCm: pergolaParams.arm1DepthCm,
       color: pergolaParams.color,
       lamellaAngleDeg: pergolaParams.lamellaAngleDeg,
       attachedToWall: pergolaParams.attachedToWall,
@@ -122,6 +131,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       lamellaAlongWidth: pergolaParams.lamellaAlongWidth,
       postProfileId: pergolaParams.postProfileId,
       beamProfileId: pergolaParams.beamProfileId,
+      dividerProfileId: pergolaParams.dividerProfileId,
       lamellaProfileId: pergolaParams.lamellaProfileId,
     }
 

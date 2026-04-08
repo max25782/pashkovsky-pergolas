@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, type ReactElement } from 'react'
+import { useThree } from '@react-three/fiber'
 import type { ConfiguratorLocale } from './locale'
 import type { PergolaParams } from './types'
 import { cm } from './utils'
@@ -35,6 +36,7 @@ export function SceneWithSaveBridge({
   onSaveSuccess,
   onSaveError,
 }: SceneWithSaveBridgeProps): ReactElement {
+  const { gl } = useThree()
   const save = useSaver(() => params, locale, {
     onSuccess: onSaveSuccess,
     onError: onSaveError,
@@ -46,6 +48,7 @@ export function SceneWithSaveBridge({
   useEffect(() => {
     if (readOnly) {
       delete (globalThis as Record<string, unknown>).__savePergola
+      delete (globalThis as Record<string, unknown>).__capturePergolaScreenshot
       return
     }
     const fn = () => saveRef.current()
@@ -54,6 +57,14 @@ export function SceneWithSaveBridge({
       delete (globalThis as Record<string, unknown>).__savePergola
     }
   }, [readOnly])
+
+  useEffect(() => {
+    const captureFn = () => gl.domElement.toDataURL('image/png', 0.92)
+    ;(globalThis as Record<string, unknown>).__capturePergolaScreenshot = captureFn
+    return () => {
+      delete (globalThis as Record<string, unknown>).__capturePergolaScreenshot
+    }
+  }, [gl])
 
   // Place the pergola so its back edge is at Z=0 (touching the wall).
   // Pergola back edge in local space = -depth/2, so shift group by +depth/2.

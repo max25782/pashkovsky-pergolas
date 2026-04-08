@@ -675,13 +675,14 @@ export function DealModal({
                 dealId={deal.id} 
                 refreshTrigger={offersRefreshTrigger} 
                 adminToken={adminToken}
+                onOffersChanged={() => setOffersRefreshTrigger((prev) => prev + 1)}
               />
             </div>
           )}
 
           {/* Material Orders List */}
           <div className="pt-4 border-t border-white/10">
-            <MaterialOrdersList dealId={deal.id} adminToken={adminToken} />
+            <MaterialOrdersList dealId={deal.id} adminToken={adminToken} refreshKey={offersRefreshTrigger} />
           </div>
 
           {/* Payment Plan (contractor only) */}

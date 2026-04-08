@@ -2,9 +2,12 @@ import type { PergolaParams } from './types'
 
 export function defaultPergolaParams(initial?: Partial<PergolaParams>): PergolaParams {
   return {
+    shapeType: initial?.shapeType ?? 'rectangle',
     widthCm: initial?.widthCm ?? 400,
     depthCm: initial?.depthCm ?? 350,
     heightCm: initial?.heightCm ?? 260,
+    arm1WidthCm: initial?.arm1WidthCm ?? 200,
+    arm1DepthCm: initial?.arm1DepthCm ?? 200,
     color: initial?.color ?? '#9aa0a6',
     lamellaAngleDeg: initial?.lamellaAngleDeg ?? 0,
     attachedToWall: initial?.attachedToWall ?? false,

@@ -50,6 +50,7 @@ function Pergola3DInner({
     message: string
   } | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [panelOpen, setPanelOpen] = useState(false)
 
   useEffect(() => {
     if (saveNotice === null) return
@@ -83,9 +84,15 @@ function Pergola3DInner({
         const p = data.prefill
         setParams((prev) => ({
           ...prev,
+          shapeType:
+            p.shapeType === 'rectangle' || p.shapeType === 'L' || p.shapeType === 'U'
+              ? p.shapeType
+              : prev.shapeType,
           widthCm: typeof p.widthCm === 'number' ? p.widthCm : prev.widthCm,
           depthCm: typeof p.depthCm === 'number' ? p.depthCm : prev.depthCm,
           heightCm: typeof p.heightCm === 'number' ? p.heightCm : prev.heightCm,
+          arm1WidthCm: typeof p.arm1WidthCm === 'number' ? p.arm1WidthCm : prev.arm1WidthCm,
+          arm1DepthCm: typeof p.arm1DepthCm === 'number' ? p.arm1DepthCm : prev.arm1DepthCm,
           color: typeof p.color === 'string' ? p.color : prev.color,
           lamellaAngleDeg:
             typeof p.lamellaAngleDeg === 'number' ? p.lamellaAngleDeg : prev.lamellaAngleDeg,
@@ -146,8 +153,8 @@ function Pergola3DInner({
 
   return (
     <div
-      className="relative flex h-full min-h-[360px] w-full flex-1 overflow-hidden bg-white"
-      dir={isRTL ? 'rtl' : 'ltr'}
+      className="relative flex h-full w-full overflow-hidden bg-white"
+      dir="ltr"
     >
       {/* Save notice */}
       {saveNotice !== null ? (
@@ -162,62 +169,15 @@ function Pergola3DInner({
         </div>
       ) : null}
 
-      {/* Sidebar */}
-      {readOnly ? (
+      {/* Read-only label */}
+      {readOnly && (
         <div className="absolute start-3 top-3 z-10 rounded-lg bg-black/70 px-3 py-1.5 text-xs font-medium text-white">
-          {locale === 'he'
-            ? 'תצוגה בלבד — לסיבוב התמונה גררו בעכבר'
-            : locale === 'ru'
-              ? 'Только просмотр — вращайте сцену мышью'
-              : 'View only — drag to rotate'}
+          {t.readOnlyLabel}
         </div>
-      ) : (
-        <aside className="relative z-10 flex h-full w-52 shrink-0 flex-col border-e  shadow-[2px_0_8px_rgba(0,0,0,0.06)]">
-          <ControlsPanel
-            locale={locale}
-            params={params}
-            onUpdate={update}
-            profiles={profiles}
-            profilesLoading={profilesLoading}
-            candidates={candidates}
-            postProfileId={params.postProfileId}
-            beamProfileId={params.beamProfileId}
-            dividerProfileId={params.dividerProfileId}
-            lamellaProfileId={params.lamellaProfileId}
-            onPostProfileChange={(id) => update('postProfileId', id)}
-            onBeamProfileChange={(id) => update('beamProfileId', id)}
-            onDividerProfileChange={(id) => update('dividerProfileId', id)}
-            onLamellaProfileChange={(id) => update('lamellaProfileId', id)}
-            postSizeCm={postSizeCm}
-            beamHeightCm={beamHeightCm}
-            beamDepthCm={beamDepthCm}
-            lamellaHeightCm={lamellaHeightCm}
-            lamellaDepthCm={lamellaDepthCm}
-          />
-          <div className="shrink-0 border-t border-gray-200 p-3">
-            <button
-              type="button"
-              disabled={isSaving}
-              onClick={async () => {
-                const fn = (globalThis as { __savePergola?: () => Promise<void> }).__savePergola
-                if (!fn) return
-                setIsSaving(true)
-                try {
-                  await fn()
-                } finally {
-                  setIsSaving(false)
-                }
-              }}
-              className="w-full rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-500 disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {isSaving ? '...' : t.saveButton}
-            </button>
-          </div>
-        </aside>
       )}
 
-      {/* Canvas area */}
-      <div className="relative min-h-[280px] flex-1">
+      {/* Canvas — full width, pointer-events only on canvas itself */}
+      <div className="absolute inset-0">
         <Canvas
           shadows
           className="!absolute inset-0 !h-full !w-full touch-none"
@@ -250,6 +210,116 @@ function Pergola3DInner({
           />
         </Canvas>
       </div>
+
+      {/* UI overlay — sits above canvas, pointer-events only on interactive children */}
+      <div className="absolute inset-0 pointer-events-none">
+        {/* Hamburger button */}
+        {!readOnly && (
+          <button
+            type="button"
+            onClick={() => setPanelOpen((v) => !v)}
+            className="pointer-events-auto absolute right-3 top-10 z-30 flex h-9 w-9 flex-col items-center justify-center gap-1.5 rounded-lg bg-white/90 shadow-md hover:bg-white transition-colors"
+            aria-label={t.settingsAriaLabel}
+          >
+            {panelOpen ? (
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <line x1="2" y1="2" x2="14" y2="14" stroke="#374151" strokeWidth="2" strokeLinecap="round"/>
+                <line x1="14" y1="2" x2="2" y2="14" stroke="#374151" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            ) : (
+              <>
+                <span className="block h-0.5 w-5 rounded bg-gray-700" />
+                <span className="block h-0.5 w-5 rounded bg-gray-700" />
+                <span className="block h-0.5 w-5 rounded bg-gray-700" />
+              </>
+            )}
+          </button>
+        )}
+      </div>
+
+      {/* Slide-out controls drawer — overlays canvas from the right */}
+      {!readOnly && (
+        <>
+          {/* Backdrop */}
+          {panelOpen && (
+            <div
+              className="fixed inset-0 z-[199] bg-black/20"
+              onClick={() => setPanelOpen(false)}
+            />
+          )}
+
+          {/* Drawer */}
+          <aside
+            className={
+              'fixed right-0 top-0 z-[200] flex h-full w-72 flex-col overflow-hidden bg-white shadow-[-4px_0_16px_rgba(0,0,0,0.15)] transition-transform duration-300 ' +
+              (panelOpen ? 'translate-x-0' : 'translate-x-full')
+            }
+          >
+            {/* Drawer header */}
+            <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+              <span className="text-sm font-semibold text-gray-700" dir={isRTL ? 'rtl' : 'ltr'}>
+                {t.title}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPanelOpen(false)}
+                className="rounded p-1 hover:bg-gray-100 transition-colors"
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <line x1="1" y1="1" x2="13" y2="13" stroke="#6B7280" strokeWidth="2" strokeLinecap="round"/>
+                  <line x1="13" y1="1" x2="1" y2="13" stroke="#6B7280" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              </button>
+            </div>
+
+            {/* Scrollable controls */}
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <ControlsPanel
+                locale={locale}
+                params={params}
+                onUpdate={update}
+                profiles={profiles}
+                profilesLoading={profilesLoading}
+                candidates={candidates}
+                postProfileId={params.postProfileId}
+                beamProfileId={params.beamProfileId}
+                dividerProfileId={params.dividerProfileId}
+                lamellaProfileId={params.lamellaProfileId}
+                onPostProfileChange={(id) => update('postProfileId', id)}
+                onBeamProfileChange={(id) => update('beamProfileId', id)}
+                onDividerProfileChange={(id) => update('dividerProfileId', id)}
+                onLamellaProfileChange={(id) => update('lamellaProfileId', id)}
+                postSizeCm={postSizeCm}
+                beamHeightCm={beamHeightCm}
+                beamDepthCm={beamDepthCm}
+                lamellaHeightCm={lamellaHeightCm}
+                lamellaDepthCm={lamellaDepthCm}
+              />
+            </div>
+
+            {/* Save button pinned at bottom */}
+            <div className="shrink-0 border-t border-gray-200 p-3">
+              <button
+                type="button"
+                disabled={isSaving}
+                onClick={async () => {
+                  const fn = (globalThis as { __savePergola?: () => Promise<void> }).__savePergola
+                  if (!fn) return
+                  setIsSaving(true)
+                  try {
+                    await fn()
+                  } finally {
+                    setIsSaving(false)
+                  }
+                }}
+                className="w-full rounded-xl bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-500 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isSaving ? '...' : t.saveButton}
+              </button>
+            </div>
+          </aside>
+        </>
+      )}
     </div>
   )
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { formatPrice } from '@/lib/offer-calculator'
 import type { Offer } from '@/types/offer'
 import { PERGOLA_TYPE_NAMES } from '@/types/offer'
@@ -26,12 +27,14 @@ interface OffersListProps {
   dealId: string
   refreshTrigger?: number
   adminToken?: string
+  onOffersChanged?: () => void
 }
 
-export function OffersList({ dealId, refreshTrigger, adminToken }: OffersListProps) {
+export function OffersList({ dealId, refreshTrigger, adminToken, onOffersChanged }: OffersListProps) {
   const params = useParams()
   const locale = (params?.locale as Locale) || 'he'
   const toast = useToast()
+  const tDeals = useTranslations('deals')
   const [offers, setOffers] = useState<Offer[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -119,11 +122,12 @@ export function OffersList({ dealId, refreshTrigger, adminToken }: OffersListPro
         throw new Error(data.error ?? 'Failed to delete offer')
       }
       fetchOffers()
+      onOffersChanged?.()
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error'
       toast.error('שגיאה במחיקה: ' + message)
     }
-  }, [fetchOffers, toast])
+  }, [fetchOffers, onOffersChanged, toast])
 
   const handleGeneratePdf = useCallback(async (offer: Offer, forceRegenerate = false) => {
     try {
@@ -294,7 +298,8 @@ export function OffersList({ dealId, refreshTrigger, adminToken }: OffersListPro
                         : p?.width != null && p?.length != null
                           ? { width: p.width, length: p.length }
                           : null
-                    const typeName = p?.pergolaType ? PERGOLA_TYPE_NAMES[p.pergolaType] : null
+                    const typeKey = p?.pergolaType === 'fixed' ? 'pergolaFixed' : p?.pergolaType === 'electricPvc' ? 'pergolaElectricPvc' : p?.pergolaType === 'electricBioclimatic' ? 'pergolaElectricBioclimatic' : null
+                    const typeName = typeKey ? tDeals(typeKey) : null
                     return rect ? (
                       <>
                         {typeName && <span className="text-blue-300 text-xs font-normal me-1">{typeName}</span>}

@@ -50,6 +50,7 @@ export async function GET(req: NextRequest) {
       .from('deals')
       .select('id, customer_name, customer_phone, customer_email, stage, project_type, price, my_cost, notes, created_at, updated_at')
       .eq('company_id', companyId)
+      .or('source.is.null,source.neq.quick_offer')
       .order('created_at', { ascending: false })
       .limit(limit)
     

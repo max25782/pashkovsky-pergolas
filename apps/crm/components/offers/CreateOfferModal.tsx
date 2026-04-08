@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useParams } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { X, Copy, Loader2, Box } from 'lucide-react'
@@ -31,6 +32,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
   const params = useParams()
   const locale = (params?.locale as Locale) || 'he'
   const toast = useToast()
+  const tDeals = useTranslations('deals')
 
   const [postCreateStep, setPostCreateStep] = useState<PostCreateStep>('form')
   const [createdOffer, setCreatedOffer] = useState<Offer | null>(null)
@@ -527,7 +529,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
                         >
                           {(Object.keys(PERGOLA_TYPE_NAMES) as PergolaProductType[]).map((key) => (
                             <option key={key} value={key} className="bg-gray-800">
-                              {PERGOLA_TYPE_NAMES[key]} ({PERGOLA_TYPE_DEFAULT_PRICES[key].toLocaleString()} ₪/מ״ר)
+                              {tDeals(key === 'fixed' ? 'pergolaFixed' : key === 'electricPvc' ? 'pergolaElectricPvc' : 'pergolaElectricBioclimatic')} ({PERGOLA_TYPE_DEFAULT_PRICES[key].toLocaleString()} ₪/מ״ר)
                             </option>
                           ))}
                         </select>
@@ -1176,7 +1178,8 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
                   {getPergolas().map((pg, idx) => {
                     const area = pg?.shape ? calculatePergolaArea(pg.shape) : 0
                     const total = area * pg.pricePerSqm
-                    const typeName = pg.pergolaType ? PERGOLA_TYPE_NAMES[pg.pergolaType] : 'פרגולה'
+                    const typeKey = pg.pergolaType === 'fixed' ? 'pergolaFixed' : pg.pergolaType === 'electricPvc' ? 'pergolaElectricPvc' : pg.pergolaType === 'electricBioclimatic' ? 'pergolaElectricBioclimatic' : null
+                    const typeName = typeKey ? tDeals(typeKey) : tDeals('pergolaFixed')
                     return (
                       <div key={idx} className="flex justify-between text-white/70">
                         <span>{typeName}{getPergolas().length > 1 ? ` #${idx + 1}` : ''}:</span>

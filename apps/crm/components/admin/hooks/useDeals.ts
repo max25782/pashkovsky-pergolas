@@ -30,9 +30,12 @@ export function useDeals({
       const supabase = createClient()
       
       // Start with base query (include deal_railings_details for railings work type)
+      // Exclude unsaved quick offers — they become visible only after save-to-crm sets source='quick_offer_saved'.
+      // Must use .or() because .neq() also excludes rows where source IS NULL.
       let query = supabase
         .from('deals')
         .select('*, deal_railings_details(*)', { count: 'exact' })
+        .or('source.is.null,source.neq.quick_offer')
         .order('created_at', { ascending: false })
       
       // Apply filters

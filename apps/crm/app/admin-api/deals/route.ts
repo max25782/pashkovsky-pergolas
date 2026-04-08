@@ -42,6 +42,7 @@ export async function GET(req: NextRequest) {
     .from('deals')
     .select('*, deal_railings_details(*)', { count: 'exact' })
     .eq('company_id', companyId) // Multi-tenant filter
+    .or('source.is.null,source.neq.quick_offer') // Hide unsaved quick offers from the board
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1)
   

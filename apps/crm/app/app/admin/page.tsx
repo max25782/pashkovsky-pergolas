@@ -19,7 +19,8 @@ import {
   TrendingUp,
   Box,
   ShoppingCart,
-  Package
+  Package,
+  Zap,
 } from 'lucide-react'
 
 interface DashboardStats {
@@ -123,6 +124,14 @@ export default function AdminPage() {
 
   const adminSections = [
     {
+      id: 'quick-offer',
+      title: tAdmin('quickOfferTitle'),
+      description: tAdmin('quickOfferDescription'),
+      href: `/app/quick-offer`,
+      icon: Zap,
+      color: 'bg-amber-500 hover:bg-amber-600',
+    },
+    {
       id: 'deals',
       title: t.nav.deals,
       description: t.deals.title,
@@ -157,7 +166,7 @@ export default function AdminPage() {
     {
       id: 'ai-chats',
       title: t.nav.aiChats,
-      description: 'AI Chat Management',
+      description: tAdmin('aiChatDescription'),
       href: `/app/admin/ai-chats`,
       icon: MessageSquare,
       color: 'bg-cyan-600 hover:bg-cyan-700',

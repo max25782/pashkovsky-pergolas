@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { PergolaShape, PergolaShapeType } from '@/types/offer'
 import { RectangleShapeInput } from './shapes/RectangleShapeInput'
 import { LShapeInput } from './shapes/LShapeInput'
@@ -12,8 +13,9 @@ interface PergolaShapeSelectorProps {
 }
 
 export function PergolaShapeSelector({ value, onChange }: PergolaShapeSelectorProps) {
+  const t = useTranslations('deals')
+
   const handleShapeTypeChange = (newType: PergolaShapeType) => {
-    // Reset to default shape when type changes
     switch (newType) {
       case 'rectangle':
         onChange({ type: 'rectangle', width: 4, length: 6 })
@@ -48,89 +50,39 @@ export function PergolaShapeSelector({ value, onChange }: PergolaShapeSelectorPr
     }
   }
 
+  const btnCls = (active: boolean) =>
+    `px-4 py-2 rounded border transition ${
+      active
+        ? 'bg-blue-600 border-blue-500 text-white'
+        : 'bg-white/10 border-white/20 text-white/80 hover:bg-white/20'
+    }`
+
   return (
     <div className="space-y-4">
-      {/* Shape Type Selector */}
       <div>
-        <label className="block text-sm text-white/80 mb-2">סוג צורה</label>
+        <label className="block text-sm text-white/80 mb-2">{t('shapeTypeLabel')}</label>
         <div className="grid grid-cols-4 gap-2">
-          <button
-            type="button"
-            onClick={() => handleShapeTypeChange('rectangle')}
-            className={`px-4 py-2 rounded border transition ${
-              value.type === 'rectangle'
-                ? 'bg-blue-600 border-blue-500 text-white'
-                : 'bg-white/10 border-white/20 text-white/80 hover:bg-white/20'
-            }`}
-          >
-            מלבנית
+          <button type="button" onClick={() => handleShapeTypeChange('rectangle')} className={btnCls(value.type === 'rectangle')}>
+            {t('rectangle')}
           </button>
-          <button
-            type="button"
-            onClick={() => handleShapeTypeChange('L')}
-            className={`px-4 py-2 rounded border transition ${
-              value.type === 'L'
-                ? 'bg-blue-600 border-blue-500 text-white'
-                : 'bg-white/10 border-white/20 text-white/80 hover:bg-white/20'
-            }`}
-          >
-            Г-образная
+          <button type="button" onClick={() => handleShapeTypeChange('L')} className={btnCls(value.type === 'L')}>
+            {t('lShape')}
           </button>
-          <button
-            type="button"
-            onClick={() => handleShapeTypeChange('X')}
-            className={`px-4 py-2 rounded border transition ${
-              value.type === 'X'
-                ? 'bg-blue-600 border-blue-500 text-white'
-                : 'bg-white/10 border-white/20 text-white/80 hover:bg-white/20'
-            }`}
-          >
-            Х-образная
+          <button type="button" onClick={() => handleShapeTypeChange('X')} className={btnCls(value.type === 'X')}>
+            {t('xShape')}
           </button>
-          <button
-            type="button"
-            onClick={() => handleShapeTypeChange('U')}
-            className={`px-4 py-2 rounded border transition ${
-              value.type === 'U'
-                ? 'bg-blue-600 border-blue-500 text-white'
-                : 'bg-white/10 border-white/20 text-white/80 hover:bg-white/20'
-            }`}
-          >
-            П-образная
+          <button type="button" onClick={() => handleShapeTypeChange('U')} className={btnCls(value.type === 'U')}>
+            {t('uShape')}
           </button>
         </div>
       </div>
 
-      {/* Shape-specific Input */}
       <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-        {value.type === 'rectangle' && (
-          <RectangleShapeInput
-            value={value}
-            onChange={onChange}
-          />
-        )}
-        {value.type === 'L' && (
-          <LShapeInput
-            value={value}
-            onChange={onChange}
-          />
-        )}
-        {value.type === 'X' && (
-          <XShapeInput
-            value={value}
-            onChange={onChange}
-          />
-        )}
-        {value.type === 'U' && (
-          <UShapeInput
-            value={value}
-            onChange={onChange}
-          />
-        )}
+        {value.type === 'rectangle' && <RectangleShapeInput value={value} onChange={onChange} />}
+        {value.type === 'L' && <LShapeInput value={value} onChange={onChange} />}
+        {value.type === 'X' && <XShapeInput value={value} onChange={onChange} />}
+        {value.type === 'U' && <UShapeInput value={value} onChange={onChange} />}
       </div>
     </div>
   )
 }
-
-
-

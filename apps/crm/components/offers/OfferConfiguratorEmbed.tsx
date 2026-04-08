@@ -1,7 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { useCallback, useMemo } from 'react'
+import { useCallback, useImperativeHandle, useMemo, forwardRef } from 'react'
 import type { Locale } from '@/lib/locales'
 import { authFetch } from '@/lib/api/auth-fetch'
 import type { ConfiguratorLocale, CustomSavePayload } from '@pashkovsky/pergola-configurator'
@@ -24,6 +24,11 @@ function extractCtFromEditUrl(editUrl: string | undefined): string | undefined {
   }
 }
 
+export interface OfferConfiguratorEmbedHandle {
+  /** Captures the current 3D canvas as a PNG data URL. Returns null if 3D is not mounted. */
+  captureScreenshot: () => string | null
+}
+
 interface OfferConfiguratorEmbedProps {
   offerId: string
   locale: Locale
@@ -34,13 +39,21 @@ interface OfferConfiguratorEmbedProps {
   onSaved?: () => void
 }
 
-export function OfferConfiguratorEmbed({
+export const OfferConfiguratorEmbed = forwardRef<OfferConfiguratorEmbedHandle, OfferConfiguratorEmbedProps>(
+function OfferConfiguratorEmbed({
   offerId,
   locale,
   editUrl,
   offer,
   onSaved,
-}: OfferConfiguratorEmbedProps) {
+}, ref) {
+  useImperativeHandle(ref, () => ({
+    captureScreenshot: () => {
+      const fn = (globalThis as { __capturePergolaScreenshot?: () => string }).__capturePergolaScreenshot
+      return fn ? fn() : null
+    },
+  }))
+
   const siteBase = (process.env.NEXT_PUBLIC_SITE_URL ?? '').replace(/\/$/, '')
   const linkToken = useMemo(() => extractCtFromEditUrl(editUrl ?? undefined), [editUrl])
   const initialParams = useMemo(
@@ -79,7 +92,7 @@ export function OfferConfiguratorEmbed({
   }
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-1 flex-col">
+    <div className="h-full w-full">
       <Pergola3D
         locale={locale as ConfiguratorLocale}
         linkToken={linkToken}
@@ -91,4 +104,4 @@ export function OfferConfiguratorEmbed({
       />
     </div>
   )
-}
+})

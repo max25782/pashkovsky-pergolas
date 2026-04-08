@@ -238,13 +238,18 @@ export function calculateCutList(offer: Offer): CutListResult {
   // Corner posts: 4 if free-standing, 2 if attached to wall (front only)
   const cornerPostQty = attachedToWall ? 2 : 4
 
-  // Intermediate posts along width (max 500 cm span)
-  function intermediateCount(spanCm: number, maxSpan = 500): number {
-    if (spanCm <= maxSpan) return 0
-    return Math.ceil(spanCm / maxSpan) - 1
+  // Intermediate posts along outer beams — max 400 cm span, split equally
+  const POST_MAX_SPAN = 400
+  function intermediatePostCount(spanCm: number): number {
+    if (spanCm <= POST_MAX_SPAN) return 0
+    return Math.ceil(spanCm / POST_MAX_SPAN) - 1
   }
-  const widthIntermediatePosts = intermediateCount(widthCm) * (attachedToWall ? 1 : 2)
-  const depthIntermediatePosts = intermediateCount(depthCm) * (attachedToWall ? 0 : 2)
+  // Width beams: front beam always has posts, back beam only if free-standing
+  const widthBeamCount = attachedToWall ? 1 : 2
+  const widthIntermediatePosts = intermediatePostCount(widthCm) * widthBeamCount
+  // Depth beams: only for free-standing (wall side has no posts)
+  const depthBeamCount = attachedToWall ? 0 : 2
+  const depthIntermediatePosts = intermediatePostCount(depthCm) * depthBeamCount
   const totalPostQty = cornerPostQty + widthIntermediatePosts + depthIntermediatePosts
 
   const postPieces: CutPiece[] = totalPostQty > 0
@@ -262,11 +267,30 @@ export function calculateCutList(offer: Offer): CutListResult {
   if (widthCm > 0) beamPieces.push({ label: 'קורת מסגרת רוחב', lengthCm: widthCm, qty: 2 })
   if (depthCm > 0) beamPieces.push({ label: 'קורת מסגרת עומק', lengthCm: depthCm, qty: 2 })
 
+  // ── Divider (חוצץ פנימי) length deduction ──────────────────────────────────
+  // The divider sits between the two side depth-beams.
+  // The frame beam profile is installed standing (בעמידה), so its horizontal
+  // footprint (the thin dimension) protrudes into the span on each side.
+  // Divider cut length = depthCm − 2 × beamThinCm
+  //
+  // Examples:
+  //   200x50mm standing  → thin = 5 cm  → deduct 10 cm
+  //   דאבל-טי 142        → flange = 7 cm → deduct 14 cm (no parseable dims → use beamProfileId dims)
+  //   דאבל-טי מעוצב      → flange = 7 cm → deduct 14 cm
+  //
+  // If beam dims are not parseable (no "NxNmm" in profiles.json), deduction = 0.
+  const beamDims = profileDimsCm(cfg?.beamProfileId)
+  // Thin dimension = the smaller of the two (the horizontal/standing thickness)
+  const beamThinCm = beamDims ? Math.min(beamDims.a, beamDims.b) : 0
+  const dividerDeductionCm = beamThinCm * 2
+  const dividerLengthCm = Math.max(0, depthCm - dividerDeductionCm)
+
   // Intermediate (divider) beams — separate group if a different profile is chosen
   const dividerPieces: CutPiece[] = []
   if (intermediateBeamQty > 0 && depthCm > 0) {
     const dividerTarget = cfg?.dividerProfileId ? dividerPieces : beamPieces
-    dividerTarget.push({ label: 'חוצץ פנימי', lengthCm: depthCm, qty: intermediateBeamQty })
+    const deductLabel = dividerDeductionCm > 0 ? ` (עומק ${depthCm} − ${dividerDeductionCm} ס״מ)` : ''
+    dividerTarget.push({ label: `חוצץ פנימי${deductLabel}`, lengthCm: dividerLengthCm, qty: intermediateBeamQty })
   }
 
   // ── Lamellas ───────────────────────────────────────────────────────────────

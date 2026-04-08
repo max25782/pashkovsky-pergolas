@@ -1,9 +1,41 @@
+import fs from 'fs'
+import path from 'path'
 import type { Offer } from '@/types/offer'
+
+interface ProfileEntry {
+  id: string
+  dimensions?: string
+}
+
+function loadProfilesMapLocal(): Map<string, ProfileEntry> {
+  try {
+    const filePath = path.join(process.cwd(), 'public', 'data', 'profiles.json')
+    const raw = fs.readFileSync(filePath, 'utf-8')
+    const json = JSON.parse(raw) as { profiles: ProfileEntry[] }
+    return new Map(json.profiles.map((p) => [p.id, p]))
+  } catch {
+    return new Map()
+  }
+}
+
+/** Parse "NxNmm" → thin dimension in cm (the smaller of the two). Returns 0 if unparseable. */
+function profileThinCm(profileId: string | null | undefined): number {
+  if (!profileId) return 0
+  const map = loadProfilesMapLocal()
+  const entry = map.get(profileId)
+  if (!entry?.dimensions) return 0
+  const match = entry.dimensions.match(/^(\d+(?:\.\d+)?)x(\d+(?:\.\d+)?)mm$/i)
+  if (!match) return 0
+  const a = Number(match[1]) / 10
+  const b = Number(match[2]) / 10
+  return Math.min(a, b)
+}
 
 /**
  * Top-down rectangle plan for PDF (meters).
  * Draws the pergola outline, intermediate cross-beams (max 140 cm span),
  * and dimension annotations for all spans.
+ * Span dimensions show clear inner distance (face-to-face), not center-to-center.
  * Returns empty string if not a single rectangle.
  */
 export function rectanglePlanSvgFragment(offer: Offer): string {
@@ -17,6 +49,12 @@ export function rectanglePlanSvgFragment(offer: Offer): string {
   const cfgParams = offer.configuratorMeta?.params
   const widthCm = cfgParams?.widthCm ?? widthM * 100
   const depthCm = cfgParams?.depthCm ?? depthM * 100
+
+  // Resolve profile thin dimensions for clear-span calculation
+  // Frame beam thin = the horizontal footprint of the side frame beams
+  const frameThinCm = profileThinCm(cfgParams?.beamProfileId)
+  // Divider thin = the width of each intermediate divider beam (as seen from above)
+  const dividerThinCm = profileThinCm(cfgParams?.dividerProfileId ?? cfgParams?.beamProfileId)
 
   // --- Intermediate beam positions (same logic as PergolaMesh) ---
   const BEAM_MAX_SPAN_CM = 140
@@ -83,32 +121,60 @@ export function rectanglePlanSvgFragment(offer: Offer): string {
 
   // ── Pergola outline ──
   lines.push(`<rect x="${x0}" y="${y0}" width="${innerW}" height="${innerH}" fill="#f0f4ff" stroke="#111" stroke-width="2"/>`)
+  // Draw frame beam thickness on left and right sides (if known)
+  if (frameThinCm > 0) {
+    const fw = frameThinCm * scaleX
+    lines.push(`<rect x="${x0}" y="${y0}" width="${fw}" height="${innerH}" fill="#c8d0e0" stroke="none"/>`)
+    lines.push(`<rect x="${x0 + innerW - fw}" y="${y0}" width="${fw}" height="${innerH}" fill="#c8d0e0" stroke="none"/>`)
+  }
 
   // ── Intermediate cross-beams + span dimension lines ──
   if (beamPosCm.length > 0) {
     // Build all span boundaries: 0, beam1, beam2, ..., widthCm
     const boundaries = [0, ...beamPosCm, widthCm]
 
-    // Draw beam lines
+    // Draw divider beams with actual width (if known) or as a line
     for (const bCm of beamPosCm) {
       const bx = x0 + bCm * scaleX
-      lines.push(`<line x1="${bx}" y1="${y0}" x2="${bx}" y2="${y0 + innerH}" stroke="#555" stroke-width="1.5" stroke-dasharray="6 3"/>`)
+      if (dividerThinCm > 0) {
+        const halfW = (dividerThinCm / 2) * scaleX
+        lines.push(`<rect x="${bx - halfW}" y="${y0}" width="${halfW * 2}" height="${innerH}" fill="#c8d0e0" stroke="#555" stroke-width="1"/>`)
+      } else {
+        lines.push(`<line x1="${bx}" y1="${y0}" x2="${bx}" y2="${y0 + innerH}" stroke="#555" stroke-width="1.5" stroke-dasharray="6 3"/>`)
+      }
     }
 
-    // Bottom span dimension lines (one per span)
+    // Bottom span dimension lines (one per span) — clear inner distance (face-to-face)
+    //
+    // boundaries[0]    = 0         → outer left edge of left frame beam
+    // boundaries[last] = widthCm   → outer right edge of right frame beam
+    // intermediate     = center line of each divider beam
+    //
+    // Clear span for each segment:
+    //   left side:  if frame boundary → add frameThinCm to get inner face
+    //               if divider center → add dividerThinCm/2 to get right face of divider
+    //   right side: if frame boundary → subtract frameThinCm to get inner face
+    //               if divider center → subtract dividerThinCm/2 to get left face of divider
     const spanDimY = y0 + innerH + 28
     for (let i = 0; i < boundaries.length - 1; i++) {
       const startCm = boundaries[i]
       const endCm = boundaries[i + 1]
-      const spanCm = endCm - startCm
-      const sx = x0 + startCm * scaleX
-      const ex = x0 + endCm * scaleX
+      const isLeftFrame = i === 0
+      const isRightFrame = i === boundaries.length - 2
+
+      const leftDeduct  = isLeftFrame  ? frameThinCm        : dividerThinCm / 2
+      const rightDeduct = isRightFrame ? frameThinCm        : dividerThinCm / 2
+      const clearSpanCm = (endCm - startCm) - leftDeduct - rightDeduct
+
+      // Pixel positions of the clear span faces
+      const sx = x0 + (startCm + leftDeduct) * scaleX
+      const ex = x0 + (endCm   - rightDeduct) * scaleX
       const mx = (sx + ex) / 2
 
       lines.push(`<line x1="${sx}" y1="${spanDimY - 4}" x2="${sx}" y2="${spanDimY + 4}" stroke="#555" stroke-width="1"/>`)
       lines.push(`<line x1="${ex}" y1="${spanDimY - 4}" x2="${ex}" y2="${spanDimY + 4}" stroke="#555" stroke-width="1"/>`)
       lines.push(`<line x1="${sx}" y1="${spanDimY}" x2="${ex}" y2="${spanDimY}" stroke="#555" stroke-width="1"/>`)
-      lines.push(`<text x="${mx}" y="${spanDimY + 14}" text-anchor="middle" font-size="10" fill="#333" font-family="Noto Sans Hebrew, Arial, sans-serif">${fmtCm(spanCm)}</text>`)
+      lines.push(`<text x="${mx}" y="${spanDimY + 14}" text-anchor="middle" font-size="10" fill="#333" font-family="Noto Sans Hebrew, Arial, sans-serif">${fmtCm(clearSpanCm)}</text>`)
     }
 
     // Legend label

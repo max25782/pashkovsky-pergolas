@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Building2, ChevronRight, Loader2 } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 interface Company {
   id: string
@@ -14,6 +15,7 @@ function SelectCompanyPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectUrl = searchParams.get('redirect') || '/app/admin'
+  const tSC = useTranslations('selectCompany')
   
   const [companies, setCompanies] = useState<Company[]>([])
   const [loading, setLoading] = useState(true)
@@ -98,7 +100,7 @@ function SelectCompanyPageContent() {
       <main className="min-h-screen bg-neutral-50 dark:bg-neutral-900 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
-          <p className="text-neutral-600 dark:text-neutral-400">Loading companies...</p>
+          <p className="text-neutral-600 dark:text-neutral-400">{tSC('loading')}</p>
         </div>
       </main>
     )
@@ -109,10 +111,10 @@ function SelectCompanyPageContent() {
       <div className="w-full max-w-2xl">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold mb-2 text-neutral-900 dark:text-white">
-            בחר חברה
+            {tSC('title')}
           </h1>
           <p className="text-neutral-600 dark:text-neutral-400">
-            בחר את החברה שאיתה תרצה לעבוד
+            {tSC('subtitle')}
           </p>
         </div>
 
@@ -126,10 +128,10 @@ function SelectCompanyPageContent() {
           <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-700 p-8 text-center">
             <Building2 className="w-16 h-16 mx-auto mb-4 text-neutral-400" />
             <h2 className="text-xl font-semibold mb-2 text-neutral-900 dark:text-white">
-              אין חברות זמינות
+              {tSC('noCompanies')}
             </h2>
             <p className="text-neutral-600 dark:text-neutral-400 mb-4">
-              אתה לא משויך לאף חברה. צור קשר עם המנהל.
+              {tSC('noCompaniesDesc')}
             </p>
           </div>
         ) : (
@@ -151,7 +153,7 @@ function SelectCompanyPageContent() {
                         {company.name}
                       </h3>
                       <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                        תפקיד: {getRoleLabel(company.role)}
+                        {tSC('role')} {tSC(`roles.${company.role}` as const)}
                       </p>
                     </div>
                   </div>
@@ -169,17 +171,6 @@ function SelectCompanyPageContent() {
       </div>
     </main>
   )
-}
-
-function getRoleLabel(role: string): string {
-  const labels: Record<string, string> = {
-    owner: 'בעלים',
-    admin: 'מנהל',
-    manager: 'מנהל',
-    worker: 'עובד',
-    viewer: 'צופה',
-  }
-  return labels[role] || role
 }
 
 export default function SelectCompanyPage() {

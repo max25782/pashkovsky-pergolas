@@ -173,7 +173,7 @@
         "en": "T-profile 80"
       },
       "image": "/images/profiles/טי-80-1-300x258.jpg",
-      "dimensions": "80mm",
+      "dimensions": "80x80mm",
       "description": {
         "he": "פרופיל בצורת T לחיבורים",
         "ru": "T-образный профиль для соединений",
@@ -188,7 +188,7 @@
         "en": "T-profile with lighting 120"
       },
       "image": "/images/profiles/טי-תאורה-120.jpg",
-      "dimensions": "120mm",
+      "dimensions": "120x70mm",
       "description": {
         "he": "פרופיל T עם תאורת LED מובנית",
         "ru": "T-профиль со встроенной LED подсветкой",
@@ -578,7 +578,7 @@
         "en": "דאבל-טי-מעוצב-120-300x229"
       },
       "image": "/images/profiles/דאבל-טי-מעוצב-120-300x229.jpg",
-      "dimensions": "",
+      "dimensions": "142x70mm",
       "description": {
         "he": "",
         "ru": "",
@@ -593,7 +593,7 @@
         "en": "טי-תאורה-120 (1)"
       },
       "image": "/images/profiles/טי-תאורה-120 (1).jpg",
-      "dimensions": "",
+      "dimensions": "120x70mm",
       "description": {
         "he": "",
         "ru": "",
@@ -1148,7 +1148,7 @@
         "en": "דאבל-טי-מעוצב-120"
       },
       "image": "/images/profiles/דאבל-טי-מעוצב-120.jpg",
-      "dimensions": "",
+      "dimensions": "142x70mm",
       "description": {
         "he": "",
         "ru": "",
@@ -1163,7 +1163,7 @@
         "en": "טי-80-1"
       },
       "image": "/images/profiles/טי-80-1.jpg",
-      "dimensions": "",
+      "dimensions": "80x80mm",
       "description": {
         "he": "",
         "ru": "",
@@ -1178,7 +1178,7 @@
         "en": "טי-תאורה-120-1"
       },
       "image": "/images/profiles/טי-תאורה-120-1.jpg",
-      "dimensions": "",
+      "dimensions": "120x70mm",
       "description": {
         "he": "",
         "ru": "",

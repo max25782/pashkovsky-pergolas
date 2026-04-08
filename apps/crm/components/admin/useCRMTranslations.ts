@@ -39,6 +39,9 @@ export function useCRMTranslations() {
       yes: common('yes'),
       no: common('no'),
       edit: common('edit'),
+      phone: common('phone'),
+      city: common('city'),
+      address: common('address'),
     },
     auth: {
       enterAdminToken: auth('enterAdminToken'),

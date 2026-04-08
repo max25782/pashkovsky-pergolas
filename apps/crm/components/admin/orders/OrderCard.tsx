@@ -16,10 +16,6 @@ interface Props {
 export function OrderCard({ order, lang, onEdit, onDelete, onGeneratePdf }: Props) {
   const t = useCRMTranslations()
 
-  const phone = lang === 'ru' ? 'Телефон' : lang === 'en' ? 'Phone' : 'טלפון'
-  const city = lang === 'ru' ? 'Город' : lang === 'en' ? 'City' : 'עיר'
-  const address = lang === 'ru' ? 'Адрес' : lang === 'en' ? 'Address' : 'כתובת'
-
   return (
     <div className="bg-white/5 border border-white/10 rounded-lg p-6 hover:bg-white/10 transition">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
@@ -29,11 +25,11 @@ export function OrderCard({ order, lang, onEdit, onDelete, onGeneratePdf }: Prop
           </h2>
           <div className="text-sm text-white/60 space-y-1">
             <p><strong>{t.orders.customer}:</strong> {order.customer_name}</p>
-            <p><strong>{phone}:</strong> {order.customer_phone}</p>
+            <p><strong>{t.common.phone}:</strong> {order.customer_phone}</p>
             {order.customer_email && <p><strong>Email:</strong> {order.customer_email}</p>}
-            <p><strong>{city}:</strong> {order.customer_city}</p>
+            <p><strong>{t.common.city}:</strong> {order.customer_city}</p>
             {order.delivery_address && (
-              <p><strong>{address}:</strong> {order.delivery_address}</p>
+              <p><strong>{t.common.address}:</strong> {order.delivery_address}</p>
             )}
           </div>
         </div>
