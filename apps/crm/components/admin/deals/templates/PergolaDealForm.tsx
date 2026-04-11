@@ -29,6 +29,7 @@ export function PergolaDealForm({ value, onChange, stages }: PergolaDealFormProp
           <option value="gates">{t.deals.projectTypes.gates}</option>
           <option value="windows">{t.deals.projectTypes.windows}</option>
           <option value="laundry_closet">{t.deals.projectTypes.laundry_closet}</option>
+          <option value="fence">{t.deals.projectTypes.fence}</option>
         </select>
       </div>
       <div>

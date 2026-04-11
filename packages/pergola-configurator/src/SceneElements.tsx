@@ -85,7 +85,7 @@ export function Ground(): ReactElement {
   )
 }
 
-/** Building wall behind the pergola — wallZ is the Z center of the wall */
+/** Building wall behind the pergola */
 export function BuildingWall({ wallZ = -3 }: { wallZ?: number }): ReactElement {
   const wallTexture = useMemo(() => {
     const size = 512
@@ -124,27 +124,13 @@ export function BuildingWall({ wallZ = -3 }: { wallZ?: number }): ReactElement {
     return tex
   }, [])
 
-  const wf = wallZ + 0.17  // front face of wall (wallZ is center, thickness 0.3)
-  const sideLen = 12       // side wall depth (how far forward they extend)
-  const sideMid = wallZ + 0.15 + sideLen / 2
+  const wf = wallZ + 0.17
 
   return (
     <group>
       {/* main back wall */}
       <mesh position={[0, 5, wallZ]} receiveShadow castShadow>
         <boxGeometry args={[20, 10, 0.3]} />
-        <meshStandardMaterial map={wallTexture} roughness={0.9} metalness={0.0} />
-      </mesh>
-
-      {/* left side wall */}
-      <mesh position={[-10, 5, sideMid]} receiveShadow castShadow>
-        <boxGeometry args={[0.3, 10, sideLen]} />
-        <meshStandardMaterial map={wallTexture} roughness={0.9} metalness={0.0} />
-      </mesh>
-
-      {/* right side wall */}
-      <mesh position={[10, 5, sideMid]} receiveShadow castShadow>
-        <boxGeometry args={[0.3, 10, sideLen]} />
         <meshStandardMaterial map={wallTexture} roughness={0.9} metalness={0.0} />
       </mesh>
 

@@ -1,6 +1,6 @@
 'use client'
 
-import type { DealRailingsDetails } from './deal-types'
+import type { DealRailingsDetails, RailingsGlazingSystem } from './deal-types'
 
 export interface RailingsFormValue {
   meters_total: number | null
@@ -8,6 +8,7 @@ export interface RailingsFormValue {
   profile_type: string
   color: string
   location_type: 'balcony' | 'stairs' | 'roof' | 'yard' | 'other'
+  glazing_system: RailingsGlazingSystem | ''
   glass_type: string
   notes: string
 }
@@ -30,9 +31,14 @@ interface RailingsFormFieldsProps {
     profileType: string
     color: string
     locationType: string
+    glazingSystem: string
+    glazingAluminumGlass: string
+    glazingWet: string
+    glazingDry: string
     glassType: string
     notes: string
     required: string
+    profilePlaceholder?: string
   }
 }
 
@@ -42,10 +48,23 @@ const defaultTranslations = {
   profileType: 'Profile Type / סוג פרופיל',
   color: 'Color / צבע',
   locationType: 'Location / מיקום',
-  glassType: 'Glass Type / סוג זכוכית',
+  glazingSystem: 'Glazing / זיגוג',
+  glazingAluminumGlass: 'Aluminum + glass / אלומיניום בשילוב זכוכית',
+  glazingWet: 'Wet glazing / זיגוג רטוב',
+  glazingDry: 'Dry glazing / זיגוג יבש',
+  glassType: 'Glass detail (optional) / פירוט זכוכית',
   notes: 'Notes / הערות',
   required: '*',
 }
+
+const GLAZING_OPTIONS: { value: RailingsGlazingSystem; labelKey: keyof Pick<
+  typeof defaultTranslations,
+  'glazingAluminumGlass' | 'glazingWet' | 'glazingDry'
+> }[] = [
+  { value: 'aluminum_glass', labelKey: 'glazingAluminumGlass' },
+  { value: 'wet_glazing', labelKey: 'glazingWet' },
+  { value: 'dry_glazing', labelKey: 'glazingDry' },
+]
 
 export function RailingsFormFields({
   value,
@@ -93,6 +112,14 @@ export function RailingsFormFields({
           <span className={labelClass}>{t.locationType}</span>
           <div className="px-3 py-2 rounded-lg bg-white/5 border border-white/20 text-white">
             {LOCATION_OPTIONS.find((o) => o.value === value.location_type)?.label ?? value.location_type ?? '-'}
+          </div>
+        </div>
+        <div>
+          <span className={labelClass}>{t.glazingSystem}</span>
+          <div className="px-3 py-2 rounded-lg bg-white/5 border border-white/20 text-white">
+            {value.glazing_system
+              ? t[GLAZING_OPTIONS.find((o) => o.value === value.glazing_system)?.labelKey ?? 'glazingSystem']
+              : '-'}
           </div>
         </div>
         <div>
@@ -149,7 +176,7 @@ export function RailingsFormFields({
           value={value.profile_type}
           onChange={(e) => update('profile_type', e.target.value)}
           className={inputClass}
-          placeholder="Profile type"
+          placeholder={t.profilePlaceholder ?? 'Profile type'}
         />
       </div>
       <div>
@@ -180,12 +207,29 @@ export function RailingsFormFields({
         </select>
       </div>
       <div>
+        <label className={labelClass}>
+          {t.glazingSystem} <span className="text-red-400">{t.required}</span>
+        </label>
+        <select
+          value={value.glazing_system}
+          onChange={(e) => update('glazing_system', e.target.value as RailingsFormValue['glazing_system'])}
+          className={inputClass}
+        >
+          <option value="">-</option>
+          {GLAZING_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {t[opt.labelKey]}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div>
         <label className={labelClass}>{t.glassType}</label>
         <input
           value={value.glass_type}
           onChange={(e) => update('glass_type', e.target.value)}
           className={inputClass}
-          placeholder="Glass type"
+          placeholder="e.g. 10mm / חלבי"
         />
       </div>
       <div className="md:col-span-2">

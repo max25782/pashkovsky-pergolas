@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabase
     .from('deals')
-    .select('*, deal_railings_details(*)', { count: 'exact' })
+    .select('*, deal_railings_details(*), deal_fence_details(*)', { count: 'exact' })
     .eq('company_id', companyId) // Multi-tenant filter
     .or('source.is.null,source.neq.quick_offer') // Hide unsaved quick offers from the board
     .order('created_at', { ascending: false })
@@ -103,7 +103,24 @@ export async function POST(req: NextRequest) {
     return new Response('Bad JSON', { status: 400 })
   }
   
-  const { lead_id, work_type, meters_total, height_cm, profile_type, color, location_type, glass_type, railings_notes, ...dealData } = body || {}
+  const {
+    lead_id,
+    work_type,
+    meters_total,
+    height_cm,
+    profile_type,
+    color,
+    location_type,
+    glass_type,
+    railings_notes,
+    glazing_system,
+    fence_meters_total,
+    fence_height_cm,
+    fence_variant,
+    fence_color,
+    fence_notes,
+    ...dealData
+  } = body || {}
   
   const effectiveWorkType = work_type || 'pergola'
   dealData.work_type = effectiveWorkType
@@ -120,6 +137,32 @@ export async function POST(req: NextRequest) {
     }
     if (!location_type || String(location_type).trim() === '') {
       return new Response(JSON.stringify({ error: 'location_type is required' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+    }
+    const gs = glazing_system != null ? String(glazing_system).trim() : ''
+    if (!['aluminum_glass', 'wet_glazing', 'dry_glazing'].includes(gs)) {
+      return new Response(JSON.stringify({ error: 'glazing_system is required (aluminum_glass | wet_glazing | dry_glazing)' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+  }
+
+  if (effectiveWorkType === 'fence') {
+    if (!fence_meters_total || Number(fence_meters_total) <= 0) {
+      return new Response(JSON.stringify({ error: 'fence_meters_total is required and must be > 0' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+    const fv = fence_variant != null ? String(fence_variant).trim() : ''
+    if (!['classic', 'hitech', 'hitech_angular'].includes(fv)) {
+      return new Response(JSON.stringify({ error: 'fence_variant is required (classic | hitech | hitech_angular)' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+    if (!fence_color || String(fence_color).trim() === '') {
+      return new Response(JSON.stringify({ error: 'fence_color is required' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
     }
   }
   
@@ -178,6 +221,7 @@ export async function POST(req: NextRequest) {
   }
   
   if (effectiveWorkType === 'railings') {
+    const gsInsert = String(glazing_system).trim() as 'aluminum_glass' | 'wet_glazing' | 'dry_glazing'
     const { error: railingsError } = await supabase
       .from('deal_railings_details')
       .insert({
@@ -189,6 +233,7 @@ export async function POST(req: NextRequest) {
         color: String(color).trim(),
         location_type: String(location_type).trim() as 'balcony' | 'stairs' | 'roof' | 'yard' | 'other',
         glass_type: glass_type != null ? String(glass_type).trim() : null,
+        glazing_system: gsInsert,
         notes: railings_notes != null ? String(railings_notes).trim() : null,
       })
     if (railingsError) {
@@ -207,6 +252,31 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ ...data, deal_railings_details: railingsRow }), {
       status: 201,
       headers: { 'Content-Type': 'application/json' }
+    })
+  }
+
+  if (effectiveWorkType === 'fence') {
+    const { error: fenceError } = await supabase.from('deal_fence_details').insert({
+      deal_id: data.id,
+      company_id: companyId,
+      meters_total: Number(fence_meters_total),
+      height_cm: fence_height_cm != null ? Number(fence_height_cm) : null,
+      fence_variant: String(fence_variant).trim() as 'classic' | 'hitech' | 'hitech_angular',
+      color: String(fence_color).trim(),
+      notes: fence_notes != null ? String(fence_notes).trim() : null,
+    })
+    if (fenceError) {
+      console.error('POST: Fence insert error', fenceError)
+      await supabase.from('deals').delete().eq('id', data.id)
+      return new Response(JSON.stringify({ error: fenceError.message }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+    const { data: fenceRow } = await supabase.from('deal_fence_details').select('*').eq('deal_id', data.id).single()
+    return new Response(JSON.stringify({ ...data, deal_fence_details: fenceRow }), {
+      status: 201,
+      headers: { 'Content-Type': 'application/json' },
     })
   }
   
@@ -239,16 +309,34 @@ export async function PATCH(req: NextRequest) {
     return new Response('Bad JSON', { status: 400 })
   }
   
-  const { id, meters_total, height_cm, profile_type, color, location_type, glass_type, railings_notes, ...updates } = body || {}
+  const {
+    id,
+    meters_total,
+    height_cm,
+    profile_type,
+    color,
+    location_type,
+    glass_type,
+    railings_notes,
+    glazing_system,
+    fence_meters_total,
+    fence_height_cm,
+    fence_variant,
+    fence_color,
+    fence_notes,
+    ...updates
+  } = body || {}
   if (!id) {
     return new Response('Missing id', { status: 400 })
   }
   
-  const railingsUpdates = { meters_total, height_cm, profile_type, color, location_type, glass_type, railings_notes }
+  const railingsUpdates = { meters_total, height_cm, profile_type, color, location_type, glass_type, railings_notes, glazing_system }
   const hasRailingsUpdates = Object.values(railingsUpdates).some(v => v !== undefined)
+  const fenceUpdates = { fence_meters_total, fence_height_cm, fence_variant, fence_color, fence_notes }
+  const hasFenceUpdates = Object.values(fenceUpdates).some(v => v !== undefined)
   
   // Проверяем, что есть что обновлять
-  if (Object.keys(updates).length === 0 && !hasRailingsUpdates) {
+  if (Object.keys(updates).length === 0 && !hasRailingsUpdates && !hasFenceUpdates) {
     // Если нет обновлений, просто возвращаем текущую сделку
     const { data: currentDeal, error: fetchError } = await supabase
       .from('deals')
@@ -312,6 +400,16 @@ export async function PATCH(req: NextRequest) {
       if (color != null) railingsPayload.color = String(color).trim()
       if (location_type != null) railingsPayload.location_type = String(location_type).trim()
       if (glass_type != null) railingsPayload.glass_type = String(glass_type).trim() || null
+      if (glazing_system != null) {
+        const gs = String(glazing_system).trim()
+        if (!['aluminum_glass', 'wet_glazing', 'dry_glazing'].includes(gs)) {
+          return new Response(JSON.stringify({ error: 'Invalid glazing_system' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' },
+          })
+        }
+        railingsPayload.glazing_system = gs
+      }
       if (railings_notes !== undefined) railingsPayload.notes = railings_notes != null ? String(railings_notes).trim() : null
       if (Object.keys(railingsPayload).length > 0) {
         const { data: existingRailings } = await supabase
@@ -326,7 +424,14 @@ export async function PATCH(req: NextRequest) {
             .eq('deal_id', id)
         } else {
           const { data: dealRow } = await supabase.from('deals').select('id').eq('id', id).single()
-          if (dealRow && railingsPayload.meters_total && railingsPayload.profile_type && railingsPayload.color && railingsPayload.location_type) {
+          if (
+            dealRow &&
+            railingsPayload.meters_total &&
+            railingsPayload.profile_type &&
+            railingsPayload.color &&
+            railingsPayload.location_type &&
+            railingsPayload.glazing_system
+          ) {
             await supabase.from('deal_railings_details').insert({
               deal_id: id,
               company_id: companyId,
@@ -336,9 +441,61 @@ export async function PATCH(req: NextRequest) {
               color: railingsPayload.color,
               location_type: railingsPayload.location_type,
               glass_type: railingsPayload.glass_type ?? null,
+              glazing_system: (railingsPayload.glazing_system as string) ?? null,
               notes: railingsPayload.notes ?? null,
             })
           }
+        }
+      }
+    }
+  }
+
+  if (hasFenceUpdates) {
+    const { data: dealForFence } = await supabase.from('deals').select('work_type').eq('id', id).eq('company_id', companyId).single()
+    const effectiveFenceWork = updates.work_type ?? dealForFence?.work_type
+    if (effectiveFenceWork === 'fence') {
+      const fencePayload: Record<string, unknown> = {}
+      if (fence_meters_total != null) {
+        const v = Number(fence_meters_total)
+        if (v <= 0) {
+          return new Response(JSON.stringify({ error: 'fence_meters_total must be > 0' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' },
+          })
+        }
+        fencePayload.meters_total = v
+      }
+      if (fence_height_cm != null) fencePayload.height_cm = Number(fence_height_cm)
+      if (fence_variant != null) {
+        const fv = String(fence_variant).trim()
+        if (!['classic', 'hitech', 'hitech_angular'].includes(fv)) {
+          return new Response(JSON.stringify({ error: 'Invalid fence_variant' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' },
+          })
+        }
+        fencePayload.fence_variant = fv
+      }
+      if (fence_color != null) fencePayload.color = String(fence_color).trim()
+      if (fence_notes !== undefined) fencePayload.notes = fence_notes != null ? String(fence_notes).trim() : null
+      if (Object.keys(fencePayload).length > 0) {
+        const { data: existingFence } = await supabase.from('deal_fence_details').select('deal_id').eq('deal_id', id).single()
+        if (existingFence) {
+          await supabase.from('deal_fence_details').update(fencePayload).eq('deal_id', id)
+        } else if (
+          fencePayload.meters_total &&
+          fencePayload.fence_variant &&
+          fencePayload.color
+        ) {
+          await supabase.from('deal_fence_details').insert({
+            deal_id: id,
+            company_id: companyId,
+            meters_total: fencePayload.meters_total as number,
+            height_cm: (fencePayload.height_cm as number) ?? null,
+            fence_variant: fencePayload.fence_variant as string,
+            color: fencePayload.color as string,
+            notes: (fencePayload.notes as string) ?? null,
+          })
         }
       }
     }
@@ -409,6 +566,14 @@ export async function PATCH(req: NextRequest) {
     return new Response(JSON.stringify({ ...data, deal_railings_details: railingsRow }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
+    })
+  }
+
+  if (data.work_type === 'fence') {
+    const { data: fenceRow } = await supabase.from('deal_fence_details').select('*').eq('deal_id', data.id).single()
+    return new Response(JSON.stringify({ ...data, deal_fence_details: fenceRow }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
     })
   }
   

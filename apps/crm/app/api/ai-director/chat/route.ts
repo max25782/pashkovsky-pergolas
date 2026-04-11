@@ -194,6 +194,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Company ID not found' }, { status: 400 })
     }
 
+    const accessCheck = await checkAIDirectorAccess(authCheck.user.id)
+    if (accessCheck) return accessCheck
+
     // Get the most recent session for this company
     const { data: session } = await supabase
       .from('ai_director_sessions')
@@ -254,8 +257,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Company ID not found' }, { status: 400 })
     }
 
-    // Check subscription access (AI Director only for Pro/Enterprise)
-    const accessCheck = await checkAIDirectorAccess(companyId)
+    const accessCheck = await checkAIDirectorAccess(authCheck.user.id)
     if (accessCheck) return accessCheck
     
     if (!message || typeof message !== 'string') {

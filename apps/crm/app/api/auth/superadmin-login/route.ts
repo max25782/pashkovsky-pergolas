@@ -87,14 +87,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const redisUrl = process.env.UPSTASH_REDIS_REST_URL?.trim();
+    const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
+    if (
+      process.env.NODE_ENV === 'production' &&
+      (!redisUrl || !redisToken)
+    ) {
+      console.error(
+        '[SuperAdmin Login] Missing UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_TOKEN (required in production)',
+      );
+      return NextResponse.json(
+        { error: 'SuperAdmin session store not configured' },
+        { status: 500 },
+      );
+    }
 
-    // Create server-side session in Redis
-    const sessionId = await createSession({
-      user_id: admin.user_id,
-      email: admin.email,
-      role: 'superadmin',
-      phone: normalizedPhone,
-    });
+    let sessionId: string;
+    try {
+      sessionId = await createSession({
+        user_id: admin.user_id,
+        email: admin.email ?? '',
+        role: 'superadmin',
+        phone: normalizedPhone,
+      });
+    } catch (sessionErr) {
+      console.error('[SuperAdmin Login] Redis/session error:', sessionErr);
+      return NextResponse.json(
+        { error: 'SuperAdmin session store unavailable' },
+        { status: 503 },
+      );
+    }
 
 
     // Create response with httpOnly cookie

@@ -112,11 +112,28 @@ export async function DELETE(
   }
 
   try {
-    const { error } = await supabase
-      .from('workers')
-      .delete()
-      .eq('id', params.id)
-      .eq('company_id', auth.user.companyId) // Extra safety
+    // Dependent rows reference workers (FK often ON DELETE RESTRICT until migrations apply).
+    const childTables = ['worker_shifts', 'work_shifts'] as const
+    for (const table of childTables) {
+      let del = supabase.from(table).delete().eq('worker_id', params.id)
+      if (auth.user.companyId !== 'admin') {
+        del = del.eq('company_id', auth.user.companyId)
+      }
+      const { error: childError } = await del
+      if (childError) {
+        console.error(`Error deleting worker rows from ${table}:`, childError)
+        return NextResponse.json(
+          { error: `Failed to delete related ${table.replace('_', ' ')}` },
+          { status: 500 }
+        )
+      }
+    }
+
+    let workerDelete = supabase.from('workers').delete().eq('id', params.id)
+    if (auth.user.companyId !== 'admin') {
+      workerDelete = workerDelete.eq('company_id', auth.user.companyId)
+    }
+    const { error } = await workerDelete
 
     if (error) {
       console.error('Error deleting worker:', error)

@@ -39,6 +39,9 @@ function profileThinCm(profileId: string | null | undefined): number {
  * Returns empty string if not a single rectangle.
  */
 export function rectanglePlanSvgFragment(offer: Offer): string {
+  const qp = offer.quickProduct ?? offer.quickOfferExtra?.quickProduct ?? 'pergola'
+  if (qp === 'railings' || qp === 'fence') return ''
+
   const p = offer.pergolas?.[0] ?? offer.pergola
   if (!p?.shape || p.shape.type !== 'rectangle') return ''
   const widthM = p.shape.width

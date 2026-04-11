@@ -9,7 +9,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { generateOfferPdf } from '@/lib/pdf/generate-offer-pdf'
-import type { Offer, Pergola, PergolaShape } from '@/types/offer'
+import type { Offer } from '@/types/offer'
+import { pergolaFieldsFromOfferRow } from '@/lib/pdf/map-offer-db-row-for-pdf'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -27,20 +28,7 @@ async function fetchOffer(id: string): Promise<Offer | null> {
   const { data, error } = await supabase.from('offers').select('*').eq('id', id).single()
   if (error || !data) return null
 
-  const pergolasFromDb = data.pergolas_data as Pergola[] | null | undefined
-  const pergolaSingle =
-    pergolasFromDb && pergolasFromDb.length > 0
-      ? pergolasFromDb[0]
-      : {
-          shape: data.pergola_shape_data
-            ? (data.pergola_shape_data as PergolaShape)
-            : { type: 'rectangle' as const, width: data.pergola_width || 0, length: data.pergola_length || 0 },
-          height: data.pergola_height,
-          location: data.pergola_location,
-          pricePerSqm: data.pergola_price_per_sqm ?? 750,
-          width: data.pergola_width,
-          length: data.pergola_length,
-        }
+  const pf = pergolaFieldsFromOfferRow(data)
 
   return {
     id: data.id,
@@ -48,8 +36,12 @@ async function fetchOffer(id: string): Promise<Offer | null> {
     customerName: data.customer_name,
     customerPhone: data.customer_phone,
     customerCity: data.customer_city,
-    pergolas: pergolasFromDb && pergolasFromDb.length > 0 ? pergolasFromDb : undefined,
-    pergola: pergolaSingle,
+    pergolas: pf.pergolas,
+    pergola: pf.pergola,
+    quickProduct: pf.quickProduct,
+    quickRailings: pf.quickRailings,
+    quickFence: pf.quickFence,
+    quickOfferExtra: pf.quickOfferExtra,
     configuratorMeta: data.configurator_meta ?? undefined,
     color: { type: data.color_type, ralCode: data.color_ral_code, woodName: data.color_wood_name },
     roof: { type: data.roof_type, santafColor: data.roof_santaf_color },

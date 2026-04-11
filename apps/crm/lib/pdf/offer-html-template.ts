@@ -1,5 +1,6 @@
 import type { Offer } from '@/types/offer'
 import { PERGOLA_TYPE_NAMES } from '@/types/offer'
+import { quickOfferRailingsFenceAreaSqm } from '@/lib/offer-calculator'
 import { rectanglePlanSvgFragment } from '@/lib/pdf/plan-view-svg'
 import { getHebrewFontsCss, getLogoDataUri } from './font-loader'
 interface LineRow {
@@ -22,6 +23,10 @@ function escapeHtml(value: string): string {
 /** Safe for double-quoted HTML attributes (e.g. img src data URLs). */
 function escapeAttr(value: string): string {
   return value.replaceAll('&', '&amp;').replaceAll('"', '&quot;')
+}
+
+function pdfPrimaryProductKind(offer: Offer): 'pergola' | 'railings' | 'fence' {
+  return offer.quickProduct ?? offer.quickOfferExtra?.quickProduct ?? 'pergola'
 }
 
 function formatPricePdf(n: number): string {
@@ -78,31 +83,92 @@ function buildPergolaLineName(offer: Offer, pergolaType?: string | null): string
 function collectLineRows(offer: Offer): LineRow[] {
   const rows: LineRow[] = []
   const area = offer.area > 0 ? offer.area : 1
+  const qp = offer.quickProduct ?? offer.quickOfferExtra?.quickProduct ?? 'pergola'
+  const qExtra = offer.quickOfferExtra
 
-  const pergolas = offer.pergolas || (offer.pergola ? [offer.pergola] : [])
-  if (pergolas.length > 0) {
-    const { calculatePergolaArea } = require('@/lib/calculations/pergola-area') as typeof import('@/lib/calculations/pergola-area')
-    for (const pg of pergolas) {
-      if (!pg?.shape) continue
-      const pgArea = calculatePergolaArea(pg.shape)
-      if (pgArea <= 0 || pg.pricePerSqm <= 0) continue
+  if (qp === 'railings' && qExtra?.quickRailings) {
+    const qr = qExtra.quickRailings
+    const lineTotal = offer.pergolaTotal ?? 0
+    const sqm = quickOfferRailingsFenceAreaSqm(qr.metersTotal, qr.heightCm)
+    const up = Math.max(
+      0,
+      Number(
+        (qr as { pricePerSqm?: number; pricePerMeter?: number }).pricePerSqm ??
+          (qr as { pricePerMeter?: number }).pricePerMeter,
+      ) || 0,
+    )
+    if (lineTotal > 0 && sqm > 0 && up > 0) {
+      const glazingLabels: Record<string, string> = {
+        aluminum_glass: 'אלומיניום + זכוכית',
+        wet_glazing: 'זיגוג רטוב',
+        dry_glazing: 'זיגוג יבש',
+      }
+      const locLabels: Record<string, string> = {
+        balcony: 'מרפסת',
+        stairs: 'מדרגות',
+        roof: 'גג',
+        yard: 'חצר',
+        other: 'אחר',
+      }
       rows.push({
-        description: buildPergolaLineName(offer, pg.pergolaType),
+        description: `מעקות · ${escapeHtml(qr.profileType)} · ${glazingLabels[qr.glazingSystem] ?? qr.glazingSystem} · מיקום: ${locLabels[qr.locationType] ?? qr.locationType} · צבע: ${escapeHtml(qr.color)}`,
         unitLabel: 'מ"ר',
-        quantity: Math.round(pgArea * 100) / 100,
-        unitPrice: pg.pricePerSqm,
-        lineTotal: Math.round(pgArea * pg.pricePerSqm * 100) / 100,
+        quantity: Math.round(sqm * 1000) / 1000,
+        unitPrice: Math.round(up * 100) / 100,
+        lineTotal,
       })
     }
-  } else if (offer.pergolaTotal != null && offer.pergolaTotal > 0) {
-    const up = offer.pergolaTotal / area
-    rows.push({
-      description: buildPergolaLineName(offer, null),
-      unitLabel: 'מ"ר',
-      quantity: Math.round(area * 100) / 100,
-      unitPrice: Math.round(up * 100) / 100,
-      lineTotal: offer.pergolaTotal,
-    })
+  } else if (qp === 'fence' && qExtra?.quickFence) {
+    const qf = qExtra.quickFence
+    const lineTotal = offer.pergolaTotal ?? 0
+    const sqm = quickOfferRailingsFenceAreaSqm(qf.metersTotal, qf.heightCm)
+    const up = Math.max(
+      0,
+      Number(
+        (qf as { pricePerSqm?: number; pricePerMeter?: number }).pricePerSqm ??
+          (qf as { pricePerMeter?: number }).pricePerMeter,
+      ) || 0,
+    )
+    const fenceLabels: Record<string, string> = {
+      classic: 'גדר קלאסית',
+      hitech: 'גדר הייטק',
+      hitech_angular: 'גדר הייטק זוויתית',
+    }
+    if (lineTotal > 0 && sqm > 0 && up > 0) {
+      rows.push({
+        description: `גדר · ${fenceLabels[qf.fenceVariant] ?? qf.fenceVariant} · צבע: ${escapeHtml(qf.color)}`,
+        unitLabel: 'מ"ר',
+        quantity: Math.round(sqm * 1000) / 1000,
+        unitPrice: Math.round(up * 100) / 100,
+        lineTotal,
+      })
+    }
+  } else {
+    const pergolas = offer.pergolas || (offer.pergola ? [offer.pergola] : [])
+    if (pergolas.length > 0) {
+      const { calculatePergolaArea } = require('@/lib/calculations/pergola-area') as typeof import('@/lib/calculations/pergola-area')
+      for (const pg of pergolas) {
+        if (!pg?.shape) continue
+        const pgArea = calculatePergolaArea(pg.shape)
+        if (pgArea <= 0 || pg.pricePerSqm <= 0) continue
+        rows.push({
+          description: buildPergolaLineName(offer, pg.pergolaType),
+          unitLabel: 'מ"ר',
+          quantity: Math.round(pgArea * 100) / 100,
+          unitPrice: pg.pricePerSqm,
+          lineTotal: Math.round(pgArea * pg.pricePerSqm * 100) / 100,
+        })
+      }
+    } else if (offer.pergolaTotal != null && offer.pergolaTotal > 0) {
+      const up = offer.pergolaTotal / area
+      rows.push({
+        description: buildPergolaLineName(offer, null),
+        unitLabel: 'מ"ר',
+        quantity: Math.round(area * 100) / 100,
+        unitPrice: Math.round(up * 100) / 100,
+        lineTotal: offer.pergolaTotal,
+      })
+    }
   }
 
   if (offer.santaf?.enabled && offer.santafTotal > 0) {
@@ -251,6 +317,55 @@ function formatSinglePergolaDimensionsHtml(pergola: Offer['pergola'], index?: nu
 }
 
 function formatAllPergolasTechnicalHtml(offer: Offer): string {
+  const pk = pdfPrimaryProductKind(offer)
+  const qx = offer.quickOfferExtra
+
+  if (pk === 'railings' && qx?.quickRailings) {
+    const qr = qx.quickRailings
+    const sqm = quickOfferRailingsFenceAreaSqm(qr.metersTotal, qr.heightCm)
+    const glazingLabels: Record<string, string> = {
+      aluminum_glass: 'אלומיניום + זכוכית',
+      wet_glazing: 'זיגוג רטוב',
+      dry_glazing: 'זיגוג יבש',
+    }
+    const locLabels: Record<string, string> = {
+      balcony: 'מרפסת',
+      stairs: 'מדרגות',
+      roof: 'גג',
+      yard: 'חצר',
+      other: 'אחר',
+    }
+    return `
+    <tr><td colspan="2" class="tech-h">מעקות — מפרט</td></tr>
+    <tr><td>אורך</td><td>${escapeHtml(String(qr.metersTotal))} מ׳</td></tr>
+    <tr><td>גובה</td><td>${qr.heightCm != null ? escapeHtml(String(qr.heightCm)) : '—'} ס״מ</td></tr>
+    <tr><td>שטח משוער</td><td>${sqm.toFixed(2)} מ״ר</td></tr>
+    <tr><td>פרופיל</td><td>${escapeHtml(qr.profileType || '—')}</td></tr>
+    <tr><td>צבע</td><td>${escapeHtml(qr.color || '—')}</td></tr>
+    <tr><td>מיקום</td><td>${escapeHtml(locLabels[qr.locationType] ?? qr.locationType)}</td></tr>
+    <tr><td>זיגוג</td><td>${escapeHtml(glazingLabels[qr.glazingSystem] ?? qr.glazingSystem)}</td></tr>
+    ${qr.glassType ? `<tr><td>פירוט זכוכית</td><td>${escapeHtml(qr.glassType)}</td></tr>` : ''}
+    ${qr.notes ? `<tr><td>הערות</td><td>${escapeHtml(qr.notes)}</td></tr>` : ''}`
+  }
+
+  if (pk === 'fence' && qx?.quickFence) {
+    const qf = qx.quickFence
+    const sqm = quickOfferRailingsFenceAreaSqm(qf.metersTotal, qf.heightCm)
+    const fenceLabels: Record<string, string> = {
+      classic: 'קלאסי',
+      hitech: 'הייטק',
+      hitech_angular: 'הייטק זוויתי',
+    }
+    return `
+    <tr><td colspan="2" class="tech-h">גדר — מפרט</td></tr>
+    <tr><td>אורך</td><td>${escapeHtml(String(qf.metersTotal))} מ׳</td></tr>
+    <tr><td>גובה</td><td>${qf.heightCm != null ? escapeHtml(String(qf.heightCm)) : '—'} ס״מ</td></tr>
+    <tr><td>שטח משוער</td><td>${sqm.toFixed(2)} מ״ר</td></tr>
+    <tr><td>סוג גדר</td><td>${escapeHtml(fenceLabels[qf.fenceVariant] ?? qf.fenceVariant)}</td></tr>
+    <tr><td>צבע</td><td>${escapeHtml(qf.color || '—')}</td></tr>
+    ${qf.notes ? `<tr><td>הערות</td><td>${escapeHtml(qf.notes)}</td></tr>` : ''}`
+  }
+
   const pergolas = offer.pergolas || (offer.pergola ? [offer.pergola] : [])
   if (pergolas.length === 0) return '<tr><td colspan="2">ללא פרגולה בפריט</td></tr>'
   return pergolas.map((p, i) => formatSinglePergolaDimensionsHtml(p, pergolas.length > 1 ? i : undefined)).join('')
@@ -356,13 +471,16 @@ function configuratorParamsTechHtml(offer: Offer): string {
  *   Pass this to avoid Puppeteer being unable to load external URLs during PDF generation.
  */
 function configuratorTechnicalAppendixHtml(offer: Offer, previewImageDataUrl?: string | null): string {
+  const pk = pdfPrimaryProductKind(offer)
   const meta = offer.configuratorMeta
   let img: string | null = null
   // Prefer pre-fetched base64 data URL (works in Puppeteer without network access)
-  if (previewImageDataUrl?.startsWith('data:image/')) img = previewImageDataUrl
-  else if (meta?.previewImageUrl?.startsWith('http')) img = meta.previewImageUrl
-  else if (offer.images?.[0]?.startsWith('http')) img = offer.images[0]
-  const link = customer3dViewerHref(meta)
+  if (pk === 'pergola') {
+    if (previewImageDataUrl?.startsWith('data:image/')) img = previewImageDataUrl
+    else if (meta?.previewImageUrl?.startsWith('http')) img = meta.previewImageUrl
+    else if (offer.images?.[0]?.startsWith('http')) img = offer.images[0]
+  }
+  const link = pk === 'pergola' ? customer3dViewerHref(meta) : null
   const planSvg = rectanglePlanSvgFragment(offer)
   const hasViz = img !== null || link !== null
   const hasPlan = planSvg !== ''
@@ -472,6 +590,9 @@ export function renderOfferHtml(
   const docDate = formatDateDdMmYyyy(offer.createdAt)
   const validUntil = formatDateDdMmYyyy(addDaysIso(offer.createdAt, 30))
   const lineRows = collectLineRows(offer)
+  const pdfPk = pdfPrimaryProductKind(offer)
+  const areaRowLabel =
+    pdfPk === 'railings' || pdfPk === 'fence' ? 'שטח (מ״ר, אורך × גובה)' : 'שטח פרגולה (חישוב)'
 
   const linesHtml =
     lineRows.length > 0
@@ -808,7 +929,7 @@ export function renderOfferHtml(
     <tr><td>גג</td><td>${offer.roof?.type === 'santaf' ? 'סנטף' : offer.roof?.type === 'triplexGlass' ? 'זכוכית טריפלקס' : '—'}</td></tr>
     <tr><td>יחס הצללה</td><td>${offer.shadingRatio ? escapeHtml(offer.shadingRatio) : '—'}</td></tr>
     <tr><td>סוג גימור</td><td>${offer.finishType ? escapeHtml(offer.finishType) : '—'} ${offer.finishValue ? `· ${escapeHtml(offer.finishValue)}` : ''}</td></tr>
-    <tr><td>שטח פרגולה (חישוב)</td><td>${offer.area.toFixed(2)} מ״ר</td></tr>
+    <tr><td>${escapeHtml(areaRowLabel)}</td><td>${offer.area.toFixed(2)} מ״ר</td></tr>
     ${winterClosureTechRows(offer)}
   </table>
 
@@ -816,7 +937,7 @@ export function renderOfferHtml(
     ${formatAllPergolasTechnicalHtml(offer)}
   </table>
 
-  ${configuratorParamsTechHtml(offer)}
+  ${pdfPk === 'pergola' ? configuratorParamsTechHtml(offer) : ''}
 
   ${configuratorTechnicalAppendixHtml(offer, previewImageDataUrl)}
 

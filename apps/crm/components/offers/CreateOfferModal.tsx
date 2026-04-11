@@ -59,6 +59,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
     drainage: { ...DEFAULT_OFFER_VALUES.drainage },
     winterClosure: { ...DEFAULT_OFFER_VALUES.winterClosure },
     options: { ...DEFAULT_OFFER_VALUES.options },
+    vatPercent: DEFAULT_OFFER_VALUES.vatPercent,
     discountPercent: 0,
     images: []
   })
@@ -1250,8 +1251,27 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
               </div>
               
               {/* VAT */}
-              <div className="flex justify-between text-white/70">
-                <span>מע״מ (18%):</span>
+              <div className="flex justify-between items-center text-white/70">
+                <span className="flex items-center gap-2 shrink-0">
+                  מע״מ (%):
+                  <input
+                    type="number"
+                    step="0.01"
+                    min={0}
+                    max={100}
+                    value={draft.vatPercent}
+                    onChange={(e) => {
+                      const v = parseFloat(e.target.value)
+                      setDraft((prev) => ({
+                        ...prev,
+                        vatPercent: Number.isFinite(v)
+                          ? Math.min(100, Math.max(0, v))
+                          : DEFAULT_OFFER_VALUES.vatPercent,
+                      }))
+                    }}
+                    className="w-16 bg-white/10 border border-white/20 rounded px-2 py-0.5 text-white text-left text-sm focus:outline-none focus:border-blue-400"
+                  />
+                </span>
                 <span>+{formatPrice(calculation.vatAmount)}</span>
               </div>
               

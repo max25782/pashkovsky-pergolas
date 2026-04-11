@@ -1,0 +1,26 @@
+import { createClient } from '@supabase/supabase-js'
+import { isSuperAdmin } from '@/lib/auth/isSuperAdmin'
+import { normalizePlan } from '@/lib/subscription/plan-access'
+import type { SubscriptionPlan } from '@/lib/subscription/plan-types'
+
+const SUPABASE_URL = process.env.SUPABASE_URL
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+const supabase =
+  SUPABASE_URL && SERVICE_KEY
+    ? createClient(SUPABASE_URL, SERVICE_KEY, { db: { schema: 'public' } })
+    : undefined
+
+/**
+ * Resolved SaaS plan for API / gating. Platform super-admins always get full access.
+ */
+export async function getUserSubscriptionPlan(userId: string): Promise<SubscriptionPlan> {
+  if (!userId) return 'offer'
+  if (await isSuperAdmin(userId)) return 'growth'
+  if (!supabase) return 'offer'
+
+  const { data, error } = await supabase.from('users').select('plan').eq('id', userId).maybeSingle()
+
+  if (error || !data) return 'offer'
+  return normalizePlan((data as { plan?: string }).plan)
+}

@@ -1,20 +1,65 @@
-import type { OfferDraft, OfferCalculation } from '@/types/offer'
+import type { OfferDraft, OfferCalculation, QuickOfferProductType } from '@/types/offer'
 import { calculatePergolaArea } from '@/lib/calculations/pergola-area'
 import { calculateSuntufSheets, calculateSuntufPriceByArea } from '@/lib/calculations/suntuf-sheets'
 
+/** Face area m² for quick-offer railings/fence: length (m) × height (m). */
+export function quickOfferRailingsFenceAreaSqm(
+  metersTotal: number,
+  heightCm: number | undefined,
+): number {
+  const len = Math.max(0, Number(metersTotal) || 0)
+  const hM =
+    heightCm != null && Number(heightCm) > 0 ? Math.max(0, Number(heightCm)) / 100 : 0
+  if (len <= 0 || hM <= 0) return 0
+  return Math.round(len * hM * 1000) / 1000
+}
+
+function quickOfferLinePerSqmLegacy(
+  row: { pricePerSqm?: number; pricePerMeter?: number },
+): number {
+  return Math.max(0, Number(row.pricePerSqm ?? row.pricePerMeter) || 0)
+}
+
+const DEFAULT_VAT_PERCENT = 18
+
+function normalizeVatPercent(value: unknown): number {
+  const n = Number(value)
+  if (!Number.isFinite(n)) return DEFAULT_VAT_PERCENT
+  return Math.min(100, Math.max(0, n))
+}
+
 export function calculateOffer(draft: OfferDraft): OfferCalculation {
+  const productKind: QuickOfferProductType = draft.quickProduct ?? 'pergola'
+
   // Support multiple pergolas - use pergolas array if available, otherwise fall back to single pergola
   const pergolas = draft.pergolas || (draft.pergola ? [draft.pergola] : [])
-  
-  // 1. Calculate total area from all pergolas
+
+  let railingsLineTotal: number | undefined
+  let fenceLineTotal: number | undefined
+
+  if (productKind === 'railings' && draft.quickRailings) {
+    const qr = draft.quickRailings
+    const sqm = quickOfferRailingsFenceAreaSqm(qr.metersTotal, qr.heightCm)
+    const p = quickOfferLinePerSqmLegacy(qr)
+    railingsLineTotal = sqm * p
+  } else if (productKind === 'fence' && draft.quickFence) {
+    const qf = draft.quickFence
+    const sqm = quickOfferRailingsFenceAreaSqm(qf.metersTotal, qf.heightCm)
+    const p = quickOfferLinePerSqmLegacy(qf)
+    fenceLineTotal = sqm * p
+  }
+
+  // 1. Calculate total area from all pergolas (pergola product only)
   let pergolaArea = 0
   let pergolaTotal = 0
-  
-  for (const pergola of pergolas) {
-    if (pergola?.shape) {
-      const singleArea = calculatePergolaArea(pergola.shape)
-      pergolaArea += singleArea
-      pergolaTotal += singleArea * pergola.pricePerSqm
+
+  if (productKind === 'pergola') {
+    for (const pergola of pergolas) {
+      if (pergola?.shape) {
+        const singleArea = calculatePergolaArea(pergola.shape)
+        pergolaArea += singleArea
+        pergolaTotal += singleArea * pergola.pricePerSqm
+      }
     }
   }
   
@@ -33,8 +78,12 @@ export function calculateOffer(draft: OfferDraft): OfferCalculation {
   // Use pergola area for general area calculation
   const area = pergolaArea || santafArea
 
-  // 3. Set pergolaTotal (undefined if no pergolas, otherwise sum of all)
-  const pergolaTotalFinal = pergolas.length > 0 ? pergolaTotal : undefined
+  // 3. Pergola line total (pergola product only)
+  const pergolaTotalFinal =
+    productKind === 'pergola' && pergolas.length > 0 ? pergolaTotal : undefined
+
+  const mainProductTotal =
+    (pergolaTotalFinal ?? 0) + (railingsLineTotal ?? 0) + (fenceLineTotal ?? 0)
   
   // 4. Calculate santaf price (if enabled)
   // IMPORTANT: Suntuf sheets are priced by MATERIAL AREA (full sheet dimensions),
@@ -89,10 +138,16 @@ export function calculateOffer(draft: OfferDraft): OfferCalculation {
     const zipPrice = draft.zipScreen.type === 'electric'
       ? draft.zipScreen.pricePerSqmElectric
       : draft.zipScreen.pricePerSqmManual
-    
-    // Use runningMeters if specified, otherwise use area
-    const meters = draft.zipScreen.runningMeters || area
-    zipScreenTotal = meters * zipPrice
+
+    const railFenceSqmForZip =
+      productKind === 'railings' && draft.quickRailings
+        ? quickOfferRailingsFenceAreaSqm(draft.quickRailings.metersTotal, draft.quickRailings.heightCm)
+        : productKind === 'fence' && draft.quickFence
+          ? quickOfferRailingsFenceAreaSqm(draft.quickFence.metersTotal, draft.quickFence.heightCm)
+          : 0
+    // Use running meters if set; else m² (pergola roof or railings/fence face) × ZIP ₪/m²
+    const zipQty = draft.zipScreen.runningMeters || railFenceSqmForZip || area
+    zipScreenTotal = zipQty * zipPrice
   }
   
   // 6. Calculate lighting price (if enabled)
@@ -118,11 +173,13 @@ export function calculateOffer(draft: OfferDraft): OfferCalculation {
   }
   
   // 9. Calculate total before VAT
-  const totalBeforeVat = (pergolaTotalFinal || 0) + santafTotal + zipScreenTotal + lightingTotal + drainageTotal + winterClosureTotal
+  const totalBeforeVat =
+    mainProductTotal + santafTotal + zipScreenTotal + lightingTotal + drainageTotal + winterClosureTotal
   
-  // 10. Calculate VAT (18%)
-  const vatAmount = totalBeforeVat * 0.18
-  
+  // 10. VAT (% of total before VAT)
+  const vatPct = normalizeVatPercent(draft.vatPercent)
+  const vatAmount = totalBeforeVat * (vatPct / 100)
+
   // 11. Calculate price with VAT
   const priceWithVat = totalBeforeVat + vatAmount
   
@@ -132,17 +189,27 @@ export function calculateOffer(draft: OfferDraft): OfferCalculation {
   
   // 13. Calculate final price
   const finalPrice = priceWithVat - discountAmount
-  
+
+  // Summary quantity: m² (pergola roof area, or railings/fence face area for ZIP fallback / AI)
+  const areaDisplay =
+    productKind === 'railings' && draft.quickRailings
+      ? quickOfferRailingsFenceAreaSqm(draft.quickRailings.metersTotal, draft.quickRailings.heightCm)
+      : productKind === 'fence' && draft.quickFence
+        ? quickOfferRailingsFenceAreaSqm(draft.quickFence.metersTotal, draft.quickFence.heightCm)
+        : area
+
   return {
-    area,
+    area: areaDisplay,
     pergolaTotal: pergolaTotalFinal,
+    railingsLineTotal,
+    fenceLineTotal,
     santafTotal,
     zipScreenTotal,
     lightingTotal,
     drainageTotal,
     winterClosureTotal,
     totalBeforeVat,
-    vatPercent: 18,
+    vatPercent: vatPct,
     vatAmount,
     priceWithVat,
     discountPercent,

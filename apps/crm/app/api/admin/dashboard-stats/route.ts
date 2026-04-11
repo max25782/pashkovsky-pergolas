@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { requireCompanyAccess } from '@/lib/auth'
+import { assertUserHasFeature } from '@/lib/subscription/require-feature-api'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -27,6 +28,9 @@ export async function GET(req: NextRequest) {
 
   const access = await requireCompanyAccess(req, companyId)
   if (!access.authorized) return access.error
+
+  const planBlock = await assertUserHasFeature(authCheck.user.id, 'crm_home')
+  if (planBlock) return planBlock
 
   if (!supabase) {
     return NextResponse.json({ error: 'Server not configured' }, { status: 500 })

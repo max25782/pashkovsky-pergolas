@@ -130,6 +130,10 @@ function rowToDraft(data: Record<string, unknown>): OfferDraft {
     options: {
       notes: (data.options_notes as string) || undefined,
     },
+    vatPercent: (() => {
+      const vp = Number(data.vat_percent)
+      return Number.isFinite(vp) ? Math.min(100, Math.max(0, vp)) : 18
+    })(),
     discountPercent: Number(data.discount_percent) || 0,
     images: (data.images as string[]) || undefined,
   }

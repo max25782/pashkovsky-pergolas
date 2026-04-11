@@ -13,6 +13,7 @@ import { useProjectRevenue } from '@/hooks/useProjectRevenue'
 import { LaundryClosetModal } from './LaundryClosetModal'
 import { MaterialOrdersList } from './MaterialOrdersList'
 import { RailingsFormFields, type RailingsFormValue } from './RailingsFormFields'
+import { FenceFormFields, type FenceFormValue } from './FenceFormFields'
 import { DealPaymentsWidget } from './DealPaymentsWidget'
 import { ContractorPaymentPlan } from './deals/templates/ContractorPaymentPlan'
 import { authFetch } from '@/lib/api/auth-fetch'
@@ -69,6 +70,10 @@ export function DealModal({
   const [offersRefreshTrigger, setOffersRefreshTrigger] = useState(0)
   const [shiftsRefreshTrigger, setShiftsRefreshTrigger] = useState(0)
 
+  function railingsGlazingFromRow(g: string | null | undefined): RailingsFormValue['glazing_system'] {
+    return g === 'aluminum_glass' || g === 'wet_glazing' || g === 'dry_glazing' ? g : ''
+  }
+
   const [railingsForm, setRailingsForm] = useState<RailingsFormValue>(() => {
     const rd = deal.deal_railings_details
     const row = Array.isArray(rd) ? rd[0] : rd
@@ -78,7 +83,21 @@ export function DealModal({
       profile_type: row?.profile_type ?? '',
       color: row?.color ?? '',
       location_type: (row?.location_type as RailingsFormValue['location_type']) ?? 'balcony',
+      glazing_system: railingsGlazingFromRow(row?.glazing_system),
       glass_type: row?.glass_type ?? '',
+      notes: row?.notes ?? '',
+    }
+  })
+
+  const [fenceForm, setFenceForm] = useState<FenceFormValue>(() => {
+    const fd = deal.deal_fence_details
+    const row = Array.isArray(fd) ? fd[0] : fd
+    const fv = row?.fence_variant
+    return {
+      meters_total: row?.meters_total ?? null,
+      height_cm: row?.height_cm ?? null,
+      fence_variant: fv === 'classic' || fv === 'hitech' || fv === 'hitech_angular' ? fv : '',
+      color: row?.color ?? '',
       notes: row?.notes ?? '',
     }
   })
@@ -97,6 +116,7 @@ export function DealModal({
         profile_type: row.profile_type ?? '',
         color: row.color ?? '',
         location_type: (row.location_type as RailingsFormValue['location_type']) ?? 'balcony',
+        glazing_system: railingsGlazingFromRow(row.glazing_system),
         glass_type: row.glass_type ?? '',
         notes: row.notes ?? '',
       })
@@ -107,7 +127,29 @@ export function DealModal({
         profile_type: '',
         color: '',
         location_type: 'balcony',
+        glazing_system: '',
         glass_type: '',
+        notes: '',
+      })
+    }
+
+    const fd = deal.deal_fence_details
+    const frow = Array.isArray(fd) ? fd[0] : fd
+    if (deal.work_type === 'fence' && frow) {
+      const fv = frow.fence_variant
+      setFenceForm({
+        meters_total: frow.meters_total ?? null,
+        height_cm: frow.height_cm ?? null,
+        fence_variant: fv === 'classic' || fv === 'hitech' || fv === 'hitech_angular' ? fv : '',
+        color: frow.color ?? '',
+        notes: frow.notes ?? '',
+      })
+    } else if (deal.work_type === 'fence') {
+      setFenceForm({
+        meters_total: null,
+        height_cm: null,
+        fence_variant: '',
+        color: '',
         notes: '',
       })
     }
@@ -177,6 +219,7 @@ export function DealModal({
         updates.profile_type = railingsForm.profile_type || undefined
         updates.color = railingsForm.color || undefined
         updates.location_type = railingsForm.location_type
+        updates.glazing_system = railingsForm.glazing_system || undefined
         updates.glass_type = railingsForm.glass_type || undefined
         updates.railings_notes = railingsForm.notes || undefined
       }
@@ -191,6 +234,33 @@ export function DealModal({
           return
         }
         if (!railingsForm.color?.trim()) {
+          toast.error(`${t.deals.color} ${t.deals.required}`)
+          return
+        }
+        if (!railingsForm.glazing_system) {
+          toast.error(`${t.deals.glazingSystem} ${t.deals.required}`)
+          return
+        }
+      }
+
+      if (localDeal.work_type === 'fence' && fenceForm) {
+        updates.fence_meters_total = fenceForm.meters_total ?? undefined
+        updates.fence_height_cm = fenceForm.height_cm ?? undefined
+        updates.fence_variant = fenceForm.fence_variant || undefined
+        updates.fence_color = fenceForm.color || undefined
+        updates.fence_notes = fenceForm.notes || undefined
+      }
+
+      if (localDeal.work_type === 'fence') {
+        if (!fenceForm.meters_total || fenceForm.meters_total <= 0) {
+          toast.error(`${t.deals.metersTotal} ${t.deals.required}`)
+          return
+        }
+        if (!fenceForm.fence_variant) {
+          toast.error(`${t.deals.fenceVariant} ${t.deals.required}`)
+          return
+        }
+        if (!fenceForm.color?.trim()) {
           toast.error(`${t.deals.color} ${t.deals.required}`)
           return
         }
@@ -346,13 +416,14 @@ export function DealModal({
               <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.workType}</label>
               <select
                 value={localDeal.work_type || 'pergola'}
-                onChange={(e) => updateField('work_type', (e.target.value || 'pergola') as 'pergola' | 'railings' | 'gates' | 'facade' | 'other')}
+                onChange={(e) => updateField('work_type', (e.target.value || 'pergola') as 'pergola' | 'railings' | 'gates' | 'facade' | 'fence' | 'other')}
                 className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
               >
                 <option value="pergola">{t.deals.workTypes.pergola}</option>
                 <option value="railings">{t.deals.workTypes.railings}</option>
                 <option value="gates">{t.deals.workTypes.gates}</option>
                 <option value="facade">{t.deals.workTypes.facade}</option>
+                <option value="fence">{t.deals.workTypes.fence}</option>
                 <option value="other">{t.deals.workTypes.other}</option>
               </select>
             </div>
@@ -382,6 +453,7 @@ export function DealModal({
                 <option value="gates">{t.deals.projectTypes.gates}</option>
                 <option value="windows">{t.deals.projectTypes.windows}</option>
                 <option value="laundry_closet">{t.deals.projectTypes.laundry_closet}</option>
+                <option value="fence">{t.deals.projectTypes.fence}</option>
               </select>
               {localDeal.project_type === 'laundry_closet' && (
                 <button
@@ -406,7 +478,7 @@ export function DealModal({
                 ))}
               </select>
             </div>
-            {localDeal.work_type !== 'railings' && (
+            {localDeal.work_type !== 'railings' && localDeal.work_type !== 'fence' && (
               <>
                 <div>
                   <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.width}</label>
@@ -506,7 +578,7 @@ export function DealModal({
                 className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
               />
             </div>
-            {localDeal.project_type !== 'laundry_closet' && localDeal.work_type !== 'railings' && (
+            {localDeal.project_type !== 'laundry_closet' && localDeal.work_type !== 'railings' && localDeal.work_type !== 'fence' && (
               <div>
                 <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.lighting}</label>
                 <input
@@ -631,9 +703,36 @@ export function DealModal({
                   metersTotal: t.deals.metersTotal,
                   heightCm: t.deals.heightCm,
                   profileType: t.deals.profileType,
+                  profilePlaceholder: t.deals.railingProfilePlaceholder,
                   color: t.deals.color,
                   locationType: t.deals.locationType,
+                  glazingSystem: t.deals.glazingSystem,
+                  glazingAluminumGlass: t.deals.glazingAluminumGlass,
+                  glazingWet: t.deals.glazingWet,
+                  glazingDry: t.deals.glazingDry,
                   glassType: t.deals.glassType,
+                  notes: t.deals.notes,
+                  required: t.deals.required,
+                }}
+              />
+            </div>
+          )}
+
+          {localDeal.work_type === 'fence' && (
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-4">{t.deals.fenceDetails}</h3>
+              <FenceFormFields
+                value={fenceForm}
+                onChange={setFenceForm}
+                readOnly={false}
+                translations={{
+                  metersTotal: t.deals.metersTotal,
+                  heightCm: t.deals.heightCm,
+                  fenceVariant: t.deals.fenceVariant,
+                  fenceClassic: t.deals.fenceClassic,
+                  fenceHitech: t.deals.fenceHitech,
+                  fenceHitechAngular: t.deals.fenceHitechAngular,
+                  color: t.deals.color,
                   notes: t.deals.notes,
                   required: t.deals.required,
                 }}
@@ -654,7 +753,7 @@ export function DealModal({
 
           {/* Sketch & Offers Buttons (hide sketch for railings) */}
           <div className="pt-4 border-t border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {localDeal.work_type !== 'railings' && (
+            {localDeal.work_type !== 'railings' && localDeal.work_type !== 'fence' && (
               <button
                 onClick={() => setShowSketchModal(true)}
                 className="px-4 py-2 rounded-lg bg-amber-600/20 hover:bg-amber-600/30 text-amber-200 font-medium flex items-center justify-center gap-2"
@@ -676,11 +775,15 @@ export function DealModal({
           {deal.customer_name && (
             <div className="min-h-[200px] border-t border-white/10 pt-4">
               <h3 className="mb-3 text-lg font-semibold">{t.deals.offersTitle}</h3>
-              <OffersList 
-                dealId={deal.id} 
-                refreshTrigger={offersRefreshTrigger} 
+              <OffersList
+                dealId={deal.id}
+                dealSource={localDeal.source ?? null}
+                refreshTrigger={offersRefreshTrigger}
                 adminToken={adminToken}
                 onOffersChanged={() => setOffersRefreshTrigger((prev) => prev + 1)}
+                onDealPromotedToCrm={() =>
+                  setLocalDeal((prev) => ({ ...prev, source: 'quick_offer_saved' }))
+                }
               />
             </div>
           )}

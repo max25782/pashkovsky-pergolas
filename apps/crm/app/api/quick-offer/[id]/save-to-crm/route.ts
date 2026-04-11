@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
+import { assertUserHasFeature } from '@/lib/subscription/require-feature-api'
 
 export const runtime = 'nodejs'
 
@@ -28,6 +29,9 @@ export async function POST(
 ) {
   const auth = await requireAuthAsync(req)
   if (!auth.authorized) return auth.error
+
+  const planBlock = await assertUserHasFeature(auth.user.id, 'save_offer_to_crm')
+  if (planBlock) return planBlock
 
   if (!supabase) return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
 

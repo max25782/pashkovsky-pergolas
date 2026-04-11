@@ -71,9 +71,8 @@ export function SceneWithSaveBridge({
   const pergolaDepth = cm(params.depthCm)
   const pergolaZ = pergolaDepth / 2
 
-  // Wall sits just behind Z=0 (back edge of pergola).
   const wallThickness = 0.3
-  const wallZ = -(wallThickness / 2)  // wall center so front face is exactly at Z=0
+  const wallZ = -(wallThickness / 2)
 
   return (
     <>

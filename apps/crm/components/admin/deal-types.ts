@@ -1,4 +1,8 @@
-export type WorkType = 'pergola' | 'railings' | 'gates' | 'facade' | 'other'
+export type WorkType = 'pergola' | 'railings' | 'gates' | 'facade' | 'fence' | 'other'
+
+export type FenceVariant = 'classic' | 'hitech' | 'hitech_angular'
+
+export type RailingsGlazingSystem = 'aluminum_glass' | 'wet_glazing' | 'dry_glazing'
 export type CustomerType = 'private' | 'contractor'
 export type PricingModel = 'fixed' | 'per_meter' | 'per_sqm' | 'custom'
 
@@ -17,8 +21,21 @@ export interface DealRailingsDetails {
   color: string
   location_type: 'balcony' | 'stairs' | 'roof' | 'yard' | 'other'
   glass_type?: string | null
+  glazing_system?: RailingsGlazingSystem | null
   railing_type?: string | null
   material?: string | null
+  notes?: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface DealFenceDetails {
+  deal_id: string
+  company_id: string
+  meters_total: number
+  height_cm?: number | null
+  fence_variant: FenceVariant
+  color: string
   notes?: string | null
   created_at?: string
   updated_at?: string
@@ -35,7 +52,7 @@ export interface Deal {
   customer_phone?: string | null
   customer_email?: string | null
   customer_city?: string | null
-  project_type?: 'pergola' | 'railing' | 'gates' | 'windows' | 'laundry_closet' | null
+  project_type?: 'pergola' | 'railing' | 'gates' | 'windows' | 'laundry_closet' | 'fence' | null
   width?: number | null
   depth?: number | null
   shape?: 'прямоугольник' | 'Г-образная' | 'ר' | 'ח' | 'מקיר לקיר' | null
@@ -61,8 +78,11 @@ export interface Deal {
   sketch_image_url?: string | null
   sketch_json?: any
   deal_railings_details?: DealRailingsDetails | null
+  deal_fence_details?: DealFenceDetails | null
   created_at?: string | null
   updated_at?: string | null
+  /** Deal origin, e.g. quick_offer vs quick_offer_saved (CRM board visibility). */
+  source?: string | null
   // Railings fields (for PATCH payload when work_type is railings)
   meters_total?: number | null
   height_cm?: number | null
@@ -70,7 +90,14 @@ export interface Deal {
   color?: string | null
   location_type?: DealRailingsDetails['location_type'] | null
   glass_type?: string | null
+  glazing_system?: RailingsGlazingSystem | null
   railings_notes?: string | null
+  /** PATCH/create payload when work_type is fence */
+  fence_meters_total?: number | null
+  fence_height_cm?: number | null
+  fence_variant?: FenceVariant | null
+  fence_color?: string | null
+  fence_notes?: string | null
 }
 
 // Base stages with colors (labels will be translated)

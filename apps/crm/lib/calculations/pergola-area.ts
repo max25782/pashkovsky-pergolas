@@ -115,17 +115,11 @@ function calculateLShapeArea(shape: LShape): number {
   const leg1Area = shape.leg1.width * shape.leg1.length
   const leg2Area = shape.leg2.width * shape.leg2.length
   
-  // Если есть overlap, вычитаем его (чтобы не считать дважды)
-  let overlapArea = 0
-  if (shape.overlap) {
-    overlapArea = shape.overlap.width * shape.overlap.length
-  } else {
-    // Автоматический расчет пересечения (примерный)
-    // Пересечение = минимальная ширина * минимальная длина
-    const minWidth = Math.min(shape.leg1.width, shape.leg2.width)
-    const minLength = Math.min(shape.leg1.length, shape.leg2.length)
-    overlapArea = minWidth * minLength
-  }
+  // Only subtract overlap if explicitly specified by the user.
+  // Default is 0 — the two legs are separate sections that don't overlap.
+  const overlapArea = shape.overlap
+    ? shape.overlap.width * shape.overlap.length
+    : 0
   
   return leg1Area + leg2Area - overlapArea
 }

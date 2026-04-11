@@ -2,6 +2,7 @@ import '../globals.css'
 import type { Metadata } from 'next'
 import dynamic from 'next/dynamic'
 import { Providers } from '@/components/providers'
+import { CRMSubscriptionProvider } from '@/components/subscription/crm-subscription-provider'
 import { Suspense } from 'react'
 
 // CRMSidebar uses usePathname, useLanguage, createClient - defer to client to avoid hydration mismatch
@@ -25,17 +26,17 @@ export default function CRMLayout({
 }) {
   return (
     <Providers>
-      <div className="flex min-h-screen">
-        {/* CRM Sidebar - Only render if not on /app (which redirects immediately) */}
-        <Suspense fallback={<div className="w-64 bg-white dark:bg-neutral-800" />}>
-          <CRMSidebar />
-        </Suspense>
-        
-        {/* Main Content */}
-        <main className="flex-1 overflow-y-auto">
-          {children}
-        </main>
-      </div>
+      <CRMSubscriptionProvider>
+        <div className="flex min-h-screen">
+          {/* CRM Sidebar - Only render if not on /app (which redirects immediately) */}
+          <Suspense fallback={<div className="w-64 bg-white dark:bg-neutral-800" />}>
+            <CRMSidebar />
+          </Suspense>
+
+          {/* Main Content */}
+          <main className="flex-1 overflow-y-auto">{children}</main>
+        </div>
+      </CRMSubscriptionProvider>
     </Providers>
   )
 }

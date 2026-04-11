@@ -50,6 +50,7 @@ export async function POST(req: NextRequest) {
       winterClosure,
       options,
       discountPercent,
+      vatPercent: bodyVatPercent,
       area,
       pergolaTotal,
       santafTotal,
@@ -125,6 +126,10 @@ export async function POST(req: NextRequest) {
 
     // Use provided area, calculated pergola area, or Santaf area
     const finalArea = area || calculatedArea || santafArea
+
+    const rawVatPct = Number(bodyVatPercent)
+    const storedVatPercent =
+      Number.isFinite(rawVatPct) ? Math.min(100, Math.max(0, rawVatPct)) : 18
 
     // Prepare insert data with proper defaults
     const insertData: any = {
@@ -211,7 +216,7 @@ export async function POST(req: NextRequest) {
       lighting_total: Number(lightingTotal) || 0,
       drainage_total: Number(drainageTotal) || 0,
       total_before_vat: Number(totalBeforeVat) || 0,
-      vat_percent: 18,
+      vat_percent: storedVatPercent,
       vat_amount: Number(vatAmount) || 0,
       price_with_vat: Number(priceWithVat) || 0,
       discount_percent: Number(discountPercent) || 0,

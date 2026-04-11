@@ -28,6 +28,12 @@ export default function RootLayout({
         <link rel="icon" href="/logo-icon.svg" type="image/svg+xml" />
       </head>
       <body className="antialiased bg-neutral-50 dark:bg-neutral-900" suppressHydrationWarning>
+        {/* Inline theme script — runs before React hydrates, prevents flash */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `!function(){try{var d=document.documentElement,c=d.classList;c.remove('light','dark');var e=localStorage.getItem('theme');if(e){c.add(e||'')}else{c.add('dark');}if(e==='light'||e==='dark'||!e)d.style.colorScheme=e||'dark'}catch(t){}}();`,
+          }}
+        />
         <Providers>
           {children}
         </Providers>

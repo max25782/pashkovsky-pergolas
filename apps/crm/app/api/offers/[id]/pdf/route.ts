@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { generateOfferPdf, generateOfferPdfFilename } from '@/lib/pdf/generate-offer-pdf'
 import { uploadToS3 } from '@/lib/s3-upload'
-import type { Offer, Pergola, PergolaShape } from '@/types/offer'
+import type { Offer } from '@/types/offer'
+import { pergolaFieldsFromOfferRow } from '@/lib/pdf/map-offer-db-row-for-pdf'
 
 // Force Node.js runtime (not Edge) for Puppeteer/Chromium compatibility
 export const runtime = 'nodejs'
@@ -28,24 +29,7 @@ async function fetchOffer(id: string): Promise<Offer | null> {
 
   // Log raw shape data for debugging
 
-  const pergolasFromDb = data.pergolas_data as Pergola[] | null | undefined
-  const pergolaSingle =
-    pergolasFromDb && pergolasFromDb.length > 0
-      ? pergolasFromDb[0]
-      : {
-          shape: data.pergola_shape_data
-            ? (data.pergola_shape_data as PergolaShape)
-            : {
-                type: 'rectangle' as const,
-                width: data.pergola_width || 0,
-                length: data.pergola_length || 0,
-              },
-          height: data.pergola_height,
-          location: data.pergola_location,
-          pricePerSqm: data.pergola_price_per_sqm,
-          width: data.pergola_width,
-          length: data.pergola_length,
-        }
+  const pf = pergolaFieldsFromOfferRow(data)
 
   return {
     id: data.id,
@@ -54,8 +38,12 @@ async function fetchOffer(id: string): Promise<Offer | null> {
     customerPhone: data.customer_phone,
     customerCity: data.customer_city,
 
-    pergolas: pergolasFromDb && pergolasFromDb.length > 0 ? pergolasFromDb : undefined,
-    pergola: pergolaSingle,
+    pergolas: pf.pergolas,
+    pergola: pf.pergola,
+    quickProduct: pf.quickProduct,
+    quickRailings: pf.quickRailings,
+    quickFence: pf.quickFence,
+    quickOfferExtra: pf.quickOfferExtra,
 
     configuratorMeta: data.configurator_meta ?? undefined,
     color: {

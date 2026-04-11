@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { isSuperAdmin } from '@/lib/auth/isSuperAdmin'
+import { getUserSubscriptionPlan } from '@/lib/subscription/load-user-plan'
+import { hasAccess } from '@/lib/subscription/plan-access'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,6 +37,11 @@ export default async function AppPage() {
 
     if (!rawMemberships) {
       redirect('/app/onboarding?error=no_company')
+    }
+
+    const plan = await getUserSubscriptionPlan(user.id)
+    if (!hasAccess({ plan }, 'crm_home')) {
+      redirect('/app/quick-offer')
     }
 
     redirect('/app/admin')

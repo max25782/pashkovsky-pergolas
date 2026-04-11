@@ -22,9 +22,14 @@ export function RailingsDealForm({ value, onChange, readOnly = false }: Railings
         profileType: t.deals.profileType,
         color: t.deals.color,
         locationType: t.deals.locationType,
+        glazingSystem: t.deals.glazingSystem,
+        glazingAluminumGlass: t.deals.glazingAluminumGlass,
+        glazingWet: t.deals.glazingWet,
+        glazingDry: t.deals.glazingDry,
         glassType: t.deals.glassType,
         notes: t.deals.notes,
         required: t.deals.required,
+        profilePlaceholder: t.deals.railingProfilePlaceholder,
       }}
     />
   )

@@ -122,6 +122,45 @@ export interface Options {
   notes?: string
 }
 
+/** Quick Offer: primary product (defaults to pergola when omitted). */
+export type QuickOfferProductType = 'pergola' | 'railings' | 'fence'
+
+export type QuickOfferGlazingSystem = 'aluminum_glass' | 'wet_glazing' | 'dry_glazing'
+
+export type QuickOfferFenceVariant = 'classic' | 'hitech' | 'hitech_angular'
+
+export type QuickOfferRailingsLocation = 'balcony' | 'stairs' | 'roof' | 'yard' | 'other'
+
+export interface QuickOfferRailingsDraft {
+  metersTotal: number
+  heightCm?: number
+  profileType: string
+  color: string
+  locationType: QuickOfferRailingsLocation
+  glassType?: string
+  glazingSystem: QuickOfferGlazingSystem
+  notes?: string
+  /** ₪/m² — line total = areaSqm × pricePerSqm, areaSqm = metersTotal × (heightCm/100) */
+  pricePerSqm: number
+}
+
+export interface QuickOfferFenceDraft {
+  metersTotal: number
+  heightCm?: number
+  fenceVariant: QuickOfferFenceVariant
+  color: string
+  notes?: string
+  /** ₪/m² — same area rule as railings */
+  pricePerSqm: number
+}
+
+/** Stored on offers.quick_offer_extra for PDF / round-trip. */
+export interface QuickOfferExtraPersisted {
+  quickProduct: QuickOfferProductType
+  quickRailings?: QuickOfferRailingsDraft
+  quickFence?: QuickOfferFenceDraft
+}
+
 export interface Pricing {
   // Calculated values
   pergolaTotal?: number              // area * pricePerSqm
@@ -133,8 +172,8 @@ export interface Pricing {
   
   // Base totals
   totalBeforeVat: number            // sum of all before VAT
-  vatPercent: number                // 18%
-  vatAmount: number                 // totalBeforeVat * 0.18
+  vatPercent: number                // configurable % (e.g. 18)
+  vatAmount: number                 // totalBeforeVat * (vatPercent/100)
   priceWithVat: number              // totalBeforeVat + vatAmount
   
   // Discount (applied AFTER VAT)
@@ -225,17 +264,28 @@ export interface OfferDraft {
   winterClosure: WinterClosure
   options: Options
   
+  // VAT rate (%) — applied to total before VAT
+  vatPercent: number
+
   // Discount (applied after VAT)
   discountPercent: number
-  
+
   images?: string[]
 
   configuratorMeta?: ConfiguratorMeta | null
+
+  quickProduct?: QuickOfferProductType
+  quickRailings?: QuickOfferRailingsDraft
+  quickFence?: QuickOfferFenceDraft
 }
 
 export interface OfferCalculation {
   area: number
   pergolaTotal?: number
+  /** Main line for Quick Offer when product is railings (₪). */
+  railingsLineTotal?: number
+  /** Main line for Quick Offer when product is fence (₪). */
+  fenceLineTotal?: number
   santafTotal: number
   zipScreenTotal: number
   lightingTotal: number
@@ -253,6 +303,8 @@ export interface OfferCalculation {
 export interface Offer extends OfferDraft, OfferCalculation {
   id: string
   area: number
+  /** Loaded from offers.quick_offer_extra when present. */
+  quickOfferExtra?: QuickOfferExtraPersisted | null
   pricing: Pricing
   paymentTerms: PaymentTerms
   warranty: Warranty
@@ -319,6 +371,26 @@ export const DEFAULT_OFFER_VALUES = {
   },
   options: {
     notes: undefined
+  },
+  quickProduct: 'pergola' as QuickOfferProductType,
+  quickRailings: {
+    metersTotal: 10,
+    heightCm: 120,
+    profileType: '',
+    color: '',
+    locationType: 'balcony' as QuickOfferRailingsLocation,
+    glassType: '',
+    glazingSystem: 'aluminum_glass' as QuickOfferGlazingSystem,
+    notes: '',
+    pricePerSqm: 450,
+  },
+  quickFence: {
+    metersTotal: 10,
+    heightCm: 120,
+    fenceVariant: 'classic' as QuickOfferFenceVariant,
+    color: '',
+    notes: '',
+    pricePerSqm: 350,
   },
   discountPercent: 0,
   vatPercent: 18, // Changed from 17% to 18%

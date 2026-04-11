@@ -375,7 +375,7 @@ export default function MediaAdminPage() {
       {selected.size > 0 && (
         <div className="bg-blue-900/30 border border-blue-500/40 rounded-lg p-4 mb-4 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-blue-200">{t.gallery.selectedItems.replace('{count}', String(selected.size))}</span>
+            <span className="text-sm font-medium text-blue-200">{t.gallery.selectedItems(selected.size)}</span>
             <button type="button" onClick={clearSelection} className="text-xs text-white/50 hover:text-white">
               {t.gallery.clearSelection}
             </button>
@@ -393,7 +393,7 @@ export default function MediaAdminPage() {
             disabled={applyingBulk || bulkCategory == null}
             className="flex items-center gap-2 px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-sm font-medium"
           >
-            {applyingBulk ? t.gallery.applying : `${t.gallery.applyCategory.replace('{count}', String(selected.size))}`}
+            {applyingBulk ? t.gallery.applying : t.gallery.applyCategory(selected.size)}
           </button>
         </div>
       )}
@@ -413,12 +413,12 @@ export default function MediaAdminPage() {
       {displayItems.length > 0 && (
         <div className="flex items-center gap-4 mb-3 text-sm text-white/60">
           <button type="button" onClick={selectAll} className="hover:text-white flex items-center gap-1">
-            <CheckSquare className="w-4 h-4" /> {t.gallery.selectAll.replace('{count}', String(displayItems.length))}
+            <CheckSquare className="w-4 h-4" /> {t.gallery.selectAll(displayItems.length)}
           </button>
           <span>•</span>
-          <span>{t.gallery.withCategory.replace('{count}', String(displayItems.filter((i) => i.category != null).length))}</span>
+          <span>{t.gallery.withCategory(displayItems.filter((i) => i.category != null).length)}</span>
           <span>•</span>
-          <span>{t.gallery.withoutCategory.replace('{count}', String(displayItems.filter((i) => i.category == null).length))}</span>
+          <span>{t.gallery.withoutCategory(displayItems.filter((i) => i.category == null).length)}</span>
         </div>
       )}
 

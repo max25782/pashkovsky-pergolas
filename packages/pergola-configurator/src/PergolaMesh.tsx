@@ -28,12 +28,21 @@ interface Section {
  *
  *  Rectangle:  single section centred at origin
  *
- *  L-shape:    main body on the left, arm extends to the right-front corner
- *              ┌──────┐
- *              │ main │
- *              │      ├──┐
- *              └──────┘  │ arm
- *                        └──┘
+ *  L-shape:    pergola wraps an OUTER corner of the building.
+ *              Main body runs along the back wall (X direction).
+ *              Arm runs along the right side wall (Z direction).
+ *              Both share the same corner post at top-right of main body.
+ *
+ *              Wall corner is at X = width/2, Z = 0
+ *
+ *              ════════╗   ← back wall (Z=0)
+ *              ┌──────┐║
+ *              │ main │║  ← right side wall (X = width/2 + arm1Width)
+ *              │      │╠══════╗
+ *              └──────┘║      ║
+ *                      ║ arm  ║
+ *                      ║      ║
+ *                      ╚══════╝
  *
  *  U-shape:    main body across the back, two arms extending forward
  *              ┌──────────────┐
@@ -54,12 +63,23 @@ function buildSections(
   }
 
   if (shape === 'L') {
-    // Main body: full width × full depth, centred at origin
-    // Arm: arm1Width × arm1Depth, attached at right-front corner of main body
+    // Main body centred at origin, back edge at Z = -depth/2 (touching back wall).
+    // Arm attached at right side of main body, back edge flush with main body.
+    //
+    // Top-down view (X = right, Z = forward):
+    //
+    //  ════════════════════════╗  ← back wall (Z = -depth/2)
+    //  │    main body          ║
+    //  │   (width × depth)     ║
+    //  └───────────────────────┘
+    //                      ┌───┐
+    //                      │arm│ arm1Width × arm1Depth
+    //                      └───┘
+    //  arm back edge = main body back edge = Z = -depth/2
     const mainCx = 0
     const mainCz = 0
     const armCx = width / 2 + arm1Width / 2
-    const armCz = depth / 2 - arm1Depth / 2
+    const armCz = -depth / 2 + arm1Depth / 2
     return [
       { cx: mainCx, cz: mainCz, widthM: width, depthM: depth },
       { cx: armCx, cz: armCz, widthM: arm1Width, depthM: arm1Depth },

@@ -16,30 +16,48 @@ import {
   Trash2,
   Box,
   Copy,
+  Building2,
+  Lock,
 } from 'lucide-react'
 import { getOfferPublicUrl } from '@/lib/offer-sharing'
 import type { Locale } from '@/lib/locales'
 import { authFetch } from '@/lib/api/auth-fetch'
 import { useToast } from '@/components/ui/toast'
 import { OfferConfiguratorEmbed } from '@/components/offers/OfferConfiguratorEmbed'
+import { useSubscriptionPlan } from '@/components/subscription/subscription-plan-context'
+import { minPlanForFeature } from '@/lib/subscription/plan-access'
 
 interface OffersListProps {
   dealId: string
+  /** When `quick_offer`, signed offers can be promoted to the CRM board (Pro+). */
+  dealSource?: string | null
   refreshTrigger?: number
   adminToken?: string
   onOffersChanged?: () => void
+  /** Called after save-to-CRM so the parent can refresh deal `source` without refetch. */
+  onDealPromotedToCrm?: () => void
 }
 
-export function OffersList({ dealId, refreshTrigger, adminToken, onOffersChanged }: OffersListProps) {
+export function OffersList({
+  dealId,
+  dealSource = null,
+  refreshTrigger,
+  adminToken,
+  onOffersChanged,
+  onDealPromotedToCrm,
+}: OffersListProps) {
   const params = useParams()
   const locale = (params?.locale as Locale) || 'he'
   const toast = useToast()
   const tDeals = useTranslations('deals')
+  const tSub = useTranslations('subscription')
+  const { can } = useSubscriptionPlan()
   const [offers, setOffers] = useState<Offer[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [embedFor, setEmbedFor] = useState<{ offer: Offer; editUrl: string } | null>(null)
   const [embedLoadingOfferId, setEmbedLoadingOfferId] = useState<string | null>(null)
+  const [convertingOfferId, setConvertingOfferId] = useState<string | null>(null)
 
   const fetchOffers = useCallback(async (opts?: { silent?: boolean }): Promise<Offer[]> => {
     const silent = opts?.silent === true
@@ -128,6 +146,39 @@ export function OffersList({ dealId, refreshTrigger, adminToken, onOffersChanged
       toast.error('שגיאה במחיקה: ' + message)
     }
   }, [fetchOffers, onOffersChanged, toast])
+
+  const handleConvertToDeal = useCallback(
+    async (offer: Offer) => {
+      if (!can('save_offer_to_crm')) return
+      const name = offer.customerName?.trim() || tDeals('withoutName')
+      setConvertingOfferId(offer.id)
+      try {
+        const res = await authFetch(`/api/quick-offer/${offer.id}/save-to-crm`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            customerName: name,
+            customerPhone: offer.customerPhone ?? '',
+            customerCity: offer.customerCity ?? '',
+          }),
+        })
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({})) as { error?: string }
+          throw new Error(d.error ?? tDeals('convertToDealError'))
+        }
+        toast.success(tDeals('convertToDealSuccess'))
+        onDealPromotedToCrm?.()
+        await fetchOffers({ silent: true })
+        onOffersChanged?.()
+      } catch (err) {
+        const message = err instanceof Error ? err.message : tDeals('convertToDealError')
+        toast.error(message)
+      } finally {
+        setConvertingOfferId(null)
+      }
+    },
+    [can, fetchOffers, onDealPromotedToCrm, onOffersChanged, tDeals, toast],
+  )
 
   const handleGeneratePdf = useCallback(async (offer: Offer, forceRegenerate = false) => {
     try {
@@ -511,6 +562,33 @@ export function OffersList({ dealId, refreshTrigger, adminToken, onOffersChanged
               <Mail className="w-4 h-4" />
               Email
             </button>
+
+            {dealSource === 'quick_offer' && offer.approval.approved === true ? (
+              can('save_offer_to_crm') ? (
+                <button
+                  type="button"
+                  onClick={() => void handleConvertToDeal(offer)}
+                  disabled={convertingOfferId === offer.id}
+                  className="w-full sm:flex-1 flex items-center justify-center gap-1 px-2 py-2 rounded bg-violet-600/25 hover:bg-violet-600/35 text-violet-100 text-xs font-medium transition-colors disabled:opacity-50"
+                  title={tDeals('btnConvertToDeal')}
+                >
+                  <Building2 className="w-4 h-4" />
+                  {convertingOfferId === offer.id ? '…' : tDeals('btnConvertToDeal')}
+                </button>
+              ) : (
+                <div className="col-span-2 flex flex-col gap-1 rounded border border-amber-500/35 bg-amber-500/10 px-2 py-2">
+                  <div className="flex items-center gap-1 text-amber-200 text-xs font-medium">
+                    <Lock className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                    {tDeals('btnConvertToDeal')}
+                  </div>
+                  <p className="text-[10px] text-amber-200/85 leading-snug">
+                    {tSub('availableInPlan', {
+                      plan: tSub(`planNames.${minPlanForFeature('save_offer_to_crm')}`),
+                    })}
+                  </p>
+                </div>
+              )
+            ) : null}
 
             {/* Delete */}
             <button

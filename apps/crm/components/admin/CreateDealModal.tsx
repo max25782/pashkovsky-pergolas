@@ -5,6 +5,7 @@ import { getStages } from './deal-types'
 import { useCRMTranslations } from './useCRMTranslations'
 import { useToast } from '@/components/ui/toast'
 import { RailingsFormFields, type RailingsFormValue } from './RailingsFormFields'
+import { FenceFormFields, type FenceFormValue } from './FenceFormFields'
 
 interface CreateDealModalProps {
   onClose: () => void
@@ -19,7 +20,7 @@ export function CreateDealModal({
   const toast = useToast();
   const stages = getStages(t.deals)
   const [customerType, setCustomerType] = useState<'private' | 'contractor'>('private')
-  const [workType, setWorkType] = useState<'pergola' | 'railings' | 'gates' | 'facade' | 'other'>('pergola')
+  const [workType, setWorkType] = useState<'pergola' | 'railings' | 'gates' | 'facade' | 'fence' | 'other'>('pergola')
   const [pricingModel, setPricingModel] = useState<'fixed' | 'per_meter' | 'per_sqm' | 'custom'>('fixed')
   const [railingsForm, setRailingsForm] = useState<RailingsFormValue>({
     meters_total: null,
@@ -27,7 +28,15 @@ export function CreateDealModal({
     profile_type: '',
     color: '',
     location_type: 'balcony',
+    glazing_system: '',
     glass_type: '',
+    notes: '',
+  })
+  const [fenceForm, setFenceForm] = useState<FenceFormValue>({
+    meters_total: null,
+    height_cm: null,
+    fence_variant: '',
+    color: '',
     notes: '',
   })
   const [dealData, setDealData] = useState<Partial<Deal>>({
@@ -97,6 +106,25 @@ export function CreateDealModal({
         toast.error(t.deals.color ? `${t.deals.color} ${t.deals.required}` : 'Color is required')
         return
       }
+      if (!railingsForm.glazing_system) {
+        toast.error(t.deals.glazingSystem ? `${t.deals.glazingSystem} ${t.deals.required}` : 'Glazing system is required')
+        return
+      }
+    }
+
+    if (workType === 'fence') {
+      if (!fenceForm.meters_total || fenceForm.meters_total <= 0) {
+        toast.error(t.deals.metersTotal ? `${t.deals.metersTotal} ${t.deals.required}` : 'Meters total is required')
+        return
+      }
+      if (!fenceForm.fence_variant) {
+        toast.error(t.deals.fenceVariant ? `${t.deals.fenceVariant} ${t.deals.required}` : 'Fence type is required')
+        return
+      }
+      if (!fenceForm.color?.trim()) {
+        toast.error(t.deals.color ? `${t.deals.color} ${t.deals.required}` : 'Color is required')
+        return
+      }
     }
 
     setSaving(true)
@@ -118,8 +146,17 @@ export function CreateDealModal({
         dealToCreate.profile_type = railingsForm.profile_type
         dealToCreate.color = railingsForm.color
         dealToCreate.location_type = railingsForm.location_type
+        dealToCreate.glazing_system = railingsForm.glazing_system
         dealToCreate.glass_type = railingsForm.glass_type || null
         dealToCreate.railings_notes = railingsForm.notes || null
+      }
+      if (workType === 'fence') {
+        dealToCreate.fence_meters_total = fenceForm.meters_total
+        dealToCreate.fence_height_cm = fenceForm.height_cm
+        dealToCreate.fence_variant = fenceForm.fence_variant
+        dealToCreate.fence_color = fenceForm.color
+        dealToCreate.fence_notes = fenceForm.notes || null
+        if (!dealToCreate.project_type) dealToCreate.project_type = 'fence'
       }
       await onCreate(dealToCreate as Partial<Deal>)
       onClose()
@@ -168,19 +205,20 @@ export function CreateDealModal({
             <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.workType}</label>
             <select
               value={workType}
-              onChange={(e) => setWorkType((e.target.value || 'pergola') as 'pergola' | 'railings' | 'gates' | 'facade' | 'other')}
+              onChange={(e) => setWorkType((e.target.value || 'pergola') as 'pergola' | 'railings' | 'gates' | 'facade' | 'fence' | 'other')}
               className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
             >
               <option value="pergola">{t.deals.workTypes.pergola}</option>
               <option value="railings">{t.deals.workTypes.railings}</option>
               <option value="gates">{t.deals.workTypes.gates}</option>
               <option value="facade">{t.deals.workTypes.facade}</option>
+              <option value="fence">{t.deals.workTypes.fence}</option>
               <option value="other">{t.deals.workTypes.other}</option>
             </select>
           </div>
 
           {/* Pricing Model (for contractor or railings with per_meter) */}
-          {(customerType === 'contractor' || workType === 'railings') && (
+          {(customerType === 'contractor' || workType === 'railings' || workType === 'fence') && (
             <div>
               <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.pricingModel}</label>
               <select
@@ -208,9 +246,36 @@ export function CreateDealModal({
                   metersTotal: t.deals.metersTotal,
                   heightCm: t.deals.heightCm,
                   profileType: t.deals.profileType,
+                  profilePlaceholder: t.deals.railingProfilePlaceholder,
                   color: t.deals.color,
                   locationType: t.deals.locationType,
+                  glazingSystem: t.deals.glazingSystem,
+                  glazingAluminumGlass: t.deals.glazingAluminumGlass,
+                  glazingWet: t.deals.glazingWet,
+                  glazingDry: t.deals.glazingDry,
                   glassType: t.deals.glassType,
+                  notes: t.deals.notes,
+                  required: t.deals.required,
+                }}
+              />
+            </div>
+          )}
+
+          {workType === 'fence' && (
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-4">{t.deals.fenceDetails}</h3>
+              <FenceFormFields
+                value={fenceForm}
+                onChange={setFenceForm}
+                readOnly={false}
+                translations={{
+                  metersTotal: t.deals.metersTotal,
+                  heightCm: t.deals.heightCm,
+                  fenceVariant: t.deals.fenceVariant,
+                  fenceClassic: t.deals.fenceClassic,
+                  fenceHitech: t.deals.fenceHitech,
+                  fenceHitechAngular: t.deals.fenceHitechAngular,
+                  color: t.deals.color,
                   notes: t.deals.notes,
                   required: t.deals.required,
                 }}
@@ -285,6 +350,7 @@ export function CreateDealModal({
                   <option value="gates">{t.deals.projectTypes.gates}</option>
                   <option value="windows">{t.deals.projectTypes.windows}</option>
                   <option value="laundry_closet">{t.deals.projectTypes.laundry_closet}</option>
+                  <option value="fence">{t.deals.projectTypes.fence}</option>
                 </select>
               </div>
               <div>
@@ -300,7 +366,7 @@ export function CreateDealModal({
                   ))}
                 </select>
               </div>
-              {workType !== 'railings' && (
+              {workType !== 'railings' && workType !== 'fence' && (
                 <>
                   <div>
                     <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.width}</label>
@@ -392,7 +458,7 @@ export function CreateDealModal({
                   className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
                 />
               </div>
-              {workType !== 'railings' && (
+              {workType !== 'railings' && workType !== 'fence' && (
                 <div>
                   <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.lighting}</label>
                   <input

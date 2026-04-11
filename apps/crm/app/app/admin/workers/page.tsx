@@ -103,6 +103,13 @@ export default function WorkersAdminPage() {
           <div>
             <h2 className="text-3xl font-bold mb-2">{tWorkers('title')}</h2>
             <p className="text-white/60">{tWorkers('subtitle')}</p>
+            {!loading && workers.length > 0 ? (
+              <p className="text-white/50 text-sm mt-1">
+                {tWorkers('activeWorkersSummary', {
+                  count: workers.filter((w) => w.isActive).length,
+                })}
+              </p>
+            ) : null}
           </div>
           <button
             onClick={() => setShowAddModal(true)}
