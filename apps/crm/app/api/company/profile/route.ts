@@ -173,7 +173,7 @@ export async function PUT(request: NextRequest) {
 
     const body = await request.json()
 
-    // Get memberships (choose most recent owner, else most recent company)
+    // Get memberships via user session (RLS allows reading own memberships)
     const { data: memberships, error: membershipError } = await supabase
       .from('company_members')
       .select(
@@ -218,8 +218,14 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    // Update company profile
-    const { data: company, error: updateError } = await supabase
+    // Use service role to bypass RLS for the update
+    const serviceClient = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    )
+
+    const { data: company, error: updateError } = await serviceClient
       .from('companies')
       .update({
         ...body,
