@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 import type { CompanyMember } from '@/types/membership'
 
 export const dynamic = 'force-dynamic'
@@ -90,7 +91,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Use service role to bypass RLS for company creation
-    const { createClient: createServiceClient } = await import('@supabase/supabase-js')
     const serviceClient = createServiceClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
