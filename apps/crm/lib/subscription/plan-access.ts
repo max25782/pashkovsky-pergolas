@@ -16,7 +16,7 @@ const FEATURE_MIN_PLAN: Record<SaasFeature, SubscriptionPlan> = {
   save_offer_to_crm: 'pro',
   gallery: 'pro',
   articles: 'pro',
-  ai_media: 'offer',
+  ai_media: 'growth',
   statistics: 'business',
   reports_finance: 'business',
   workers: 'business',
