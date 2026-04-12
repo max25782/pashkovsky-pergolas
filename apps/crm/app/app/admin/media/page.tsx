@@ -2,13 +2,14 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import Image from 'next/image'
-import { RefreshCw, Download, Search, CheckSquare, Square, AlertCircle, Pencil } from 'lucide-react'
+import { RefreshCw, Download, Search, CheckSquare, Square, AlertCircle, Pencil, Lock } from 'lucide-react'
 import { authFetch } from '@/lib/api/auth-fetch'
 import {
   CategorySelector,
   CATALOG_CATEGORIES,
 } from '@/components/admin/media/CategorySelector'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
+import { useSubscriptionPlan } from '@/components/subscription/subscription-plan-context'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -37,6 +38,19 @@ interface DisplayItem extends S3Item {
 
 export default function MediaAdminPage() {
   const t = useCRMTranslations()
+  const { can, loading: planLoading } = useSubscriptionPlan()
+
+  if (!planLoading && !can('ai_media')) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-neutral-950">
+        <div className="text-center p-8">
+          <Lock className="h-12 w-12 text-neutral-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-white mb-2">Growth Plan Required</h2>
+          <p className="text-neutral-400">AI Media is available on the Growth plan only.</p>
+        </div>
+      </div>
+    )
+  }
 
   const categoryLabels: Record<string, string> = {
     pergolas: t.gallery.catPergolas,
