@@ -81,6 +81,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Use user session to verify identity
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -88,8 +89,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Use service role to bypass RLS for company creation
+    const { createClient: createServiceClient } = await import('@supabase/supabase-js')
+    const serviceClient = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    )
+
     // Check user doesn't already have a company
-    const { data: existing } = await supabase
+    const { data: existing } = await serviceClient
       .from('company_members')
       .select('company_id')
       .eq('user_id', user.id)
@@ -110,8 +119,8 @@ export async function POST(request: NextRequest) {
     // Generate slug from name
     const slug = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + Date.now()
 
-    // Create company
-    const { data: company, error: companyError } = await supabase
+    // Create company (service role bypasses RLS)
+    const { data: company, error: companyError } = await serviceClient
       .from('companies')
       .insert({
         name: name.trim(),
@@ -129,7 +138,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Add user as owner
-    const { error: memberError } = await supabase
+    const { error: memberError } = await serviceClient
       .from('company_members')
       .insert({
         company_id: company.id,
@@ -142,7 +151,7 @@ export async function POST(request: NextRequest) {
     if (memberError) {
       console.error('[Company Profile POST] Member insert error:', memberError)
       // Rollback company creation
-      await supabase.from('companies').delete().eq('id', company.id)
+      await serviceClient.from('companies').delete().eq('id', company.id)
       return NextResponse.json({ error: memberError.message }, { status: 500 })
     }
 
