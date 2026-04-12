@@ -276,12 +276,12 @@ export default async function SubscriptionsPage() {
                       {revenue ? `₪${revenue}/mo` : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button className="text-blue-600 hover:text-blue-900 mr-4">
+                      <a href={`/superadmin/companies/${subscription.company_id}`} className="text-blue-600 hover:text-blue-900 mr-4">
                         View
-                      </button>
-                      <button className="text-gray-600 hover:text-gray-900">
+                      </a>
+                      <a href={`/superadmin/companies/${subscription.company_id}/settings`} className="text-gray-600 hover:text-gray-900">
                         Manage
-                      </button>
+                      </a>
                     </td>
                   </tr>
                 )
@@ -354,12 +354,12 @@ export default async function SubscriptionsPage() {
                     {new Date(company.created_at).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button className="text-blue-600 hover:text-blue-900 mr-4">
+                    <a href={`/superadmin/companies/${company.id}/settings`} className="text-blue-600 hover:text-blue-900 mr-4">
                       Change Plan
-                    </button>
-                    <button className="text-gray-600 hover:text-gray-900">
+                    </a>
+                    <a href={`/superadmin/companies/${company.id}`} className="text-gray-600 hover:text-gray-900">
                       View Details
-                    </button>
+                    </a>
                   </td>
                 </tr>
               ))
