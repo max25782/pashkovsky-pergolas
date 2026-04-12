@@ -79,6 +79,80 @@ export async function GET(request: NextRequest) {
   }
 }
 
+export async function POST(request: NextRequest) {
+  try {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Check user doesn't already have a company
+    const { data: existing } = await supabase
+      .from('company_members')
+      .select('company_id')
+      .eq('user_id', user.id)
+      .limit(1)
+      .maybeSingle()
+
+    if (existing) {
+      return NextResponse.json({ error: 'User already has a company' }, { status: 409 })
+    }
+
+    const body = await request.json()
+    const { name, industry } = body
+
+    if (!name?.trim()) {
+      return NextResponse.json({ error: 'Company name is required' }, { status: 400 })
+    }
+
+    // Generate slug from name
+    const slug = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + Date.now()
+
+    // Create company
+    const { data: company, error: companyError } = await supabase
+      .from('companies')
+      .insert({
+        name: name.trim(),
+        slug,
+        industry: industry || 'aluminum',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .select()
+      .single()
+
+    if (companyError) {
+      console.error('[Company Profile POST] Create error:', companyError)
+      return NextResponse.json({ error: companyError.message }, { status: 500 })
+    }
+
+    // Add user as owner
+    const { error: memberError } = await supabase
+      .from('company_members')
+      .insert({
+        company_id: company.id,
+        user_id: user.id,
+        role: 'owner',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+
+    if (memberError) {
+      console.error('[Company Profile POST] Member insert error:', memberError)
+      // Rollback company creation
+      await supabase.from('companies').delete().eq('id', company.id)
+      return NextResponse.json({ error: memberError.message }, { status: 500 })
+    }
+
+    return NextResponse.json(company, { status: 201 })
+  } catch (error) {
+    console.error('[Company Profile POST] Error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
 export async function PUT(request: NextRequest) {
   try {
     const supabase = createClient()

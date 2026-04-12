@@ -72,10 +72,88 @@ const strings = {
   saveChanges: 'Save Changes',
 }
 
+function CreateCompanyForm({ onCreated }: { onCreated: (company: Company) => void }) {
+  const [name, setName] = useState('')
+  const [industry, setIndustry] = useState('aluminum')
+  const [creating, setCreating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault()
+    if (!name.trim()) return
+    setCreating(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/company/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), industry }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to create company')
+      onCreated(data)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to create company')
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-neutral-950 flex items-center justify-center p-4">
+      <div className="max-w-md w-full bg-neutral-800 rounded-xl p-8">
+        <div className="flex items-center gap-3 mb-6">
+          <Building2 className="h-8 w-8 text-blue-500" />
+          <div>
+            <h1 className="text-2xl font-bold text-white">Create Your Company</h1>
+            <p className="text-neutral-400 text-sm">Set up your company to access the CRM</p>
+          </div>
+        </div>
+        {error && (
+          <div className="mb-4 p-3 bg-red-900/30 border border-red-700 rounded text-red-200 text-sm">{error}</div>
+        )}
+        <form onSubmit={handleCreate} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-neutral-300 mb-1">Company Name *</label>
+            <input
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="Pashkovsky Group"
+              required
+              className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-lg text-white placeholder-neutral-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-neutral-300 mb-1">Industry</label>
+            <select
+              value={industry}
+              onChange={e => setIndustry(e.target.value)}
+              className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="aluminum">Aluminum & Pergolas</option>
+              <option value="construction">Construction</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <button
+            type="submit"
+            disabled={creating || !name.trim()}
+            className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
+          >
+            {creating ? 'Creating...' : 'Create Company'}
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 export default function CompanySettingsPage() {
   const t = (key: keyof typeof strings) => strings[key]
 
   const [company, setCompany] = useState<Company | null>(null)
+  const [noCompany, setNoCompany] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -88,6 +166,10 @@ export default function CompanySettingsPage() {
   async function fetchCompany() {
     try {
       const res = await fetch('/api/company/profile')
+      if (res.status === 404) {
+        setNoCompany(true)
+        return
+      }
       if (!res.ok) {
         const error = await res.json()
         throw new Error(error.error || t('loadFailed'))
@@ -178,6 +260,18 @@ export default function CompanySettingsPage() {
           <p className="text-gray-600">{t('loading')}</p>
         </div>
       </div>
+    )
+  }
+
+  if (noCompany) {
+    return (
+      <CreateCompanyForm
+        onCreated={(newCompany) => {
+          setCompany(newCompany)
+          setNoCompany(false)
+          setLoading(false)
+        }}
+      />
     )
   }
 
