@@ -10,7 +10,6 @@ import { useState, useEffect } from 'react'
 import { Building2, Upload, Save, Mail, FileText, Palette, Phone, MapPin, CreditCard } from 'lucide-react'
 import Image from 'next/image'
 import { LanguageSwitcher } from '@/components/admin/LanguageSwitcher'
-import { useTranslations } from 'next-intl'
 
 interface Company {
   id: string
@@ -31,9 +30,51 @@ interface Company {
   bank_branch: string | null
 }
 
+const strings = {
+  loadFailed: 'Failed to load company data',
+  saveFailed: 'Failed to save changes',
+  savedSuccess: 'Changes saved successfully',
+  logoUploadFailed: 'Failed to upload logo',
+  logoUploadSuccess: 'Logo uploaded successfully',
+  loading: 'Loading...',
+  noCompany: 'No company found. Please contact your administrator.',
+  title: 'Company Settings',
+  subtitle: 'Manage your company profile, branding, and contact information',
+  logoSection: 'Company Logo',
+  noLogo: 'No logo',
+  uploading: 'Uploading...',
+  uploadLogo: 'Upload Logo',
+  logoHint: 'Recommended: PNG or SVG, max 2MB',
+  basicInfo: 'Basic Information',
+  companyName: 'Company Name',
+  email: 'Email',
+  phone: 'Phone',
+  city: 'City',
+  address: 'Address',
+  addressPlaceholder: '123 Main St',
+  banking: 'Banking & Invoice Details',
+  vatNumber: 'VAT Number',
+  vatPlaceholder: '123456789',
+  bankName: 'Bank Name',
+  bankNamePlaceholder: 'Bank Leumi',
+  branchNumber: 'Branch Number',
+  branchPlaceholder: '800',
+  accountNumber: 'Account Number',
+  accountPlaceholder: '12345678',
+  branding: 'Branding',
+  primaryColor: 'Primary Color',
+  colorCode: 'Hex color code',
+  emailSignature: 'Email Signature',
+  emailSignatureHint: 'This signature will be appended to outgoing emails',
+  pdfFooter: 'PDF Footer',
+  pdfFooterHint: 'This text will appear at the bottom of generated PDFs',
+  saving: 'Saving...',
+  saveChanges: 'Save Changes',
+}
+
 export default function CompanySettingsPage() {
-  const t = useTranslations('companySettings')
-  
+  const t = (key: keyof typeof strings) => strings[key]
+
   const [company, setCompany] = useState<Company | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
