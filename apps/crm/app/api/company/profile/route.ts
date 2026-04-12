@@ -59,8 +59,15 @@ export async function GET(request: NextRequest) {
     })
     const membership = candidates[0]
 
+    // Use service role to bypass RLS for reading company data
+    const serviceClient = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    )
+
     // Get company profile
-    const { data: company, error: companyError } = await supabase
+    const { data: company, error: companyError } = await serviceClient
       .from('companies')
       .select('*')
       .eq('id', membership.company_id)
