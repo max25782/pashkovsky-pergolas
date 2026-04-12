@@ -162,6 +162,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: memberError.message }, { status: 500 })
     }
 
+    // Create trial subscription so company appears in SuperAdmin
+    await serviceClient
+      .from('company_subscriptions')
+      .insert({
+        company_id: company.id,
+        plan_id: 'trial',
+        status: 'trial',
+        billing_cycle: 'monthly',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+
     return NextResponse.json(company, { status: 201 })
   } catch (error) {
     console.error('[Company Profile POST] Error:', error)
