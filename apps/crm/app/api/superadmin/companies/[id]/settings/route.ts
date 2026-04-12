@@ -119,6 +119,25 @@ export async function PATCH(
       )
     }
 
+    // If plan changed, sync to users.plan for all company members
+    if (body.plan) {
+      const validPlans = ['offer', 'pro', 'business', 'growth']
+      if (validPlans.includes(body.plan)) {
+        const { data: members } = await supabaseAdmin
+          .from('company_members')
+          .select('user_id')
+          .eq('company_id', companyId)
+
+        if (members && members.length > 0) {
+          const userIds = members.map((m: { user_id: string }) => m.user_id)
+          await supabaseAdmin
+            .from('users')
+            .update({ plan: body.plan })
+            .in('id', userIds)
+        }
+      }
+    }
+
 
     return NextResponse.json({
       success: true,

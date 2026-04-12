@@ -186,17 +186,21 @@ export function CompanySettingsForm({ companyId }: CompanySettingsFormProps) {
       {/* Plan */}
       <div className="space-y-2">
         <Label htmlFor="plan" className="!text-black font-medium">
-          Plan
+          Plan (CRM Feature Access)
         </Label>
-        <Input
+        <select
           id="plan"
-          type="text"
           value={formData.plan}
           onChange={(e) => setFormData({ ...formData, plan: e.target.value })}
-          placeholder="trial, enterprise, etc."
           disabled={saving}
-          className="bg-white border-gray-300 !text-black"
-        />
+          className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-black"
+        >
+          <option value="offer">Offer (free tier)</option>
+          <option value="pro">Pro</option>
+          <option value="business">Business</option>
+          <option value="growth">Growth (full access)</option>
+        </select>
+        <p className="text-xs text-gray-500">Controls which CRM features are available to company members.</p>
       </div>
 
       {/* Result Message */}
