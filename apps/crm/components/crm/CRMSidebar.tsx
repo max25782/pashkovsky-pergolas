@@ -17,7 +17,7 @@ import {
   Zap,
   Lock,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import clsx from 'clsx'
 import { createClient } from '@/lib/supabase/client'
 import { LanguageSwitcher } from '@/components/admin/LanguageSwitcher'
@@ -46,6 +46,14 @@ export default function CRMSidebar() {
   const { can } = useSubscriptionPlan()
   const [isOpen, setIsOpen] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
+  const [companyName, setCompanyName] = useState<string>('AluminCRM')
+
+  useEffect(() => {
+    fetch('/api/company/profile')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.name) setCompanyName(data.name) })
+      .catch(() => {})
+  }, [])
 
   const isRTL = language === 'he'
   const sidePosition = isRTL ? 'right-0' : 'left-0'
@@ -88,7 +96,7 @@ export default function CRMSidebar() {
           onClick={() => setIsOpen(false)}
           className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent"
         >
-          Pashkovsky CRM
+          {companyName}
         </Link>
         <button
           onClick={() => setIsOpen(false)}
