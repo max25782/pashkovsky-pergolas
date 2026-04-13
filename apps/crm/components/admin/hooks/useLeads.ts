@@ -8,6 +8,20 @@ interface UseLeadsParams {
   limit?: number
 }
 
+async function getCompanyId(supabase: ReturnType<typeof createClient>): Promise<string | null> {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const { data: membership } = await supabase
+    .from('company_members')
+    .select('company_id')
+    .eq('user_id', user.id)
+    .limit(1)
+    .maybeSingle()
+
+  return membership?.company_id ?? null
+}
+
 export function useLeads({
   searchQuery = '',
   page = 0,
@@ -21,12 +35,18 @@ export function useLeads({
     setLoading(true)
     setError(null)
     try {
-      // Create authenticated client with JWT token
       const supabase = createClient()
-      
+
+      const companyId = await getCompanyId(supabase)
+      if (!companyId) {
+        setLeads([])
+        return
+      }
+
       let query = supabase
         .from('leads')
         .select('*')
+        .eq('company_id', companyId)
         .order('created_at', { ascending: false })
         .range(page * limit, (page + 1) * limit - 1)
       
@@ -55,7 +75,7 @@ export function useLeads({
 
   useEffect(() => {
     load()
-  }, [searchQuery, page, limit]) // removed adminToken
+  }, [searchQuery, page, limit])
 
   return {
     leads,

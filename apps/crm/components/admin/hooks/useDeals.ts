@@ -10,6 +10,20 @@ interface UseDealsParams {
   limit?: number
 }
 
+async function getCompanyId(supabase: ReturnType<typeof createClient>): Promise<string | null> {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const { data: membership } = await supabase
+    .from('company_members')
+    .select('company_id')
+    .eq('user_id', user.id)
+    .limit(1)
+    .maybeSingle()
+
+  return membership?.company_id ?? null
+}
+
 export function useDeals({
   searchQuery = '',
   stageFilter = '',
@@ -28,6 +42,13 @@ export function useDeals({
     
     try {
       const supabase = createClient()
+
+      const companyId = await getCompanyId(supabase)
+      if (!companyId) {
+        setDeals([])
+        setTotalCount(0)
+        return
+      }
       
       // Start with base query (include deal_railings_details for railings work type)
       // Exclude unsaved quick offers — they become visible only after save-to-crm sets source='quick_offer_saved'.
@@ -35,6 +56,7 @@ export function useDeals({
       let query = supabase
         .from('deals')
         .select('*, deal_railings_details(*)', { count: 'exact' })
+        .eq('company_id', companyId)
         .or('source.is.null,source.neq.quick_offer')
         .order('created_at', { ascending: false })
       
