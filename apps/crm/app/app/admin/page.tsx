@@ -42,6 +42,7 @@ export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isChecking, setIsChecking] = useState(true)
   const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [companyName, setCompanyName] = useState<string>('')
   const [stats, setStats] = useState<DashboardStats>({
     activeDeals: 0,
     newLeads: 0,
@@ -50,6 +51,10 @@ export default function AdminPage() {
 
   useEffect(() => {
     checkAuth()
+    fetch('/api/companies/me')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.company_name) setCompanyName(data.company_name) })
+      .catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -248,7 +253,7 @@ export default function AdminPage() {
               {tAdmin('title')}
             </h1>
             <p className="text-white/60">
-              {tAdmin('subtitle')}
+              {companyName ? `${tAdmin('title')} - ${companyName}` : tAdmin('subtitle')}
             </p>
           </div>
           <div className="flex items-center gap-4">

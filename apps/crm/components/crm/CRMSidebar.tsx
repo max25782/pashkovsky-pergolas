@@ -49,9 +49,9 @@ export default function CRMSidebar() {
   const [companyName, setCompanyName] = useState<string>('AluminCRM')
 
   useEffect(() => {
-    fetch('/api/company/profile')
+    fetch('/api/companies/me')
       .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data?.name) setCompanyName(data.name) })
+      .then(data => { if (data?.company_name) setCompanyName(data.company_name) })
       .catch(() => {})
   }, [])
 
