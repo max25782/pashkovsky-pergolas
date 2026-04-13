@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { isSuperAdmin } from '@/lib/auth/isSuperAdmin'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
@@ -28,38 +27,7 @@ export async function GET() {
     }
 
 
-    const admin = await isSuperAdmin(user.id)
-
-    // --- SuperAdmin: use service role ---
-    if (admin) {
-      const service = createServiceClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { persistSession: false, autoRefreshToken: false } }
-      )
-
-      const { data: company, error: companyError } = await service
-        .from('companies')
-        .select('id, name, status, created_at')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single()
-
-      if (companyError || !company) {
-        return NextResponse.json({ error: 'No companies available' }, { status: 404 })
-      }
-
-      const response = {
-        company_id: company.id,
-        company_name: company.name,
-        role: 'superadmin',
-        status: company.status,
-      }
-      return NextResponse.json(response)
-    }
-
-    // --- Normal user: enforce RLS only ---
-    // First, get raw memberships (without join) to check if user has any memberships
+    // Get all memberships for this user - pick oldest company (has real data)
     const { data: rawMemberships, error: rawError } = await supabase
       .from('company_members')
       .select('company_id, role')
@@ -93,7 +61,7 @@ export async function GET() {
       `
       )
       .eq('user_id', user.id)
-      .order('created_at', { foreignTable: 'companies', ascending: false })
+      .order('created_at', { foreignTable: 'companies', ascending: true })
       .limit(1)
       .maybeSingle<MembershipWithCompany>()
 
@@ -118,8 +86,8 @@ export async function GET() {
       { auth: { persistSession: false, autoRefreshToken: false } }
     )
 
-    // Get the newest membership's company_id
-    const newestMembership = rawMemberships[0]
+    // Get the oldest membership's company_id (most likely to have real data)
+    const newestMembership = rawMemberships[rawMemberships.length - 1]
     if (!newestMembership || !newestMembership.company_id) {
       console.error('[companies/me] Invalid membership data:', newestMembership)
       return NextResponse.json({ error: 'Company not found' }, { status: 404 })
