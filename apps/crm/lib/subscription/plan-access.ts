@@ -10,7 +10,7 @@ export const PLAN_ORDER: Record<SubscriptionPlan, number> = {
 const FEATURE_MIN_PLAN: Record<SaasFeature, SubscriptionPlan> = {
   quick_offer: 'offer',
   crm_home: 'pro',
-  leads: 'pro',
+  leads: 'business',
   deals: 'pro',
   clients: 'pro',
   save_offer_to_crm: 'pro',

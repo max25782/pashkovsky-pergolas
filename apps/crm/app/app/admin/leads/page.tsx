@@ -1,11 +1,25 @@
 "use client"
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { Lock } from 'lucide-react'
 import { LeadsTable } from '@/components/admin/LeadsTable'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
+import { useSubscriptionPlan } from '@/components/subscription/subscription-plan-context'
 
 export default function AdminLeadsPage(){
   const t = useCRMTranslations()
+  const { can, loading: planLoading } = useSubscriptionPlan()
+
+  if (!planLoading && !can('leads')) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-neutral-950">
+        <div className="text-center p-8">
+          <Lock className="h-12 w-12 text-neutral-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-white mb-2">Business Plan Required</h2>
+          <p className="text-neutral-400">Leads are available on the Business plan and above.</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <main className="container py-8 text-white">
