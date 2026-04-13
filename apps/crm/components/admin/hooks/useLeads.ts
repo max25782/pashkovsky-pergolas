@@ -8,18 +8,15 @@ interface UseLeadsParams {
   limit?: number
 }
 
-async function getCompanyId(supabase: ReturnType<typeof createClient>): Promise<string | null> {
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
-
-  const { data: membership } = await supabase
-    .from('company_members')
-    .select('company_id')
-    .eq('user_id', user.id)
-    .limit(1)
-    .maybeSingle()
-
-  return membership?.company_id ?? null
+async function getCompanyId(): Promise<string | null> {
+  try {
+    const res = await fetch('/api/companies/me')
+    if (!res.ok) return null
+    const data = await res.json()
+    return data.company_id ?? null
+  } catch {
+    return null
+  }
 }
 
 export function useLeads({
@@ -37,7 +34,7 @@ export function useLeads({
     try {
       const supabase = createClient()
 
-      const companyId = await getCompanyId(supabase)
+      const companyId = await getCompanyId()
       if (!companyId) {
         setLeads([])
         return
