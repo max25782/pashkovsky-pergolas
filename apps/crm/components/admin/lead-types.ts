@@ -5,7 +5,7 @@ export interface Lead {
   city?: string | null
   email?: string | null
   source?: string | null
-  status?: 'pending' | 'confirmed' | 'contacted' | 'qualified' | 'won' | 'lost' | null
+  status?: 'waiting' | 'busy' | 'no_answer' | 'thinking' | 'meeting_set' | 'visited' | 'not_relevant' | 'not_interested' | 'lost_contact' | null
   notes?: string | null
   last_message?: string | null
   last_message_at?: string | null
@@ -22,12 +22,15 @@ export interface Lead {
 }
 
 export const LEAD_STATUSES = [
-  { id: 'pending', label: 'Ожидает', color: 'bg-gray-500' },
-  { id: 'confirmed', label: 'Подтвержден', color: 'bg-blue-500' },
-  { id: 'contacted', label: 'Связались', color: 'bg-purple-500' },
-  { id: 'qualified', label: 'Квалифицирован', color: 'bg-yellow-500' },
-  { id: 'won', label: 'Выигран', color: 'bg-green-500' },
-  { id: 'lost', label: 'Проигран', color: 'bg-red-500' },
+  { id: 'waiting',       label: 'Ожидает',            labelHe: 'ממתין',           color: 'bg-gray-500' },
+  { id: 'busy',          label: 'Занято',              labelHe: 'תפוס',            color: 'bg-orange-400' },
+  { id: 'no_answer',     label: 'Не отвечает',         labelHe: 'לא עונה',         color: 'bg-yellow-500' },
+  { id: 'thinking',      label: 'Думает/Перезвонить',  labelHe: 'חושב/יחזור',      color: 'bg-blue-400' },
+  { id: 'meeting_set',   label: 'Назначена встреча',   labelHe: 'נקבעה פגישה',     color: 'bg-purple-500' },
+  { id: 'visited',       label: 'Выполнен визит',      labelHe: 'בוצע ביקור',      color: 'bg-indigo-500' },
+  { id: 'not_relevant',  label: 'Не актуально',        labelHe: 'לא רלוונטי',      color: 'bg-red-400' },
+  { id: 'not_interested',label: 'Не заинтересован',    labelHe: 'לא מעוניין',      color: 'bg-red-600' },
+  { id: 'lost_contact',  label: 'Потерян контакт',     labelHe: 'אובד קשר',        color: 'bg-gray-600' },
 ] as const
 
 export const LEAD_SOURCES = [

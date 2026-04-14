@@ -18,7 +18,7 @@ export function useLeadDragDrop({ onStatusChange }: UseLeadDragDropParams) {
 
   async function handleDrop(status: string) {
     if (!draggedLead) return
-    const currentStatus = draggedLead.status || 'pending'
+    const currentStatus = draggedLead.status || 'waiting'
     if (currentStatus === status) {
       setDraggedLead(null)
       return

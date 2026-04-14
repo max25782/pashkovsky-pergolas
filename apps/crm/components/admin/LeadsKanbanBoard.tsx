@@ -24,7 +24,7 @@ export function LeadsKanbanBoard({
 
   function getLeadsByStatus(statusId: string) {
     return leads.filter(lead => {
-      const leadStatus = lead.status || 'pending'
+      const leadStatus = lead.status || 'waiting'
       return leadStatus === statusId
     })
   }
