@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
       return {
         ...rest,
         company_id: companyId,
-        status: 'pending',
+        status: 'waiting',
         metadata: metadata ?? {},
       }
     })

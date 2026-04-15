@@ -151,7 +151,7 @@ export async function POST(req: NextRequest) {
       city: city || null,
       message,
       source,
-      status: 'pending',
+      status: 'waiting',
       google_conv_sent: false,
       metadata: { zapier: true },
     })

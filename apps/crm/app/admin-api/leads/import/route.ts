@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
       phone,
       email: email || null,
       source,
-      status: 'pending',
+      status: 'waiting',
       message: null,
     })
   }

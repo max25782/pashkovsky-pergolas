@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
         email: leadData.email || null,
         message: leadData.message || null,
         source: 'website',
-        status: 'pending',
+        status: 'waiting',
         utm_source: leadData.utm?.utm_source || null,
         utm_medium: leadData.utm?.utm_medium || null,
         utm_campaign: leadData.utm?.utm_campaign || null,

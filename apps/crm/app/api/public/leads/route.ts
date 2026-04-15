@@ -203,7 +203,7 @@ export async function POST(request: NextRequest) {
         email: leadData.email || null,
         message: leadData.message || null,
         source: leadData.source || 'website',
-        status: 'pending',
+        status: 'waiting',
         utm_source: leadData.utm_source || null,
         utm_medium: leadData.utm_medium || null,
         utm_campaign: leadData.utm_campaign || null,

@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
         email: email || null,
         message: message || null,
         source: 'facebook',
-        status: 'pending',
+        status: 'waiting',
         metadata: { fb_leadgen_id: leadgenId, fb_created_time: data.created_time },
       })
     } catch (e) {
