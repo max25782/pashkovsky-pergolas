@@ -7,20 +7,10 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { getSession } from '@/lib/session/redis-client'
+import { checkSuperAdminAuth } from '@/lib/middleware/superadmin-auth'
 import type { PlatformSettings, PlatformSettingsUpdate } from '@/types/platform-settings'
 
 export const dynamic = 'force-dynamic'
-
-async function checkSuperAdminAuth(request: NextRequest) {
-  const sessionId = request.cookies.get('superadmin_session')?.value
-  if (!sessionId) return null
-  
-  const session = await getSession(sessionId)
-  if (!session || session.role !== 'superadmin') return null
-  
-  return session
-}
 
 export async function GET(request: NextRequest) {
   try {
