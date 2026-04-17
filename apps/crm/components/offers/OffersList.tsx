@@ -26,6 +26,7 @@ import { useToast } from '@/components/ui/toast'
 import { OfferConfiguratorEmbed } from '@/components/offers/OfferConfiguratorEmbed'
 import { useSubscriptionPlan } from '@/components/subscription/subscription-plan-context'
 import { minPlanForFeature } from '@/lib/subscription/plan-access'
+import { ModuleEmptyState } from '@/components/onboarding'
 
 interface OffersListProps {
   dealId: string
@@ -50,6 +51,7 @@ export function OffersList({
   const locale = (params?.locale as Locale) || 'he'
   const toast = useToast()
   const tDeals = useTranslations('deals')
+  const tOnboarding = useTranslations('onboarding')
   const tSub = useTranslations('subscription')
   const { can } = useSubscriptionPlan()
   const [offers, setOffers] = useState<Offer[]>([])
@@ -322,9 +324,13 @@ export function OffersList({
 
   if (offers.length === 0) {
     return (
-      <div className="flex min-h-[200px] flex-col items-center justify-center text-center text-white/60">
-        <FileText className="mx-auto mb-3 h-12 w-12 opacity-50" />
-        <p>אין עדיין הצעות מחיר ללקוח זה</p>
+      <div className="min-h-[200px] py-4">
+        <ModuleEmptyState
+          title={tOnboarding('emptyOffersTitle')}
+          description={tOnboarding('emptyOffersDesc')}
+          actionLabel={tOnboarding('emptyOffersCta')}
+          actionHref="/app/quick-offer"
+        />
       </div>
     )
   }

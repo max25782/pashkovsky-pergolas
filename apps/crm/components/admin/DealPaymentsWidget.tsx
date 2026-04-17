@@ -18,6 +18,10 @@ interface DealPaymentsWidgetProps {
   dealId: string
   dealPrice: number | null | undefined
   formatCurrency: (amount: number) => string
+  /** Increment to open the add-payment form (e.g. quick action). */
+  openAddFormSignal?: number
+  /** Shown when there are no payment rows yet. */
+  emptyHint?: string
   translations?: {
     title?: string
     totalPaid?: string
@@ -66,6 +70,8 @@ export function DealPaymentsWidget({
   dealId,
   dealPrice,
   formatCurrency,
+  openAddFormSignal = 0,
+  emptyHint,
   translations = defaultTranslations,
 }: DealPaymentsWidgetProps) {
   const t = { ...defaultTranslations, ...translations }
@@ -111,6 +117,12 @@ export function DealPaymentsWidget({
   useEffect(() => {
     fetchPayments()
   }, [dealId])
+
+  useEffect(() => {
+    if (openAddFormSignal > 0) {
+      setShowForm(true)
+    }
+  }, [openAddFormSignal])
 
   async function handleAddPayment() {
     const amount = parseFloat(formAmount)
@@ -242,6 +254,10 @@ export function DealPaymentsWidget({
   return (
     <div className="pt-4 border-t border-white/10">
       <h3 className="text-lg font-semibold text-white mb-3">{t.title}</h3>
+
+      {payments.length === 0 && emptyHint && (
+        <p className="mb-3 text-sm text-white/50">{emptyHint}</p>
+      )}
 
       {/* Summary stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">

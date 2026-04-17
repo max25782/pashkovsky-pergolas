@@ -61,6 +61,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const allowedPaymentMethods = ['bit', 'paybox', 'bank', 'paypal'] as const
+    if (!allowedPaymentMethods.includes(body.payment_method)) {
+      return NextResponse.json(
+        { error: 'Invalid payment_method' },
+        { status: 400 }
+      )
+    }
+
     // Validate URL format
     try {
       new URL(body.website_url)

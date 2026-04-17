@@ -30,7 +30,7 @@ export interface CompanySubscription {
   company_id: string
   plan_id: string
   status: 'trialing' | 'active' | 'past_due' | 'canceled' | 'suspended'
-  payment_provider?: 'stripe' | 'manual' | 'bit' | 'paybox'
+  payment_provider?: 'stripe' | 'manual' | 'bit' | 'paybox' | 'paypal'
   payment_provider_subscription_id?: string
   payment_provider_customer_id?: string
   billing_cycle?: 'monthly' | 'yearly'

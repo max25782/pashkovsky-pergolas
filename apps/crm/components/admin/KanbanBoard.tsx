@@ -1,4 +1,5 @@
 import type { Deal } from './deal-types'
+import type { DealMaterialOrdersSummary } from './hooks/useDealMaterialOrdersTotalsMap'
 import { getStages } from './deal-types'
 import { KanbanColumn } from './KanbanColumn'
 import { useCRMTranslations } from './useCRMTranslations'
@@ -6,6 +7,8 @@ import { useCRMTranslations } from './useCRMTranslations'
 interface KanbanBoardProps {
   deals: Deal[]
   paymentsMap?: Record<string, number>
+  laborMap?: Record<string, number>
+  materialOrdersMap?: Record<string, DealMaterialOrdersSummary>
   onDragOver: (e: React.DragEvent) => void
   onDrop: (stage: string) => void
   onDealDragStart: (deal: Deal) => void
@@ -15,6 +18,8 @@ interface KanbanBoardProps {
 export function KanbanBoard({
   deals,
   paymentsMap = {},
+  laborMap = {},
+  materialOrdersMap = {},
   onDragOver,
   onDrop,
   onDealDragStart,
@@ -43,6 +48,8 @@ export function KanbanBoard({
               stage={stage}
               deals={stageDeals}
               paymentsMap={paymentsMap}
+              laborMap={laborMap}
+              materialOrdersMap={materialOrdersMap}
               onDragOver={onDragOver}
               onDrop={() => onDrop(stage.id)}
               onDealDragStart={onDealDragStart}

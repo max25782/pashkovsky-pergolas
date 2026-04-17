@@ -1,6 +1,7 @@
 "use client"
 import { useState } from "react"
 import dynamic from "next/dynamic"
+import { useTranslations } from 'next-intl'
 import type { Deal } from './deal-types'
 import { CreateDealModal } from './CreateDealModal'
 import { DealsHeader } from './DealsHeader'
@@ -13,6 +14,9 @@ import { useDeals } from './hooks/useDeals'
 import { useDealActions } from './hooks/useDealActions'
 import { useDealDragDrop } from './hooks/useDealDragDrop'
 import { useDealPaymentsMap } from './hooks/useDealPaymentsMap'
+import { useDealLaborMap } from './hooks/useDealLaborMap'
+import { useDealMaterialOrdersTotalsMap } from './hooks/useDealMaterialOrdersTotalsMap'
+import { ModuleEmptyState } from '@/components/onboarding'
 
 const DealModal = dynamic(
   () => import('./DealModal').then((mod) => ({ default: mod.DealModal })),
@@ -22,6 +26,7 @@ const DealModal = dynamic(
 type ViewMode = 'kanban' | 'table'
 
 export function DealsTable() {
+  const tOnboarding = useTranslations('onboarding')
   const [q, setQ] = useState("")
   const [stageFilter, setStageFilter] = useState("")
   const [projectTypeFilter, setProjectTypeFilter] = useState("")
@@ -67,6 +72,8 @@ export function DealsTable() {
 
   const dealIds = deals.map((d) => d.id)
   const paymentsMap = useDealPaymentsMap(dealIds)
+  const laborMap = useDealLaborMap(dealIds)
+  const materialOrdersMap = useDealMaterialOrdersTotalsMap(dealIds)
 
   function handleSearchChange(value: string) {
     setQ(value)
@@ -112,18 +119,29 @@ export function DealsTable() {
       
       <DealsStatus loading={loading} error={error} />
 
-      {viewMode === 'kanban' && (
+      {!loading && !error && deals.length === 0 && (
+        <div className="mb-8">
+          <ModuleEmptyState
+            title={tOnboarding('emptyDealsTitle')}
+            description={tOnboarding('emptyDealsDesc')}
+            actionLabel={tOnboarding('emptyDealsCta')}
+            onAction={() => setShowCreateModal(true)}
+          />
+        </div>
+      )}
+
+      {!loading && !error && deals.length === 0 ? null : viewMode === 'kanban' ? (
         <KanbanBoard
           deals={deals}
           paymentsMap={paymentsMap}
+          laborMap={laborMap}
+          materialOrdersMap={materialOrdersMap}
           onDragOver={handleDragOver}
           onDrop={handleDrop}
           onDealDragStart={handleDragStart}
           onDealClick={setSelectedDeal}
         />
-      )}
-
-      {viewMode === 'table' && (
+      ) : (
         <DealsTableView
           deals={filteredRows}
           loading={loading}

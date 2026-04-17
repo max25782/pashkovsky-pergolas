@@ -17,6 +17,10 @@ import { FenceFormFields, type FenceFormValue } from './FenceFormFields'
 import { DealPaymentsWidget } from './DealPaymentsWidget'
 import { ContractorPaymentPlan } from './deals/templates/ContractorPaymentPlan'
 import { authFetch } from '@/lib/api/auth-fetch'
+import { useLanguage } from '@/lib/language-context'
+import { FinanceBlock } from './deals/FinanceBlock'
+import { CollapsibleSection } from './deals/CollapsibleSection'
+import { DealQuickActions } from './deals/DealQuickActions'
 
 const OffersListLoading = () => {
   const t = useCRMTranslations()
@@ -69,6 +73,9 @@ export function DealModal({
   const [showLaundryClosetModal, setShowLaundryClosetModal] = useState(false)
   const [offersRefreshTrigger, setOffersRefreshTrigger] = useState(0)
   const [shiftsRefreshTrigger, setShiftsRefreshTrigger] = useState(0)
+  const [openPaymentFormSignal, setOpenPaymentFormSignal] = useState(0)
+  const [openWorkShiftSignal, setOpenWorkShiftSignal] = useState(0)
+  const { language } = useLanguage()
 
   function railingsGlazingFromRow(g: string | null | undefined): RailingsFormValue['glazing_system'] {
     return g === 'aluminum_glass' || g === 'wet_glazing' || g === 'dry_glazing' ? g : ''
@@ -357,9 +364,54 @@ export function DealModal({
           </button>
         </div>
 
-        <div className="flex-1 p-3 sm:p-6 space-y-6">
-          {/* Customer Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="flex-1 space-y-6 p-3 sm:p-6" dir={language === 'he' ? 'rtl' : 'ltr'}>
+          <FinanceBlock
+            dealId={deal.id}
+            breakdownRefreshKey={shiftsRefreshTrigger + offersRefreshTrigger}
+            clientPrice={localDeal.price}
+            totalCosts={localDeal.my_cost}
+            onClientPriceChange={(v) => updateField('price', v)}
+            onTotalCostsChange={(v) => updateField('my_cost', v)}
+            formatCurrency={formatCurrency}
+            labels={{
+              clientPrice: t.deals.financeClientPrice,
+              totalCosts: t.deals.financeTotalCosts,
+              profit: t.deals.financeProfitLabel,
+              margin: t.deals.financeMarginLabel,
+              warnNoCostsYet: t.deals.financeWarnNoCostsYet,
+              warnAddPriceCosts: t.deals.financeWarnAddPriceCosts,
+              warnZeroCostsNoMargin: t.deals.financeWarnZeroCostsNoMargin,
+              placeholderPrice: t.deals.financePlaceholderPrice,
+              placeholderCosts: t.deals.financePlaceholderCosts,
+              costBreakdownTitle: t.deals.financeCostBreakdown,
+              laborFromShifts: t.deals.financeLaborFromShifts,
+              materialOrdersFromSystem: t.deals.materialOrdersSystemTotal,
+              materialOrdersOrderCountTemplate: t.deals.financeMaterialOrdersOrderCountTpl,
+              noMaterialOrdersDash: t.deals.financeNoOrdersDash,
+              totalInternalForProfit: t.deals.financeTotalInternalForProfit,
+              loadingBreakdown: t.deals.financeLoadingBreakdown,
+              financeProfitFootnote: t.deals.financeProfitFootnote,
+            }}
+          />
+          <DealQuickActions
+            labelExpense={t.deals.addExpense}
+            labelWorkDay={t.deals.addWorkDay}
+            onAddExpense={() => {
+              setOpenPaymentFormSignal((s) => s + 1)
+              requestAnimationFrame(() =>
+                document.getElementById('deal-expenses-anchor')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+              )
+            }}
+            onAddWorkDay={() => {
+              setOpenWorkShiftSignal((s) => s + 1)
+              requestAnimationFrame(() =>
+                document.getElementById('deal-work-log-anchor')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+              )
+            }}
+          />
+
+          <CollapsibleSection title={t.deals.sectionClient} defaultClosed>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.customerName}</label>
               <input
@@ -398,9 +450,10 @@ export function DealModal({
               />
             </div>
           </div>
+          </CollapsibleSection>
 
-          {/* Project Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CollapsibleSection title={t.deals.sectionProjectSpecs} defaultClosed>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.customerType}</label>
               <select
@@ -514,26 +567,6 @@ export function DealModal({
                 </div>
               </>
             )}
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.price}</label>
-              <input
-                type="number"
-                value={localDeal.price || ''}
-                onChange={(e) => updateField('price', e.target.value ? parseFloat(e.target.value) : null)}
-                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
-                placeholder="0"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.myCost}</label>
-              <input
-                type="number"
-                value={localDeal.my_cost || ''}
-                onChange={(e) => updateField('my_cost', e.target.value ? parseFloat(e.target.value) : null)}
-                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
-                placeholder="0"
-              />
-            </div>
             <div>
               <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.orderDate}</label>
               <input
@@ -746,10 +779,11 @@ export function DealModal({
             <textarea
               value={localDeal.notes || ''}
               onChange={(e) => updateField('notes', e.target.value || null)}
-              className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none min-h-[120px]"
+              className="min-h-[120px] w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 focus:bg-white/10 focus:outline-none"
               placeholder={t.deals.notes}
             />
           </div>
+          </CollapsibleSection>
 
           {/* Sketch & Offers Buttons (hide sketch for railings) */}
           <div className="pt-4 border-t border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -805,11 +839,13 @@ export function DealModal({
           )}
 
           {/* Payments Widget */}
-          <div className="pt-4 border-t border-white/10">
+          <div id="deal-expenses-anchor" className="border-t border-white/10 pt-4 scroll-mt-24">
             <DealPaymentsWidget
               dealId={deal.id}
               dealPrice={localDeal.price}
               formatCurrency={formatCurrency}
+              openAddFormSignal={openPaymentFormSignal}
+              emptyHint={t.deals.noExpensesYet}
               translations={{
                 title: t.deals.payments,
                 totalPaid: t.deals.totalPaid,
@@ -821,23 +857,24 @@ export function DealModal({
             />
           </div>
 
-          {/* Profit Widget */}
-          <div className="pt-4 border-t border-white/10">
-            <ProfitWidget 
-              projectId={deal.id} 
-              revenue={revenue || localDeal.price || 0} 
-              materialCost={localDeal.my_cost || 0}
-              refreshTrigger={shiftsRefreshTrigger}
+          {/* Work Log Section */}
+          <div id="deal-work-log-anchor" className="border-t border-white/10 pt-4 scroll-mt-24">
+            <WorkLogSection
+              projectId={deal.id}
+              openModalSignal={openWorkShiftSignal}
+              emptyMessage={t.deals.noWorkDaysYet}
+              onShiftAdded={() => setShiftsRefreshTrigger((prev) => prev + 1)}
             />
           </div>
 
-          {/* Work Log Section */}
-          <div className="pt-4 border-t border-white/10">
-            <WorkLogSection 
+          <CollapsibleSection title={t.deals.sectionDetailedProfit} defaultClosed>
+            <ProfitWidget
               projectId={deal.id}
-              onShiftAdded={() => setShiftsRefreshTrigger(prev => prev + 1)}
+              revenue={revenue || localDeal.price || 0}
+              materialCost={localDeal.my_cost || 0}
+              refreshTrigger={shiftsRefreshTrigger}
             />
-          </div>
+          </CollapsibleSection>
 
           {/* Metadata */}
           <div className="pt-4 border-t border-white/10 text-sm text-white/50 space-y-1">

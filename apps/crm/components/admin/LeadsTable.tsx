@@ -1,5 +1,6 @@
 "use client"
 import { useState } from "react"
+import { useTranslations } from 'next-intl'
 import type { Lead } from './lead-types'
 import { LeadModal } from './LeadModal'
 import { LeadsHeader } from './LeadsHeader'
@@ -10,10 +11,12 @@ import { DealsStatus } from './DealsStatus'
 import { useLeads } from './hooks/useLeads'
 import { useLeadActions } from './hooks/useLeadActions'
 import { useLeadDragDrop } from './hooks/useLeadDragDrop'
+import { ModuleEmptyState } from '@/components/onboarding'
 
 type ViewMode = 'kanban' | 'table'
 
 export function LeadsTable() {
+  const tOnboarding = useTranslations('onboarding')
   const [q, setQ] = useState("")
   const [page, setPage] = useState(0)
   const [viewMode, setViewMode] = useState<ViewMode>('kanban')
@@ -83,7 +86,20 @@ export function LeadsTable() {
       
       <DealsStatus loading={loading} error={error} />
 
-      {viewMode === 'kanban' && (
+      {!loading && !error && leads.length === 0 && (
+        <div className="mb-8">
+          <ModuleEmptyState
+            title={tOnboarding('emptyLeadsTitle')}
+            description={tOnboarding('emptyLeadsDesc')}
+            actionLabel={tOnboarding('emptyLeadsCta')}
+            onAction={() => document.getElementById('leads-import-trigger')?.click()}
+          />
+        </div>
+      )}
+
+      {!loading && !error && leads.length === 0 ? (
+        null
+      ) : viewMode === 'kanban' ? (
         <LeadsKanbanBoard
           key={kanbanGroupBy}
           leads={leads}
@@ -93,9 +109,7 @@ export function LeadsTable() {
           onLeadDragStart={handleDragStart}
           onLeadClick={setSelectedLead}
         />
-      )}
-
-      {viewMode === 'table' && (
+      ) : (
         <LeadsTableView
           leads={leads}
           loading={loading}

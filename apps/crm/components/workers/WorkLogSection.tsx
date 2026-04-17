@@ -24,6 +24,10 @@ interface DealShift {
 interface WorkLogSectionProps {
   projectId: string
   onShiftAdded?: () => void
+  /** Increment to open the add-shift modal from parent (e.g. quick action). */
+  openModalSignal?: number
+  /** Override empty list copy (e.g. “No work days yet”). */
+  emptyMessage?: string
 }
 
 function groupByDate(shifts: DealShift[]) {
@@ -40,7 +44,12 @@ function groupByDate(shifts: DealShift[]) {
 
 const LOCALE_MAP: Record<string, string> = { ru: 'ru-RU', en: 'en-US', he: 'he-IL' }
 
-export function WorkLogSection({ projectId, onShiftAdded }: WorkLogSectionProps) {
+export function WorkLogSection({
+  projectId,
+  onShiftAdded,
+  openModalSignal = 0,
+  emptyMessage,
+}: WorkLogSectionProps) {
   const toast = useToast()
   const t = useCRMTranslations()
   const { language } = useLanguage()
@@ -68,6 +77,12 @@ export function WorkLogSection({ projectId, onShiftAdded }: WorkLogSectionProps)
   useEffect(() => {
     fetchShifts()
   }, [fetchShifts])
+
+  useEffect(() => {
+    if (openModalSignal > 0) {
+      setIsModalOpen(true)
+    }
+  }, [openModalSignal])
 
   const handleDeleteShift = async (shiftId: string, workerId: string) => {
     if (!confirm(t.workers.deleteShiftConfirm)) return
@@ -117,7 +132,7 @@ export function WorkLogSection({ projectId, onShiftAdded }: WorkLogSectionProps)
         <div className="text-red-400 text-center py-8">{error}</div>
       ) : groupedShifts.length === 0 ? (
         <div className="text-white/60 text-center py-8">
-          {t.workers.noShifts}
+          {emptyMessage ?? t.workers.noShifts}
         </div>
       ) : (
         <div className="space-y-4">

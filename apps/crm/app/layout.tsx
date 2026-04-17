@@ -1,5 +1,6 @@
 import './globals.css'
 import type { Metadata } from 'next'
+import Script from 'next/script'
 import { Providers } from '@/components/providers'
 
 export const metadata: Metadata = {
@@ -28,8 +29,10 @@ export default function RootLayout({
         <link rel="icon" href="/logo-icon.svg" type="image/svg+xml" />
       </head>
       <body className="antialiased bg-neutral-50 dark:bg-neutral-900" suppressHydrationWarning>
-        {/* Inline theme script — runs before React hydrates, prevents flash */}
-        <script
+        {/* beforeInteractive: same timing as inline IIFE, but matches server/client tree for hydration */}
+        <Script
+          id="crm-theme-init"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `!function(){try{var d=document.documentElement,c=d.classList;c.remove('light','dark');var e=localStorage.getItem('theme');if(e){c.add(e||'')}else{c.add('dark');}if(e==='light'||e==='dark'||!e)d.style.colorScheme=e||'dark'}catch(t){}}();`,
           }}

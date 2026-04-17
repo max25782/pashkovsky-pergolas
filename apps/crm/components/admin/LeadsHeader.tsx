@@ -85,6 +85,7 @@ export function LeadsHeader({
             placeholder={t.leads.searchPlaceholder}
           />
           <button
+            id="leads-import-trigger"
             type="button"
             onClick={() => fileRef.current?.click()}
             disabled={importing}

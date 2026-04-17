@@ -42,6 +42,7 @@ export default function CRMSidebar() {
   const { language } = useLanguage()
   const t = useCRMTranslations()
   const tNav = useTranslations('nav')
+  const tOnboarding = useTranslations('onboarding')
   const tSub = useTranslations('subscription')
   const { can } = useSubscriptionPlan()
   const [isOpen, setIsOpen] = useState(false)
@@ -155,7 +156,14 @@ export default function CRMSidebar() {
               className={className}
             >
               <Icon size={20} />
-              <span>{item.label}</span>
+              <span className={isHighlight ? 'flex flex-col items-start gap-0.5' : ''}>
+                <span>{item.label}</span>
+                {isHighlight ? (
+                  <span className="text-[10px] font-semibold leading-tight text-amber-200/95">
+                    {tOnboarding('quickOfferTagline')}
+                  </span>
+                ) : null}
+              </span>
             </Link>
           )
         })}

@@ -26,6 +26,8 @@ import { PlanBoundary } from '@/components/subscription/PlanBoundary'
 import { useSubscriptionPlan } from '@/components/subscription/subscription-plan-context'
 import { minPlanForFeature } from '@/lib/subscription/plan-access'
 import type { SaasFeature } from '@/lib/subscription/plan-types'
+import { OnboardingModal, FirstActions, useOnboardingGate } from '@/components/onboarding'
+import { snapshotOnboardingLocalStorage, restoreOnboardingLocalStorage } from '@/lib/onboarding/constants'
 
 interface DashboardStats {
   activeDeals: number
@@ -39,6 +41,15 @@ export default function AdminPage() {
   const tNav = useTranslations('nav')
   const tSub = useTranslations('subscription')
   const { can } = useSubscriptionPlan()
+  const [authUserId, setAuthUserId] = useState<string | null>(null)
+  const [companyId, setCompanyId] = useState<string | null>(null)
+  /** null until `/api/companies/me` succeeds (server field `crm_intro_completed_at`) */
+  const [introRemoteComplete, setIntroRemoteComplete] = useState<boolean | null>(null)
+  const { showOnboarding, markOnboardingComplete } = useOnboardingGate({
+    userId: authUserId,
+    companyId,
+    introRemoteComplete,
+  })
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isChecking, setIsChecking] = useState(true)
   const [userEmail, setUserEmail] = useState<string | null>(null)
@@ -50,11 +61,36 @@ export default function AdminPage() {
   })
 
   useEffect(() => {
-    checkAuth()
-    fetch('/api/companies/me')
-      .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data?.company_name) setCompanyName(data.company_name) })
-      .catch(() => {})
+    let cancelled = false
+    async function boot() {
+      await checkAuth()
+      if (cancelled) return
+      // After session is ready: same auth path as dashboard-stats so company_id is set reliably
+      try {
+        const r = await authFetch('/api/companies/me')
+        if (cancelled || !r.ok) return
+        const data = (await r.json()) as {
+          company_id?: string
+          company_name?: string
+          crm_intro_completed_at?: string | null
+        }
+        if (data.company_name) setCompanyName(data.company_name)
+        const id = data.company_id
+        if (id && typeof id === 'string') {
+          setCompanyId(id)
+          const introDone =
+            data.crm_intro_completed_at != null &&
+            String(data.crm_intro_completed_at).trim() !== ''
+          setIntroRemoteComplete(introDone)
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+    void boot()
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   useEffect(() => {
@@ -97,6 +133,7 @@ export default function AdminPage() {
       
       if (user) {
         setIsAuthenticated(true)
+        setAuthUserId(user.id)
         setUserEmail(user.email || null)
       } else {
         window.location.href = '/login'
@@ -112,7 +149,13 @@ export default function AdminPage() {
   async function logout() {
     const supabase = createClient()
     await supabase.auth.signOut()
-    localStorage.clear()
+    try {
+      const onboardingSnap = snapshotOnboardingLocalStorage()
+      localStorage.clear()
+      restoreOnboardingLocalStorage(onboardingSnap)
+    } catch {
+      /* ignore */
+    }
     window.location.href = '/login'
   }
 
@@ -245,6 +288,7 @@ export default function AdminPage() {
   return (
     <PlanBoundary feature="crm_home">
     <main className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-950 text-white">
+      <OnboardingModal open={showOnboarding} onComplete={markOnboardingComplete} />
       <div className="container py-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
@@ -266,6 +310,8 @@ export default function AdminPage() {
             </button>
           </div>
         </div>
+
+        <FirstActions />
 
         {/* Admin Sections Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

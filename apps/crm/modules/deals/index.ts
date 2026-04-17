@@ -70,6 +70,11 @@ export { useDeals } from '@/components/admin/hooks/useDeals'
 export { useDealActions } from '@/components/admin/hooks/useDealActions'
 export { useDealDragDrop } from '@/components/admin/hooks/useDealDragDrop'
 export { useDealPaymentsMap } from '@/components/admin/hooks/useDealPaymentsMap'
+export { useDealLaborMap } from '@/components/admin/hooks/useDealLaborMap'
+export {
+  useDealMaterialOrdersTotalsMap,
+  type DealMaterialOrdersSummary,
+} from '@/components/admin/hooks/useDealMaterialOrdersTotalsMap'
 
 // UI Components
 export { DealCard } from '@/components/admin/DealCard'

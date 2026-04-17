@@ -11,9 +11,18 @@ type Company = {
   created_at: string
 }
 
-type MembershipWithCompany = {
+/** PostgREST embed for `companies(...)` is typed as an object or a single-element array. */
+type MembershipRow = {
   role: string
-  companies: Company
+  company_id: string
+  crm_intro_completed_at: string | null
+  companies: Company | Company[] | null
+}
+
+function companyFromMembership(row: MembershipRow): Company | null {
+  const nested = row.companies
+  if (nested == null) return null
+  return Array.isArray(nested) ? (nested[0] ?? null) : nested
 }
 
 export async function GET() {
@@ -36,7 +45,7 @@ export async function GET() {
 
     const { data: memberships, error: membershipsError } = await service
       .from('company_members')
-      .select('role, company_id, companies(id, name, status, created_at)')
+      .select('role, company_id, crm_intro_completed_at, companies(id, name, status, created_at)')
       .eq('user_id', user.id)
       .order('created_at', { referencedTable: 'companies', ascending: true })
       .limit(1)
@@ -45,8 +54,8 @@ export async function GET() {
       return NextResponse.json({ error: 'Company not found' }, { status: 404 })
     }
 
-    const chosen = memberships[0]
-    const company = chosen.companies as unknown as Company
+    const chosen = memberships[0] as unknown as MembershipRow
+    const company = companyFromMembership(chosen)
     if (!company) {
       return NextResponse.json({ error: 'Company not found' }, { status: 404 })
     }
@@ -56,6 +65,7 @@ export async function GET() {
       company_name: company.name,
       role: chosen.role,
       status: company.status,
+      crm_intro_completed_at: chosen.crm_intro_completed_at ?? null,
     })
   } catch (error: unknown) {
     const e = error as Error & { stack?: string }

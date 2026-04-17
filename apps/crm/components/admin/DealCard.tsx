@@ -1,10 +1,15 @@
 import type { Deal } from './deal-types'
+import type { DealMaterialOrdersSummary } from './hooks/useDealMaterialOrdersTotalsMap'
 import { useCRMTranslations } from './useCRMTranslations'
 import { PhoneActions } from './PhoneActions'
 
 interface DealCardProps {
   deal: Deal
   paidToDate?: number
+  /** Total labor cost from worker_shifts (batched on board load). */
+  laborCost?: number
+  /** Sum of material_orders.total_price (non-cancelled), batched on board load. */
+  materialOrdersSummary?: DealMaterialOrdersSummary
   onDragStart: () => void
   onClick: () => void
   formatCurrency: (amount: number | null | undefined) => string
@@ -14,12 +19,25 @@ interface DealCardProps {
 export function DealCard({ 
   deal, 
   paidToDate,
+  laborCost,
+  materialOrdersSummary,
   onDragStart, 
   onClick,
   formatCurrency,
   formatDate
 }: DealCardProps) {
   const t = useCRMTranslations()
+  const material = Number(deal.my_cost ?? 0)
+  const labor = laborCost != null ? Number(laborCost) : 0
+  const totalInternalCosts = material + labor
+  const ordersTotal = materialOrdersSummary?.totalPrice ?? 0
+  const ordersCount = materialOrdersSummary?.orderCount ?? 0
+  const priceNum =
+    deal.price != null && Number.isFinite(Number(deal.price)) ? Number(deal.price) : null
+  const estimatedProfit = priceNum != null ? priceNum - totalInternalCosts : null
+  const showCostBreakdown =
+    deal.price != null || material > 0 || labor > 0 || ordersCount > 0
+
   return (
     <div
       draggable
@@ -59,6 +77,36 @@ export function DealCard({
           <div className="text-xs text-white/60 space-y-0.5">
             <div>{t.deals.paidToDate}: {formatCurrency(paidToDate ?? 0)}</div>
             <div>{t.deals.remaining}: {formatCurrency((deal.price ?? 0) - (paidToDate ?? 0))}</div>
+          </div>
+        )}
+
+        {showCostBreakdown && (
+          <div className="text-xs text-amber-200/90 space-y-0.5 pt-1 border-t border-white/10">
+            <div>
+              {t.deals.materialCost}: {formatCurrency(material)}
+            </div>
+            <div>
+              {t.deals.laborCost}: {formatCurrency(labor)}
+            </div>
+            <div className="font-semibold text-amber-100">
+              {t.deals.totalCosts}: {formatCurrency(totalInternalCosts)}
+            </div>
+            {ordersCount > 0 && (
+              <div className="text-amber-200/80 pt-0.5">
+                {t.deals.materialOrdersSystemTotal}: {formatCurrency(ordersTotal)}
+                <span className="text-white/45"> · {t.deals.materialOrdersOrderCount(ordersCount)}</span>
+              </div>
+            )}
+            {estimatedProfit != null && (
+              <div
+                className={
+                  estimatedProfit >= 0 ? 'pt-1 font-semibold text-emerald-300' : 'pt-1 font-semibold text-rose-300'
+                }
+              >
+                {t.deals.kanbanEstimatedProfit}: {formatCurrency(estimatedProfit)}
+              </div>
+            )}
+            <p className="text-[11px] text-white/35 pt-1 leading-snug">{t.deals.kanbanTapForDetails}</p>
           </div>
         )}
         

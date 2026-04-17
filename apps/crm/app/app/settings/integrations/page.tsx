@@ -213,12 +213,18 @@ export default function IntegrationsSettingsPage() {
                 <select
                   required
                   value={formData.payment_method}
-                  onChange={(e) => setFormData({ ...formData, payment_method: e.target.value as 'bit' | 'paybox' | 'bank' })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      payment_method: e.target.value as 'bit' | 'paybox' | 'bank' | 'paypal',
+                    })
+                  }
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="bit">{t('paymentMethods.bit')}</option>
                   <option value="paybox">{t('paymentMethods.paybox')}</option>
                   <option value="bank">{t('paymentMethods.bank')}</option>
+                  <option value="paypal">{t('paymentMethods.paypal')}</option>
                 </select>
               </div>
 

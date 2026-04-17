@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
     const instructions: PaymentInstructions = {
       bit_phone: process.env.PAYMENT_BIT_PHONE || '',
       paybox_link: process.env.PAYMENT_PAYBOX_LINK || '',
+      paypal_link: process.env.PAYMENT_PAYPAL_LINK || '',
       bank_details: {
         bank_name: process.env.PAYMENT_BANK_NAME || '',
         account_number: process.env.PAYMENT_BANK_ACCOUNT || '',

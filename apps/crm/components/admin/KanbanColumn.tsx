@@ -1,4 +1,5 @@
 import type { Deal } from './deal-types'
+import type { DealMaterialOrdersSummary } from './hooks/useDealMaterialOrdersTotalsMap'
 import { DealCard } from './DealCard'
 import { formatCurrency, formatDate } from './deal-utils'
 import { useCRMTranslations } from './useCRMTranslations'
@@ -7,6 +8,8 @@ interface KanbanColumnProps {
   stage: { id: string; label: string; color: string }
   deals: Deal[]
   paymentsMap?: Record<string, number>
+  laborMap?: Record<string, number>
+  materialOrdersMap?: Record<string, DealMaterialOrdersSummary>
   onDragOver: (e: React.DragEvent) => void
   onDrop: () => void
   onDealDragStart: (deal: Deal) => void
@@ -17,6 +20,8 @@ export function KanbanColumn({
   stage,
   deals,
   paymentsMap = {},
+  laborMap = {},
+  materialOrdersMap = {},
   onDragOver,
   onDrop,
   onDealDragStart,
@@ -44,6 +49,8 @@ export function KanbanColumn({
               key={deal.id}
               deal={deal}
               paidToDate={paymentsMap[deal.id]}
+              laborCost={laborMap[deal.id]}
+              materialOrdersSummary={materialOrdersMap[deal.id]}
               onDragStart={() => onDealDragStart(deal)}
               onClick={() => onDealClick(deal)}
               formatCurrency={formatCurrency}

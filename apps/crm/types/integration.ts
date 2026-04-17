@@ -6,7 +6,7 @@
 export type IntegrationType = 'webhook' | 'wordpress'
 export type IntegrationStatus = 'not_connected' | 'pending_payment' | 'active' | 'suspended'
 export type IntegrationEventType = 'lead_received' | 'test_ping' | 'setup_requested' | 'activated' | 'suspended'
-export type PaymentMethodType = 'bit' | 'paybox' | 'bank'
+export type PaymentMethodType = 'bit' | 'paybox' | 'bank' | 'paypal'
 export type IntegrationPackageType = 'basic' | 'advanced' | 'custom'
 
 export interface CompanyIntegration {
@@ -40,6 +40,8 @@ export interface RequestSetupDTO {
 export interface PaymentInstructions {
   bit_phone?: string
   paybox_link?: string
+  /** PayPal.me link, hosted button URL, or checkout URL */
+  paypal_link?: string
   bank_details?: {
     bank_name: string
     account_number: string
