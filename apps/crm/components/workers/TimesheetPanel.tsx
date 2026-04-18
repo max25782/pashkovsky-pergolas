@@ -125,7 +125,10 @@ export function TimesheetPanel({ workerId, workerName, month }: TimesheetPanelPr
     setPdfLoading(true)
     setPdfError(null)
     try {
-      const r = await authFetch(`/api/workers/${workerId}/pdf?month=${month}`, { method: 'POST' })
+      const r = await authFetch(
+        `/api/workers/${workerId}/pdf?month=${encodeURIComponent(month)}&locale=${encodeURIComponent(language)}`,
+        { method: 'POST' },
+      )
       const data = await r.json()
       if (!r.ok) throw new Error(data.error ?? 'Failed to generate PDF')
       window.open(data.pdfUrl, '_blank')

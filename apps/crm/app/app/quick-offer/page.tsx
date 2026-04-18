@@ -40,6 +40,7 @@ import { formatPhoneForWhatsApp } from '@/lib/offer-sharing'
 import { OfferConfiguratorEmbed, type OfferConfiguratorEmbedHandle } from '@/components/offers/OfferConfiguratorEmbed'
 import { useSubscriptionPlan } from '@/components/subscription/subscription-plan-context'
 import { minPlanForFeature } from '@/lib/subscription/plan-access'
+import { useLanguage } from '@/lib/language-context'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -473,6 +474,7 @@ function ResultScreen({
   const tDeals = useTranslations('deals')
   const tSub = useTranslations('subscription')
   const { can } = useSubscriptionPlan()
+  const { language } = useLanguage()
   const [downloadingPdf, setDownloadingPdf] = useState(false)
   const [showSaveCrm, setShowSaveCrm] = useState(false)
   const [showWhatsApp, setShowWhatsApp] = useState(false)
@@ -549,7 +551,10 @@ function ResultScreen({
         }
       }
 
-      const res = await authFetch(`/api/quick-offer/${result.offerId}/pdf`, { method: 'POST' })
+      const res = await authFetch(
+        `/api/quick-offer/${result.offerId}/pdf?locale=${encodeURIComponent(language)}`,
+        { method: 'POST' },
+      )
       if (!res.ok) {
         const d = await res.json().catch(() => ({}))
         alert(`${t('errorCreating')}: ${d.error ?? res.statusText}`)

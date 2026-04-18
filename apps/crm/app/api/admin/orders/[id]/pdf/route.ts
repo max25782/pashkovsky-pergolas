@@ -8,7 +8,8 @@ import { createClient } from '@supabase/supabase-js'
 import { requireCompanyAuth } from '@/lib/middleware/require-company-auth'
 import { profilesApi } from '@/lib/profiles-api/client'
 import { generateOrderPdf, generateOrderPdfFilename } from '@/lib/pdf/generate-order-pdf'
-import { fetchCompanyPdfLocale } from '@/lib/pdf/company-pdf-locale'
+import { fetchCompanyPdfLocale, mergeUiPdfLocale } from '@/lib/pdf/company-pdf-locale'
+import type { PdfLocale } from '@/lib/pdf/pdf-locale'
 import { uploadToS3 } from '@/lib/s3-upload'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
@@ -35,6 +36,9 @@ export async function POST(
   if (!auth.ok) return auth.error
 
   try {
+    const { searchParams } = new URL(req.url)
+    const localeParam = searchParams.get('locale')
+
     const orderResult = await profilesApi.orders.get(params.id, auth.companyId, auth.authHeader)
     if (!orderResult.ok) {
       const msg = (orderResult.data as { message?: string })?.message || 'Failed to fetch order'
@@ -44,10 +48,11 @@ export async function POST(
 
     const order = orderResult.data as Parameters<typeof generateOrderPdf>[0]
 
-    let pdfLocale: string | undefined
+    let companyLocale: PdfLocale = 'he'
     if (supabase) {
-      pdfLocale = await fetchCompanyPdfLocale(supabase, auth.companyId)
+      companyLocale = await fetchCompanyPdfLocale(supabase, auth.companyId)
     }
+    const pdfLocale = mergeUiPdfLocale(localeParam, companyLocale)
 
     let pdfBuffer: Buffer
     try {

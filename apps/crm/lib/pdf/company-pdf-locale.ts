@@ -1,6 +1,16 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { resolvePdfLocale, type PdfLocale } from '@/lib/pdf/pdf-locale'
 
+/** Prefer `?locale=` from the CRM UI; otherwise company settings (`fetchCompanyPdfLocale`). */
+export function mergeUiPdfLocale(
+  requestLocaleRaw: string | null | undefined,
+  companyLocale: PdfLocale,
+): PdfLocale {
+  const t = requestLocaleRaw?.trim()
+  if (t) return resolvePdfLocale(t)
+  return companyLocale
+}
+
 /**
  * Reads tenant PDF/UI language from `companies.settings` JSONB.
  * Supports: settings.locale | settings.company_locale | settings.pdf_locale

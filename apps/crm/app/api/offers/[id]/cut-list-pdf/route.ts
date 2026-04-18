@@ -5,7 +5,7 @@ import { requireCompanyAccess } from '@/lib/auth'
 import { calculateCutList } from '@/lib/cut-list/calculate-cut-list'
 import { renderCutListHtml } from '@/lib/cut-list/cut-list-html-template'
 import { renderHtmlToPdfBuffer } from '@/lib/pdf/render-html-to-pdf'
-import { fetchCompanyPdfLocale } from '@/lib/pdf/company-pdf-locale'
+import { fetchCompanyPdfLocale, mergeUiPdfLocale } from '@/lib/pdf/company-pdf-locale'
 import type { Offer, Pergola, PergolaShape } from '@/types/offer'
 
 export const runtime = 'nodejs'
@@ -159,8 +159,10 @@ export async function GET(
     const access = await requireCompanyAccess(req, row.company_id as string)
     if (!access.authorized) return access.error
 
+    const { searchParams } = new URL(req.url)
+    const companyLocale = await fetchCompanyPdfLocale(supabase, row.company_id as string)
+    const locale = mergeUiPdfLocale(searchParams.get('locale'), companyLocale)
     const cutList = calculateCutList(offer)
-    const locale = await fetchCompanyPdfLocale(supabase, row.company_id as string)
     const html = renderCutListHtml(cutList, locale)
     const pdfBuffer = await renderHtmlToPdfBuffer(html)
 

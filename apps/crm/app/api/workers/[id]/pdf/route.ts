@@ -10,7 +10,7 @@ import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { requireCompanyAccess } from '@/lib/auth'
 import { renderHtmlToPdfBuffer } from '@/lib/pdf/render-html-to-pdf'
 import { generateWorkerTimesheetHtml } from '@/lib/pdf/worker-timesheet-html-template'
-import { fetchCompanyPdfLocale } from '@/lib/pdf/company-pdf-locale'
+import { fetchCompanyPdfLocale, mergeUiPdfLocale } from '@/lib/pdf/company-pdf-locale'
 import { uploadToS3 } from '@/lib/s3-upload'
 import { computeMinutesWorked, computeShiftCost } from '@/lib/workers/calculations'
 import type { WorkerShift, WorkerShiftSummary, WorkerShiftType } from '@/types/workers'
@@ -132,7 +132,8 @@ export async function POST(
       }).length,
     }
 
-    const pdfLocale = await fetchCompanyPdfLocale(supabase, worker.company_id as string)
+    const companyLocale = await fetchCompanyPdfLocale(supabase, worker.company_id as string)
+    const pdfLocale = mergeUiPdfLocale(searchParams.get('locale'), companyLocale)
 
     // Generate HTML → PDF
     const html = generateWorkerTimesheetHtml(

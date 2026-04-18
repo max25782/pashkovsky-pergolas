@@ -206,6 +206,8 @@ export interface Approval {
 export interface PDF {
   url?: string
   createdAt?: string
+  /** Locale used when this PDF was generated (`he` | `ru` | `en` | `sr`). */
+  locale?: string
 }
 
 export interface ConfiguratorParams {

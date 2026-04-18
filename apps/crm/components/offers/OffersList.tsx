@@ -22,6 +22,7 @@ import {
 import { getOfferPublicUrl } from '@/lib/offer-sharing'
 import type { Locale } from '@/lib/locales'
 import { authFetch } from '@/lib/api/auth-fetch'
+import { useLanguage } from '@/lib/language-context'
 import { useToast } from '@/components/ui/toast'
 import { OfferConfiguratorEmbed } from '@/components/offers/OfferConfiguratorEmbed'
 import { useSubscriptionPlan } from '@/components/subscription/subscription-plan-context'
@@ -53,6 +54,7 @@ export function OffersList({
   const tDeals = useTranslations('deals')
   const tOnboarding = useTranslations('onboarding')
   const tSub = useTranslations('subscription')
+  const { language } = useLanguage()
   const { can } = useSubscriptionPlan()
   const [offers, setOffers] = useState<Offer[]>([])
   const [loading, setLoading] = useState(true)
@@ -184,7 +186,10 @@ export function OffersList({
 
   const handleGeneratePdf = useCallback(async (offer: Offer, forceRegenerate = false) => {
     try {
-      const url = `/api/offers/${offer.id}/pdf${forceRegenerate ? '?force=true' : ''}`
+      const qs = new URLSearchParams()
+      if (forceRegenerate) qs.set('force', 'true')
+      qs.set('locale', language)
+      const url = `/api/offers/${offer.id}/pdf?${qs.toString()}`
       const res = await authFetch(url, { method: 'POST' })
       if (!res.ok) {
         const err = await res.json().catch(() => ({})) as { error?: string; details?: string }
@@ -204,7 +209,7 @@ export function OffersList({
       const message = err instanceof Error ? err.message : 'שגיאה לא ידועה'
       toast.error('שגיאה ביצירת PDF: ' + message)
     }
-  }, [toast])
+  }, [language, toast])
 
   const handleViewOffer = useCallback((offerId: string) => {
     const url = getOfferPublicUrl(offerId, locale)

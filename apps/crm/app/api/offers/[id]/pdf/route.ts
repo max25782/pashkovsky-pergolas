@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { generateOfferPdf, generateOfferPdfFilename } from '@/lib/pdf/generate-offer-pdf'
-import { fetchPdfLocaleForOffer } from '@/lib/pdf/company-pdf-locale'
+import { fetchPdfLocaleForOffer, mergeUiPdfLocale } from '@/lib/pdf/company-pdf-locale'
+import type { PdfLocale } from '@/lib/pdf/pdf-locale'
 import { uploadToS3 } from '@/lib/s3-upload'
 import type { Offer } from '@/types/offer'
 import { pergolaFieldsFromOfferRow } from '@/lib/pdf/map-offer-db-row-for-pdf'
@@ -136,6 +137,7 @@ async function fetchOffer(id: string): Promise<Offer | null> {
     pdf: {
       url: data.pdf_url,
       createdAt: data.pdf_created_at,
+      locale: data.pdf_locale ?? undefined,
     },
     createdAt: data.created_at,
     updatedAt: data.updated_at,
@@ -158,24 +160,26 @@ export async function POST(
     // Check for force regeneration parameter
     const { searchParams } = new URL(req.url)
     const force = searchParams.get('force') === 'true'
+    const localeParam = searchParams.get('locale')
 
-    
     const offer = await fetchOffer(params.id)
     if (!offer) {
       console.error('[PDF API] Offer not found:', params.id)
       return NextResponse.json({ error: 'Offer not found' }, { status: 404 })
     }
 
-    // If PDF already exists and not forcing regeneration, return existing URL
-    if (offer.pdf?.url && !force) {
-      return NextResponse.json({ 
+    const companyLocale = await fetchPdfLocaleForOffer(supabase, offer.id)
+    const pdfLocale = mergeUiPdfLocale(localeParam, companyLocale)
+    const storedLocale = (offer.pdf?.locale as PdfLocale | undefined) ?? 'he'
+
+    if (offer.pdf?.url && !force && storedLocale === pdfLocale) {
+      return NextResponse.json({
         pdfUrl: offer.pdf.url,
         cached: true,
-        message: 'PDF already exists. Use ?force=true to regenerate.'
+        message: 'PDF already exists. Use ?force=true to regenerate.',
       })
     }
 
-    const pdfLocale = await fetchPdfLocaleForOffer(supabase, offer.id)
     const pdfBuffer = await generateOfferPdf(offer, pdfLocale)
 
     const filename = generateOfferPdfFilename(offer)
@@ -185,7 +189,11 @@ export async function POST(
 
     await supabase
       .from('offers')
-      .update({ pdf_url: pdfUrl, pdf_created_at: new Date().toISOString() })
+      .update({
+        pdf_url: pdfUrl,
+        pdf_created_at: new Date().toISOString(),
+        pdf_locale: pdfLocale,
+      })
       .eq('id', offer.id)
 
     return NextResponse.json({ pdfUrl, cached: false })

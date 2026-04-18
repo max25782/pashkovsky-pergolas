@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import type { MaterialOrder } from '@/types/material-order'
 import { authFetch } from '@/lib/api/auth-fetch'
+import { useLanguage } from '@/lib/language-context'
 import { useTranslations } from 'next-intl'
 
 interface MaterialOrdersListProps {
@@ -12,6 +13,7 @@ interface MaterialOrdersListProps {
 }
 
 export function MaterialOrdersList({ dealId, adminToken = '', refreshKey = 0 }: MaterialOrdersListProps) {
+  const { language } = useLanguage()
   const tMat = useTranslations('materialOrders')
   const [orders, setOrders] = useState<MaterialOrder[]>([])
   const [loading, setLoading] = useState(true)
@@ -59,7 +61,9 @@ export function MaterialOrdersList({ dealId, adminToken = '', refreshKey = 0 }: 
     if (!offerId) return
     setGeneratingPdf(true)
     try {
-      const res = await authFetch(`/api/offers/${offerId}/cut-list-pdf`)
+      const res = await authFetch(
+        `/api/offers/${offerId}/cut-list-pdf?locale=${encodeURIComponent(language)}`,
+      )
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
         alert(`${tMat('errorGenerating')} ${err.error ?? res.statusText}`)

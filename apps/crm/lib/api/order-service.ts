@@ -98,8 +98,9 @@ export class OrderService {
     return res.json()
   }
 
-  async generatePdf(orderId: string): Promise<Blob> {
-    const res = await authFetch(`/api/admin/orders/${orderId}/pdf`)
+  async generatePdf(orderId: string, locale?: string): Promise<Blob> {
+    const q = locale?.trim() ? `?locale=${encodeURIComponent(locale.trim())}` : ''
+    const res = await authFetch(`/api/admin/orders/${orderId}/pdf${q}`, { method: 'POST' })
     if (!res.ok) throw new Error('Failed to generate PDF')
     return res.blob()
   }

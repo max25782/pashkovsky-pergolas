@@ -1,9 +1,9 @@
 import type { Offer } from '@/types/offer'
-import { PERGOLA_TYPE_NAMES } from '@/types/offer'
 import { quickOfferRailingsFenceAreaSqm } from '@/lib/offer-calculator'
 import { rectanglePlanSvgFragment } from '@/lib/pdf/plan-view-svg'
 import { getHebrewFontsCss, getLogoDataUri } from './font-loader'
 import { pdfT, resolvePdfLocale, pdfHtmlDir, pdfBcp47Locale, type PdfDict } from '@/lib/pdf/offer-pdf-i18n'
+import { OFFER_TERMS_BODIES } from '@/lib/pdf/offer-terms-bodies'
 
 function fillTpl(s: string, vars: Record<string, string | number>): string {
   let out = s
@@ -64,6 +64,14 @@ function addDaysIso(iso: string, days: number): string {
   return d.toISOString()
 }
 
+/** Pergola type label for PDF (uses `pdf-translations`, not CRM Hebrew constants). */
+function pergolaProductTypeLabel(pergolaType: string | null | undefined, dict: PdfDict): string {
+  if (pergolaType === 'fixed') return dict.off_pergola_type_fixed
+  if (pergolaType === 'electricPvc') return dict.off_pergola_type_pvc
+  if (pergolaType === 'electricBioclimatic') return dict.off_pergola_type_bioclimatic
+  return dict.off_pergola_default
+}
+
 function colorDescription(offer: Offer, dict: PdfDict): string {
   const c = offer.color
   if (!c) return dict.off_color_dash
@@ -80,9 +88,7 @@ function colorDescription(offer: Offer, dict: PdfDict): string {
 }
 
 function buildPergolaLineName(offer: Offer, pergolaType: string | null | undefined, dict: PdfDict): string {
-  const typeName = pergolaType && pergolaType in PERGOLA_TYPE_NAMES
-    ? PERGOLA_TYPE_NAMES[pergolaType as keyof typeof PERGOLA_TYPE_NAMES]
-    : dict.off_pergola_default
+  const typeName = pergolaProductTypeLabel(pergolaType, dict)
   const parts: string[] = [typeName]
   if (offer.shadingRatio) parts.push(`${dict.off_shading} ${offer.shadingRatio}`)
   if (offer.roof?.type === 'santaf') parts.push(dict.off_roof_santaf)
@@ -271,9 +277,12 @@ function collectLineRows(offer: Offer, dict: PdfDict): LineRow[] {
 
 function formatSinglePergolaDimensionsHtml(pergola: Offer['pergola'], dict: PdfDict, index?: number): string {
   if (!pergola) return ''
-  const typeLabel = pergola.pergolaType && pergola.pergolaType in PERGOLA_TYPE_NAMES
-    ? PERGOLA_TYPE_NAMES[pergola.pergolaType as keyof typeof PERGOLA_TYPE_NAMES]
-    : null
+  const typeLabel =
+    pergola.pergolaType === 'fixed' ||
+    pergola.pergolaType === 'electricPvc' ||
+    pergola.pergolaType === 'electricBioclimatic'
+      ? pergolaProductTypeLabel(pergola.pergolaType, dict)
+      : null
   const headingText =
     index !== undefined
       ? `${fillTpl(dict.off_pergola_n, { n: index + 1 })}${typeLabel ? ` — ${typeLabel}` : ''}`
@@ -655,6 +664,7 @@ export function renderOfferHtml(
         : dash
   const warrantyCovers = (offer.warranty?.covers ?? []).join(', ')
   const termsTail = `${fillTpl(dict.off_valid_30, { y: String(offer.warranty?.years ?? 7) })}${warrantyCovers ? `: ${warrantyCovers}` : ''}`
+  const termsBody = OFFER_TERMS_BODIES[resolved]
 
   return `
 <!DOCTYPE html>
@@ -816,6 +826,13 @@ export function renderOfferHtml(
     .tech-h { font-weight: 700; background: #eee !important; }
     .terms { font-size: 9px; color: #333; margin-top: 10px; }
     .terms strong { display: block; margin-bottom: 4px; }
+    .terms-body {
+      white-space: pre-wrap;
+      font-size: 8.5px;
+      line-height: 1.38;
+      margin-top: 4px;
+    }
+    .terms-tail { margin-top: 10px; font-size: 8.5px; }
     .viz-section {
       margin: 14px 0 0;
       border: 1px solid #222;
@@ -973,9 +990,8 @@ export function renderOfferHtml(
   ${configuratorTechnicalAppendixHtml(offer, dict, previewImageDataUrl)}
 
   <div class="terms">
-    <strong>${dict.off_terms_title}</strong>
-    ${escapeHtml(offer.paymentTerms?.text || dict.off_pay_default)}
-    <br/>${escapeHtml(termsTail)}
+    <div class="terms-body">${escapeHtml(termsBody)}</div>
+    <div class="terms-tail">${escapeHtml(termsTail)}</div>
   </div>
 
   <div class="page-foot">

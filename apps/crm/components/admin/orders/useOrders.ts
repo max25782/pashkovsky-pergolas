@@ -105,7 +105,10 @@ export function useOrders(lang: Language): UseOrdersResult {
 
   async function handleGeneratePdf(order: Order) {
     try {
-      const res = await authFetch(`/api/admin/orders/${order.id}/pdf`, { method: 'POST' })
+      const res = await authFetch(
+        `/api/admin/orders/${order.id}/pdf?locale=${encodeURIComponent(lang)}`,
+        { method: 'POST' },
+      )
       if (!res.ok) {
         const data = await res.json().catch(() => ({})) as { error?: string }
         throw new Error(data.error ?? 'Failed to generate PDF')
