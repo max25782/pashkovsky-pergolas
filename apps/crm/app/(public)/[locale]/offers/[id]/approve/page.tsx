@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
 import { renderOfferHtml } from '@/lib/pdf/offer-html-template'
+import { fetchCompanyPdfLocale } from '@/lib/pdf/company-pdf-locale'
 import { ApproveClient } from './ApproveClient'
 import type { Offer, Pergola, PergolaShape } from '@/types/offer'
 
@@ -158,9 +159,12 @@ export default async function OfferApprovePage({
 
   const offer = transformOfferFromDB(data as Record<string, unknown>)
 
+  const companyId = data.company_id as string | undefined
+  const pdfLocale = companyId ? await fetchCompanyPdfLocale(supabase, companyId) : 'he'
+
   // Render the PDF HTML server-side (needs filesystem access for fonts/logo)
   // Omit the static signature section — the client component renders an interactive pad instead.
-  const offerHtml = renderOfferHtml(offer, null, true)
+  const offerHtml = renderOfferHtml(offer, null, true, pdfLocale)
 
   return (
     <ApproveClient

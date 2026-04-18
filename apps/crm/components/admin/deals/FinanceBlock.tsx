@@ -18,8 +18,8 @@ export interface FinanceBlockLabels {
   costBreakdownTitle: string
   laborFromShifts: string
   materialOrdersFromSystem: string
-  /** Template with literal `{count}` for order count suffix. */
-  materialOrdersOrderCountTemplate: string
+  /** Localized suffix for material order count (e.g. "3 orders"). */
+  formatMaterialOrdersOrderCount: (count: number) => string
   noMaterialOrdersDash: string
   totalInternalForProfit: string
   loadingBreakdown: string
@@ -208,7 +208,7 @@ export function FinanceBlock({
                   <>
                     {formatCurrency(ordersTotal)}
                     <span className="ms-1 text-xs text-white/45">
-                      {labels.materialOrdersOrderCountTemplate.replace('{count}', String(ordersCount))}
+                      {labels.formatMaterialOrdersOrderCount(ordersCount)}
                     </span>
                   </>
                 ) : (

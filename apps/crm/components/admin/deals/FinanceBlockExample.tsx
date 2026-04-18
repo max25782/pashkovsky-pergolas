@@ -20,7 +20,7 @@ const mockLabels: FinanceBlockLabels = {
   costBreakdownTitle: 'Cost breakdown (system)',
   laborFromShifts: 'Labor (work shifts)',
   materialOrdersFromSystem: 'Material orders total (from system)',
-  materialOrdersOrderCountTemplate: '{count} orders',
+  formatMaterialOrdersOrderCount: (count: number) => `${count} orders`,
   noMaterialOrdersDash: '—',
   totalInternalForProfit: 'Total for profit below',
   loadingBreakdown: '…',

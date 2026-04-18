@@ -1,6 +1,7 @@
 import type { CutListResult, ProfileGroup, StockBar, SantafOrderLine } from './calculate-cut-list'
 import { KERF_CM } from './calculate-cut-list'
 import { getHebrewFontsCss } from '@/lib/pdf/font-loader'
+import { pdfT, resolvePdfLocale, pdfHtmlDir, pdfBcp47Locale, type PdfDict } from '@/lib/pdf/offer-pdf-i18n'
 
 function escapeHtml(s: string): string {
   return s
@@ -10,24 +11,30 @@ function escapeHtml(s: string): string {
     .replaceAll('"', '&quot;')
 }
 
-function fmtCm(cm: number): string {
+function fillTpl(s: string, vars: Record<string, string | number>): string {
+  let out = s
+  for (const [k, v] of Object.entries(vars)) {
+    out = out.replaceAll(`{${k}}`, String(v))
+  }
+  return out
+}
+
+function fmtCm(cm: number, t: PdfDict): string {
   const m = cm / 100
   const mStr = Number.isInteger(m) ? `${m}` : m.toFixed(2).replace(/\.?0+$/, '')
-  return `${cm} ס״מ (${mStr} מ׳)`
+  return `${cm} ${t.cut_cm} (${mStr} ${t.cut_m})`
 }
 
-function fmtCmShort(cm: number): string {
-  return `${Math.round(cm * 10) / 10} ס״מ`
+function fmtCmShort(cm: number, t: PdfDict): string {
+  return `${Math.round(cm * 10) / 10} ${t.cut_cm}`
 }
 
-/** SVG bar diagram showing cuts + kerf lines inside a stock bar */
-function barSvg(bar: StockBar): string {
+function barSvg(bar: StockBar, t: PdfDict): string {
   const W = 420
   const H = 28
   const scale = W / bar.stockLengthCm
   const kerfW = Math.max(1.5, KERF_CM * scale)
 
-  // Assign a palette of muted colours to each unique label
   const palette = ['#4a90d9', '#e67e22', '#27ae60', '#8e44ad', '#c0392b', '#16a085', '#d35400']
   const labelColors: Record<string, string> = {}
   let colorIdx = 0
@@ -49,14 +56,12 @@ function barSvg(bar: StockBar): string {
       )
     }
     x += w
-    // Kerf stripe after each cut
     rects.push(
-      `<rect x="${x.toFixed(1)}" y="0" width="${kerfW.toFixed(1)}" height="${H}" fill="#555" stroke="none" title="קרף ${KERF_CM} ס״מ"/>`,
+      `<rect x="${x.toFixed(1)}" y="0" width="${kerfW.toFixed(1)}" height="${H}" fill="#555" stroke="none" title="${escapeHtml(t.cut_kerf)} ${KERF_CM} ${t.cut_cm}"/>`,
     )
     x += KERF_CM * scale
   }
 
-  // Waste block (remaining space after all cuts + kerfs)
   const remaining = W - x
   if (remaining > 0.5) {
     rects.push(
@@ -64,7 +69,7 @@ function barSvg(bar: StockBar): string {
     )
     if (remaining > 20) {
       rects.push(
-        `<text x="${(x + remaining / 2).toFixed(1)}" y="${H / 2 + 4}" text-anchor="middle" font-size="8" fill="#999" font-family="Arial,sans-serif">פסולת</text>`,
+        `<text x="${(x + remaining / 2).toFixed(1)}" y="${H / 2 + 4}" text-anchor="middle" font-size="8" fill="#999" font-family="Arial,sans-serif">${escapeHtml(t.cut_waste)}</text>`,
       )
     }
   }
@@ -72,15 +77,21 @@ function barSvg(bar: StockBar): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${rects.join('')}</svg>`
 }
 
-function profileGroupHtml(g: ProfileGroup, idx: number, lamellaGapCm?: number, lamellaQty?: number): string {
+function profileGroupHtml(
+  g: ProfileGroup,
+  idx: number,
+  t: PdfDict,
+  lamellaGapCm?: number,
+  lamellaQty?: number,
+): string {
   const piecesRows = g.pieces
     .map(
       (p) => `
       <tr>
         <td>${escapeHtml(p.label)}</td>
-        <td class="num">${fmtCmShort(p.lengthCm)}</td>
+        <td class="num">${fmtCmShort(p.lengthCm, t)}</td>
         <td class="num">${p.qty}</td>
-        <td class="num">${fmtCmShort(p.lengthCm * p.qty)}</td>
+        <td class="num">${fmtCmShort(p.lengthCm * p.qty, t)}</td>
       </tr>`,
     )
     .join('')
@@ -90,65 +101,66 @@ function profileGroupHtml(g: ProfileGroup, idx: number, lamellaGapCm?: number, l
       (bar, bi) => `
       <tr>
         <td class="bar-no">${bi + 1}</td>
-        <td class="bar-svg">${barSvg(bar)}</td>
-        <td class="num">${fmtCmShort(bar.usedCm)}</td>
-        <td class="num waste">${fmtCmShort(bar.wasteCm)}</td>
+        <td class="bar-svg">${barSvg(bar, t)}</td>
+        <td class="num">${fmtCmShort(bar.usedCm, t)}</td>
+        <td class="num waste">${fmtCmShort(bar.wasteCm, t)}</td>
       </tr>`,
     )
     .join('')
 
-  const lamellaNote = (lamellaGapCm !== undefined && lamellaQty !== undefined)
-    ? `<div class="lamella-note">מרווח בין הצללות: <strong>${fmtCmShort(lamellaGapCm)}</strong> &nbsp;|&nbsp; כמות הצללות: <strong>${lamellaQty}</strong></div>`
-    : ''
+  const lamellaNote =
+    lamellaGapCm !== undefined && lamellaQty !== undefined
+      ? `<div class="lamella-note">${t.cut_lamella_gap}: <strong>${fmtCmShort(lamellaGapCm, t)}</strong> &nbsp;|&nbsp; ${t.cut_lamella_qty}: <strong>${lamellaQty}</strong></div>`
+      : ''
 
   return `
   <div class="group" id="group-${idx}">
     <div class="group-header">
       <span class="group-title">${escapeHtml(g.profileName)}</span>
-      <span class="group-stock">מוט סטנדרטי: ${fmtCm(g.stockLengthCm)}</span>
+      <span class="group-stock">${t.cut_stock_bar}: ${fmtCm(g.stockLengthCm, t)}</span>
     </div>
     ${lamellaNote}
 
-    <h4 class="sub-title">חתיכות נדרשות</h4>
+    <h4 class="sub-title">${t.cut_pieces_title}</h4>
     <table class="pieces-table">
       <thead>
         <tr>
-          <th>חלק</th>
-          <th class="num">אורך חתיכה</th>
-          <th class="num">כמות</th>
-          <th class="num">סה״כ אורך</th>
+          <th>${t.cut_th_part}</th>
+          <th class="num">${t.cut_th_piece_len}</th>
+          <th class="num">${t.cut_th_qty}</th>
+          <th class="num">${t.cut_th_total_len}</th>
         </tr>
       </thead>
       <tbody>${piecesRows}</tbody>
     </table>
 
-    <h4 class="sub-title">תכנית חיתוך (${g.totalBars} מוטות)</h4>
+    <h4 class="sub-title">${t.cut_plan_title} (${g.totalBars} ${t.cut_plan_bars_unit})</h4>
     <table class="bars-table">
       <thead>
         <tr>
           <th>#</th>
-          <th>תרשים חיתוך</th>
-          <th class="num">שימוש</th>
-          <th class="num">פסולת</th>
+          <th>${t.cut_th_diag}</th>
+          <th class="num">${t.cut_th_use}</th>
+          <th class="num">${t.cut_th_waste}</th>
         </tr>
       </thead>
       <tbody>${barsRows}</tbody>
     </table>
 
     <div class="summary-row">
-      <span>סה״כ מוטות לרכישה: <strong>${g.totalBars}</strong></span>
-      <span>פסולת כוללת (כולל קרף ${KERF_CM} ס״מ/חיתוך): <strong>${fmtCmShort(g.totalWasteCm)}</strong> (${g.wastePercent.toFixed(1)}%)</span>
+      <span>${t.cut_total_bars}: <strong>${g.totalBars}</strong></span>
+      <span>${fillTpl(t.cut_waste_note, { kerf: String(KERF_CM) })}: <strong>${fmtCmShort(g.totalWasteCm, t)}</strong> (${g.wastePercent.toFixed(1)}%)</span>
     </div>
   </div>`
 }
 
-function orderSummaryHtml(result: CutListResult): string {
+function orderSummaryHtml(result: CutListResult, t: PdfDict): string {
   const profileRows = result.groups
     .map(
       (g) => `
       <tr>
         <td>${escapeHtml(g.profileName)}</td>
-        <td class="num">${fmtCm(g.stockLengthCm)}</td>
+        <td class="num">${fmtCm(g.stockLengthCm, t)}</td>
         <td class="num order-qty">${g.totalBars}</td>
       </tr>`,
     )
@@ -158,8 +170,8 @@ function orderSummaryHtml(result: CutListResult): string {
     .map(
       (s: SantafOrderLine) => `
       <tr>
-        <td>סנטף BH (גליון 104.5 ס״מ)</td>
-        <td class="num">${fmtCm(s.lengthCm)}</td>
+        <td>${escapeHtml(t.cut_santaf_row)}</td>
+        <td class="num">${fmtCm(s.lengthCm, t)}</td>
         <td class="num order-qty">${s.qty}</td>
       </tr>`,
     )
@@ -169,13 +181,13 @@ function orderSummaryHtml(result: CutListResult): string {
 
   return `
   <div class="order-summary">
-    <div class="order-summary-header">סיכום הזמנה</div>
+    <div class="order-summary-header">${t.cut_order_summary}</div>
     <table class="order-table">
       <thead>
         <tr>
-          <th>פריט</th>
-          <th class="num">אורך / מוט</th>
-          <th class="num">כמות להזמנה</th>
+          <th>${t.cut_th_item}</th>
+          <th class="num">${t.cut_th_len_per_bar}</th>
+          <th class="num">${t.cut_th_order_qty}</th>
         </tr>
       </thead>
       <tbody>
@@ -186,32 +198,44 @@ function orderSummaryHtml(result: CutListResult): string {
   </div>`
 }
 
-export function renderCutListHtml(result: CutListResult): string {
+export function renderCutListHtml(result: CutListResult, locale?: string): string {
+  const loc = resolvePdfLocale(locale)
+  const t = pdfT[loc]
+  const dir = pdfHtmlDir(loc)
+  const lang = pdfBcp47Locale(loc)
   const fontsCss = getHebrewFontsCss()
-  const date = new Date(result.generatedAt).toLocaleDateString('he-IL', {
+  const date = new Date(result.generatedAt).toLocaleDateString(lang, {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   })
 
-  const groupsHtml = result.groups.map((g, i) => {
-    const isLamella = g.category === 'lamella'
-    return profileGroupHtml(
-      g, i,
-      isLamella ? result.lamellaGapCm : undefined,
-      isLamella ? result.lamellaQty : undefined,
-    )
-  }).join('\n')
-  const summaryHtml = orderSummaryHtml(result)
+  const groupsHtml = result.groups
+    .map((g, i) => {
+      const isLamella = g.category === 'lamella'
+      return profileGroupHtml(
+        g,
+        i,
+        t,
+        isLamella ? result.lamellaGapCm : undefined,
+        isLamella ? result.lamellaQty : undefined,
+      )
+    })
+    .join('\n')
+  const summaryHtml = orderSummaryHtml(result, t)
 
   const estimatedWarning = result.estimated
-    ? `<div class="warning">⚠️ נתוני קונפיגורטור חסרים — חישוב מוערך לפי מידות הצעת המחיר בלבד.</div>`
+    ? `<div class="warning">⚠️ ${escapeHtml(t.cut_warn_estimated)}</div>`
     : ''
 
-  const dimsRow = `${result.widthCm} × ${result.depthCm} ס״מ, גובה ${result.heightCm} ס״מ`
+  const heightWord =
+    loc === 'he' ? 'גובה' : loc === 'ru' ? 'Высота' : loc === 'sr' ? 'Visina' : 'Height'
+  const dimsRow = `${result.widthCm} × ${result.depthCm} ${t.cut_cm}, ${heightWord} ${result.heightCm} ${t.cut_cm}`
+
+  const title = fillTpl(t.cut_title, { name: escapeHtml(result.customerName) })
 
   return `<!DOCTYPE html>
-<html dir="rtl" lang="he">
+<html dir="${dir}" lang="${lang.split('-')[0]}">
 <head>
 <meta charset="UTF-8"/>
 <style>
@@ -223,7 +247,7 @@ body {
   color: #111;
   background: #fff;
   padding: 0;
-  direction: rtl;
+  direction: ${dir};
 }
 
 .page-header {
@@ -326,9 +350,9 @@ th { background: #f0f4fa; font-weight: 700; color: #1a3a5c; }
 </head>
 <body>
   <div class="page-header">
-    <h1>רשימת חיתוך — ${escapeHtml(result.customerName)}</h1>
+    <h1>${title}</h1>
     <div class="meta">
-      מידות: ${dimsRow} &nbsp;·&nbsp; הופק: ${date}
+      ${t.cut_dims}: ${dimsRow} &nbsp;·&nbsp; ${t.cut_generated}: ${date}
     </div>
   </div>
 
@@ -339,7 +363,7 @@ th { background: #f0f4fa; font-weight: 700; color: #1a3a5c; }
   ${groupsHtml}
 
   <div class="page-foot">
-    <span>Pashkovsky Group · רשימת חיתוך אלומיניום</span>
+    <span>${escapeHtml(t.cut_footer)}</span>
     <span>${date}</span>
   </div>
 </body>

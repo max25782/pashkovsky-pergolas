@@ -386,7 +386,7 @@ export function DealModal({
               costBreakdownTitle: t.deals.financeCostBreakdown,
               laborFromShifts: t.deals.financeLaborFromShifts,
               materialOrdersFromSystem: t.deals.materialOrdersSystemTotal,
-              materialOrdersOrderCountTemplate: t.deals.financeMaterialOrdersOrderCountTpl,
+              formatMaterialOrdersOrderCount: t.deals.financeMaterialOrdersOrderCountTpl,
               noMaterialOrdersDash: t.deals.financeNoOrdersDash,
               totalInternalForProfit: t.deals.financeTotalInternalForProfit,
               loadingBreakdown: t.deals.financeLoadingBreakdown,

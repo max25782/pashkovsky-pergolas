@@ -76,12 +76,12 @@ async function prefetchImages(order: Order): Promise<Record<string, string>> {
  * Generates a PDF buffer for the given order using Puppeteer + Chromium
  * with proper Hebrew RTL support and embedded product images.
  */
-export async function generateOrderPdf(order: Order): Promise<Buffer> {
+export async function generateOrderPdf(order: Order, locale?: string): Promise<Buffer> {
   try {
 
     const imageMap = await prefetchImages(order)
 
-    const html = renderOrderHtml(order, imageMap)
+    const html = renderOrderHtml(order, imageMap, locale)
 
     const pdfBuffer = await renderHtmlToPdfBuffer(html)
 

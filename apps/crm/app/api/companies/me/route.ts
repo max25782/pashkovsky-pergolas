@@ -15,8 +15,19 @@ type Company = {
 type MembershipRow = {
   role: string
   company_id: string
-  crm_intro_completed_at: string | null
+  crm_intro_completed_at?: string | null
   companies: Company | Company[] | null
+}
+
+const MEMBERSHIP_SELECT_WITH_INTRO =
+  'role, company_id, crm_intro_completed_at, companies(id, name, status, created_at)'
+const MEMBERSHIP_SELECT_BASE = 'role, company_id, companies(id, name, status, created_at)'
+
+function isMissingCrmIntroColumn(err: { code?: string; message?: string } | null): boolean {
+  return (
+    err?.code === '42703' &&
+    (err.message?.includes('crm_intro_completed_at') ?? false)
+  )
 }
 
 function companyFromMembership(row: MembershipRow): Company | null {
@@ -43,18 +54,42 @@ export async function GET() {
       { auth: { persistSession: false, autoRefreshToken: false } }
     )
 
-    const { data: memberships, error: membershipsError } = await service
+    let first = await service
       .from('company_members')
-      .select('role, company_id, crm_intro_completed_at, companies(id, name, status, created_at)')
+      .select(MEMBERSHIP_SELECT_WITH_INTRO)
       .eq('user_id', user.id)
-      .order('created_at', { referencedTable: 'companies', ascending: true })
+      .order('created_at', { ascending: true })
       .limit(1)
 
-    if (membershipsError || !memberships || memberships.length === 0) {
+    let membershipsError = first.error
+    let rows: MembershipRow[] | null = first.data as MembershipRow[] | null
+
+    if (membershipsError && isMissingCrmIntroColumn(membershipsError)) {
+      const retry = await service
+        .from('company_members')
+        .select(MEMBERSHIP_SELECT_BASE)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: true })
+        .limit(1)
+      membershipsError = retry.error
+      rows = retry.data as MembershipRow[] | null
+      if (!membershipsError) {
+        console.warn(
+          '[companies/me] company_members.crm_intro_completed_at missing; apply migration 046_company_members_crm_intro.sql — intro completion will not persist server-side until then.',
+        )
+      }
+    }
+
+    if (membershipsError) {
+      console.error('[companies/me] company_members query:', membershipsError)
+      return NextResponse.json({ error: 'Company lookup failed', details: membershipsError.message }, { status: 500 })
+    }
+
+    if (!rows || rows.length === 0) {
       return NextResponse.json({ error: 'Company not found' }, { status: 404 })
     }
 
-    const chosen = memberships[0] as unknown as MembershipRow
+    const chosen = rows[0] as unknown as MembershipRow
     const company = companyFromMembership(chosen)
     if (!company) {
       return NextResponse.json({ error: 'Company not found' }, { status: 404 })

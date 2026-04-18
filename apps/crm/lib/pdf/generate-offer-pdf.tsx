@@ -36,14 +36,14 @@ async function resolvePreviewImageDataUrl(offer: Offer): Promise<string | null> 
  * @param offer - The offer to generate PDF for
  * @returns PDF as Buffer
  */
-export async function generateOfferPdf(offer: Offer): Promise<Buffer> {
+export async function generateOfferPdf(offer: Offer, locale?: string): Promise<Buffer> {
   try {
     // Pre-fetch the 3D preview image as a base64 data URL so Puppeteer can
     // render it inline without needing external network access.
     const previewImageDataUrl = await resolvePreviewImageDataUrl(offer)
 
     // Render HTML template with inlined image
-    const html = renderOfferHtml(offer, previewImageDataUrl)
+    const html = renderOfferHtml(offer, previewImageDataUrl, false, locale)
     
     // Convert HTML to PDF
     const pdfBuffer = await renderHtmlToPdfBuffer(html)

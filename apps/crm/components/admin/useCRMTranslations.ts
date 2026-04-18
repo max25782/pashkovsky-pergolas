@@ -170,7 +170,8 @@ export function useCRMTranslations() {
       financeTotalInternalForProfit: deals('financeTotalInternalForProfit'),
       financeLoadingBreakdown: deals('financeLoadingBreakdown'),
       financeNoOrdersDash: deals('financeNoOrdersDash'),
-      financeMaterialOrdersOrderCountTpl: deals('financeMaterialOrdersOrderCountTpl'),
+      financeMaterialOrdersOrderCountTpl: (count: number) =>
+        deals('financeMaterialOrdersOrderCountTpl', { count }),
       financeProfitFootnote: deals('financeProfitFootnote'),
       quickActions: deals('quickActions'),
       addExpense: deals('addExpense'),

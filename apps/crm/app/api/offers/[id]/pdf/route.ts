@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { generateOfferPdf, generateOfferPdfFilename } from '@/lib/pdf/generate-offer-pdf'
+import { fetchPdfLocaleForOffer } from '@/lib/pdf/company-pdf-locale'
 import { uploadToS3 } from '@/lib/s3-upload'
 import type { Offer } from '@/types/offer'
 import { pergolaFieldsFromOfferRow } from '@/lib/pdf/map-offer-db-row-for-pdf'
@@ -174,7 +175,8 @@ export async function POST(
       })
     }
 
-    const pdfBuffer = await generateOfferPdf(offer)
+    const pdfLocale = await fetchPdfLocaleForOffer(supabase, offer.id)
+    const pdfBuffer = await generateOfferPdf(offer, pdfLocale)
 
     const filename = generateOfferPdfFilename(offer)
     const key = `offers/${offer.id}/${filename}`

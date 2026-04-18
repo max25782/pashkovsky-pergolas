@@ -5,6 +5,7 @@ import { requireCompanyAccess } from '@/lib/auth'
 import { calculateCutList } from '@/lib/cut-list/calculate-cut-list'
 import { renderCutListHtml } from '@/lib/cut-list/cut-list-html-template'
 import { renderHtmlToPdfBuffer } from '@/lib/pdf/render-html-to-pdf'
+import { fetchCompanyPdfLocale } from '@/lib/pdf/company-pdf-locale'
 import type { Offer, Pergola, PergolaShape } from '@/types/offer'
 
 export const runtime = 'nodejs'
@@ -159,7 +160,8 @@ export async function GET(
     if (!access.authorized) return access.error
 
     const cutList = calculateCutList(offer)
-    const html = renderCutListHtml(cutList)
+    const locale = await fetchCompanyPdfLocale(supabase, row.company_id as string)
+    const html = renderCutListHtml(cutList, locale)
     const pdfBuffer = await renderHtmlToPdfBuffer(html)
 
     // Content-Disposition filename must be ASCII-only; use offer ID as safe fallback

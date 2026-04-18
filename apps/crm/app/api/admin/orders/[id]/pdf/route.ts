@@ -4,10 +4,19 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 import { requireCompanyAuth } from '@/lib/middleware/require-company-auth'
 import { profilesApi } from '@/lib/profiles-api/client'
 import { generateOrderPdf, generateOrderPdfFilename } from '@/lib/pdf/generate-order-pdf'
+import { fetchCompanyPdfLocale } from '@/lib/pdf/company-pdf-locale'
 import { uploadToS3 } from '@/lib/s3-upload'
+
+const SUPABASE_URL = process.env.SUPABASE_URL
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
+const supabase =
+  SUPABASE_URL && SERVICE_KEY
+    ? createClient(SUPABASE_URL, SERVICE_KEY, { db: { schema: 'public' } })
+    : undefined
 
 // Force Node.js runtime (not Edge) for Puppeteer/Chromium compatibility
 export const runtime = 'nodejs'
@@ -35,9 +44,14 @@ export async function POST(
 
     const order = orderResult.data as Parameters<typeof generateOrderPdf>[0]
 
+    let pdfLocale: string | undefined
+    if (supabase) {
+      pdfLocale = await fetchCompanyPdfLocale(supabase, auth.companyId)
+    }
+
     let pdfBuffer: Buffer
     try {
-      pdfBuffer = await generateOrderPdf(order)
+      pdfBuffer = await generateOrderPdf(order, pdfLocale)
     } catch (pdfErr: unknown) {
       const msg = pdfErr instanceof Error ? pdfErr.message : 'Unknown PDF error'
       console.error('[PDF API] PDF generation failed:', msg)

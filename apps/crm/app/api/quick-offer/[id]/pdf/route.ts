@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { generateOfferPdf } from '@/lib/pdf/generate-offer-pdf'
+import { fetchPdfLocaleForOffer } from '@/lib/pdf/company-pdf-locale'
 import type { Offer } from '@/types/offer'
 import { pergolaFieldsFromOfferRow } from '@/lib/pdf/map-offer-db-row-for-pdf'
 
@@ -132,7 +133,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const offer = await fetchOffer(params.id)
     if (!offer) return NextResponse.json({ error: 'Offer not found' }, { status: 404 })
 
-    const pdfBuffer = await generateOfferPdf(offer)
+    const pdfLocale = await fetchPdfLocaleForOffer(supabase, params.id)
+    const pdfBuffer = await generateOfferPdf(offer, pdfLocale)
     const filename = `offer_${offer.id}.pdf`
 
     return new NextResponse(new Uint8Array(pdfBuffer), {

@@ -10,6 +10,7 @@ import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { requireCompanyAccess } from '@/lib/auth'
 import { renderHtmlToPdfBuffer } from '@/lib/pdf/render-html-to-pdf'
 import { generateWorkerTimesheetHtml } from '@/lib/pdf/worker-timesheet-html-template'
+import { fetchCompanyPdfLocale } from '@/lib/pdf/company-pdf-locale'
 import { uploadToS3 } from '@/lib/s3-upload'
 import { computeMinutesWorked, computeShiftCost } from '@/lib/workers/calculations'
 import type { WorkerShift, WorkerShiftSummary, WorkerShiftType } from '@/types/workers'
@@ -131,21 +132,26 @@ export async function POST(
       }).length,
     }
 
+    const pdfLocale = await fetchCompanyPdfLocale(supabase, worker.company_id as string)
+
     // Generate HTML → PDF
-    const html = generateWorkerTimesheetHtml({
-      worker: {
-        id: worker.id,
-        firstName: worker.first_name,
-        lastName: worker.last_name,
-        phone: worker.phone,
-        role: worker.role,
-        dailyRate: parseFloat(worker.daily_rate),
-        hourlyRate: worker.hourly_rate != null ? parseFloat(worker.hourly_rate) : null,
+    const html = generateWorkerTimesheetHtml(
+      {
+        worker: {
+          id: worker.id,
+          firstName: worker.first_name,
+          lastName: worker.last_name,
+          phone: worker.phone,
+          role: worker.role,
+          dailyRate: parseFloat(worker.daily_rate),
+          hourlyRate: worker.hourly_rate != null ? parseFloat(worker.hourly_rate) : null,
+        },
+        month,
+        shifts,
+        summary,
       },
-      month,
-      shifts,
-      summary,
-    })
+      pdfLocale,
+    )
 
     const pdfBuffer = await renderHtmlToPdfBuffer(html)
 

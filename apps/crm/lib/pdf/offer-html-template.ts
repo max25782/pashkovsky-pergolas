@@ -3,6 +3,16 @@ import { PERGOLA_TYPE_NAMES } from '@/types/offer'
 import { quickOfferRailingsFenceAreaSqm } from '@/lib/offer-calculator'
 import { rectanglePlanSvgFragment } from '@/lib/pdf/plan-view-svg'
 import { getHebrewFontsCss, getLogoDataUri } from './font-loader'
+import { pdfT, resolvePdfLocale, pdfHtmlDir, pdfBcp47Locale, type PdfDict } from '@/lib/pdf/offer-pdf-i18n'
+
+function fillTpl(s: string, vars: Record<string, string | number>): string {
+  let out = s
+  for (const [k, v] of Object.entries(vars)) {
+    out = out.replaceAll(`{${k}}`, String(v))
+  }
+  return out
+}
+
 interface LineRow {
   description: string
   unitLabel: string
@@ -44,8 +54,8 @@ function formatOfferNumber(offer: Offer): string {
   const digits = offer.id.replace(/\D/g, '')
   if (digits.length >= 8) return digits.slice(-8)
   if (digits.length >= 6) return digits.padStart(8, '0').slice(-8)
-  const t = new Date(offer.createdAt).getTime()
-  return String(t % 100000000).padStart(8, '0')
+  const ts = new Date(offer.createdAt).getTime()
+  return String(ts % 100000000).padStart(8, '0')
 }
 
 function addDaysIso(iso: string, days: number): string {
@@ -54,33 +64,33 @@ function addDaysIso(iso: string, days: number): string {
   return d.toISOString()
 }
 
-function colorDescription(offer: Offer): string {
+function colorDescription(offer: Offer, dict: PdfDict): string {
   const c = offer.color
-  if (!c) return '—'
+  if (!c) return dict.off_color_dash
   if (c.type === 'ral' && c.ralCode) return `RAL ${c.ralCode}`
-  if (c.type === 'wood' && c.woodName) return `דמוי עץ — ${c.woodName}`
+  if (c.type === 'wood' && c.woodName) return `${dict.off_color_woodlike} — ${c.woodName}`
   const map: Record<string, string> = {
-    white: 'לבן',
-    black: 'שחור',
-    cream: 'קרם',
-    ral: 'RAL',
-    wood: 'דמוי עץ',
+    white: dict.off_color_white,
+    black: dict.off_color_black,
+    cream: dict.off_color_cream,
+    ral: dict.off_color_ral,
+    wood: dict.off_color_wood,
   }
   return map[c.type] ?? c.type
 }
 
-function buildPergolaLineName(offer: Offer, pergolaType?: string | null): string {
+function buildPergolaLineName(offer: Offer, pergolaType: string | null | undefined, dict: PdfDict): string {
   const typeName = pergolaType && pergolaType in PERGOLA_TYPE_NAMES
     ? PERGOLA_TYPE_NAMES[pergolaType as keyof typeof PERGOLA_TYPE_NAMES]
-    : 'פרגולה אלומיניום'
+    : dict.off_pergola_default
   const parts: string[] = [typeName]
-  if (offer.shadingRatio) parts.push(`הצללה ${offer.shadingRatio}`)
-  if (offer.roof?.type === 'santaf') parts.push('גג סנטף')
-  parts.push(`צבע: ${colorDescription(offer)}`)
+  if (offer.shadingRatio) parts.push(`${dict.off_shading} ${offer.shadingRatio}`)
+  if (offer.roof?.type === 'santaf') parts.push(dict.off_roof_santaf)
+  parts.push(`${dict.off_color_prefix} ${colorDescription(offer, dict)}`)
   return parts.join(' · ')
 }
 
-function collectLineRows(offer: Offer): LineRow[] {
+function collectLineRows(offer: Offer, dict: PdfDict): LineRow[] {
   const rows: LineRow[] = []
   const area = offer.area > 0 ? offer.area : 1
   const qp = offer.quickProduct ?? offer.quickOfferExtra?.quickProduct ?? 'pergola'
@@ -99,20 +109,20 @@ function collectLineRows(offer: Offer): LineRow[] {
     )
     if (lineTotal > 0 && sqm > 0 && up > 0) {
       const glazingLabels: Record<string, string> = {
-        aluminum_glass: 'אלומיניום + זכוכית',
-        wet_glazing: 'זיגוג רטוב',
-        dry_glazing: 'זיגוג יבש',
+        aluminum_glass: dict.off_gl_al_glass,
+        wet_glazing: dict.off_gl_wet,
+        dry_glazing: dict.off_gl_dry,
       }
       const locLabels: Record<string, string> = {
-        balcony: 'מרפסת',
-        stairs: 'מדרגות',
-        roof: 'גג',
-        yard: 'חצר',
-        other: 'אחר',
+        balcony: dict.off_loc_balcony,
+        stairs: dict.off_loc_stairs,
+        roof: dict.off_loc_roof,
+        yard: dict.off_loc_yard,
+        other: dict.off_loc_other,
       }
       rows.push({
-        description: `מעקות · ${escapeHtml(qr.profileType)} · ${glazingLabels[qr.glazingSystem] ?? qr.glazingSystem} · מיקום: ${locLabels[qr.locationType] ?? qr.locationType} · צבע: ${escapeHtml(qr.color)}`,
-        unitLabel: 'מ"ר',
+        description: `${dict.off_rail_prefix} ${escapeHtml(qr.profileType)} · ${glazingLabels[qr.glazingSystem] ?? qr.glazingSystem} · ${dict.off_rail_loc}: ${locLabels[qr.locationType] ?? qr.locationType} · ${dict.off_color_prefix} ${escapeHtml(qr.color)}`,
+        unitLabel: dict.off_unit_sqm,
         quantity: Math.round(sqm * 1000) / 1000,
         unitPrice: Math.round(up * 100) / 100,
         lineTotal,
@@ -130,14 +140,14 @@ function collectLineRows(offer: Offer): LineRow[] {
       ) || 0,
     )
     const fenceLabels: Record<string, string> = {
-      classic: 'גדר קלאסית',
-      hitech: 'גדר הייטק',
-      hitech_angular: 'גדר הייטק זוויתית',
+      classic: dict.off_fence_classic,
+      hitech: dict.off_fence_hitech,
+      hitech_angular: dict.off_fence_hitech_ang,
     }
     if (lineTotal > 0 && sqm > 0 && up > 0) {
       rows.push({
-        description: `גדר · ${fenceLabels[qf.fenceVariant] ?? qf.fenceVariant} · צבע: ${escapeHtml(qf.color)}`,
-        unitLabel: 'מ"ר',
+        description: `${dict.off_fence_prefix} ${fenceLabels[qf.fenceVariant] ?? qf.fenceVariant} · ${dict.off_color_prefix} ${escapeHtml(qf.color)}`,
+        unitLabel: dict.off_unit_sqm,
         quantity: Math.round(sqm * 1000) / 1000,
         unitPrice: Math.round(up * 100) / 100,
         lineTotal,
@@ -152,8 +162,8 @@ function collectLineRows(offer: Offer): LineRow[] {
         const pgArea = calculatePergolaArea(pg.shape)
         if (pgArea <= 0 || pg.pricePerSqm <= 0) continue
         rows.push({
-          description: buildPergolaLineName(offer, pg.pergolaType),
-          unitLabel: 'מ"ר',
+          description: buildPergolaLineName(offer, pg.pergolaType, dict),
+          unitLabel: dict.off_unit_sqm,
           quantity: Math.round(pgArea * 100) / 100,
           unitPrice: pg.pricePerSqm,
           lineTotal: Math.round(pgArea * pg.pricePerSqm * 100) / 100,
@@ -162,8 +172,8 @@ function collectLineRows(offer: Offer): LineRow[] {
     } else if (offer.pergolaTotal != null && offer.pergolaTotal > 0) {
       const up = offer.pergolaTotal / area
       rows.push({
-        description: buildPergolaLineName(offer, null),
-        unitLabel: 'מ"ר',
+        description: buildPergolaLineName(offer, null, dict),
+        unitLabel: dict.off_unit_sqm,
         quantity: Math.round(area * 100) / 100,
         unitPrice: Math.round(up * 100) / 100,
         lineTotal: offer.pergolaTotal,
@@ -174,8 +184,8 @@ function collectLineRows(offer: Offer): LineRow[] {
   if (offer.santaf?.enabled && offer.santafTotal > 0) {
     const up = offer.santafTotal / area
     rows.push({
-      description: offer.santaf.withStructure ? 'סנטף BH כולל קונסטרוקציה' : 'סנטף BH',
-      unitLabel: 'מ"ר',
+      description: offer.santaf.withStructure ? dict.off_santaf_with_struct : dict.off_santaf_bh,
+      unitLabel: dict.off_unit_sqm,
       quantity: Math.round(area * 100) / 100,
       unitPrice: Math.round(up * 100) / 100,
       lineTotal: offer.santafTotal,
@@ -189,11 +199,11 @@ function collectLineRows(offer: Offer): LineRow[] {
     rows.push({
       description:
         offer.zipScreen?.type === 'electric'
-          ? 'ZIP Screen חשמלי'
+          ? dict.off_zip_electric
           : offer.zipScreen?.type === 'manual'
-            ? 'ZIP Screen ידני'
-            : 'ZIP Screen',
-      unitLabel: zm != null && zm > 0 ? 'ר"מ' : 'מ"ר',
+            ? dict.off_zip_manual
+            : dict.off_zip_screen,
+      unitLabel: zm != null && zm > 0 ? dict.off_unit_rm : dict.off_unit_sqm,
       quantity: Math.round(qty * 100) / 100,
       unitPrice: Math.round(up * 100) / 100,
       lineTotal: offer.zipScreenTotal,
@@ -205,8 +215,8 @@ function collectLineRows(offer: Offer): LineRow[] {
     const ppm = offer.lighting?.pricePerMeter ?? 200
     const qty = rm != null && rm > 0 ? rm : offer.lightingTotal / ppm
     rows.push({
-      description: 'תאורת LED אינטגרלית',
-      unitLabel: 'ר"מ',
+      description: dict.off_led_light,
+      unitLabel: dict.off_unit_rm,
       quantity: Math.round(qty * 100) / 100,
       unitPrice: ppm,
       lineTotal: offer.lightingTotal,
@@ -218,8 +228,8 @@ function collectLineRows(offer: Offer): LineRow[] {
     const ppm = offer.drainage?.pricePerMeter ?? 500
     const qty = rm != null && rm > 0 ? rm : offer.drainageTotal / ppm
     rows.push({
-      description: 'ניקוז / מרזבים',
-      unitLabel: 'ר"מ',
+      description: dict.off_drainage,
+      unitLabel: dict.off_unit_rm,
       quantity: Math.round(qty * 100) / 100,
       unitPrice: ppm,
       lineTotal: offer.drainageTotal,
@@ -228,27 +238,27 @@ function collectLineRows(offer: Offer): LineRow[] {
 
   if (offer.winterClosure?.enabled && offer.winterClosure.items?.length) {
     const typeNames: Record<string, string> = {
-      fixedGlass: 'זכוכית קבועה',
-      windows7000: 'חלונות 7000',
-      windows9000: 'חלונות 9000',
-      slidingShowcase7000: 'ויטרינה הזזה 7000',
-      slidingShowcase9000: 'ויטרינה הזזה 9000',
-      sliderGlass: 'זכוכית סליידר',
-      foldingGlass: 'זכוכית מתקפלת',
+      fixedGlass: dict.off_wc_fixed,
+      windows7000: dict.off_wc_w7000,
+      windows9000: dict.off_wc_w9000,
+      slidingShowcase7000: dict.off_wc_slide7000,
+      slidingShowcase9000: dict.off_wc_slide9000,
+      sliderGlass: dict.off_wc_slider,
+      foldingGlass: dict.off_wc_folding,
     }
     const glassTypeNames: Record<string, string> = {
-      tempered: 'מחוסם',
-      triplex: 'טריפלקס',
-      insulated: 'מבודד',
+      tempered: dict.off_glass_tempered,
+      triplex: dict.off_glass_triplex,
+      insulated: dict.off_glass_insulated,
     }
     const glassTypeSuffix =
       offer.winterClosure.glassType ? ` · ${glassTypeNames[offer.winterClosure.glassType] ?? offer.winterClosure.glassType}` : ''
     for (const item of offer.winterClosure.items) {
       const name = typeNames[item.type] ?? item.type
-      const note = item.notes ? ` (${item.notes})` : ''
+      const note = item.notes ? ` (${escapeHtml(item.notes)})` : ''
       rows.push({
-        description: `סגירת חורף — ${name}${glassTypeSuffix}${note}`,
-        unitLabel: 'מ"ר',
+        description: `${dict.off_winter_prefix} ${name}${glassTypeSuffix}${note}`,
+        unitLabel: dict.off_unit_sqm,
         quantity: Math.round(item.area * 100) / 100,
         unitPrice: item.pricePerSqm,
         lineTotal: item.area * item.pricePerSqm,
@@ -259,116 +269,122 @@ function collectLineRows(offer: Offer): LineRow[] {
   return rows
 }
 
-function formatSinglePergolaDimensionsHtml(pergola: Offer['pergola'], index?: number): string {
+function formatSinglePergolaDimensionsHtml(pergola: Offer['pergola'], dict: PdfDict, index?: number): string {
   if (!pergola) return ''
   const typeLabel = pergola.pergolaType && pergola.pergolaType in PERGOLA_TYPE_NAMES
     ? PERGOLA_TYPE_NAMES[pergola.pergolaType as keyof typeof PERGOLA_TYPE_NAMES]
     : null
-  const headingText = index !== undefined
-    ? `פרגולה ${index + 1}${typeLabel ? ` — ${typeLabel}` : ''}`
-    : typeLabel ?? null
+  const headingText =
+    index !== undefined
+      ? `${fillTpl(dict.off_pergola_n, { n: index + 1 })}${typeLabel ? ` — ${typeLabel}` : ''}`
+      : (typeLabel ?? null)
   const prefix = headingText !== null
     ? `<tr><td colspan="2" class="tech-h">${escapeHtml(headingText)}</td></tr>`
     : ''
+  const m = dict.off_dim_m
+  const dash = dict.off_color_dash
   const shape = pergola.shape
   if (!shape) {
     return (
       prefix +
-      `<tr><td>רוחב × אורך</td><td>${pergola.width ?? '—'} × ${pergola.length ?? '—'} מ׳</td></tr>`
+      `<tr><td>${dict.off_dim_w_l}</td><td>${pergola.width ?? dash} × ${pergola.length ?? dash} ${m}</td></tr>`
     )
   }
   switch (shape.type) {
     case 'rectangle':
       return (
         prefix +
-        `<tr><td>צורה</td><td>מלבן</td></tr>
-         <tr><td>רוחב × אורך</td><td>${shape.width} × ${shape.length} מ׳</td></tr>`
+        `<tr><td>${dict.off_shape}</td><td>${dict.off_shape_rect}</td></tr>
+         <tr><td>${dict.off_dim_w_l}</td><td>${shape.width} × ${shape.length} ${m}</td></tr>`
       )
     case 'L':
       return (
         prefix +
-        `<tr><td>צורה</td><td>L</td></tr>
-         <tr><td>רגל 1</td><td>${shape.leg1.width} × ${shape.leg1.length} מ׳</td></tr>
-         <tr><td>רגל 2</td><td>${shape.leg2.width} × ${shape.leg2.length} מ׳</td></tr>`
+        `<tr><td>${dict.off_shape}</td><td>${dict.off_shape_l}</td></tr>
+         <tr><td>${dict.off_leg1}</td><td>${shape.leg1.width} × ${shape.leg1.length} ${m}</td></tr>
+         <tr><td>${dict.off_leg2}</td><td>${shape.leg2.width} × ${shape.leg2.length} ${m}</td></tr>`
       )
     case 'X':
       return (
         prefix +
-        `<tr><td>צורה</td><td>X</td></tr>
-         <tr><td>מרכז</td><td>${shape.center.width} × ${shape.center.length} מ׳</td></tr>
+        `<tr><td>${dict.off_shape}</td><td>${dict.off_shape_x}</td></tr>
+         <tr><td>${dict.off_center}</td><td>${shape.center.width} × ${shape.center.length} ${m}</td></tr>
          ${shape.arms
            .map(
              (a, i) =>
-               `<tr><td>זרוע ${i + 1}</td><td>${escapeHtml(a.direction)} — ${a.width} × ${a.length} מ׳</td></tr>`,
+               `<tr><td>${fillTpl(dict.off_arm, { n: i + 1 })}</td><td>${escapeHtml(a.direction)} — ${a.width} × ${a.length} ${m}</td></tr>`,
            )
            .join('')}`
       )
     case 'U':
       return (
         prefix +
-        `<tr><td>צורה</td><td>U</td></tr>
-         <tr><td>בסיס</td><td>${shape.base.width} × ${shape.base.length} מ׳</td></tr>
-         <tr><td>רגל שמאל</td><td>${shape.leftLeg.width} × ${shape.leftLeg.length} מ׳</td></tr>
-         <tr><td>רגל ימין</td><td>${shape.rightLeg.width} × ${shape.rightLeg.length} מ׳</td></tr>`
+        `<tr><td>${dict.off_shape}</td><td>${dict.off_shape_u}</td></tr>
+         <tr><td>${dict.off_base}</td><td>${shape.base.width} × ${shape.base.length} ${m}</td></tr>
+         <tr><td>${dict.off_leg_left}</td><td>${shape.leftLeg.width} × ${shape.leftLeg.length} ${m}</td></tr>
+         <tr><td>${dict.off_leg_right}</td><td>${shape.rightLeg.width} × ${shape.rightLeg.length} ${m}</td></tr>`
       )
     default:
       return prefix
   }
 }
 
-function formatAllPergolasTechnicalHtml(offer: Offer): string {
+function formatAllPergolasTechnicalHtml(offer: Offer, dict: PdfDict): string {
   const pk = pdfPrimaryProductKind(offer)
   const qx = offer.quickOfferExtra
+  const dash = dict.off_color_dash
 
   if (pk === 'railings' && qx?.quickRailings) {
     const qr = qx.quickRailings
     const sqm = quickOfferRailingsFenceAreaSqm(qr.metersTotal, qr.heightCm)
     const glazingLabels: Record<string, string> = {
-      aluminum_glass: 'אלומיניום + זכוכית',
-      wet_glazing: 'זיגוג רטוב',
-      dry_glazing: 'זיגוג יבש',
+      aluminum_glass: dict.off_gl_al_glass,
+      wet_glazing: dict.off_gl_wet,
+      dry_glazing: dict.off_gl_dry,
     }
     const locLabels: Record<string, string> = {
-      balcony: 'מרפסת',
-      stairs: 'מדרגות',
-      roof: 'גג',
-      yard: 'חצר',
-      other: 'אחר',
+      balcony: dict.off_loc_balcony,
+      stairs: dict.off_loc_stairs,
+      roof: dict.off_loc_roof,
+      yard: dict.off_loc_yard,
+      other: dict.off_loc_other,
     }
     return `
-    <tr><td colspan="2" class="tech-h">מעקות — מפרט</td></tr>
-    <tr><td>אורך</td><td>${escapeHtml(String(qr.metersTotal))} מ׳</td></tr>
-    <tr><td>גובה</td><td>${qr.heightCm != null ? escapeHtml(String(qr.heightCm)) : '—'} ס״מ</td></tr>
-    <tr><td>שטח משוער</td><td>${sqm.toFixed(2)} מ״ר</td></tr>
-    <tr><td>פרופיל</td><td>${escapeHtml(qr.profileType || '—')}</td></tr>
-    <tr><td>צבע</td><td>${escapeHtml(qr.color || '—')}</td></tr>
-    <tr><td>מיקום</td><td>${escapeHtml(locLabels[qr.locationType] ?? qr.locationType)}</td></tr>
-    <tr><td>זיגוג</td><td>${escapeHtml(glazingLabels[qr.glazingSystem] ?? qr.glazingSystem)}</td></tr>
-    ${qr.glassType ? `<tr><td>פירוט זכוכית</td><td>${escapeHtml(qr.glassType)}</td></tr>` : ''}
-    ${qr.notes ? `<tr><td>הערות</td><td>${escapeHtml(qr.notes)}</td></tr>` : ''}`
+    <tr><td colspan="2" class="tech-h">${dict.off_rail_spec_title}</td></tr>
+    <tr><td>${dict.off_len}</td><td>${escapeHtml(String(qr.metersTotal))} ${dict.off_dim_m}</td></tr>
+    <tr><td>${dict.off_height}</td><td>${qr.heightCm != null ? escapeHtml(String(qr.heightCm)) : dash} ${dict.off_cm}</td></tr>
+    <tr><td>${dict.off_est_area}</td><td>${sqm.toFixed(2)} ${dict.off_unit_sqm_dot}</td></tr>
+    <tr><td>${dict.off_profile}</td><td>${escapeHtml(qr.profileType || dash)}</td></tr>
+    <tr><td>${dict.off_color}</td><td>${escapeHtml(qr.color || dash)}</td></tr>
+    <tr><td>${dict.off_location}</td><td>${escapeHtml(locLabels[qr.locationType] ?? qr.locationType)}</td></tr>
+    <tr><td>${dict.off_glazing}</td><td>${escapeHtml(glazingLabels[qr.glazingSystem] ?? qr.glazingSystem)}</td></tr>
+    ${qr.glassType ? `<tr><td>${dict.off_glass_detail}</td><td>${escapeHtml(qr.glassType)}</td></tr>` : ''}
+    ${qr.notes ? `<tr><td>${dict.off_notes}</td><td>${escapeHtml(qr.notes)}</td></tr>` : ''}`
   }
 
   if (pk === 'fence' && qx?.quickFence) {
     const qf = qx.quickFence
     const sqm = quickOfferRailingsFenceAreaSqm(qf.metersTotal, qf.heightCm)
     const fenceLabels: Record<string, string> = {
-      classic: 'קלאסי',
-      hitech: 'הייטק',
-      hitech_angular: 'הייטק זוויתי',
+      classic: dict.off_fence_short_classic,
+      hitech: dict.off_fence_short_hitech,
+      hitech_angular: dict.off_fence_short_hitech_ang,
     }
     return `
-    <tr><td colspan="2" class="tech-h">גדר — מפרט</td></tr>
-    <tr><td>אורך</td><td>${escapeHtml(String(qf.metersTotal))} מ׳</td></tr>
-    <tr><td>גובה</td><td>${qf.heightCm != null ? escapeHtml(String(qf.heightCm)) : '—'} ס״מ</td></tr>
-    <tr><td>שטח משוער</td><td>${sqm.toFixed(2)} מ״ר</td></tr>
-    <tr><td>סוג גדר</td><td>${escapeHtml(fenceLabels[qf.fenceVariant] ?? qf.fenceVariant)}</td></tr>
-    <tr><td>צבע</td><td>${escapeHtml(qf.color || '—')}</td></tr>
-    ${qf.notes ? `<tr><td>הערות</td><td>${escapeHtml(qf.notes)}</td></tr>` : ''}`
+    <tr><td colspan="2" class="tech-h">${dict.off_fence_spec_title}</td></tr>
+    <tr><td>${dict.off_len}</td><td>${escapeHtml(String(qf.metersTotal))} ${dict.off_dim_m}</td></tr>
+    <tr><td>${dict.off_height}</td><td>${qf.heightCm != null ? escapeHtml(String(qf.heightCm)) : dash} ${dict.off_cm}</td></tr>
+    <tr><td>${dict.off_est_area}</td><td>${sqm.toFixed(2)} ${dict.off_unit_sqm_dot}</td></tr>
+    <tr><td>${dict.off_fence_type}</td><td>${escapeHtml(fenceLabels[qf.fenceVariant] ?? qf.fenceVariant)}</td></tr>
+    <tr><td>${dict.off_color}</td><td>${escapeHtml(qf.color || dash)}</td></tr>
+    ${qf.notes ? `<tr><td>${dict.off_notes}</td><td>${escapeHtml(qf.notes)}</td></tr>` : ''}`
   }
 
   const pergolas = offer.pergolas || (offer.pergola ? [offer.pergola] : [])
-  if (pergolas.length === 0) return '<tr><td colspan="2">ללא פרגולה בפריט</td></tr>'
-  return pergolas.map((p, i) => formatSinglePergolaDimensionsHtml(p, pergolas.length > 1 ? i : undefined)).join('')
+  if (pergolas.length === 0) return `<tr><td colspan="2">${dict.off_no_pergola_row}</td></tr>`
+  return pergolas
+    .map((p, i) => formatSinglePergolaDimensionsHtml(p, dict, pergolas.length > 1 ? i : undefined))
+    .join('')
 }
 
 function customer3dViewerHref(meta: Offer['configuratorMeta']): string | null {
@@ -385,8 +401,8 @@ function hasRenderableSignatureImage(sig: string | null | undefined): boolean {
   )
 }
 
-/** חתימת לקוח: embedded digital signature when approved on the public approve page. */
-function customerSignatureSectionHtml(offer: Offer, offerNo: string, docDate: string): string {
+/** Customer signature: embedded digital signature when approved on the public approve page. */
+function customerSignatureSectionHtml(offer: Offer, offerNo: string, docDate: string, dict: PdfDict): string {
   const a = offer.approval
   const sig = a?.signatureImage
   const digital =
@@ -404,29 +420,29 @@ function customerSignatureSectionHtml(offer: Offer, offerNo: string, docDate: st
 
     return `
   <div class="sign sign--digital">
-    <div class="title">חתימת לקוח — חתימה דיגיטלית</div>
-    <div class="sign-meta"><strong>שם החותם/ת:</strong> ${name}${
-      phone !== '' ? ` · <strong>טל׳:</strong> ${phone}` : ''
+    <div class="title">${dict.off_sig_digital_title}</div>
+    <div class="sign-meta"><strong>${dict.off_sig_signer}:</strong> ${name}${
+      phone !== '' ? ` · <strong>${dict.off_sig_phone}:</strong> ${phone}` : ''
     }</div>
-    <div class="sign-meta"><strong>תאריך אישור:</strong> ${escapeHtml(approvedDate)}</div>
+    <div class="sign-meta"><strong>${dict.off_sig_approved_date}:</strong> ${escapeHtml(approvedDate)}</div>
     <div class="sign-img-wrap">
       <img src="${src}" alt="" class="sign-img" />
     </div>
-    <div class="hint">אני מאשר/ת את תנאי ההצעה · חתימה אלקטרונית נרשמה במערכת · הצעה מס׳ ${escapeHtml(offerNo)}</div>
+    <div class="hint">${escapeHtml(fillTpl(dict.off_sig_digital_hint, { no: offerNo }))}</div>
   </div>`
   }
 
   return `
   <div class="sign">
-    <div class="title">חתימת לקוח</div>
+    <div class="title">${dict.off_sig_title}</div>
     <div class="hint">
-      לאישור דיגיטלי: פתחו את קישור ההצעה שנשלח אליכם, חתמו במסך ושמרו — לאחר מכן הורידו מחדש את קובץ ה־PDF לקבלת העתק עם החתימה.
+      ${dict.off_sig_hint_digital}
     </div>
     <div class="hint" style="margin-top:10px;">
-      אישור ידני: אני מאשר/ת את תנאי ההצעה · תאריך: ___________
+      ${dict.off_sig_hint_manual}
     </div>
     <div class="hint" style="margin-top:16px;">
-      הצעת מחיר ${escapeHtml(offerNo)} · ${docDate}
+      ${escapeHtml(fillTpl(dict.off_sig_footer_line, { no: offerNo, date: docDate }))}
     </div>
   </div>`
 }
@@ -434,32 +450,32 @@ function customerSignatureSectionHtml(offer: Offer, offerNo: string, docDate: st
 /**
  * Renders a table of 3D configurator technical parameters (profiles, options) for the PDF.
  */
-function configuratorParamsTechHtml(offer: Offer): string {
+function configuratorParamsTechHtml(offer: Offer, dict: PdfDict): string {
   const p = offer.configuratorMeta?.params
   if (!p) return ''
 
   const rows: [string, string][] = []
 
-  rows.push(['רוחב', `${p.widthCm} ס"מ`])
-  rows.push(['עומק', `${p.depthCm} ס"מ`])
-  rows.push(['גובה', `${p.heightCm} ס"מ`])
+  rows.push([dict.off_cfg_width, `${p.widthCm} ${dict.off_cm}`])
+  rows.push([dict.off_cfg_depth, `${p.depthCm} ${dict.off_cm}`])
+  rows.push([dict.off_cfg_height, `${p.heightCm} ${dict.off_cm}`])
 
-  if (p.postProfileId) rows.push(['פרופיל עמוד', escapeHtml(p.postProfileId)])
-  if (p.beamProfileId) rows.push(['פרופיל קורה', escapeHtml(p.beamProfileId)])
-  if (p.lamellaProfileId) rows.push(['פרופיל למילה', escapeHtml(p.lamellaProfileId)])
+  if (p.postProfileId) rows.push([dict.off_post_profile, escapeHtml(p.postProfileId)])
+  if (p.beamProfileId) rows.push([dict.off_beam_profile, escapeHtml(p.beamProfileId)])
+  if (p.lamellaProfileId) rows.push([dict.off_lamella_profile, escapeHtml(p.lamellaProfileId)])
 
-  rows.push(['מרווח בין למילות', `${p.lamellaGapCm} ס"מ`])
-  if (p.lamellaAngleDeg !== 0) rows.push(['זווית למילה', `${p.lamellaAngleDeg}°`])
-  if (p.lamellaStanding) rows.push(['למילות בעמידה', 'כן'])
-  if (p.lamellaAlongWidth) rows.push(['למילות לאורך הרוחב', 'כן'])
-  if (p.beamLed) rows.push(['תאורת LED בקורות', 'כן'])
-  if (p.attachedToWall) rows.push(['מחובר לקיר', 'כן'])
+  rows.push([dict.off_lamella_gap, `${p.lamellaGapCm} ${dict.off_cm}`])
+  if (p.lamellaAngleDeg !== 0) rows.push([dict.off_lamella_angle, `${p.lamellaAngleDeg}°`])
+  if (p.lamellaStanding) rows.push([dict.off_lamella_standing, dict.off_yes])
+  if (p.lamellaAlongWidth) rows.push([dict.off_lamella_along_width, dict.off_yes])
+  if (p.beamLed) rows.push([dict.off_beam_led, dict.off_yes])
+  if (p.attachedToWall) rows.push([dict.off_attached_wall, dict.off_yes])
 
   if (rows.length === 0) return ''
 
   const trs = rows.map(([label, val]) => `<tr><td>${label}</td><td>${val}</td></tr>`).join('\n    ')
   return `
-  <h3 class="tech-subtitle">פרמטרים מהקונפיגורטור התלת־ממדי</h3>
+  <h3 class="tech-subtitle">${dict.off_cfg_params_title}</h3>
   <table class="tech">
     ${trs}
   </table>`
@@ -470,7 +486,7 @@ function configuratorParamsTechHtml(offer: Offer): string {
  * @param previewImageDataUrl - Optional pre-fetched base64 data URL for the 3D preview image.
  *   Pass this to avoid Puppeteer being unable to load external URLs during PDF generation.
  */
-function configuratorTechnicalAppendixHtml(offer: Offer, previewImageDataUrl?: string | null): string {
+function configuratorTechnicalAppendixHtml(offer: Offer, dict: PdfDict, previewImageDataUrl?: string | null): string {
   const pk = pdfPrimaryProductKind(offer)
   const meta = offer.configuratorMeta
   let img: string | null = null
@@ -489,38 +505,36 @@ function configuratorTechnicalAppendixHtml(offer: Offer, previewImageDataUrl?: s
   const pergolas = offer.pergolas || (offer.pergola ? [offer.pergola] : [])
   const pergolaHeading =
     pergolas.length === 0
-      ? 'פרגולה'
+      ? dict.off_viz_pergola
       : pergolas.length === 1
-        ? '1 · פרגולה'
-        : `${pergolas.length} · פרגולות`
+        ? dict.off_viz_one_pergola
+        : fillTpl(dict.off_viz_n_pergolas, { n: pergolas.length })
 
   let body = ''
   if (img !== null) {
-    body += `<div class="viz-img-wrap"><img src="${escapeAttr(img)}" alt="הדמיית פרגולה" /></div>`
+    body += `<div class="viz-img-wrap"><img src="${escapeAttr(img)}" alt="${escapeAttr(dict.off_viz_alt)}" /></div>`
   }
   if (link !== null) {
-    body += `<div class="viz-link"><a href="${escapeHtml(link)}">פתיחת תצוגה תלת־ממדית אינטראקטיבית</a></div>`
-    body +=
-      '<div class="viz-note">לצפייה והסתכלות בלבד · ניתן לסובב את המודל · התאמות נעשות דרך נציג מכירות בלבד</div>'
+    body += `<div class="viz-link"><a href="${escapeHtml(link)}">${dict.off_viz_open_3d}</a></div>`
+    body += `<div class="viz-note">${dict.off_viz_note}</div>`
   }
 
   let schematicInner = ''
   if (hasPlan) {
     schematicInner += `<div class="viz-plan-svg-wrap">${planSvg}</div>`
-    schematicInner +=
-      '<p class="viz-schematic-note">תרשים מבט על — מידות לפי שורת הפרגולה בהצעה (צורה מלבנית).</p>'
+    schematicInner += `<p class="viz-schematic-note">${dict.off_plan_note}</p>`
   }
   if (img !== null) {
-    schematicInner += `<p class="viz-schematic-note">התמונה בהדמיה למעלה נלקחה מתצוגת התכנון התלת־ממדי ומשקפת את הגימור כפי שהוגדר בהצעה.</p>`
+    schematicInner += `<p class="viz-schematic-note">${dict.off_viz_from_3d}</p>`
   }
   if (link !== null) {
-    schematicInner += `<p class="viz-schematic-note">לסיבוב מלא של המודל ולצפייה מזוויות נוספות — השתמשו בקישור בבלוק &quot;הדמיה מוצר&quot;.</p>`
+    schematicInner += `<p class="viz-schematic-note">${dict.off_viz_rotate_hint}</p>`
   }
 
   const vizBlock = hasViz
     ? `
   <div class="viz-section">
-    <div class="viz-section-title">הדמיה מוצר ותצוגה תלת־ממדית</div>
+    <div class="viz-section-title">${dict.off_viz_section_title}</div>
     <div class="viz-section-body">${body}</div>
   </div>`
     : ''
@@ -529,58 +543,64 @@ function configuratorTechnicalAppendixHtml(offer: Offer, previewImageDataUrl?: s
   <p class="viz-pergola-line">${escapeHtml(pergolaHeading)}</p>
   ${vizBlock}
   <div class="viz-section viz-schematic">
-    <div class="viz-section-title">תרשים / תצוגה הנדסית</div>
+    <div class="viz-section-title">${dict.off_eng_section_title}</div>
     <div class="viz-section-body viz-schematic-body">
       ${schematicInner}
     </div>
   </div>`
 }
 
-function winterClosureTechRows(offer: Offer): string {
+function winterClosureTechRows(offer: Offer, dict: PdfDict): string {
   const wc = offer.winterClosure
   if (!wc?.enabled || !wc.items?.length) return ''
 
   const typeNames: Record<string, string> = {
-    fixedGlass: 'זכוכית קבועה',
-    windows7000: 'חלונות 7000',
-    windows9000: 'חלונות 9000',
-    slidingShowcase7000: 'ויטרינה הזזה 7000',
-    slidingShowcase9000: 'ויטרינה הזזה 9000',
-    sliderGlass: 'זכוכית סליידר',
-    foldingGlass: 'זכוכית מתקפלת',
+    fixedGlass: dict.off_wc_fixed,
+    windows7000: dict.off_wc_w7000,
+    windows9000: dict.off_wc_w9000,
+    slidingShowcase7000: dict.off_wc_slide7000,
+    slidingShowcase9000: dict.off_wc_slide9000,
+    sliderGlass: dict.off_wc_slider,
+    foldingGlass: dict.off_wc_folding,
   }
   const glassTypeNames: Record<string, string> = {
-    tempered: 'מחוסם',
-    triplex: 'טריפלקס',
-    insulated: 'מבודד',
+    tempered: dict.off_glass_tempered,
+    triplex: dict.off_glass_triplex,
+    insulated: dict.off_glass_insulated,
   }
 
   const glassTypeLabel = wc.glassType ? glassTypeNames[wc.glassType] ?? wc.glassType : null
 
-  let rows = `<tr><td colspan="2" class="tech-h">סגירת חורף (זכוכית)</td></tr>`
+  let rows = `<tr><td colspan="2" class="tech-h">${dict.off_wc_title}</td></tr>`
   if (glassTypeLabel) {
-    rows += `<tr><td>סוג זכוכית</td><td>${escapeHtml(glassTypeLabel)}</td></tr>`
+    rows += `<tr><td>${dict.off_wc_glass_type}</td><td>${escapeHtml(glassTypeLabel)}</td></tr>`
   }
   for (const item of wc.items) {
     const name = typeNames[item.type] ?? item.type
-    const note = item.notes ? ` · ${item.notes}` : ''
-    rows += `<tr><td>${escapeHtml(name)}${escapeHtml(note)}</td><td>${(Math.round(item.area * 100) / 100).toFixed(2)} מ״ר</td></tr>`
+    const note = item.notes ? ` · ${escapeHtml(item.notes)}` : ''
+    rows += `<tr><td>${escapeHtml(name)}${note}</td><td>${(Math.round(item.area * 100) / 100).toFixed(2)} ${dict.off_unit_sqm_dot}</td></tr>`
   }
   return rows
 }
 
 /**
- * Render HTML template for offer (הצעת מחיר) — layout aligned with classic Israeli quote PDFs:
- * header + offer no. + validity, לכבוד, priced line table, VAT summary, signature, technical appendix page.
+ * Render HTML for the offer PDF — header, line items, VAT, signature, technical appendix.
  *
- * @param omitSignatureSection - when true the signature block is replaced with an empty placeholder
- *   (used by the digital approval page which renders its own interactive signature pad below the iframe).
+ * @param omitSignatureSection - when true the signature block is omitted (public approve page).
+ * @param locale - raw company/tenant locale; resolved via `resolvePdfLocale`, default Hebrew.
  */
 export function renderOfferHtml(
   offer: Offer,
   previewImageDataUrl?: string | null,
   omitSignatureSection = false,
+  locale?: string,
 ): string {
+  const resolved = resolvePdfLocale(locale)
+  const dict = pdfT[resolved]
+  const dir = pdfHtmlDir(resolved)
+  const bcp47 = pdfBcp47Locale(resolved)
+  const dash = dict.off_color_dash
+
   const fontsCss = getHebrewFontsCss()
   const logoDataUri = getLogoDataUri()
   const notesText = offer.options?.notes?.trim() || ''
@@ -589,10 +609,10 @@ export function renderOfferHtml(
   const offerNo = formatOfferNumber(offer)
   const docDate = formatDateDdMmYyyy(offer.createdAt)
   const validUntil = formatDateDdMmYyyy(addDaysIso(offer.createdAt, 30))
-  const lineRows = collectLineRows(offer)
+  const lineRows = collectLineRows(offer, dict)
   const pdfPk = pdfPrimaryProductKind(offer)
   const areaRowLabel =
-    pdfPk === 'railings' || pdfPk === 'fence' ? 'שטח (מ״ר, אורך × גובה)' : 'שטח פרגולה (חישוב)'
+    pdfPk === 'railings' || pdfPk === 'fence' ? dict.off_area_rail_fence : dict.off_area_pergola_calc
 
   const linesHtml =
     lineRows.length > 0
@@ -602,23 +622,23 @@ export function renderOfferHtml(
     <tr>
       <td class="col-desc">${escapeHtml(r.description)}</td>
       <td class="col-unit">${escapeHtml(r.unitLabel)}</td>
-      <td class="col-num">${r.quantity.toLocaleString('he-IL', { maximumFractionDigits: 2 })}</td>
+      <td class="col-num">${r.quantity.toLocaleString(bcp47, { maximumFractionDigits: 2 })}</td>
       <td class="col-num">${formatPricePdf(r.unitPrice)}</td>
       <td class="col-num">${formatPricePdf(r.lineTotal)}</td>
     </tr>`,
           )
           .join('')
-      : `<tr><td colspan="5" class="col-desc">אין שורות מחיר — בדוק את ההצעה במערכת</td></tr>`
+      : `<tr><td colspan="5" class="col-desc">${dict.off_no_lines}</td></tr>`
 
   const discountRow =
     offer.discountAmount > 0
       ? `
     <tr class="row-section">
-      <td colspan="5">מוצרים נוספים</td>
+      <td colspan="5">${dict.off_extra_products}</td>
     </tr>
     <tr>
-      <td class="col-desc">הנחה${offer.discountPercent > 0 ? ` (${offer.discountPercent}%)` : ''}</td>
-      <td class="col-unit">יח׳</td>
+      <td class="col-desc">${dict.off_discount}${offer.discountPercent > 0 ? ` (${offer.discountPercent}%)` : ''}</td>
+      <td class="col-unit">${dict.off_unit_pc}</td>
       <td class="col-num">1</td>
       <td class="col-num">${formatPricePdf(-offer.discountAmount)}</td>
       <td class="col-num">${formatPricePdf(-offer.discountAmount)}</td>
@@ -626,19 +646,28 @@ export function renderOfferHtml(
       : ''
 
   const vatPct = offer.vatPercent ?? 18
+  const vatLineLabel = fillTpl(dict.off_vat_line, { p: String(vatPct) })
+  const roofCell =
+    offer.roof?.type === 'santaf'
+      ? dict.off_roof_cell_santaf
+      : offer.roof?.type === 'triplexGlass'
+        ? dict.off_roof_triplex
+        : dash
+  const warrantyCovers = (offer.warranty?.covers ?? []).join(', ')
+  const termsTail = `${fillTpl(dict.off_valid_30, { y: String(offer.warranty?.years ?? 7) })}${warrantyCovers ? `: ${warrantyCovers}` : ''}`
 
   return `
 <!DOCTYPE html>
-<html dir="rtl" lang="he">
+<html dir="${dir}" lang="${bcp47}">
 <head>
   <meta charset="UTF-8">
-  <title>הצעת מחיר ${escapeHtml(offerNo)}</title>
+  <title>${escapeHtml(fillTpl(dict.off_html_title, { no: offerNo }))}</title>
   <style>
     ${fontsCss}
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'Noto Sans Hebrew', 'Segoe UI', Tahoma, sans-serif;
-      direction: rtl;
+      direction: ${dir};
       color: #111;
       font-size: 11px;
       line-height: 1.45;
@@ -662,8 +691,8 @@ export function renderOfferHtml(
     .brand-text .name { font-size: 18px; font-weight: 700; }
     .brand-text .sub { font-size: 10px; color: #333; margin-top: 2px; }
     .meta {
-      text-align: left;
-      direction: rtl;
+      text-align: end;
+      direction: ${dir};
       font-size: 10px;
       min-width: 200px;
     }
@@ -691,7 +720,7 @@ export function renderOfferHtml(
       font-weight: 700;
       font-size: 10px;
     }
-    .col-desc { width: 38%; text-align: right; }
+    .col-desc { width: 38%; text-align: start; }
     .col-unit { width: 10%; text-align: center; }
     .col-num { width: 14%; text-align: left; direction: ltr; unicode-bidi: embed; }
     tr.row-section td {
@@ -701,7 +730,9 @@ export function renderOfferHtml(
     table.summary {
       width: 100%;
       max-width: 320px;
-      margin: 0 0 16px auto;
+      margin-block: 0 16px;
+      margin-inline-start: auto;
+      margin-inline-end: 0;
       border-collapse: collapse;
     }
     table.summary td {
@@ -861,40 +892,40 @@ export function renderOfferHtml(
       ${logoDataUri ? `<img class="logo" src="${logoDataUri}" alt="" />` : ''}
       <div class="brand-text">
         <div class="name">Pashkovsky Group</div>
-        <div class="sub">פתרונות אלומיניום · pergolas · מעקות · חיפוי</div>
-        <div class="sub">טל׳ 052-449-4848 · office@pashkovsky-group.com</div>
+        <div class="sub">${dict.off_brand_sub}</div>
+        <div class="sub">${dict.off_brand_phone_line}</div>
       </div>
     </div>
     <div class="meta">
-      <div>ח.פ / ע.מ: <strong>320807068</strong></div>
-      <div class="big">הצעת מחיר ${escapeHtml(offerNo)}</div>
-      <div><strong>תאריך:</strong> ${docDate}</div>
-      <div><strong>תוקף עד:</strong> ${validUntil}</div>
+      <div>${dict.off_vat_id}: <strong>320807068</strong></div>
+      <div class="big">${escapeHtml(fillTpl(dict.off_quote_big, { no: offerNo }))}</div>
+      <div><strong>${dict.off_date}:</strong> ${docDate}</div>
+      <div><strong>${dict.off_valid_until}:</strong> ${validUntil}</div>
     </div>
   </div>
 
   <div class="customer">
-    <div class="label">לכבוד</div>
+    <div class="label">${dict.off_to_customer}</div>
     <div class="name">${escapeHtml(offer.customerName)}</div>
     ${
       offer.customerPhone
-        ? `<div style="margin-top:4px;font-size:11px;">טל׳: ${escapeHtml(offer.customerPhone)}${
+        ? `<div style="margin-top:4px;font-size:11px;">${dict.off_phone_lbl}: ${escapeHtml(offer.customerPhone)}${
             offer.customerCity ? ` · ${escapeHtml(offer.customerCity)}` : ''
           }</div>`
         : ''
     }
   </div>
 
-  ${safeNotes ? `<div class="notes-box"><strong>הערות / תיאור:</strong><br/>${safeNotes}</div>` : ''}
+  ${safeNotes ? `<div class="notes-box"><strong>${dict.off_notes_title}:</strong><br/>${safeNotes}</div>` : ''}
 
   <table class="lines">
     <thead>
       <tr>
-        <th>תיאור / מוצר</th>
-        <th>מידה</th>
-        <th>כמות</th>
-        <th>מחיר</th>
-        <th>סה״כ</th>
+        <th>${dict.off_th_desc}</th>
+        <th>${dict.off_th_measure}</th>
+        <th>${dict.off_th_qty}</th>
+        <th>${dict.off_th_price}</th>
+        <th>${dict.off_th_total}</th>
       </tr>
     </thead>
     <tbody>
@@ -904,52 +935,52 @@ export function renderOfferHtml(
   </table>
 
   <table class="summary">
-    <tr><td>מע״מ לפני סה״כ</td><td>${formatPricePdf(offer.totalBeforeVat)}</td></tr>
-    <tr><td>מע״מ (${vatPct}%)</td><td>${formatPricePdf(offer.vatAmount)}</td></tr>
-    <tr><td>מע״מ כולל סה״כ</td><td>${formatPricePdf(offer.priceWithVat)}</td></tr>
+    <tr><td>${dict.off_vat_before}</td><td>${formatPricePdf(offer.totalBeforeVat)}</td></tr>
+    <tr><td>${escapeHtml(vatLineLabel)}</td><td>${formatPricePdf(offer.vatAmount)}</td></tr>
+    <tr><td>${dict.off_vat_incl}</td><td>${formatPricePdf(offer.priceWithVat)}</td></tr>
     ${
       offer.discountAmount > 0
-        ? `<tr><td>לאחר הנחה — לתשלום</td><td>${formatPricePdf(offer.finalPrice)}</td></tr>`
+        ? `<tr><td>${dict.off_after_discount}</td><td>${formatPricePdf(offer.finalPrice)}</td></tr>`
         : ''
     }
   </table>
 
-  ${omitSignatureSection ? '' : customerSignatureSectionHtml(offer, offerNo, docDate)}
+  ${omitSignatureSection ? '' : customerSignatureSectionHtml(offer, offerNo, docDate, dict)}
 
   <div class="page-foot">
-    <span>Pashkovsky Group · www.pashkovsky-group.com</span>
-    <span>עמ׳ 1 מתוך 2</span>
+    <span>${dict.off_foot_web}</span>
+    <span>${dict.off_page_1_of_2}</span>
   </div>
 
   <div class="page-break"></div>
 
-  <h2 class="tech-title">מפרט טכני</h2>
+  <h2 class="tech-title">${dict.off_tech_title}</h2>
   <table class="tech">
-    <tr><td>גימור / צבע</td><td>${escapeHtml(colorDescription(offer))}</td></tr>
-    <tr><td>גג</td><td>${offer.roof?.type === 'santaf' ? 'סנטף' : offer.roof?.type === 'triplexGlass' ? 'זכוכית טריפלקס' : '—'}</td></tr>
-    <tr><td>יחס הצללה</td><td>${offer.shadingRatio ? escapeHtml(offer.shadingRatio) : '—'}</td></tr>
-    <tr><td>סוג גימור</td><td>${offer.finishType ? escapeHtml(offer.finishType) : '—'} ${offer.finishValue ? `· ${escapeHtml(offer.finishValue)}` : ''}</td></tr>
-    <tr><td>${escapeHtml(areaRowLabel)}</td><td>${offer.area.toFixed(2)} מ״ר</td></tr>
-    ${winterClosureTechRows(offer)}
+    <tr><td>${dict.off_finish_color}</td><td>${escapeHtml(colorDescription(offer, dict))}</td></tr>
+    <tr><td>${dict.off_roof}</td><td>${escapeHtml(roofCell)}</td></tr>
+    <tr><td>${dict.off_shade_ratio}</td><td>${offer.shadingRatio ? escapeHtml(offer.shadingRatio) : dash}</td></tr>
+    <tr><td>${dict.off_finish_type}</td><td>${offer.finishType ? escapeHtml(offer.finishType) : dash} ${offer.finishValue ? `· ${escapeHtml(offer.finishValue)}` : ''}</td></tr>
+    <tr><td>${escapeHtml(areaRowLabel)}</td><td>${offer.area.toFixed(2)} ${dict.off_unit_sqm_dot}</td></tr>
+    ${winterClosureTechRows(offer, dict)}
   </table>
 
   <table class="tech">
-    ${formatAllPergolasTechnicalHtml(offer)}
+    ${formatAllPergolasTechnicalHtml(offer, dict)}
   </table>
 
-  ${pdfPk === 'pergola' ? configuratorParamsTechHtml(offer) : ''}
+  ${pdfPk === 'pergola' ? configuratorParamsTechHtml(offer, dict) : ''}
 
-  ${configuratorTechnicalAppendixHtml(offer, previewImageDataUrl)}
+  ${configuratorTechnicalAppendixHtml(offer, dict, previewImageDataUrl)}
 
   <div class="terms">
-    <strong>תנאים כלליים</strong>
-    ${escapeHtml(offer.paymentTerms?.text || '10% מקדמה וכל השאר בסיום התקנה בהעברה בנקאית')}
-    <br/>תוקף ההצעה 30 יום מתאריך ההנפקה · אחריות ${offer.warranty?.years ?? 7} שנים: ${(offer.warranty?.covers || []).join(', ')}
+    <strong>${dict.off_terms_title}</strong>
+    ${escapeHtml(offer.paymentTerms?.text || dict.off_pay_default)}
+    <br/>${escapeHtml(termsTail)}
   </div>
 
   <div class="page-foot">
-    <span>הצעת מחיר ${escapeHtml(offerNo)}</span>
-    <span>עמ׳ 2 מתוך 2</span>
+    <span>${escapeHtml(fillTpl(dict.off_quote_big, { no: offerNo }))}</span>
+    <span>${dict.off_page_2_of_2}</span>
   </div>
 </body>
 </html>
