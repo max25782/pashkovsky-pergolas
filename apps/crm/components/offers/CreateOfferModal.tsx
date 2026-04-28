@@ -13,6 +13,7 @@ import { PergolaShapeSelector } from './PergolaShapeSelector'
 import { calculatePergolaArea, validatePergolaShape } from '@/lib/calculations/pergola-area'
 import { authFetch } from '@/lib/api/auth-fetch'
 import type { Locale } from '@/lib/locales'
+import { useLanguage } from '@/lib/language-context'
 import { useToast } from '@/components/ui/toast'
 import { OfferConfiguratorEmbed } from '@/components/offers/OfferConfiguratorEmbed'
 
@@ -31,6 +32,7 @@ type PostCreateStep = 'form' | 'configurator'
 export function CreateOfferModal({ dealId, customerName, customerPhone, customerCity, isOpen, onClose, onCreated }: CreateOfferModalProps) {
   const params = useParams()
   const locale = (params?.locale as Locale) || 'he'
+  const { language: crmLanguage } = useLanguage()
   const toast = useToast()
   const tDeals = useTranslations('deals')
 
@@ -300,6 +302,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
         },
         body: JSON.stringify({
           text: currentNotes,
+          outputLanguage: crmLanguage,
           context: {
             customerName: customerName,
             pergolaType: 'אלומיניום',
@@ -323,7 +326,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
     } finally {
       setIsImprovingText(false)
     }
-  }, [draft.options.notes, customerName, calculation.finalPrice])
+  }, [draft.options.notes, customerName, calculation.finalPrice, crmLanguage])
 
   // Generate complete professional description automatically
   const generateCompleteDescription = useCallback(async () => {
@@ -375,6 +378,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
         },
         body: JSON.stringify({
           text: baseDescription,
+          outputLanguage: crmLanguage,
           context: {
             customerName: customerName,
             pergolaType: 'אלומיניום',
@@ -401,8 +405,8 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
     } finally {
       setIsGeneratingDescription(false)
     }
-  }, [draft, calculation, customerName, updateOptions])
-  
+  }, [draft, calculation, customerName, updateOptions, crmLanguage])
+
   const acceptAiSuggestion = useCallback(() => {
     if (aiSuggestion) {
       updateOptions({ notes: aiSuggestion })

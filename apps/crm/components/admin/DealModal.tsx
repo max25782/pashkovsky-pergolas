@@ -4,7 +4,7 @@ import dynamic from "next/dynamic"
 import type { Deal } from './deal-types'
 import { getStages } from './deal-types'
 import { SketchModal } from './SketchModal'
-import { FileImage, FileText } from 'lucide-react'
+import { FileImage, FileText, Loader2 } from 'lucide-react'
 import { useCRMTranslations } from './useCRMTranslations'
 import { useToast } from '@/components/ui/toast'
 import { WorkLogSection } from '../workers/WorkLogSection'
@@ -16,11 +16,20 @@ import { RailingsFormFields, type RailingsFormValue } from './RailingsFormFields
 import { FenceFormFields, type FenceFormValue } from './FenceFormFields'
 import { DealPaymentsWidget } from './DealPaymentsWidget'
 import { ContractorPaymentPlan } from './deals/templates/ContractorPaymentPlan'
+import {
+  deriveWorkTypeFromProductLines,
+  mergeProjectConfigProductLines,
+  normalizeProductLines,
+  resolveProductLinesForDealUi,
+  type DealProductLine,
+} from '@/lib/deals/deal-product-lines'
 import { authFetch } from '@/lib/api/auth-fetch'
 import { useLanguage } from '@/lib/language-context'
 import { FinanceBlock } from './deals/FinanceBlock'
 import { CollapsibleSection } from './deals/CollapsibleSection'
 import { DealQuickActions } from './deals/DealQuickActions'
+
+const PRODUCT_LINE_CHECKBOXES: DealProductLine[] = ['pergola', 'fence', 'railings', 'gates', 'facade']
 
 const OffersListLoading = () => {
   const t = useCRMTranslations()
@@ -75,7 +84,24 @@ export function DealModal({
   const [shiftsRefreshTrigger, setShiftsRefreshTrigger] = useState(0)
   const [openPaymentFormSignal, setOpenPaymentFormSignal] = useState(0)
   const [openWorkShiftSignal, setOpenWorkShiftSignal] = useState(0)
+  const [productLines, setProductLines] = useState<DealProductLine[]>(() =>
+    resolveProductLinesForDealUi(deal),
+  )
+  const [warrantyPdfLoading, setWarrantyPdfLoading] = useState(false)
   const { language } = useLanguage()
+
+  const derivedWorkType = deriveWorkTypeFromProductLines(productLines)
+
+  function productLineCheckboxLabel(line: DealProductLine): string {
+    if (line === 'pergola') return t.deals.workTypes.pergola
+    if (line === 'fence') return t.deals.workTypes.fence
+    if (line === 'railings') return t.deals.workTypes.railings
+    if (line === 'gates') return t.deals.workTypes.gates
+    return t.deals.workTypes.facade
+  }
+
+  const showPergolaDims = productLines.some((l) => l === 'pergola' || l === 'gates' || l === 'facade')
+  const showSketchButton = showPergolaDims
 
   function railingsGlazingFromRow(g: string | null | undefined): RailingsFormValue['glazing_system'] {
     return g === 'aluminum_glass' || g === 'wet_glazing' || g === 'dry_glazing' ? g : ''
@@ -116,7 +142,8 @@ export function DealModal({
     setLocalDeal(deal)
     const rd = deal.deal_railings_details
     const row = Array.isArray(rd) ? rd[0] : rd
-    if (deal.work_type === 'railings' && row) {
+    const railingsLine = resolveProductLinesForDealUi(deal).includes('railings')
+    if (railingsLine && row) {
       setRailingsForm({
         meters_total: row.meters_total ?? null,
         height_cm: row.height_cm ?? null,
@@ -127,7 +154,7 @@ export function DealModal({
         glass_type: row.glass_type ?? '',
         notes: row.notes ?? '',
       })
-    } else if (deal.work_type === 'railings') {
+    } else if (railingsLine) {
       setRailingsForm({
         meters_total: null,
         height_cm: null,
@@ -142,7 +169,8 @@ export function DealModal({
 
     const fd = deal.deal_fence_details
     const frow = Array.isArray(fd) ? fd[0] : fd
-    if (deal.work_type === 'fence' && frow) {
+    const fenceLine = resolveProductLinesForDealUi(deal).includes('fence')
+    if (fenceLine && frow) {
       const fv = frow.fence_variant
       setFenceForm({
         meters_total: frow.meters_total ?? null,
@@ -151,7 +179,7 @@ export function DealModal({
         color: frow.color ?? '',
         notes: frow.notes ?? '',
       })
-    } else if (deal.work_type === 'fence') {
+    } else if (fenceLine) {
       setFenceForm({
         meters_total: null,
         height_cm: null,
@@ -160,6 +188,8 @@ export function DealModal({
         notes: '',
       })
     }
+
+    setProductLines(resolveProductLinesForDealUi(deal))
   }, [deal])
 
   async function handleSave() {
@@ -213,14 +243,13 @@ export function DealModal({
       if (localDeal.laundry_model !== deal.laundry_model) updates.laundry_model = localDeal.laundry_model
       if (localDeal.laundry_distance !== deal.laundry_distance) updates.laundry_distance = localDeal.laundry_distance
       if (localDeal.laundry_lighting !== deal.laundry_lighting) updates.laundry_lighting = localDeal.laundry_lighting
-      if (localDeal.work_type !== deal.work_type) updates.work_type = localDeal.work_type
       if (localDeal.customer_type !== deal.customer_type) updates.customer_type = localDeal.customer_type
       if (localDeal.pricing_model !== deal.pricing_model) updates.pricing_model = localDeal.pricing_model
       if (JSON.stringify(localDeal.contractor_payment_profile) !== JSON.stringify(deal.contractor_payment_profile)) {
         updates.contractor_payment_profile = localDeal.contractor_payment_profile
       }
 
-      if (localDeal.work_type === 'railings' && railingsForm) {
+      if (productLines.includes('railings') && railingsForm) {
         updates.meters_total = railingsForm.meters_total ?? undefined
         updates.height_cm = railingsForm.height_cm ?? undefined
         updates.profile_type = railingsForm.profile_type || undefined
@@ -231,7 +260,7 @@ export function DealModal({
         updates.railings_notes = railingsForm.notes || undefined
       }
 
-      if (localDeal.work_type === 'railings') {
+      if (productLines.includes('railings')) {
         if (!railingsForm.meters_total || railingsForm.meters_total <= 0) {
           toast.error(`${t.deals.metersTotal} ${t.deals.required}`)
           return
@@ -250,7 +279,7 @@ export function DealModal({
         }
       }
 
-      if (localDeal.work_type === 'fence' && fenceForm) {
+      if (productLines.includes('fence') && fenceForm) {
         updates.fence_meters_total = fenceForm.meters_total ?? undefined
         updates.fence_height_cm = fenceForm.height_cm ?? undefined
         updates.fence_variant = fenceForm.fence_variant || undefined
@@ -258,7 +287,7 @@ export function DealModal({
         updates.fence_notes = fenceForm.notes || undefined
       }
 
-      if (localDeal.work_type === 'fence') {
+      if (productLines.includes('fence')) {
         if (!fenceForm.meters_total || fenceForm.meters_total <= 0) {
           toast.error(`${t.deals.metersTotal} ${t.deals.required}`)
           return
@@ -271,6 +300,19 @@ export function DealModal({
           toast.error(`${t.deals.color} ${t.deals.required}`)
           return
         }
+      }
+
+      const nextWt = deriveWorkTypeFromProductLines(productLines)
+      if (nextWt !== deal.work_type) {
+        updates.work_type = nextWt
+      }
+
+      const baselineProductLines = resolveProductLinesForDealUi(deal)
+      if (
+        JSON.stringify(normalizeProductLines(productLines)) !==
+        JSON.stringify(normalizeProductLines(baselineProductLines))
+      ) {
+        updates.project_config = mergeProjectConfigProductLines(deal.project_config, productLines) as Deal['project_config']
       }
 
       // Проверяем, что есть хотя бы одно поле для обновления
@@ -345,6 +387,45 @@ export function DealModal({
     }
   }
 
+  async function handleWarrantyPdfDownload() {
+    setWarrantyPdfLoading(true)
+    try {
+      const res = await authFetch(`/api/deals/${localDeal.id}/warranty`)
+      if (!res.ok) {
+        let message = `${res.status}`
+        try {
+          const j = (await res.json()) as { error?: string }
+          if (typeof j.error === 'string' && j.error) message = j.error
+        } catch {
+          /* ignore */
+        }
+        toast.error(message)
+        return
+      }
+      const blob = await res.blob()
+      if (blob.size === 0) {
+        toast.error('Empty PDF response')
+        return
+      }
+      const objectUrl = URL.createObjectURL(blob)
+      const safeName = `warranty-${localDeal.id.slice(0, 8)}.pdf`
+      const a = document.createElement('a')
+      a.href = objectUrl
+      a.download = safeName
+      a.rel = 'noopener'
+      a.style.display = 'none'
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1500)
+    } catch (err) {
+      console.error('[Warranty PDF]', err)
+      toast.error(err instanceof Error ? err.message : 'Failed to generate warranty PDF')
+    } finally {
+      setWarrantyPdfLoading(false)
+    }
+  }
+
   return (
     <div
       className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start sm:items-center justify-center p-0 sm:p-4"
@@ -409,6 +490,51 @@ export function DealModal({
               )
             }}
           />
+          <div className="mt-3 space-y-3">
+            <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+              <div className="text-sm font-medium text-white/80 mb-3">{t.deals.productLinesSection}</div>
+              <div className="flex flex-wrap gap-4">
+                {PRODUCT_LINE_CHECKBOXES.map((line) => (
+                  <label
+                    key={line}
+                    className="flex cursor-pointer items-center gap-2 rounded-lg border border-transparent px-1 py-1 hover:border-white/10"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={productLines.includes(line)}
+                      onChange={() => {
+                        setProductLines((prev) => {
+                          const next = new Set(prev)
+                          if (next.has(line)) next.delete(line)
+                          else next.add(line)
+                          const arr = normalizeProductLines([...next])
+                          return arr.length > 0 ? arr : ['pergola']
+                        })
+                      }}
+                      className="h-4 w-4 rounded border-white/30 bg-white/5 text-amber-500 focus:ring-amber-400/40"
+                    />
+                    <span className="text-sm text-white/85">{productLineCheckboxLabel(line)}</span>
+                  </label>
+                ))}
+              </div>
+              <p className="mt-3 text-xs leading-relaxed text-white/45">{t.deals.productLinesHint}</p>
+            </div>
+            <button
+              type="button"
+              disabled={warrantyPdfLoading}
+              className="inline-flex w-full min-[480px]:w-auto items-center justify-center gap-2 rounded-xl border border-amber-500/35 bg-amber-500/10 px-5 py-3 text-sm font-semibold text-amber-100 transition hover:bg-amber-500/15 focus:outline-none focus:ring-2 focus:ring-amber-400/35 disabled:opacity-50 disabled:pointer-events-none"
+              onClick={() => void handleWarrantyPdfDownload()}
+            >
+              {warrantyPdfLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 shrink-0 animate-spin" aria-hidden />
+                  <span>{t.deals.warrantyPdf}</span>
+                </>
+              ) : (
+                t.deals.warrantyPdf
+              )}
+            </button>
+          </div>
 
           <CollapsibleSection title={t.deals.sectionClient} defaultClosed>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -467,18 +593,15 @@ export function DealModal({
             </div>
             <div>
               <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.workType}</label>
-              <select
-                value={localDeal.work_type || 'pergola'}
-                onChange={(e) => updateField('work_type', (e.target.value || 'pergola') as 'pergola' | 'railings' | 'gates' | 'facade' | 'fence' | 'other')}
-                className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
-              >
-                <option value="pergola">{t.deals.workTypes.pergola}</option>
-                <option value="railings">{t.deals.workTypes.railings}</option>
-                <option value="gates">{t.deals.workTypes.gates}</option>
-                <option value="facade">{t.deals.workTypes.facade}</option>
-                <option value="fence">{t.deals.workTypes.fence}</option>
-                <option value="other">{t.deals.workTypes.other}</option>
-              </select>
+              <div className="w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-white/90">
+                {derivedWorkType === 'pergola' && t.deals.workTypes.pergola}
+                {derivedWorkType === 'fence' && t.deals.workTypes.fence}
+                {derivedWorkType === 'railings' && t.deals.workTypes.railings}
+                {derivedWorkType === 'gates' && t.deals.workTypes.gates}
+                {derivedWorkType === 'facade' && t.deals.workTypes.facade}
+                {derivedWorkType === 'other' && t.deals.workTypes.other}
+                <div className="mt-1 text-[11px] leading-snug text-white/40">{t.deals.productLinesDerivedHint}</div>
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.pricingModel}</label>
@@ -531,7 +654,7 @@ export function DealModal({
                 ))}
               </select>
             </div>
-            {localDeal.work_type !== 'railings' && localDeal.work_type !== 'fence' && (
+            {showPergolaDims && (
               <>
                 <div>
                   <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.width}</label>
@@ -611,7 +734,7 @@ export function DealModal({
                 className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
               />
             </div>
-            {localDeal.project_type !== 'laundry_closet' && localDeal.work_type !== 'railings' && localDeal.work_type !== 'fence' && (
+            {localDeal.project_type !== 'laundry_closet' && showPergolaDims && (
               <div>
                 <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.lighting}</label>
                 <input
@@ -725,7 +848,7 @@ export function DealModal({
           </div>
 
           {/* Railings Details (when work_type is railings) */}
-          {localDeal.work_type === 'railings' && (
+          {productLines.includes('railings') && (
             <div>
               <h3 className="text-lg font-semibold text-white mb-4">{t.deals.railingsDetails}</h3>
               <RailingsFormFields
@@ -751,7 +874,7 @@ export function DealModal({
             </div>
           )}
 
-          {localDeal.work_type === 'fence' && (
+          {productLines.includes('fence') && (
             <div>
               <h3 className="text-lg font-semibold text-white mb-4">{t.deals.fenceDetails}</h3>
               <FenceFormFields
@@ -785,9 +908,9 @@ export function DealModal({
           </div>
           </CollapsibleSection>
 
-          {/* Sketch & Offers Buttons (hide sketch for railings) */}
+          {/* Sketch & Offers Buttons */}
           <div className="pt-4 border-t border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {localDeal.work_type !== 'railings' && localDeal.work_type !== 'fence' && (
+            {showSketchButton && (
               <button
                 onClick={() => setShowSketchModal(true)}
                 className="px-4 py-2 rounded-lg bg-amber-600/20 hover:bg-amber-600/30 text-amber-200 font-medium flex items-center justify-center gap-2"

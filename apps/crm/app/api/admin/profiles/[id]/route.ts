@@ -33,6 +33,7 @@ export async function PATCH(
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
+        'X-Company-Id': companyId,
         ...(authHeader ? { Authorization: authHeader } : {}),
       },
       body: JSON.stringify(body),
@@ -81,6 +82,7 @@ export async function DELETE(
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
+        'X-Company-Id': companyId,
         ...(authHeader ? { Authorization: authHeader } : {}),
       },
     })

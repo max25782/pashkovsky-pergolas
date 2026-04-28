@@ -77,6 +77,8 @@ export interface Deal {
   manager?: string | null
   sketch_image_url?: string | null
   sketch_json?: any
+  /** Arbitrary project JSON (e.g. warranty scopes). */
+  project_config?: unknown | null
   deal_railings_details?: DealRailingsDetails | null
   deal_fence_details?: DealFenceDetails | null
   created_at?: string | null

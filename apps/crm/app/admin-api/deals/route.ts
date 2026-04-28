@@ -3,6 +3,12 @@ import { createClient } from '@supabase/supabase-js'
 import { getCompanyId, getCompanyIdAsync } from '@/lib/middleware/company-context'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { logDealEvent } from '@/lib/audit/logger'
+import {
+  dealIncludesProductLine,
+  deriveWorkTypeFromProductLines,
+  mergeProjectConfigProductLines,
+  resolveProductLinesForCreate,
+} from '@/lib/deals/deal-product-lines'
 
 function env(name: string): string {
   const v = process.env[name]
@@ -121,11 +127,18 @@ export async function POST(req: NextRequest) {
     fence_notes,
     ...dealData
   } = body || {}
-  
-  const effectiveWorkType = work_type || 'pergola'
-  dealData.work_type = effectiveWorkType
-  
-  if (effectiveWorkType === 'railings') {
+
+  const productLines = resolveProductLinesForCreate({
+    project_config: dealData.project_config,
+    work_type: work_type ?? null,
+  })
+  dealData.project_config = mergeProjectConfigProductLines(dealData.project_config ?? null, productLines)
+  dealData.work_type = deriveWorkTypeFromProductLines(productLines)
+
+  const needsRailings = productLines.includes('railings')
+  const needsFence = productLines.includes('fence')
+
+  if (needsRailings) {
     if (!meters_total || Number(meters_total) <= 0) {
       return new Response(JSON.stringify({ error: 'meters_total is required and must be > 0' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
     }
@@ -147,7 +160,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  if (effectiveWorkType === 'fence') {
+  if (needsFence) {
     if (!fence_meters_total || Number(fence_meters_total) <= 0) {
       return new Response(JSON.stringify({ error: 'fence_meters_total is required and must be > 0' }), {
         status: 400,
@@ -220,7 +233,7 @@ export async function POST(req: NextRequest) {
     })
   }
   
-  if (effectiveWorkType === 'railings') {
+  if (needsRailings) {
     const gsInsert = String(glazing_system).trim() as 'aluminum_glass' | 'wet_glazing' | 'dry_glazing'
     const { error: railingsError } = await supabase
       .from('deal_railings_details')
@@ -241,21 +254,12 @@ export async function POST(req: NextRequest) {
       await supabase.from('deals').delete().eq('id', data.id)
       return new Response(JSON.stringify({ error: railingsError.message }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
       })
     }
-    const { data: railingsRow } = await supabase
-      .from('deal_railings_details')
-      .select('*')
-      .eq('deal_id', data.id)
-      .single()
-    return new Response(JSON.stringify({ ...data, deal_railings_details: railingsRow }), {
-      status: 201,
-      headers: { 'Content-Type': 'application/json' }
-    })
   }
 
-  if (effectiveWorkType === 'fence') {
+  if (needsFence) {
     const { error: fenceError } = await supabase.from('deal_fence_details').insert({
       deal_id: data.id,
       company_id: companyId,
@@ -273,19 +277,27 @@ export async function POST(req: NextRequest) {
         headers: { 'Content-Type': 'application/json' },
       })
     }
-    const { data: fenceRow } = await supabase.from('deal_fence_details').select('*').eq('deal_id', data.id).single()
-    return new Response(JSON.stringify({ ...data, deal_fence_details: fenceRow }), {
-      status: 201,
-      headers: { 'Content-Type': 'application/json' },
-    })
   }
-  
-  // Log successful creation
+
   await logDealEvent(req, 'create', data.id, dealData, 'success')
-  
-  return new Response(JSON.stringify(data), {
+
+  let payload: Record<string, unknown> = { ...data }
+  if (needsRailings) {
+    const { data: railingsRow } = await supabase
+      .from('deal_railings_details')
+      .select('*')
+      .eq('deal_id', data.id)
+      .single()
+    payload = { ...payload, deal_railings_details: railingsRow }
+  }
+  if (needsFence) {
+    const { data: fenceRow } = await supabase.from('deal_fence_details').select('*').eq('deal_id', data.id).single()
+    payload = { ...payload, deal_fence_details: fenceRow }
+  }
+
+  return new Response(JSON.stringify(payload), {
     status: 201,
-    headers: { 'Content-Type': 'application/json' }
+    headers: { 'Content-Type': 'application/json' },
   })
 }
 
@@ -379,14 +391,16 @@ export async function PATCH(req: NextRequest) {
   }
   
   if (hasRailingsUpdates) {
-    const { data: existingDeal } = await supabase
+    const { data: dealRowForRailings } = await supabase
       .from('deals')
-      .select('work_type')
+      .select('work_type, project_config')
       .eq('id', id)
       .eq('company_id', companyId)
       .single()
-    const effectiveWorkType = updates.work_type ?? existingDeal?.work_type
-    if (effectiveWorkType === 'railings') {
+    const wtR = updates.work_type ?? dealRowForRailings?.work_type
+    const pcR =
+      updates.project_config !== undefined ? updates.project_config : dealRowForRailings?.project_config
+    if (dealIncludesProductLine('railings', wtR, pcR)) {
       const railingsPayload: Record<string, unknown> = {}
       if (meters_total != null) {
         const v = Number(meters_total)
@@ -451,9 +465,16 @@ export async function PATCH(req: NextRequest) {
   }
 
   if (hasFenceUpdates) {
-    const { data: dealForFence } = await supabase.from('deals').select('work_type').eq('id', id).eq('company_id', companyId).single()
-    const effectiveFenceWork = updates.work_type ?? dealForFence?.work_type
-    if (effectiveFenceWork === 'fence') {
+    const { data: dealRowForFence } = await supabase
+      .from('deals')
+      .select('work_type, project_config')
+      .eq('id', id)
+      .eq('company_id', companyId)
+      .single()
+    const wtF = updates.work_type ?? dealRowForFence?.work_type
+    const pcF =
+      updates.project_config !== undefined ? updates.project_config : dealRowForFence?.project_config
+    if (dealIncludesProductLine('fence', wtF, pcF)) {
       const fencePayload: Record<string, unknown> = {}
       if (fence_meters_total != null) {
         const v = Number(fence_meters_total)
@@ -556,30 +577,28 @@ export async function PATCH(req: NextRequest) {
   
   // Log successful update
   await logDealEvent(req, 'update', data.id, updates, 'success')
-  
-  if (data.work_type === 'railings') {
+
+  let patchPayload: Record<string, unknown> = { ...data }
+  if (dealIncludesProductLine('railings', data.work_type, data.project_config)) {
     const { data: railingsRow } = await supabase
       .from('deal_railings_details')
       .select('*')
       .eq('deal_id', data.id)
-      .single()
-    return new Response(JSON.stringify({ ...data, deal_railings_details: railingsRow }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    })
+      .maybeSingle()
+    if (railingsRow) patchPayload = { ...patchPayload, deal_railings_details: railingsRow }
+  }
+  if (dealIncludesProductLine('fence', data.work_type, data.project_config)) {
+    const { data: fenceRow } = await supabase
+      .from('deal_fence_details')
+      .select('*')
+      .eq('deal_id', data.id)
+      .maybeSingle()
+    if (fenceRow) patchPayload = { ...patchPayload, deal_fence_details: fenceRow }
   }
 
-  if (data.work_type === 'fence') {
-    const { data: fenceRow } = await supabase.from('deal_fence_details').select('*').eq('deal_id', data.id).single()
-    return new Response(JSON.stringify({ ...data, deal_fence_details: fenceRow }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    })
-  }
-  
-  return new Response(JSON.stringify(data), {
+  return new Response(JSON.stringify(patchPayload), {
     status: 200,
-    headers: { 'Content-Type': 'application/json' }
+    headers: { 'Content-Type': 'application/json' },
   })
 }
 

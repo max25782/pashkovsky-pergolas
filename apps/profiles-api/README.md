@@ -23,8 +23,7 @@ Required environment variables:
 - `SUPABASE_URL` - Your Supabase project URL
 - `SUPABASE_ANON_KEY` - Supabase anon key
 - `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key (for admin operations)
-- `JWT_SECRET` - Same JWT secret as CRM
-- `PASHKOVSKY_COMPANY_ID` - Your company UUID (get from Supabase)
+- `JWT_SECRET` - Same JWT secret as CRM (optional if you only use Supabase JWT validation via `getUser`)
 
 ### 3. Apply Database Migration
 
@@ -55,12 +54,12 @@ API will be available at: `http://localhost:3002`
 ### Profiles (Catalog Management)
 
 ```
-GET    /profiles                    # List profiles (public: active only)
-GET    /profiles/with-stock          # List with stock info (admin only)
-GET    /profiles/:id                 # Get single profile
-POST   /profiles                     # Create profile (admin, Pashkovsky only)
-PATCH  /profiles/:id                 # Update profile (admin)
-DELETE /profiles/:id                 # Soft delete (admin)
+GET    /profiles?company_id=&read_token=   # List active profiles (storefront; read_token if company requires it)
+GET    /profiles/with-stock                 # List with stock info (admin JWT + X-Company-Id)
+GET    /profiles/:id?company_id=&read_token=
+POST   /profiles                            # Create (JWT + X-Company-Id or matching company_id query)
+PATCH  /profiles/:id
+DELETE /profiles/:id
 ```
 
 ### Other Modules (TODO)
@@ -71,21 +70,22 @@ DELETE /profiles/:id                 # Soft delete (admin)
 - Usage: `/usage` - Supplier billing tracking (Phase 4)
 - Suppliers: `/suppliers` - Supplier management (Phase 4)
 
-## 🔒 Authentication
+## Authentication
 
-Protected endpoints require JWT token in `Authorization` header:
+Protected endpoints require a Supabase JWT:
 
 ```bash
 Authorization: Bearer <your-jwt-token>
+X-Company-Id: <active-company-uuid>   # recommended when the user has multiple company_members rows
 ```
 
-Get token from Supabase auth (same as CRM).
+Get the token from Supabase auth (same as CRM).
 
-## 🏢 Multi-tenancy & Feature Flags
+## Multi-tenancy
 
-- **Company Isolation:** All data is isolated by `company_id` via RLS policies
-- **Feature Access:** Profiles module is ONLY enabled for Pashkovsky Group (set via `PASHKOVSKY_COMPANY_ID`)
-- Other companies will get `403 Forbidden` if they try to access profiles endpoints
+- **Data:** Catalog and orders are scoped by `company_id` on each row.
+- **Authenticated users:** Resolved tenant = `X-Company-Id` header if the user is a member of that company, else `company_id` query if they are a member, else their newest `company_members` row. CRM and admin clients should send **`X-Company-Id`** together with the Bearer token when a user belongs to multiple companies.
+- **Anonymous storefront:** `GET /profiles`, `GET /profiles/:id`, and `POST /orders` require `company_id`. If `companies.settings.profiles_store_public_token` is set (non-empty string), the same value must be passed as query param **`read_token`**. If unset, anonymous reads remain open for that company (legacy).
 
 ## 🧪 Testing the API
 
@@ -95,6 +95,7 @@ Get token from Supabase auth (same as CRM).
 curl -X POST http://localhost:3002/profiles \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <your-token>" \
+  -H "X-Company-Id: <company-uuid>" \
   -d '{
     "code": "F5020",
     "name_he": "פרופיל פרגולה",
@@ -149,7 +150,7 @@ src/
 - ✅ NestJS app structure
 - ✅ Supabase integration
 - ✅ Authentication & authorization guards
-- ✅ Company-based feature flags
+- ✅ Multi-tenant company resolution (`X-Company-Id` / membership)
 - ✅ Profiles module CRUD (fully implemented)
 
 **Next Steps:**
@@ -164,8 +165,11 @@ src/
 **Error: "Missing Supabase environment variables"**
 - Make sure `.env` file exists and has correct values
 
-**Error: "Profiles module not enabled for your company"**
-- Check `PASHKOVSKY_COMPANY_ID` matches your company UUID in database
+**Error: "User must be authenticated with a company membership"**
+- Ensure the user has a row in `company_members` and send `X-Company-Id` when they belong to more than one company.
+
+**Error: "Invalid or missing read_token for storefront access"**
+- Set `companies.settings.profiles_store_public_token` to empty to allow open reads, or pass the same token as `read_token` on anonymous requests.
 
 **Error: "Authentication failed"**
 - Verify JWT token is valid

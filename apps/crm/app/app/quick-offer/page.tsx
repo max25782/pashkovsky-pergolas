@@ -40,7 +40,14 @@ import { formatPhoneForWhatsApp } from '@/lib/offer-sharing'
 import { OfferConfiguratorEmbed, type OfferConfiguratorEmbedHandle } from '@/components/offers/OfferConfiguratorEmbed'
 import { useSubscriptionPlan } from '@/components/subscription/subscription-plan-context'
 import { minPlanForFeature } from '@/lib/subscription/plan-access'
-import { useLanguage } from '@/lib/language-context'
+import { useLanguage, type Language } from '@/lib/language-context'
+import type { Locale } from '@/lib/locales'
+import type { OfferAiOutputLanguage } from '@/lib/ai/offer-text-output-languages'
+
+function uiLanguageToAiDefault(lang: Language): OfferAiOutputLanguage {
+  if (lang === 'en' || lang === 'ru' || lang === 'he') return lang
+  return 'en'
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -524,7 +531,7 @@ function ResultScreen({
     authFetch(`/api/offers/${result.offerId}/configurator-link`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ locale: 'he' }),
+      body: JSON.stringify({ locale: language }),
     })
       .then((r) => r.json())
       .then((data: { url?: string }) => {
@@ -532,7 +539,7 @@ function ResultScreen({
       })
       .catch(() => {})
       .finally(() => setConfiguratorLoading(false))
-  }, [resultProductKind, show3D, result.offerId, configuratorEditUrl])
+  }, [resultProductKind, show3D, result.offerId, configuratorEditUrl, language])
 
   async function handleDownloadPdf() {
     setDownloadingPdf(true)
@@ -656,7 +663,7 @@ function ResultScreen({
                 <OfferConfiguratorEmbed
                   ref={configuratorRef}
                   offerId={result.offerId}
-                  locale="he"
+                  locale={language as Locale}
                   editUrl={configuratorEditUrl}
                   offer={offerSeed}
                 />
@@ -839,6 +846,7 @@ function buildDefaultDraft(): OfferDraft {
 export default function QuickOfferPage() {
   const t = useTranslations('quickOffer')
   const tDeals = useTranslations('deals')
+  const { language: uiLanguage } = useLanguage()
   const [step, setStep] = useState<Step>('form')
   const [draft, setDraft] = useState<OfferDraft>(buildDefaultDraft)
   const [result, setResult] = useState<QuickOfferResult | null>(null)
@@ -846,6 +854,13 @@ export default function QuickOfferPage() {
   const [error, setError] = useState<string | null>(null)
   const [generatingAi, setGeneratingAi] = useState(false)
   const [improvingAi, setImprovingAi] = useState(false)
+  const [aiOutputLang, setAiOutputLang] = useState<OfferAiOutputLanguage>(() =>
+    uiLanguageToAiDefault(uiLanguage),
+  )
+
+  useEffect(() => {
+    setAiOutputLang(uiLanguageToAiDefault(uiLanguage))
+  }, [uiLanguage])
 
   const calculation = useMemo(() => calculateOffer(draft), [draft])
 
@@ -907,6 +922,7 @@ export default function QuickOfferPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text: base,
+          outputLanguage: aiOutputLang,
           context: { customerName: 'לקוח', pergolaType: 'אלומיניום', price: calculation.finalPrice },
         }),
       })
@@ -921,7 +937,7 @@ export default function QuickOfferPage() {
     } finally {
       setGeneratingAi(false)
     }
-  }, [draft, calculation, t])
+  }, [draft, calculation, t, aiOutputLang])
 
   const improveAiText = useCallback(async () => {
     const currentNotes = draft.options?.notes?.trim()
@@ -934,6 +950,7 @@ export default function QuickOfferPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text: currentNotes,
+          outputLanguage: aiOutputLang,
           context: { customerName: 'לקוח', pergolaType: 'אלומיניום', price: calculation.finalPrice },
         }),
       })
@@ -948,7 +965,7 @@ export default function QuickOfferPage() {
     } finally {
       setImprovingAi(false)
     }
-  }, [draft.options?.notes, calculation.finalPrice, t])
+  }, [draft.options?.notes, calculation.finalPrice, t, aiOutputLang])
 
   const handleSubmit = useCallback(async () => {
     const pk = draft.quickProduct ?? 'pergola'
@@ -1812,6 +1829,20 @@ export default function QuickOfferPage() {
                   </div>
                 </div>
               )}
+
+              <Field label={t('aiOutputLanguage')}>
+                <select
+                  className={inputCls}
+                  value={aiOutputLang}
+                  onChange={(e) => setAiOutputLang(e.target.value as OfferAiOutputLanguage)}
+                  dir="ltr"
+                >
+                  <option value="en">{t('langEn')}</option>
+                  <option value="ru">{t('langRu')}</option>
+                  <option value="sr">{t('langSr')}</option>
+                  <option value="he">{t('langHe')}</option>
+                </select>
+              </Field>
 
               <div className="flex gap-2">
                 <button

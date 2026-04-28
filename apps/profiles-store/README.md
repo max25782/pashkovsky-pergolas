@@ -33,6 +33,9 @@ Create a `.env.local` file:
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:3002
 NEXT_PUBLIC_COMPANY_ID=your-company-uuid
+# Optional: when the company sets `settings.profiles_store_public_token` in Supabase, set the same value here
+NEXT_PUBLIC_PROFILES_STORE_READ_TOKEN=
+# Or server-only (catalog SSR): PROFILES_STORE_READ_TOKEN=
 ```
 
 ### Development

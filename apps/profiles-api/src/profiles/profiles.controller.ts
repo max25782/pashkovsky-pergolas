@@ -19,25 +19,30 @@ import {
   CurrentUser,
   CurrentUserData,
 } from "../common/decorators/current-user.decorator";
+import { PublicStoreReadService } from "../common/public-store-read.service";
 
 @Controller("profiles")
 export class ProfilesController {
-  constructor(private readonly profilesService: ProfilesService) {}
+  constructor(
+    private readonly profilesService: ProfilesService,
+    private readonly publicStoreRead: PublicStoreReadService,
+  ) {}
 
   /**
-   * GET /profiles - List all profiles
-   * Public endpoint for storefront (only active profiles)
-   * Admin endpoint (with auth) shows all profiles
+   * GET /profiles - List active profiles for a company (storefront).
+   * Optional: `companies.settings.profiles_store_public_token` then `read_token` query must match.
    */
   @Get()
-  findAll(
+  async findAll(
     @Query("company_id") companyId?: string,
+    @Query("read_token") readToken?: string,
     @Query("search") search?: string,
     @Query("category") category?: string,
   ) {
     if (!companyId) {
       throw new BadRequestException("company_id query parameter required");
     }
+    await this.publicStoreRead.verifyStorefrontRead(companyId, readToken);
     return this.profilesService.findAll(companyId, true, search, category);
   }
 
@@ -47,22 +52,27 @@ export class ProfilesController {
   @Get("with-stock")
   @UseGuards(AuthGuard, CompanyGuard)
   findAllWithStock(@CurrentUser() user: CurrentUserData) {
-    return this.profilesService.findAllWithStock(user.company_id);
+    return this.profilesService.findAllWithStock(user.company_id!);
   }
 
   /**
-   * GET /profiles/:id - Get single profile
+   * GET /profiles/:id - Get single active profile (storefront)
    */
   @Get(":id")
-  findOne(@Param("id") id: string, @Query("company_id") companyId?: string) {
+  async findOne(
+    @Param("id") id: string,
+    @Query("company_id") companyId?: string,
+    @Query("read_token") readToken?: string,
+  ) {
     if (!companyId) {
       throw new BadRequestException("company_id query parameter required");
     }
+    await this.publicStoreRead.verifyStorefrontRead(companyId, readToken);
     return this.profilesService.findOne(id, companyId);
   }
 
   /**
-   * POST /profiles - Create new profile (Admin only, Pashkovsky company only)
+   * POST /profiles - Create profile (authenticated member of that company)
    */
   @Post()
   @UseGuards(AuthGuard, CompanyGuard)
@@ -70,12 +80,9 @@ export class ProfilesController {
     @Body() createProfileDto: CreateProfileDto,
     @CurrentUser() user: CurrentUserData,
   ) {
-    return this.profilesService.create(createProfileDto, user.company_id);
+    return this.profilesService.create(createProfileDto, user.company_id!);
   }
 
-  /**
-   * PATCH /profiles/:id - Update profile (Admin only)
-   */
   @Patch(":id")
   @UseGuards(AuthGuard, CompanyGuard)
   update(
@@ -83,15 +90,12 @@ export class ProfilesController {
     @Body() updateProfileDto: UpdateProfileDto,
     @CurrentUser() user: CurrentUserData,
   ) {
-    return this.profilesService.update(id, updateProfileDto, user.company_id);
+    return this.profilesService.update(id, updateProfileDto, user.company_id!);
   }
 
-  /**
-   * DELETE /profiles/:id - Soft delete profile (Admin only)
-   */
   @Delete(":id")
   @UseGuards(AuthGuard, CompanyGuard)
   remove(@Param("id") id: string, @CurrentUser() user: CurrentUserData) {
-    return this.profilesService.remove(id, user.company_id);
+    return this.profilesService.remove(id, user.company_id!);
   }
 }

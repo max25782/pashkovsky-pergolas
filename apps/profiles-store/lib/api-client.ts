@@ -1,5 +1,17 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'
 
+/** Sent as `read_token` when `companies.settings.profiles_store_public_token` is set (server + client). */
+function storefrontReadToken(): string | undefined {
+  const pub = process.env.NEXT_PUBLIC_PROFILES_STORE_READ_TOKEN?.trim()
+  const serverOnly = process.env.PROFILES_STORE_READ_TOKEN?.trim()
+  return pub || serverOnly || undefined
+}
+
+function appendReadToken(params: URLSearchParams) {
+  const t = storefrontReadToken()
+  if (t) params.append('read_token', t)
+}
+
 export interface Profile {
   id: string
   code: string
@@ -59,7 +71,8 @@ export async function fetchProfiles(filters?: {
     throw new Error('company_id is required but not provided')
   }
   params.append('company_id', companyId)
-  
+  appendReadToken(params)
+
   if (filters?.category) params.append('category', filters.category)
   if (filters?.search) params.append('search', filters.search)
   if (filters?.color) params.append('color', filters.color)
@@ -90,6 +103,7 @@ export async function fetchProfile(id: string, companyId?: string): Promise<Prof
     throw new Error('company_id is required but not provided')
   }
   params.append('company_id', finalCompanyId)
+  appendReadToken(params)
 
   try {
     const res = await fetch(`${API_URL}/profiles/${id}?${params}`, {
@@ -112,6 +126,7 @@ export async function fetchStock(profileId: string, companyId?: string): Promise
   const params = new URLSearchParams()
   params.append('profile_id', profileId)
   if (companyId) params.append('company_id', companyId)
+  appendReadToken(params)
 
   try {
     const res = await fetch(`${API_URL}/stock?${params}`, {
@@ -131,6 +146,7 @@ export async function fetchStock(profileId: string, companyId?: string): Promise
 export async function submitOrder(order: OrderData, companyId?: string): Promise<{ id: string }> {
   const params = new URLSearchParams()
   if (companyId) params.append('company_id', companyId)
+  appendReadToken(params)
 
   try {
     const res = await fetch(`${API_URL}/orders?${params}`, {

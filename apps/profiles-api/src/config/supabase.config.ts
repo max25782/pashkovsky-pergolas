@@ -49,16 +49,3 @@ export function getSupabaseUser(accessToken: string): SupabaseClient {
   });
 }
 
-// Feature flag: Check if company has profiles access
-export function hasProfilesAccess(companyId: string): boolean {
-  const pashkovskyCompanyId = process.env.PASHKOVSKY_COMPANY_ID;
-
-  if (!pashkovskyCompanyId) {
-    console.warn(
-      "PASHKOVSKY_COMPANY_ID not set - profiles access disabled for all",
-    );
-    return false;
-  }
-
-  return companyId === pashkovskyCompanyId;
-}

@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { NextIntlClientProvider } from 'next-intl'
+import { defaultCrmLanguageForCompany } from '@/lib/company-default-language'
 import heMessages from '../messages/he.json'
 import ruMessages from '../messages/ru.json'
 import enMessages from '../messages/en.json'
@@ -37,16 +38,41 @@ function applyDocumentLocale(lang: Language) {
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [intl, setIntl] = useState<IntlState>({
-    locale: 'he',
-    messages: heMessages as Record<string, unknown>,
+    locale: 'en',
+    messages: enMessages as Record<string, unknown>,
   })
 
   useEffect(() => {
-    const saved = localStorage.getItem('crm_language') as Language
-    const initial = saved && ['he', 'ru', 'en'].includes(saved) ? saved : 'he'
-    applyDocumentLocale(initial)
-    if (initial !== 'he') {
-      setIntl({ locale: initial, messages: loadMessages(initial) })
+    let cancelled = false
+
+    function apply(lang: Language) {
+      if (cancelled) return
+      applyDocumentLocale(lang)
+      setIntl({ locale: lang, messages: loadMessages(lang) })
+    }
+
+    const saved = localStorage.getItem('crm_language') as Language | null
+    if (saved && ['he', 'ru', 'en'].includes(saved)) {
+      apply(saved)
+      return () => {
+        cancelled = true
+      }
+    }
+
+    fetch('/api/companies/me', { credentials: 'same-origin' })
+      .then((res) => {
+        if (!res.ok) return defaultCrmLanguageForCompany(null)
+        return res.json().then((data: { company_name?: string }) =>
+          defaultCrmLanguageForCompany(data.company_name),
+        )
+      })
+      .catch(() => defaultCrmLanguageForCompany(null))
+      .then((initial) => {
+        apply(initial as Language)
+      })
+
+    return () => {
+      cancelled = true
     }
   }, [])
 

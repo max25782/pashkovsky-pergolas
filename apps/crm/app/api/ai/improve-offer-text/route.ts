@@ -1,13 +1,21 @@
 /**
  * AI Offer Text Improvement API
- * Улучшает текстовые описания в офферах, сохраняя все цифры
- * 
+ *
  * POST /api/ai/improve-offer-text
- * Body: { text: string, context?: { customerName?: string, pergolaType?: string, price?: number } }
+ * Body: {
+ *   text: string,
+ *   outputLanguage?: 'en' | 'ru' | 'sr' | 'he'   // default 'he' if omitted
+ *   context?: { customerName?, pergolaType?, price? }
+ * }
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { buildOfferImprovementSystemPrompt } from '@/lib/ai/offer-improvement-prompt'
+import {
+  parseOfferAiOutputLanguage,
+  type OfferAiOutputLanguage,
+} from '@/lib/ai/offer-text-output-languages'
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY!
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -22,33 +30,9 @@ const supabase = SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
     })
   : null
 
-const OFFER_IMPROVEMENT_PROMPT = `אתה עוזר לשיפור טקסטים בהצעות מחיר לפרגולות אלומיניום.
-
-חוקים חשובים:
-1. **אסור לחלוטין לשנות מספרים, מחירים, מידות או כמויות**
-2. שפר רק את הסגנון, הבהירות והמקצועיות של הטקסט
-3. שמור על השפה העברית וצורת הפנייה המקורית
-4. הוסף פרטים טכניים רלוונטיים אם חסרים
-5. שפר את המבנה והקריאות
-6. הדגש יתרונות ואיכות המוצר
-7. אם הטקסט קצר מדי, הרחב אותו בצורה מקצועית
-8. אם הטקסט כבר טוב, החזר אותו כמעט ללא שינוי
-
-דוגמאות:
-
-לפני: "פרגולה בצבע שחור"
-אחרי: "פרגולה מאלומיניום איכותית בצבע שחור (RAL 9005), עמידה בפני קורוזיה ותנאי מזג אוויר קשים"
-
-לפני: "זכוכית בצד"
-אחרי: "סגירת זכוכית מחוסמת בצד הדרומי, מבטיחה הגנה מירבית מפני רוח וגשם תוך שמירה על שקיפות ותאורה טבעית"
-
-לפני: "התקנה כוללת"
-אחרי: "ההצעה כוללת התקנה מקצועית על ידי צוות מנוסה, כולל כל החומרים והאביזרים הנדרשים"
-
-החזר רק את הטקסט המשופר, ללא הסברים או הערות.`
-
 interface ImproveTextRequest {
   text: string
+  outputLanguage?: string
   context?: {
     customerName?: string
     pergolaType?: string
@@ -56,25 +40,34 @@ interface ImproveTextRequest {
   }
 }
 
-async function improveTextWithGemini(text: string, context?: ImproveTextRequest['context']): Promise<string> {
+function formatContextForModel(context?: ImproveTextRequest['context']): string {
+  if (!context) return ''
+  let s = ''
+  if (context.customerName) s += `Customer: ${context.customerName}\n`
+  if (context.pergolaType) s += `Product type: ${context.pergolaType}\n`
+  if (context.price !== undefined && context.price !== null) {
+    s += `Price: ${context.price} ILS\n`
+  }
+  return s
+}
+
+async function improveTextWithGemini(
+  text: string,
+  context: ImproveTextRequest['context'] | undefined,
+  outputLanguage: OfferAiOutputLanguage,
+): Promise<string> {
   if (!GEMINI_API_KEY) {
     throw new Error('Gemini API key not configured')
   }
-  
-  // Build context string
-  let contextStr = ''
-  if (context) {
-    if (context.customerName) contextStr += `לקוח: ${context.customerName}\n`
-    if (context.pergolaType) contextStr += `סוג פרגולה: ${context.pergolaType}\n`
-    if (context.price) contextStr += `מחיר: ${context.price} ₪\n`
-  }
-  
-  const userMessage = contextStr 
-    ? `${contextStr}\n\nטקסט לשיפור:\n${text}`
-    : `טקסט לשיפור:\n${text}`
-  
+
+  const systemPrompt = buildOfferImprovementSystemPrompt(outputLanguage)
+  const contextStr = formatContextForModel(context)
+  const userMessage = contextStr
+    ? `${contextStr}\n\nText to improve:\n${text}`
+    : `Text to improve:\n${text}`
+
   const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`
-  
+
   const response = await fetch(apiUrl, {
     method: 'POST',
     headers: {
@@ -84,7 +77,7 @@ async function improveTextWithGemini(text: string, context?: ImproveTextRequest[
       contents: [
         {
           role: 'user',
-          parts: [{ text: OFFER_IMPROVEMENT_PROMPT }],
+          parts: [{ text: systemPrompt }],
         },
         {
           role: 'user',
@@ -93,7 +86,7 @@ async function improveTextWithGemini(text: string, context?: ImproveTextRequest[
       ],
       generationConfig: {
         temperature: 0.7,
-        maxOutputTokens: 500,
+        maxOutputTokens: 900,
       },
     }),
   })
@@ -181,6 +174,7 @@ export async function POST(request: NextRequest) {
     // 2. Parse request
     const body: ImproveTextRequest = await request.json()
     const { text, context } = body
+    const outputLanguage = parseOfferAiOutputLanguage(body.outputLanguage)
     
     
     if (!text || typeof text !== 'string' || text.trim().length === 0) {
@@ -199,7 +193,7 @@ export async function POST(request: NextRequest) {
     
     
     // 4. Improve text with AI
-    const improvedText = await improveTextWithGemini(text, context)
+    const improvedText = await improveTextWithGemini(text, context, outputLanguage)
     
     // 5. Log the improvement (optional, for analytics)
     if (supabase) {
@@ -209,7 +203,7 @@ export async function POST(request: NextRequest) {
           user_id: auth.userId,
           original_text: text,
           improved_text: improvedText,
-          context,
+          context: { ...context, outputLanguage },
         })
       } catch (err: unknown) {
         // Ignore if table doesn't exist

@@ -4,15 +4,16 @@ import {
   ExecutionContext,
   ForbiddenException,
 } from "@nestjs/common";
-import { hasProfilesAccess } from "../../config/supabase.config";
+import type { CurrentUserData } from "../decorators/current-user.decorator";
 
 /**
- * Company Guard - Ensures only Pashkovsky Group can access profiles module
+ * Ensures the JWT flow produced a tenant (`company_id`) from membership
+ * (via `X-Company-Id`, `company_id` query, or default membership).
  */
 @Injectable()
 export class CompanyGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<{ user?: CurrentUserData }>();
     const user = request.user;
 
     if (!user || !user.company_id) {
@@ -22,21 +23,7 @@ export class CompanyGuard implements CanActivate {
         hasCompanyId: !!user?.company_id,
       });
       throw new ForbiddenException(
-        "User must be authenticated with company_id",
-      );
-    }
-
-    const hasAccess = hasProfilesAccess(user.company_id);
-
-    if (!hasAccess) {
-      console.warn("[CompanyGuard] Access denied:", {
-        userId: user.id,
-        email: user.email,
-        companyId: user.company_id,
-        expectedCompanyId: process.env.PASHKOVSKY_COMPANY_ID,
-      });
-      throw new ForbiddenException(
-        "Profiles module is not enabled for your company",
+        "User must be authenticated with a company membership",
       );
     }
 

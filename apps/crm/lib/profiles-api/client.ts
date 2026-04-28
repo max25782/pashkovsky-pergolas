@@ -24,7 +24,9 @@ interface ProxyResult {
 async function proxyRequest(path: string, options: ProxyOptions): Promise<ProxyResult> {
   const url = `${BASE_URL}${path}?company_id=${options.companyId}`
 
-  const headers: Record<string, string> = {}
+  const headers: Record<string, string> = {
+    'X-Company-Id': options.companyId,
+  }
   if (options.authHeader) headers['Authorization'] = options.authHeader
   if (options.body !== undefined) headers['Content-Type'] = 'application/json'
 

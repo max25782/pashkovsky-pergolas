@@ -8,10 +8,12 @@ import { OrdersModule } from "./orders/orders.module";
 import { UsageModule } from "./usage/usage.module";
 import { SuppliersModule } from "./suppliers/suppliers.module";
 import { WebhooksModule } from "./webhooks/webhooks.module";
+import { PublicStoreModule } from "./common/public-store.module";
 
 @Module({
   imports: [
     HealthModule,
+    PublicStoreModule,
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ".env",

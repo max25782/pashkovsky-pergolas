@@ -43,6 +43,7 @@ export async function GET(req: NextRequest) {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        'X-Company-Id': companyId,
         ...(authHeader ? { Authorization: authHeader } : {}),
       },
       signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
@@ -109,6 +110,7 @@ export async function POST(req: NextRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-Company-Id': companyId,
         ...(authHeader ? { Authorization: authHeader } : {}),
       },
       body: JSON.stringify(body),
