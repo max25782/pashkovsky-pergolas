@@ -34,6 +34,7 @@ import {
   type Offer,
 } from '@/types/offer'
 import { calculateOffer, formatPrice, quickOfferRailingsFenceAreaSqm } from '@/lib/offer-calculator'
+import { calculatePergolaArea } from '@/lib/calculations/pergola-area'
 import { PergolaShapeSelector } from '@/components/offers/PergolaShapeSelector'
 import { authFetch } from '@/lib/api/auth-fetch'
 import { formatPhoneForWhatsApp } from '@/lib/offer-sharing'
@@ -583,9 +584,30 @@ function ResultScreen({
     }
   }
 
+  const resultProductKind2 = draft.quickProduct ?? 'pergola'
+  const resultPergolas = draft.pergolas?.length ? draft.pergolas : []
+
+  const pergolaRows: Array<{ label: string; value: number }> =
+    resultProductKind2 === 'pergola' && resultPergolas.length > 0
+      ? resultPergolas.flatMap((p, i) => {
+          if (!p?.shape) return []
+          const area = calculatePergolaArea(p.shape)
+          const price = area * p.pricePerSqm
+          if (price <= 0) return []
+          const label =
+            resultPergolas.length > 1
+              ? `${t('labelPergola')} #${i + 1} (${area.toFixed(2)} מ״ר)`
+              : `${t('labelPergola')} (${area.toFixed(2)} מ״ר)`
+          return [{ label, value: price }]
+        })
+      : []
+
   const priceRows = [
-    calculation.pergolaTotal != null &&
-      calculation.pergolaTotal > 0 && { label: t('labelPergola'), value: calculation.pergolaTotal },
+    ...(pergolaRows.length > 0
+      ? pergolaRows
+      : calculation.pergolaTotal != null && calculation.pergolaTotal > 0
+        ? [{ label: t('labelPergola'), value: calculation.pergolaTotal }]
+        : []),
     calculation.railingsLineTotal != null &&
       calculation.railingsLineTotal > 0 && {
         label: tDeals('workTypes.railings'),
@@ -867,6 +889,21 @@ export default function QuickOfferPage() {
   const productKind: QuickOfferProductType = draft.quickProduct ?? 'pergola'
 
   const pergolas: Pergola[] = draft.pergolas?.length ? draft.pergolas : [{ ...DEFAULT_OFFER_VALUES.pergola }]
+
+  const pergolaRows: Array<{ label: string; value: number }> = useMemo(() => {
+    if (productKind !== 'pergola' || pergolas.length === 0) return []
+    return pergolas.flatMap((p, i) => {
+      if (!p?.shape) return []
+      const area = calculatePergolaArea(p.shape)
+      const price = area * p.pricePerSqm
+      if (price <= 0) return []
+      const label =
+        pergolas.length > 1
+          ? `פרגולה #${i + 1} (${area.toFixed(2)} מ״ר)`
+          : `פרגולה (${area.toFixed(2)} מ״ר)`
+      return [{ label, value: price }]
+    })
+  }, [productKind, pergolas])
 
   function updatePergola(index: number, patch: Partial<Pergola>) {
     setDraft((d) => {
@@ -1933,6 +1970,27 @@ export default function QuickOfferPage() {
               <div className="text-xs font-semibold text-white/50 uppercase tracking-wide">
                 {t('priceSummary')}
               </div>
+
+              {/* Per-pergola breakdown */}
+              {pergolaRows.length > 0 && (
+                <div className="space-y-1">
+                  {pergolaRows.map((row) => (
+                    <div key={row.label} className="flex justify-between text-xs text-white/60">
+                      <span>{row.label}</span>
+                      <span className="tabular-nums text-white/80">{formatPrice(row.value)}</span>
+                    </div>
+                  ))}
+                  {pergolaRows.length > 1 && (
+                    <div className="flex justify-between text-xs border-t border-white/10 pt-1">
+                      <span className="text-white/50">{t('labelPergola')} סה״כ</span>
+                      <span className="tabular-nums text-white/70">
+                        {formatPrice(pergolaRows.reduce((s, r) => s + r.value, 0))}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="flex justify-between text-sm text-white/70">
                 <span>{t('beforeVat')}</span>
                 <span className="text-white tabular-nums">{formatPrice(calculation.totalBeforeVat)}</span>
