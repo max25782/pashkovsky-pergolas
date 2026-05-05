@@ -12,7 +12,7 @@ import { renderHtmlToPdfBuffer } from '@/lib/pdf/render-html-to-pdf'
 import { generateWorkerTimesheetHtml } from '@/lib/pdf/worker-timesheet-html-template'
 import { fetchCompanyPdfLocale, mergeUiPdfLocale } from '@/lib/pdf/company-pdf-locale'
 import { uploadToS3 } from '@/lib/s3-upload'
-import { computeMinutesWorked, computeShiftCost } from '@/lib/workers/calculations'
+import { computeMinutesWorked, computeShiftCost, applyCurrentRatesToWorkerShifts } from '@/lib/workers/calculations'
 import type { WorkerShift, WorkerShiftSummary, WorkerShiftType } from '@/types/workers'
 
 export const runtime = 'nodejs'
@@ -107,7 +107,13 @@ export async function POST(
       return NextResponse.json({ error: 'Failed to fetch shifts' }, { status: 500 })
     }
 
-    const shifts: WorkerShift[] = (rows || []).map(transformShiftFromDB)
+    const shiftsRaw: WorkerShift[] = (rows || []).map(transformShiftFromDB)
+    const dailyRateNum = parseFloat(worker.daily_rate)
+    const hourlyParsed =
+      worker.hourly_rate != null && worker.hourly_rate !== ''
+        ? parseFloat(worker.hourly_rate)
+        : null
+    const shifts = applyCurrentRatesToWorkerShifts(shiftsRaw, dailyRateNum, hourlyParsed)
 
     // Build summary
     const workShifts = shifts.filter((s) => s.shiftType === 'work')

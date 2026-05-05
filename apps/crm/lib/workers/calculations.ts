@@ -2,7 +2,7 @@
  * Helper functions for Workers and Work Shifts calculations
  */
 
-import type { WorkShift, WorkShiftGroupedByDate, ProjectProfit } from '@/types/workers'
+import type { WorkShift, WorkShiftGroupedByDate, ProjectProfit, WorkerShift } from '@/types/workers'
 
 /**
  * Parse HH:mm to minutes since midnight
@@ -39,6 +39,33 @@ export function computeShiftCost(
     return (hourlyRate * minutesWorked) / 60
   }
   return dailyRate
+}
+
+/**
+ * Recompute shift costs using the worker's **current** daily/hourly rates.
+ * Stored `computed_cost` is treated as stale after rate edits; minutes + type drive the amount.
+ */
+export function applyCurrentRatesToWorkerShifts(
+  shifts: WorkerShift[],
+  dailyRate: number,
+  hourlyRate?: number | null
+): WorkerShift[] {
+  const hr = hourlyRate != null && hourlyRate > 0 ? hourlyRate : null
+  const dr = Number.isFinite(dailyRate) ? dailyRate : 0
+  return shifts.map((s) => {
+    let cost: number | null = s.computedCost
+    if (s.shiftType === 'holiday') {
+      cost = dr
+    } else if (s.shiftType === 'day_off') {
+      cost = 0
+    } else if (s.shiftType === 'work') {
+      const mins = s.minutesWorked
+      if (mins != null && mins >= 0) {
+        cost = computeShiftCost(mins, dr, hr)
+      }
+    }
+    return { ...s, computedCost: cost }
+  })
 }
 
 /**

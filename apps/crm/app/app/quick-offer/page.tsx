@@ -866,13 +866,30 @@ export default function QuickOfferPage() {
 
   const productKind: QuickOfferProductType = draft.quickProduct ?? 'pergola'
 
-  const pergola: Pergola = draft.pergolas?.[0] ?? { ...DEFAULT_OFFER_VALUES.pergola }
+  const pergolas: Pergola[] = draft.pergolas?.length ? draft.pergolas : [{ ...DEFAULT_OFFER_VALUES.pergola }]
 
-  function updatePergola(patch: Partial<Pergola>) {
-    setDraft((d) => ({
-      ...d,
-      pergolas: [{ ...(d.pergolas?.[0] ?? DEFAULT_OFFER_VALUES.pergola), ...patch }],
-    }))
+  function updatePergola(index: number, patch: Partial<Pergola>) {
+    setDraft((d) => {
+      const current = d.pergolas?.length ? d.pergolas : [{ ...DEFAULT_OFFER_VALUES.pergola }]
+      const updated = [...current]
+      updated[index] = { ...updated[index], ...patch }
+      return { ...d, pergolas: updated }
+    })
+  }
+
+  function addPergola() {
+    setDraft((d) => {
+      const current = d.pergolas?.length ? d.pergolas : [{ ...DEFAULT_OFFER_VALUES.pergola }]
+      return { ...d, pergolas: [...current, { ...DEFAULT_OFFER_VALUES.pergola }] }
+    })
+  }
+
+  function removePergola(index: number) {
+    setDraft((d) => {
+      const current = d.pergolas?.length ? d.pergolas : [{ ...DEFAULT_OFFER_VALUES.pergola }]
+      const updated = current.filter((_, i) => i !== index)
+      return { ...d, pergolas: updated.length > 0 ? updated : [{ ...DEFAULT_OFFER_VALUES.pergola }] }
+    })
   }
 
   function patchQuickRailings(patch: Partial<NonNullable<OfferDraft['quickRailings']>>) {
@@ -1094,49 +1111,77 @@ export default function QuickOfferPage() {
             </SectionCard>
 
             {productKind === 'pergola' && (
-              <SectionCard title={t('sectionPergola')}>
-                <Field label={t('fieldPergolaType')}>
-                  <div className="flex flex-wrap gap-2">
-                    {(Object.keys(PERGOLA_TYPE_NAMES) as PergolaProductType[]).map((pt) => (
-                      <button
-                        key={pt}
-                        type="button"
-                        onClick={() =>
-                          updatePergola({ pergolaType: pt, pricePerSqm: PERGOLA_TYPE_DEFAULT_PRICES[pt] })
-                        }
-                        className={toggleCls(pergola.pergolaType === pt)}
-                      >
-                        {tDeals(pt === 'fixed' ? 'pergolaFixed' : pt === 'electricPvc' ? 'pergolaElectricPvc' : 'pergolaElectricBioclimatic')}
-                      </button>
-                    ))}
-                  </div>
-                </Field>
+              <div className="space-y-3">
+                {pergolas.map((pergola, index) => (
+                  <SectionCard
+                    key={index}
+                    title={pergolas.length > 1 ? `${t('sectionPergola')} #${index + 1}` : t('sectionPergola')}
+                  >
+                    {pergolas.length > 1 && (
+                      <div className="flex justify-end mb-2">
+                        <button
+                          type="button"
+                          onClick={() => removePergola(index)}
+                          className="flex items-center gap-1 px-3 py-1 text-xs bg-red-600/80 hover:bg-red-600 text-white rounded transition"
+                        >
+                          <X className="w-3 h-3" />
+                          הסר
+                        </button>
+                      </div>
+                    )}
 
-                <Field label={t('fieldShapeDimensions')}>
-                  <PergolaShapeSelector
-                    value={pergola.shape}
-                    onChange={(shape) => updatePergola({ shape })}
-                  />
-                </Field>
+                    <Field label={t('fieldPergolaType')}>
+                      <div className="flex flex-wrap gap-2">
+                        {(Object.keys(PERGOLA_TYPE_NAMES) as PergolaProductType[]).map((pt) => (
+                          <button
+                            key={pt}
+                            type="button"
+                            onClick={() =>
+                              updatePergola(index, { pergolaType: pt, pricePerSqm: PERGOLA_TYPE_DEFAULT_PRICES[pt] })
+                            }
+                            className={toggleCls(pergola.pergolaType === pt)}
+                          >
+                            {tDeals(pt === 'fixed' ? 'pergolaFixed' : pt === 'electricPvc' ? 'pergolaElectricPvc' : 'pergolaElectricBioclimatic')}
+                          </button>
+                        ))}
+                      </div>
+                    </Field>
 
-                <Field label={t('fieldPricePerSqm')}>
-                  <input
-                    type="number"
-                    className={inputCls}
-                    value={pergola.pricePerSqm}
-                    onChange={(e) => updatePergola({ pricePerSqm: Number(e.target.value) || 0 })}
-                  />
-                </Field>
+                    <Field label={t('fieldShapeDimensions')}>
+                      <PergolaShapeSelector
+                        value={pergola.shape}
+                        onChange={(shape) => updatePergola(index, { shape })}
+                      />
+                    </Field>
 
-                <Field label={t('fieldLocation')}>
-                  <input
-                    className={inputCls}
-                    placeholder={t('fieldLocationPlaceholder')}
-                    value={pergola.location ?? ''}
-                    onChange={(e) => updatePergola({ location: e.target.value })}
-                  />
-                </Field>
-              </SectionCard>
+                    <Field label={t('fieldPricePerSqm')}>
+                      <input
+                        type="number"
+                        className={inputCls}
+                        value={pergola.pricePerSqm}
+                        onChange={(e) => updatePergola(index, { pricePerSqm: Number(e.target.value) || 0 })}
+                      />
+                    </Field>
+
+                    <Field label={t('fieldLocation')}>
+                      <input
+                        className={inputCls}
+                        placeholder={t('fieldLocationPlaceholder')}
+                        value={pergola.location ?? ''}
+                        onChange={(e) => updatePergola(index, { location: e.target.value })}
+                      />
+                    </Field>
+                  </SectionCard>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={addPergola}
+                  className="w-full py-2 border border-dashed border-white/30 hover:border-blue-400 text-white/60 hover:text-blue-400 rounded-xl text-sm transition"
+                >
+                  + הוסף פרגולה נוספת
+                </button>
+              </div>
             )}
 
             {productKind === 'railings' && draft.quickRailings && (

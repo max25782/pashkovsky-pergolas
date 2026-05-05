@@ -9,7 +9,7 @@ import { createClient } from '@supabase/supabase-js'
 import type { WorkerShift, WorkerShiftSummary, WorkerShiftDraft, WorkerShiftType } from '@/types/workers'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { requireCompanyAccess } from '@/lib/auth'
-import { computeMinutesWorked, computeShiftCost } from '@/lib/workers/calculations'
+import { computeMinutesWorked, computeShiftCost, applyCurrentRatesToWorkerShifts } from '@/lib/workers/calculations'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -122,7 +122,13 @@ export async function GET(
       return NextResponse.json({ error: 'Failed to fetch shifts' }, { status: 500 })
     }
 
-    const shifts: WorkerShift[] = (rows || []).map(transformShiftFromDB)
+    const shiftsRaw: WorkerShift[] = (rows || []).map(transformShiftFromDB)
+    const dailyRate = parseFloat(worker.daily_rate)
+    const hourlyParsed =
+      worker.hourly_rate != null && worker.hourly_rate !== ''
+        ? parseFloat(worker.hourly_rate)
+        : null
+    const shifts = applyCurrentRatesToWorkerShifts(shiftsRaw, dailyRate, hourlyParsed)
 
     const workShifts = shifts.filter((s) => s.shiftType === 'work')
     const holidayShifts = shifts.filter((s) => s.shiftType === 'holiday')

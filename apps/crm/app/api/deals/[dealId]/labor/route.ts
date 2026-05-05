@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { requireCompanyAccess } from '@/lib/auth'
+import { computeShiftCost } from '@/lib/workers/calculations'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -14,6 +15,29 @@ const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 const supabase = SUPABASE_URL && SERVICE_KEY
   ? createClient(SUPABASE_URL, SERVICE_KEY, { db: { schema: 'public' } })
   : undefined
+
+function liveComputedCost(row: {
+  shift_type?: string | null
+  minutes_worked?: number | null
+  computed_cost?: unknown
+  worker?: { daily_rate?: string | number; hourly_rate?: string | number | null } | null
+}): number {
+  const w = row.worker
+  if (!w) {
+    return row.computed_cost != null ? parseFloat(String(row.computed_cost)) : 0
+  }
+  const dr = parseFloat(String(w.daily_rate ?? '0'))
+  const hrRaw = w.hourly_rate
+  const hr = hrRaw != null && hrRaw !== '' ? parseFloat(String(hrRaw)) : null
+  const type = row.shift_type ?? 'work'
+  if (type === 'holiday') return dr
+  if (type === 'day_off') return 0
+  const mins = row.minutes_worked
+  if (mins != null && mins >= 0) {
+    return computeShiftCost(mins, dr, hr)
+  }
+  return row.computed_cost != null ? parseFloat(String(row.computed_cost)) : 0
+}
 
 function transformShift(row: any) {
   return {
@@ -24,7 +48,7 @@ function transformShift(row: any) {
     startTime: row.start_time ? String(row.start_time).slice(0, 5) : null,
     endTime: row.end_time ? String(row.end_time).slice(0, 5) : null,
     minutesWorked: row.minutes_worked,
-    computedCost: row.computed_cost != null ? parseFloat(row.computed_cost) : null,
+    computedCost: liveComputedCost(row),
     note: row.note,
     worker: row.worker
       ? {
@@ -67,10 +91,10 @@ export async function GET(
     if (!access.authorized) return access.error
 
     const selectFields = includeShifts
-      ? '*, worker:workers(id, first_name, last_name, role)'
-      : 'computed_cost, minutes_worked'
+      ? '*, worker:workers(id, first_name, last_name, role, daily_rate, hourly_rate)'
+      : '*'
 
-    const { data: shifts, error } = await supabase
+    const { data: shiftsRaw, error } = await supabase
       .from('worker_shifts')
       .select(selectFields)
       .eq('deal_id', dealId)
@@ -81,12 +105,11 @@ export async function GET(
       return NextResponse.json({ error: 'Failed to fetch labor' }, { status: 500 })
     }
 
-    const totalCost = (shifts || []).reduce(
-      (sum, s) => sum + (s.computed_cost != null ? parseFloat(String(s.computed_cost)) : 0),
-      0
-    )
-    const totalMinutes = (shifts || []).reduce(
-      (sum, s) => sum + (s.minutes_worked ?? 0),
+    const shifts: any[] = shiftsRaw || []
+
+    const totalCost = shifts.reduce((sum: number, s: any) => sum + liveComputedCost(s), 0)
+    const totalMinutes = shifts.reduce(
+      (sum: number, s: any) => sum + (s.minutes_worked ?? 0),
       0
     )
 
