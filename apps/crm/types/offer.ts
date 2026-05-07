@@ -334,8 +334,8 @@ export const DEFAULT_OFFER_VALUES = {
     woodName: undefined
   },
   roof: {
-    type: 'santaf' as const,
-    santafColor: 'transparent' as const
+    type: null as Roof['type'],
+    santafColor: undefined as Roof['santafColor'],
   },
   shadingRatio: null as OfferDraft['shadingRatio'],
   finishType: null as OfferDraft['finishType'],

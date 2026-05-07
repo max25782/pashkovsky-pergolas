@@ -91,7 +91,7 @@ function buildPergolaLineName(offer: Offer, pergolaType: string | null | undefin
   const typeName = pergolaProductTypeLabel(pergolaType, dict)
   const parts: string[] = [typeName]
   if (offer.shadingRatio) parts.push(`${dict.off_shading} ${offer.shadingRatio}`)
-  if (offer.roof?.type === 'santaf') parts.push(dict.off_roof_santaf)
+  if (offer.santaf?.enabled) parts.push(dict.off_roof_santaf)
   parts.push(`${dict.off_color_prefix} ${colorDescription(offer, dict)}`)
   return parts.join(' · ')
 }
@@ -292,11 +292,15 @@ function formatSinglePergolaDimensionsHtml(pergola: Offer['pergola'], dict: PdfD
     : ''
   const m = dict.off_dim_m
   const dash = dict.off_color_dash
+  const locationRow = pergola.location?.trim()
+    ? `<tr><td>${dict.off_location}</td><td>${escapeHtml(pergola.location.trim())}</td></tr>`
+    : ''
   const shape = pergola.shape
   if (!shape) {
     return (
       prefix +
-      `<tr><td>${dict.off_dim_w_l}</td><td>${pergola.width ?? dash} × ${pergola.length ?? dash} ${m}</td></tr>`
+      `<tr><td>${dict.off_dim_w_l}</td><td>${pergola.width ?? dash} × ${pergola.length ?? dash} ${m}</td></tr>` +
+      locationRow
     )
   }
   switch (shape.type) {
@@ -304,14 +308,16 @@ function formatSinglePergolaDimensionsHtml(pergola: Offer['pergola'], dict: PdfD
       return (
         prefix +
         `<tr><td>${dict.off_shape}</td><td>${dict.off_shape_rect}</td></tr>
-         <tr><td>${dict.off_dim_w_l}</td><td>${shape.width} × ${shape.length} ${m}</td></tr>`
+         <tr><td>${dict.off_dim_w_l}</td><td>${shape.width} × ${shape.length} ${m}</td></tr>` +
+        locationRow
       )
     case 'L':
       return (
         prefix +
         `<tr><td>${dict.off_shape}</td><td>${dict.off_shape_l}</td></tr>
          <tr><td>${dict.off_leg1}</td><td>${shape.leg1.width} × ${shape.leg1.length} ${m}</td></tr>
-         <tr><td>${dict.off_leg2}</td><td>${shape.leg2.width} × ${shape.leg2.length} ${m}</td></tr>`
+         <tr><td>${dict.off_leg2}</td><td>${shape.leg2.width} × ${shape.leg2.length} ${m}</td></tr>` +
+        locationRow
       )
     case 'X':
       return (
@@ -323,7 +329,8 @@ function formatSinglePergolaDimensionsHtml(pergola: Offer['pergola'], dict: PdfD
              (a, i) =>
                `<tr><td>${fillTpl(dict.off_arm, { n: i + 1 })}</td><td>${escapeHtml(a.direction)} — ${a.width} × ${a.length} ${m}</td></tr>`,
            )
-           .join('')}`
+           .join('')}` +
+        locationRow
       )
     case 'U':
       return (
@@ -331,10 +338,11 @@ function formatSinglePergolaDimensionsHtml(pergola: Offer['pergola'], dict: PdfD
         `<tr><td>${dict.off_shape}</td><td>${dict.off_shape_u}</td></tr>
          <tr><td>${dict.off_base}</td><td>${shape.base.width} × ${shape.base.length} ${m}</td></tr>
          <tr><td>${dict.off_leg_left}</td><td>${shape.leftLeg.width} × ${shape.leftLeg.length} ${m}</td></tr>
-         <tr><td>${dict.off_leg_right}</td><td>${shape.rightLeg.width} × ${shape.rightLeg.length} ${m}</td></tr>`
+         <tr><td>${dict.off_leg_right}</td><td>${shape.rightLeg.width} × ${shape.rightLeg.length} ${m}</td></tr>` +
+        locationRow
       )
     default:
-      return prefix
+      return prefix + locationRow
   }
 }
 
@@ -657,7 +665,7 @@ export function renderOfferHtml(
   const vatPct = offer.vatPercent ?? 18
   const vatLineLabel = fillTpl(dict.off_vat_line, { p: String(vatPct) })
   const roofCell =
-    offer.roof?.type === 'santaf'
+    offer.santaf?.enabled
       ? dict.off_roof_cell_santaf
       : offer.roof?.type === 'triplexGlass'
         ? dict.off_roof_triplex
