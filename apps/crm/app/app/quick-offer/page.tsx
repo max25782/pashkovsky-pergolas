@@ -1971,25 +1971,37 @@ export default function QuickOfferPage() {
                 {t('priceSummary')}
               </div>
 
-              {/* Per-pergola breakdown */}
-              {pergolaRows.length > 0 && (
-                <div className="space-y-1">
-                  {pergolaRows.map((row) => (
-                    <div key={row.label} className="flex justify-between text-xs text-white/60">
-                      <span>{row.label}</span>
-                      <span className="tabular-nums text-white/80">{formatPrice(row.value)}</span>
-                    </div>
-                  ))}
-                  {pergolaRows.length > 1 && (
-                    <div className="flex justify-between text-xs border-t border-white/10 pt-1">
-                      <span className="text-white/50">{t('labelPergola')} סה״כ</span>
-                      <span className="tabular-nums text-white/70">
-                        {formatPrice(pergolaRows.reduce((s, r) => s + r.value, 0))}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* Full line-item breakdown */}
+              {(() => {
+                const rows: Array<{ label: string; value: number }> = []
+                if (pergolaRows.length === 1) {
+                  rows.push(...pergolaRows)
+                } else if (pergolaRows.length > 1) {
+                  rows.push(...pergolaRows)
+                  rows.push({ label: `${t('labelPergola')} סה״כ`, value: pergolaRows.reduce((s, r) => s + r.value, 0) })
+                }
+                if (calculation.santafTotal > 0) rows.push({ label: t('labelSantaf'), value: calculation.santafTotal })
+                if (calculation.zipScreenTotal > 0) rows.push({ label: t('labelZipScreen'), value: calculation.zipScreenTotal })
+                if (calculation.lightingTotal > 0) rows.push({ label: t('labelLighting'), value: calculation.lightingTotal })
+                if (calculation.drainageTotal > 0) rows.push({ label: t('labelDrainage'), value: calculation.drainageTotal })
+                if (calculation.winterClosureTotal > 0) rows.push({ label: t('labelWinterClosure'), value: calculation.winterClosureTotal })
+                if (calculation.railingsLineTotal != null && calculation.railingsLineTotal > 0) rows.push({ label: tDeals('workTypes.railings'), value: calculation.railingsLineTotal })
+                if (calculation.fenceLineTotal != null && calculation.fenceLineTotal > 0) rows.push({ label: tDeals('workTypes.fence'), value: calculation.fenceLineTotal })
+                if (rows.length === 0) return null
+                return (
+                  <div className="space-y-1 border-b border-white/10 pb-2">
+                    {rows.map((row, i) => (
+                      <div
+                        key={i}
+                        className={`flex justify-between text-xs ${row.label.includes('סה״כ') ? 'text-white/70 font-medium pt-0.5' : 'text-white/60'}`}
+                      >
+                        <span>{row.label}</span>
+                        <span className="tabular-nums text-white/80">{formatPrice(row.value)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })()}
 
               <div className="flex justify-between text-sm text-white/70">
                 <span>{t('beforeVat')}</span>
