@@ -2,7 +2,7 @@
   "framework": "nextjs",
   "buildCommand": "cd ../.. && npx turbo run build --filter=@pashkovsky/landing",
   "outputDirectory": ".next",
-  "installCommand": "npm install",
+  "installCommand": "cd ../.. && npm install",
   "headers": [
     {
       "source": "/(.*)",
