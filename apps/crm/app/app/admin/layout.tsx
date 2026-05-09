@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { isSuperAdmin } from '@/lib/auth/isSuperAdmin'
+import { TrialBanner } from '@/components/TrialBanner'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
@@ -24,5 +25,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   if (membershipError || !membership) redirect('/app/settings/company?error=no_company')
 
-  return <>{children}</>
+  return (
+    <>
+      <TrialBanner />
+      {children}
+    </>
+  )
 }

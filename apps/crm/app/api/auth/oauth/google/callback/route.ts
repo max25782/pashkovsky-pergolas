@@ -105,7 +105,6 @@ export async function GET(req: NextRequest) {
           plan: 'trial',
           industry: 'general',
           primary_email: googleUser.email,
-          trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
         })
         .select()
         .single()
@@ -124,6 +123,37 @@ export async function GET(req: NextRequest) {
             joined_at: new Date().toISOString(),
           })
 
+        // Atomically claim an Early Bird position. NULL = cohort full.
+        // Early birds get 14-day full access; everyone else gets a 3-day default trial.
+        let earlyBirdPosition: number | null = null
+        {
+          const { data: claimed, error: claimError } = await supabase.rpc(
+            'claim_early_bird_spot',
+            { p_company_id: company.id }
+          )
+          if (claimError) {
+            console.error('[Google OAuth] Early Bird claim error:', claimError)
+          } else if (typeof claimed === 'number') {
+            earlyBirdPosition = claimed
+          }
+        }
+
+        const isEarlyBird = earlyBirdPosition !== null
+        const trialDays = isEarlyBird ? 14 : 3
+        const trialEndsAt = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000).toISOString()
+
+        await supabase
+          .from('companies')
+          .update({ trial_ends_at: trialEndsAt })
+          .eq('id', company.id)
+
+        if (isEarlyBird) {
+          await supabase
+            .from('users')
+            .update({ plan: 'growth' })
+            .eq('id', user.id)
+        }
+
         // Create trial subscription
         const { data: trialPlan } = await supabase
           .from('plans')
@@ -140,7 +170,7 @@ export async function GET(req: NextRequest) {
               status: 'trialing',
               payment_provider: 'manual',
               current_period_start: new Date().toISOString(),
-              current_period_end: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+              current_period_end: trialEndsAt,
             })
         }
       }
