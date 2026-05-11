@@ -35,11 +35,14 @@ interface PlanProps {
   highlighted?: boolean;
   earlyBirdTag: string;
   regularLabel: string;
+  currency: string;
+  earlyBirdNote: string;
 }
 
 function PlanCard({
   name, price, regularPrice, period, desc, features,
   cta, href, badge, highlighted, earlyBirdTag, regularLabel,
+  currency, earlyBirdNote,
 }: PlanProps) {
   return (
     <div
@@ -64,16 +67,18 @@ function PlanCard({
 
       {/* Price block */}
       <div className="mb-6 space-y-1">
-        {/* Crossed-out regular price */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-text-3 line-through">{regularLabel} {regularPrice}</span>
-          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/20">
-            {earlyBirdTag}
-          </span>
-        </div>
-        {/* Early Bird price */}
+        {/* Crossed-out regular price + Early Bird badge — only when earlyBirdNote is set */}
+        {earlyBirdNote !== '' && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-text-3 line-through">{regularLabel} {currency}{regularPrice}</span>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/20">
+              {earlyBirdTag}
+            </span>
+          </div>
+        )}
+        {/* Main price */}
         <div className="flex items-end gap-1">
-          <span className="font-syne font-800 text-4xl sm:text-5xl text-white">{price}</span>
+          <span className="font-syne font-800 text-4xl sm:text-5xl text-white">{currency}{price}</span>
           <span className="text-text-2 text-sm mb-1.5">{period}</span>
         </div>
       </div>
@@ -143,6 +148,8 @@ export default function Pricing() {
 
   const spotsFraction = (TOTAL_SPOTS - spotsLeft) / TOTAL_SPOTS;
 
+  const currency = t('currency');
+  const earlyBirdNote = t('earlyBirdNote');
   const earlyBirdTag = t('early_bird_tag');
   const regularLabel = t('regular_label');
 
@@ -156,6 +163,8 @@ export default function Pricing() {
       features: t.raw('plan_starter_features') as string[],
       cta: t('plan_starter_cta'),
       href: LINKS.register,
+      currency,
+      earlyBirdNote,
       earlyBirdTag,
       regularLabel,
     },
@@ -170,6 +179,8 @@ export default function Pricing() {
       href: LINKS.register,
       badge: t('plan_pro_badge'),
       highlighted: true,
+      currency,
+      earlyBirdNote,
       earlyBirdTag,
       regularLabel,
     },
@@ -182,6 +193,8 @@ export default function Pricing() {
       features: t.raw('plan_enterprise_features') as string[],
       cta: t('plan_enterprise_cta'),
       href: LINKS.contactSales,
+      currency,
+      earlyBirdNote,
       earlyBirdTag,
       regularLabel,
     },
