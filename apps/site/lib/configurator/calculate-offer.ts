@@ -33,28 +33,38 @@ export function calculateOffer(draft: OfferDraftCalc): OfferCalculation {
       ? draft.santaf.pricePerSqmWithStructure
       : draft.santaf.pricePerSqmBasic
 
-    let suntufWidth = 0
-    let suntufLength = 0
+    const overlapType = draft.santaf.overlapType || 'double'
+    let totalSuntufMaterialArea = 0
 
-    if (pergolas.length > 0 && pergolas[0]?.shape) {
-      const firstPergola = pergolas[0]
-      if (firstPergola.shape.type === 'rectangle') {
-        suntufWidth = firstPergola.shape.width
-        suntufLength = firstPergola.shape.length
-      } else {
-        const sideLength = Math.sqrt(santafArea)
-        suntufWidth = sideLength
-        suntufLength = sideLength
+    if (pergolas.length > 0) {
+      // Calculate suntuf sheets for EACH pergola independently and sum material areas.
+      // Sheets cannot span multiple pergolas — each structure needs its own count.
+      for (const pergola of pergolas) {
+        if (!pergola?.shape) continue
+        let w = 0
+        let l = 0
+        if (pergola.shape.type === 'rectangle') {
+          w = pergola.shape.width
+          l = pergola.shape.length
+        } else {
+          // For L/X/U shapes approximate as a square with the same area
+          const singleArea = calculatePergolaArea(pergola.shape)
+          const side = Math.sqrt(singleArea)
+          w = side
+          l = side
+        }
+        if (w > 0 && l > 0) {
+          const suntufCalc = calculateSuntufSheets(w, l, overlapType)
+          totalSuntufMaterialArea += suntufCalc.suntufMaterialArea
+        }
       }
     } else if (draft.santaf.width && draft.santaf.length) {
-      suntufWidth = draft.santaf.width
-      suntufLength = draft.santaf.length
+      const suntufCalc = calculateSuntufSheets(draft.santaf.width, draft.santaf.length, overlapType)
+      totalSuntufMaterialArea = suntufCalc.suntufMaterialArea
     }
 
-    if (suntufWidth > 0 && suntufLength > 0) {
-      const overlapType = draft.santaf.overlapType || 'double'
-      const suntufCalc = calculateSuntufSheets(suntufWidth, suntufLength, overlapType)
-      santafTotal = calculateSuntufPriceByArea(suntufCalc.suntufMaterialArea, santafPrice)
+    if (totalSuntufMaterialArea > 0) {
+      santafTotal = calculateSuntufPriceByArea(totalSuntufMaterialArea, santafPrice)
     } else {
       santafTotal = santafArea * santafPrice
     }
