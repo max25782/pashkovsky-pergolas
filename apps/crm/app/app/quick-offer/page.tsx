@@ -2007,16 +2007,16 @@ export default function QuickOfferPage() {
                 <span>{t('beforeVat')}</span>
                 <span className="text-white tabular-nums">{formatPrice(calculation.totalBeforeVat)}</span>
               </div>
-              <div className="flex flex-wrap justify-between items-center gap-2 text-sm">
-                <span className="text-white/70">{t('fieldVatPercent')}</span>
-                <div className="flex items-center gap-2 ms-auto">
+              <div className="flex justify-between items-center gap-2 text-sm">
+                <span className="text-white/70 shrink-0">{t('fieldVatPercent')}</span>
+                <div className="flex items-center gap-2 shrink-0">
                   <input
                     type="number"
                     min={0}
                     max={100}
                     step={0.01}
                     dir="ltr"
-                    className={`${inputCls} w-[5.5rem] py-1.5 text-center shrink-0`}
+                    className={`${inputCls} w-[5.5rem] py-1.5 text-center`}
                     value={draft.vatPercent}
                     onChange={(e) => {
                       const v = parseFloat(e.target.value)
@@ -2039,16 +2039,16 @@ export default function QuickOfferPage() {
                   {formatPrice(calculation.priceWithVat)}
                 </span>
               </div>
-              <div className="flex flex-wrap justify-between items-center gap-2 text-sm">
-                <span className="text-white/70">{t('fieldDiscount')}</span>
-                <div className="flex items-center gap-2 ms-auto">
+              <div className="flex justify-between items-center gap-2 text-sm">
+                <span className="text-white/70 shrink-0">{t('fieldDiscount')}</span>
+                <div className="flex items-center gap-2 shrink-0">
                   <input
                     type="number"
                     min={0}
                     max={100}
                     step={0.5}
                     dir="ltr"
-                    className={`${inputCls} w-[5.5rem] py-1.5 text-center shrink-0`}
+                    className={`${inputCls} w-[5.5rem] py-1.5 text-center`}
                     value={draft.discountPercent}
                     onChange={(e) =>
                       setDraft((d) => ({ ...d, discountPercent: Number(e.target.value) || 0 }))
