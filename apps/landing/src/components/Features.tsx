@@ -58,7 +58,7 @@ function BrowserChrome() {
       <span className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
       <span className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
       <span className="ml-2 flex-1 h-4 rounded bg-white/5 text-[9px] text-text-3 flex items-center px-2">
-        crm.pashkovsky-group.com
+        app.alumincrm.com
       </span>
     </div>
   );

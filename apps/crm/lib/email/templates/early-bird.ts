@@ -5,7 +5,7 @@
  * - generateTrialEndingHTML: 3-days-left reminder
  */
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://crm.pashkovsky-group.com'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://app.alumincrm.com'
 
 interface WelcomeOptions {
   fullName: string

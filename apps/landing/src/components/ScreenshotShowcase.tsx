@@ -45,7 +45,7 @@ function BrowserFrame({ src, alt }: { src: string; alt: string }) {
         <span className="w-3 h-3 rounded-full bg-yellow-500/60" />
         <span className="w-3 h-3 rounded-full bg-green-500/60" />
         <span className="ml-3 flex-1 h-5 rounded-md bg-white/5 text-[10px] text-text-3 flex items-center px-3">
-          crm.pashkovsky-group.com
+          app.alumincrm.com
         </span>
       </div>
       {/* Screenshot */}

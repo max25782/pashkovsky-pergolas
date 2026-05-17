@@ -95,7 +95,7 @@ export default function ProofSection() {
         {/* Real app screenshots — horizontal scroll strip */}
         <div className="animate-on-scroll mb-20">
           <p className="text-center text-xs text-text-3 uppercase tracking-widest font-medium mb-8">
-            Real product — live at crm.pashkovsky-group.com
+            Real product — live at app.alumincrm.com
           </p>
           <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-3 lg:grid-cols-6 sm:overflow-visible">
             {PHONE_SCREENS.map(({ src, label }) => (

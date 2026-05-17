@@ -43,7 +43,7 @@ export async function submitLead(
 ): Promise<LeadSubmissionResult> {
   try {
     // Get CRM URL from environment
-    const crmUrl = process.env.NEXT_PUBLIC_CRM_URL || 'https://crm.pashkovsky-group.com'
+    const crmUrl = process.env.NEXT_PUBLIC_CRM_URL || 'https://app.alumincrm.com'
     const siteToken = process.env.NEXT_PUBLIC_SITE_TOKEN
 
     if (!siteToken) {
