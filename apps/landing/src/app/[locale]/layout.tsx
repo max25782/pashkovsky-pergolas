@@ -64,7 +64,8 @@ export async function generateMetadata({
 
   const title = `AluminCRM — ${t('headline_1')} ${t('headline_2')}`;
   const description = t('subheadline');
-  const canonicalUrl = `${SITE_URL}/${locale}`;
+  // English is served at root path (localePrefix: 'as-needed').
+  const canonicalUrl = locale === 'en' ? `${SITE_URL}/` : `${SITE_URL}/${locale}`;
   const ogLocale = OG_LOCALE_MAP[locale] ?? 'en_US';
 
   return {
@@ -74,11 +75,11 @@ export async function generateMetadata({
     alternates: {
       canonical: canonicalUrl,
       languages: {
-        en: `${SITE_URL}/en`,
+        en: `${SITE_URL}/`,
         ru: `${SITE_URL}/ru`,
         sr: `${SITE_URL}/sr`,
         he: `${SITE_URL}/he`,
-        'x-default': `${SITE_URL}/en`,
+        'x-default': `${SITE_URL}/`,
       },
     },
     openGraph: {
