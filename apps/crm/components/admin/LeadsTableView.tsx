@@ -1,9 +1,10 @@
 "use client"
 import { useState } from 'react'
 import type { Lead } from './lead-types'
-import { LEAD_STATUSES } from './lead-types'
+import { LEAD_STATUSES, pickLabel } from './lead-types'
 import { formatDate } from './deal-utils'
 import { useCRMTranslations } from './useCRMTranslations'
+import { useLanguage } from '@/lib/language-context'
 import { getScoreCategory } from '@/lib/leads/scoring'
 import { PhoneActions } from './PhoneActions'
 
@@ -80,6 +81,7 @@ function LeadTableRow({
   onNotesChange: (notes: string | null) => void
 }) {
   const [localNotes, setLocalNotes] = useState(lead.notes || '')
+  const { language } = useLanguage()
   const status = LEAD_STATUSES.find(s => s.id === lead.status)
 
   return (
@@ -112,7 +114,7 @@ function LeadTableRow({
         >
           <option value="">-</option>
           {LEAD_STATUSES.map(s => (
-            <option key={s.id} value={s.id}>{s.label}</option>
+            <option key={s.id} value={s.id}>{pickLabel(s, language)}</option>
           ))}
         </select>
       </td>

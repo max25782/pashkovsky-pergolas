@@ -1,7 +1,8 @@
 import type { Lead } from './lead-types'
-import { LEAD_STATUSES, LEAD_SOURCES, normalizeLeadSource } from './lead-types'
+import { LEAD_STATUSES, LEAD_SOURCES, normalizeLeadSource, pickLabel } from './lead-types'
 import { LeadsKanbanColumn } from './LeadsKanbanColumn'
 import type { KanbanGroupBy } from './GroupByToggle'
+import { useLanguage } from '@/lib/language-context'
 
 interface LeadsKanbanBoardProps {
   leads: Lead[]
@@ -20,6 +21,7 @@ export function LeadsKanbanBoard({
   onLeadDragStart,
   onLeadClick
 }: LeadsKanbanBoardProps) {
+  const { language } = useLanguage()
   const isStatusGroup = groupBy === 'status'
 
   function getLeadsByStatus(statusId: string) {
@@ -33,7 +35,8 @@ export function LeadsKanbanBoard({
     return leads.filter(lead => normalizeLeadSource(lead.source) === sourceId)
   }
 
-  const columns = isStatusGroup ? LEAD_STATUSES : LEAD_SOURCES
+  const rawColumns = isStatusGroup ? LEAD_STATUSES : LEAD_SOURCES
+  const columns = rawColumns.map(col => ({ ...col, label: pickLabel(col, language) }))
 
   return (
     <div className="overflow-x-auto pb-4 -mx-4 px-4">

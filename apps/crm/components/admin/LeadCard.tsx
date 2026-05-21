@@ -1,7 +1,8 @@
 import type { Lead } from './lead-types'
-import { LEAD_STATUSES } from './lead-types'
+import { LEAD_STATUSES, pickLabel } from './lead-types'
 import { formatDate } from './deal-utils'
 import { PhoneActions } from './PhoneActions'
+import { useLanguage } from '@/lib/language-context'
 
 interface LeadCardProps {
   lead: Lead
@@ -11,6 +12,7 @@ interface LeadCardProps {
 }
 
 export function LeadCard({ lead, onClick, onDragStart }: LeadCardProps) {
+  const { language } = useLanguage()
   const status = LEAD_STATUSES.find(s => s.id === lead.status) || LEAD_STATUSES[0]
   const isDraggable = onDragStart != null
 
@@ -34,7 +36,7 @@ export function LeadCard({ lead, onClick, onDragStart }: LeadCardProps) {
             )}
           </div>
           <span className={`${status.color} px-2 py-1 rounded text-xs font-medium text-white whitespace-nowrap`}>
-            {status.label}
+            {pickLabel(status, language)}
           </span>
         </div>
         

@@ -1,7 +1,8 @@
 "use client"
 import { useEffect, useState } from "react"
 import type { Lead } from './lead-types'
-import { LEAD_STATUSES } from './lead-types'
+import { LEAD_STATUSES, pickLabel } from './lead-types'
+import { useLanguage } from '@/lib/language-context'
 import { formatDate } from './deal-utils'
 import { useCRMTranslations } from './useCRMTranslations'
 import { LeadScore } from './LeadScore'
@@ -23,6 +24,7 @@ export function LeadModal({
   adminToken
 }: LeadModalProps) {
   const t = useCRMTranslations()
+  const { language } = useLanguage()
   const [localLead, setLocalLead] = useState(lead)
   const [saving, setSaving] = useState(false)
 
@@ -138,7 +140,7 @@ export function LeadModal({
               >
                 <option value="">-</option>
                 {LEAD_STATUSES.map(s => (
-                  <option key={s.id} value={s.id}>{s.label}</option>
+                  <option key={s.id} value={s.id}>{pickLabel(s, language)}</option>
                 ))}
               </select>
             </div>
