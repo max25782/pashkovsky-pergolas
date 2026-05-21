@@ -90,9 +90,11 @@ export async function GET(
     const access = await requireCompanyAccess(req, deal.company_id)
     if (!access.authorized) return access.error
 
+    // Always join worker rates so liveComputedCost can calculate correctly.
+    // When includeShifts=true we also return name/role for the full shifts list.
     const selectFields = includeShifts
       ? '*, worker:workers(id, first_name, last_name, role, daily_rate, hourly_rate)'
-      : '*'
+      : '*, worker:workers(daily_rate, hourly_rate)'
 
     const { data: shiftsRaw, error } = await supabase
       .from('worker_shifts')
