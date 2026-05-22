@@ -1,6 +1,6 @@
 import { getHebrewFontsCss, getLogoDataUri } from './font-loader'
 import type { WorkerShift, WorkerShiftSummary } from '@/types/workers'
-import { pdfT, resolvePdfLocale, pdfHtmlDir, pdfBcp47Locale, type PdfDict } from '@/lib/pdf/offer-pdf-i18n'
+import { pdfT, resolvePdfLocale, pdfHtmlDir, pdfBcp47Locale, pdfCurrencySymbol, type PdfDict } from '@/lib/pdf/offer-pdf-i18n'
 
 interface WorkerTimesheetData {
   worker: {
@@ -45,8 +45,8 @@ function formatMonthLabel(month: string, bcp47: string): string {
   return d.toLocaleDateString(bcp47, { month: 'long', year: 'numeric' })
 }
 
-function formatCurrency(amount: number, bcp47: string): string {
-  return `₪${amount.toLocaleString(bcp47, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+function formatCurrency(amount: number, bcp47: string, symbol: string): string {
+  return `${symbol}${amount.toLocaleString(bcp47, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 function formatTime(t: string | null, dash: string): string {
@@ -71,6 +71,7 @@ export function generateWorkerTimesheetHtml(data: WorkerTimesheetData, locale?: 
   const t = pdfT[resolved]
   const dir = pdfHtmlDir(resolved)
   const bcp47 = pdfBcp47Locale(resolved)
+  const currencySymbol = pdfCurrencySymbol(resolved)
   const dash = t.off_color_dash
 
   const { worker, month, shifts, summary } = data
@@ -92,7 +93,7 @@ export function generateWorkerTimesheetHtml(data: WorkerTimesheetData, locale?: 
       const costCell = isDayOff
         ? `<span style="color:#d97706;font-size:11px;">${escapeHtml(t.ts_no_pay)}</span>`
         : s.computedCost != null
-          ? formatCurrency(s.computedCost, bcp47)
+          ? formatCurrency(s.computedCost, bcp47, currencySymbol)
           : dash
 
       const projectCell = isWork
@@ -121,9 +122,9 @@ export function generateWorkerTimesheetHtml(data: WorkerTimesheetData, locale?: 
   const totalPayable = summary.totalPayable ?? (summary.totalCost + (summary.holidayPay ?? 0))
 
   const costBreak =
-    `${escapeHtml(t.ts_work_prefix)}: ${formatCurrency(summary.totalCost, bcp47)}` +
+    `${escapeHtml(t.ts_work_prefix)}: ${formatCurrency(summary.totalCost, bcp47, currencySymbol)}` +
     ((summary.holidayPay ?? 0) > 0
-      ? ` + ${escapeHtml(t.ts_holidays_prefix)}: ${formatCurrency(summary.holidayPay ?? 0, bcp47)}`
+      ? ` + ${escapeHtml(t.ts_holidays_prefix)}: ${formatCurrency(summary.holidayPay ?? 0, bcp47, currencySymbol)}`
       : '')
 
   return `<!DOCTYPE html>
@@ -303,7 +304,7 @@ export function generateWorkerTimesheetHtml(data: WorkerTimesheetData, locale?: 
     </div>
     <div class="worker-card-item">
       <label>${escapeHtml(t.ts_daily_rate)}</label>
-      <div class="value">${formatCurrency(worker.dailyRate, bcp47)}</div>
+      <div class="value">${formatCurrency(worker.dailyRate, bcp47, currencySymbol)}</div>
     </div>
   </div>
 
@@ -322,7 +323,7 @@ export function generateWorkerTimesheetHtml(data: WorkerTimesheetData, locale?: 
     </div>
     <div class="summary-box box-green">
       <label>${escapeHtml(t.ts_total_pay)}</label>
-      <div class="val">${formatCurrency(totalPayable, bcp47)}</div>
+      <div class="val">${formatCurrency(totalPayable, bcp47, currencySymbol)}</div>
     </div>
   </div>
 
@@ -350,7 +351,7 @@ export function generateWorkerTimesheetHtml(data: WorkerTimesheetData, locale?: 
           ${costBreak}
         </td>
         <td style="text-align:end; color:#4ade80; font-size:14px;">
-          ${formatCurrency(totalPayable, bcp47)}
+          ${formatCurrency(totalPayable, bcp47, currencySymbol)}
         </td>
       </tr>
     </tfoot>

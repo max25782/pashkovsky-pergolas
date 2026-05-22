@@ -2,7 +2,7 @@ import type { PdfLocale } from './pdf-locale'
 import { resolvePdfLocale, pdfHtmlDir, pdfBcp47Locale } from './pdf-locale'
 
 export type { PdfLocale } from './pdf-locale'
-export { resolvePdfLocale, pdfHtmlDir, pdfBcp47Locale } from './pdf-locale'
+export { resolvePdfLocale, pdfHtmlDir, pdfBcp47Locale, pdfCurrencySymbol } from './pdf-locale'
 
 import raw from './pdf-translations.json'
 

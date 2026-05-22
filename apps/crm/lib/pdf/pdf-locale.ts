@@ -21,3 +21,13 @@ export function pdfBcp47Locale(locale: PdfLocale): string {
   }
   return map[locale]
 }
+
+export function pdfCurrencySymbol(locale: PdfLocale): string {
+  const map: Record<PdfLocale, string> = {
+    he: '₪',
+    ru: '₽',
+    en: '$',
+    sr: 'RSD',
+  }
+  return map[locale]
+}

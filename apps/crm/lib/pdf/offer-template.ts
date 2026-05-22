@@ -183,7 +183,7 @@ export function generateOfferPDFTemplate(offer: Offer, company: Company): string
 
     <div class="total-row">
       <span>סה"כ לתשלום:</span>
-      <span>₪${offer.finalPrice.toLocaleString()}</span>
+      <span>${offer.finalPrice.toLocaleString()}</span>
     </div>
   </div>
 

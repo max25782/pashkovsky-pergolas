@@ -2,7 +2,7 @@ import type { Offer } from '@/types/offer'
 import { quickOfferRailingsFenceAreaSqm } from '@/lib/offer-calculator'
 import { rectanglePlanSvgFragment } from '@/lib/pdf/plan-view-svg'
 import { getHebrewFontsCss, getLogoDataUri } from './font-loader'
-import { pdfT, resolvePdfLocale, pdfHtmlDir, pdfBcp47Locale, type PdfDict } from '@/lib/pdf/offer-pdf-i18n'
+import { pdfT, resolvePdfLocale, pdfHtmlDir, pdfBcp47Locale, pdfCurrencySymbol, type PdfDict } from '@/lib/pdf/offer-pdf-i18n'
 import { OFFER_TERMS_BODIES } from '@/lib/pdf/offer-terms-bodies'
 
 function fillTpl(s: string, vars: Record<string, string | number>): string {
@@ -39,10 +39,12 @@ function pdfPrimaryProductKind(offer: Offer): 'pergola' | 'railings' | 'fence' {
   return offer.quickProduct ?? offer.quickOfferExtra?.quickProduct ?? 'pergola'
 }
 
-function formatPricePdf(n: number): string {
-  const abs = Math.abs(n)
-  const formatted = abs.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-  return n < 0 ? `₪ -${formatted}` : `₪ ${formatted}`
+function makePriceFormatter(symbol: string) {
+  return function formatPricePdf(n: number): string {
+    const abs = Math.abs(n)
+    const formatted = abs.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+    return n < 0 ? `${symbol} -${formatted}` : `${symbol} ${formatted}`
+  }
 }
 
 function formatDateDdMmYyyy(dateStr: string): string {
@@ -616,6 +618,7 @@ export function renderOfferHtml(
   const dict = pdfT[resolved]
   const dir = pdfHtmlDir(resolved)
   const bcp47 = pdfBcp47Locale(resolved)
+  const formatPricePdf = makePriceFormatter(pdfCurrencySymbol(resolved))
   const dash = dict.off_color_dash
 
   const fontsCss = getHebrewFontsCss()

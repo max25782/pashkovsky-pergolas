@@ -4,6 +4,7 @@ import {
   resolvePdfLocale,
   pdfHtmlDir,
   pdfBcp47Locale,
+  pdfCurrencySymbol,
   type PdfDict,
 } from '@/lib/pdf/offer-pdf-i18n'
 
@@ -64,8 +65,8 @@ function escapeHtml(value: string): string {
     .replaceAll("'", '&#039;')
 }
 
-function formatCurrency(amount: number, bcp47: string): string {
-  return `₪${amount.toLocaleString(bcp47, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+function formatCurrency(amount: number, bcp47: string, symbol: string): string {
+  return `${symbol}${amount.toLocaleString(bcp47, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 function getColorLabel(color: string, t: PdfDict): string {
@@ -109,6 +110,7 @@ function groupByColor(
   items: OrderItem[],
   t: PdfDict,
   bcp47: string,
+  symbol: string,
 ): Array<{ name: string; qty: string; pricePerKg: string; amount: string }> {
   const groups = new Map<string, { weight: number; pieces: number; amount: number; pricePerKgSum: number; priceCount: number }>()
   for (const item of items) {
@@ -132,7 +134,7 @@ function groupByColor(
           ? `${g.weight.toFixed(2)} ${t.ord_unit_kg}`
           : `${g.pieces} ${t.ord_unit_pc}`,
       pricePerKg: avgPricePerKg > 0 ? `${avgPricePerKg.toFixed(2)} ${t.ord_per_kg}` : '',
-      amount: formatCurrency(g.amount, bcp47),
+      amount: formatCurrency(g.amount, bcp47, symbol),
     }
   })
   while (result.length % 3 !== 0) result.push({ name: '', qty: '', pricePerKg: '', amount: '' })
@@ -144,6 +146,7 @@ export function renderOrderHtml(order: Order, imageMap: Record<string, string> =
   const t = pdfT[resolved]
   const dir = pdfHtmlDir(resolved)
   const bcp47 = pdfBcp47Locale(resolved)
+  const currencySymbol = pdfCurrencySymbol(resolved)
   const dash = t.off_color_dash
 
   const fonts = getHebrewFontsCss()
@@ -156,7 +159,7 @@ export function renderOrderHtml(order: Order, imageMap: Record<string, string> =
   const orderNumber = order.order_number || order.id?.slice(0, 8) || 'N/A'
   const quoteNumber = `Q-${orderNumber}`
   const items = order.order_items ?? []
-  const colorGroups = groupByColor(items, t, bcp47)
+  const colorGroups = groupByColor(items, t, bcp47, currencySymbol)
 
   const preVatAmount = order.final_amount || order.total_amount || 0
   const vatAmount = Math.round(preVatAmount * VAT_RATE * 100) / 100
@@ -453,8 +456,8 @@ export function renderOrderHtml(order: Order, imageMap: Record<string, string> =
           <td>${item.quantity_pieces ?? 0} ${escapeHtml(t.ord_unit_pc)}</td>
           <td>${escapeHtml(getColorLabel(item.color, t))}</td>
           <td>${(item.total_weight_kg ?? 0).toFixed(2)} ${escapeHtml(t.ord_unit_kg)}</td>
-          <td>${(item.price_per_piece ?? 0).toFixed(2)} ₪</td>
-          <td class="td-amt">${formatCurrency(item.subtotal ?? 0, bcp47)}</td>
+          <td>${(item.price_per_piece ?? 0).toFixed(2)} ${currencySymbol}</td>
+          <td class="td-amt">${formatCurrency(item.subtotal ?? 0, bcp47, currencySymbol)}</td>
         </tr>`}).join('')}
       </tbody>
     </table>
@@ -478,28 +481,28 @@ export function renderOrderHtml(order: Order, imageMap: Record<string, string> =
         ${(order.discount_percent ?? 0) > 0 ? `
         <tr>
           <td class="tl">${escapeHtml(t.ord_before_disc)}</td>
-          <td class="tv">${formatCurrency(order.total_amount || 0, bcp47)}</td>
+          <td class="tv">${formatCurrency(order.total_amount || 0, bcp47, currencySymbol)}</td>
         </tr>
         <tr>
           <td class="tl">${escapeHtml(fillTpl(t.ord_disc_pct, { p: String(order.discount_percent) }))}</td>
-          <td class="tv" style="color:#c53030;">-${formatCurrency((order.total_amount || 0) * (order.discount_percent! / 100), bcp47)}</td>
+          <td class="tv" style="color:#c53030;">-${formatCurrency((order.total_amount || 0) * (order.discount_percent! / 100), bcp47, currencySymbol)}</td>
         </tr>` : ''}
         ${(order.discount_amount ?? 0) > 0 ? `
         <tr>
           <td class="tl">${escapeHtml(t.ord_disc)}</td>
-          <td class="tv" style="color:#c53030;">-${formatCurrency(order.discount_amount!, bcp47)}</td>
+          <td class="tv" style="color:#c53030;">-${formatCurrency(order.discount_amount!, bcp47, currencySymbol)}</td>
         </tr>` : ''}
         <tr>
           <td class="tl">${escapeHtml(t.ord_total_cost)}</td>
-          <td class="tv">${formatCurrency(preVatAmount, bcp47)}</td>
+          <td class="tv">${formatCurrency(preVatAmount, bcp47, currencySymbol)}</td>
         </tr>
         <tr class="row-vat">
           <td class="tl">${escapeHtml(vatRowLabel)}</td>
-          <td class="tv">${formatCurrency(vatAmount, bcp47)}</td>
+          <td class="tv">${formatCurrency(vatAmount, bcp47, currencySymbol)}</td>
         </tr>
         <tr class="row-grand">
           <td class="tl">${escapeHtml(t.ord_grand_total)}</td>
-          <td class="tv">${formatCurrency(totalWithVat, bcp47)}</td>
+          <td class="tv">${formatCurrency(totalWithVat, bcp47, currencySymbol)}</td>
         </tr>
       </table>
 
