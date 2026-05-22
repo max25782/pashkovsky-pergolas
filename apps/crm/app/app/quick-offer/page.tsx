@@ -33,7 +33,8 @@ import {
   PERGOLA_TYPE_DEFAULT_PRICES,
   type Offer,
 } from '@/types/offer'
-import { calculateOffer, formatPrice, quickOfferRailingsFenceAreaSqm } from '@/lib/offer-calculator'
+import { calculateOffer, quickOfferRailingsFenceAreaSqm } from '@/lib/offer-calculator'
+import { usePriceFormatter } from '@/lib/use-price-formatter'
 import { calculatePergolaArea } from '@/lib/calculations/pergola-area'
 import { PergolaShapeSelector } from '@/components/offers/PergolaShapeSelector'
 import { authFetch } from '@/lib/api/auth-fetch'
@@ -293,7 +294,7 @@ function WhatsAppModal({
       const offerUrl = `${baseUrl}/he/offers/${offerId}/approve`
       const formattedPhone = formatPhoneForWhatsApp(phone)
       const message = encodeURIComponent(
-        `שלום ${name},\n\nהצעת המחיר שלך מוכנה!\n\nלצפייה בהצעה:\n${offerUrl}\n\n💰 סכום: ₪${finalPrice.toLocaleString('he-IL')}\n\nבברכה,\nPashkovsky Group`,
+        `שלום ${name},\n\nהצעת המחיר שלך מוכנה!\n\nלצפייה בהצעה:\n${offerUrl}\n\n💰 סכום: ${fmt(finalPrice)}\n\nבברכה,\nPashkovsky Group`,
       )
       window.open(`https://wa.me/${formattedPhone}?text=${message}`, '_blank')
       onClose()
@@ -483,6 +484,7 @@ function ResultScreen({
   const tSub = useTranslations('subscription')
   const { can } = useSubscriptionPlan()
   const { language } = useLanguage()
+  const fmt = usePriceFormatter()
   const [downloadingPdf, setDownloadingPdf] = useState(false)
   const [showSaveCrm, setShowSaveCrm] = useState(false)
   const [showWhatsApp, setShowWhatsApp] = useState(false)
@@ -703,28 +705,28 @@ function ResultScreen({
             {priceRows.map((row) => (
               <div key={row.label} className="flex justify-between text-xs">
                 <span className="text-white/60">{row.label}</span>
-                <span className="text-white">{formatPrice(row.value)}</span>
+                <span className="text-white">{fmt(row.value)}</span>
               </div>
             ))}
             <div className="border-t border-white/10 pt-2 flex justify-between text-xs">
               <span className="text-white/60">{t('beforeVat')}</span>
-              <span className="text-white">{formatPrice(calculation.totalBeforeVat)}</span>
+              <span className="text-white">{fmt(calculation.totalBeforeVat)}</span>
             </div>
             <div className="flex justify-between text-xs">
               <span className="text-white/60">
                 {t('vatPercentLabel', { pct: calculation.vatPercent })}
               </span>
-              <span className="text-white">{formatPrice(calculation.vatAmount)}</span>
+              <span className="text-white">{fmt(calculation.vatAmount)}</span>
             </div>
             {calculation.discountAmount > 0 && (
               <div className="flex justify-between text-xs">
                 <span className="text-white/60">{t('discount', { pct: calculation.discountPercent })}</span>
-                <span className="text-red-400">−{formatPrice(calculation.discountAmount)}</span>
+                <span className="text-red-400">−{fmt(calculation.discountAmount)}</span>
               </div>
             )}
             <div className="border-t border-white/10 pt-2 flex justify-between font-bold">
               <span className="text-white text-sm">{t('grandTotal')}</span>
-              <span className="text-green-400 text-sm">{formatPrice(calculation.finalPrice)}</span>
+              <span className="text-green-400 text-sm">{fmt(calculation.finalPrice)}</span>
             </div>
           </div>
 
@@ -968,7 +970,7 @@ export default function QuickOfferPage() {
       if (draft.drainage.enabled) features.push('מערכת ניקוז')
       if (draft.winterClosure.enabled) features.push('סגירת זכוכיות')
       if (features.length > 0) base += `\n✨ תוספות:\n${features.map((f) => `• ${f}`).join('\n')}\n`
-      base += `\n💰 מחיר סופי: ${formatPrice(calculation.finalPrice)}`
+      base += `\n💰 מחיר סופי: ${fmt(calculation.finalPrice)}`
       if (draft.discountPercent > 0) base += ` (כולל ${draft.discountPercent}% הנחה!)`
 
       const res = await authFetch('/api/ai/improve-offer-text', {
@@ -1859,7 +1861,7 @@ export default function QuickOfferPage() {
                         <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-2 text-center">
                           <span className="text-sm text-white/60">{t('closureSubtotal')}</span>
                           <span className="font-bold text-green-400">
-                            {(item.area * item.pricePerSqm).toLocaleString('he-IL')} ₪
+                            {fmt(item.area * item.pricePerSqm)}
                           </span>
                         </div>
                       )}
@@ -1889,10 +1891,7 @@ export default function QuickOfferPage() {
                     <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 flex justify-between items-center">
                       <span className="text-sm text-white/60">{t('closureTotal')}</span>
                       <span className="font-bold text-blue-400">
-                        {draft.winterClosure.items
-                          .reduce((sum, it) => sum + it.area * it.pricePerSqm, 0)
-                          .toLocaleString('he-IL')}{' '}
-                        ₪
+                        {fmt(draft.winterClosure.items.reduce((sum, it) => sum + it.area * it.pricePerSqm, 0))}
                       </span>
                     </div>
                   )}
@@ -1996,7 +1995,7 @@ export default function QuickOfferPage() {
                         className={`flex justify-between text-xs ${row.label.includes('סה״כ') ? 'text-white/70 font-medium pt-0.5' : 'text-white/60'}`}
                       >
                         <span>{row.label}</span>
-                        <span className="tabular-nums text-white/80">{formatPrice(row.value)}</span>
+                        <span className="tabular-nums text-white/80">{fmt(row.value)}</span>
                       </div>
                     ))}
                   </div>
@@ -2005,7 +2004,7 @@ export default function QuickOfferPage() {
 
               <div className="flex justify-between text-sm text-white/70">
                 <span>{t('beforeVat')}</span>
-                <span className="text-white tabular-nums">{formatPrice(calculation.totalBeforeVat)}</span>
+                <span className="text-white tabular-nums">{fmt(calculation.totalBeforeVat)}</span>
               </div>
               <div className="flex justify-between items-center gap-2 text-sm">
                 <span className="text-white/70 shrink-0">{t('fieldVatPercent')}</span>
@@ -2029,14 +2028,14 @@ export default function QuickOfferPage() {
                     }}
                   />
                   <span className="text-white tabular-nums whitespace-nowrap">
-                    +{formatPrice(calculation.vatAmount)}
+                    +{fmt(calculation.vatAmount)}
                   </span>
                 </div>
               </div>
               <div className="flex justify-between text-sm text-white/80">
                 <span>{t('afterVat')}</span>
                 <span className="text-white tabular-nums font-medium">
-                  {formatPrice(calculation.priceWithVat)}
+                  {fmt(calculation.priceWithVat)}
                 </span>
               </div>
               <div className="flex justify-between items-center gap-2 text-sm">
@@ -2056,7 +2055,7 @@ export default function QuickOfferPage() {
                   />
                   {draft.discountPercent > 0 ? (
                     <span className="text-red-400 tabular-nums whitespace-nowrap">
-                      −{formatPrice(calculation.discountAmount)}
+                      −{fmt(calculation.discountAmount)}
                     </span>
                   ) : null}
                 </div>
@@ -2064,12 +2063,12 @@ export default function QuickOfferPage() {
               <div className="border-t border-white/10 pt-3 flex justify-between items-center gap-2">
                 <span className="text-white/80 font-medium">{t('totalToPay')}</span>
                 <span className="text-2xl font-bold text-green-400 tabular-nums">
-                  {formatPrice(calculation.finalPrice)}
+                  {fmt(calculation.finalPrice)}
                 </span>
               </div>
               {calculation.discountAmount > 0 ? (
                 <p className="text-xs text-white/40 text-left">
-                  {t('beforeDiscount', { price: formatPrice(calculation.priceWithVat) })}
+                  {t('beforeDiscount', { price: fmt(calculation.priceWithVat) })}
                 </p>
               ) : null}
             </div>

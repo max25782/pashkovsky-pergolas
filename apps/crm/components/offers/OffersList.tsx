@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { formatPrice } from '@/lib/offer-calculator'
+import { usePriceFormatter } from '@/lib/use-price-formatter'
 import type { Offer } from '@/types/offer'
 import { PERGOLA_TYPE_NAMES } from '@/types/offer'
 import {
@@ -55,6 +55,7 @@ export function OffersList({
   const tOnboarding = useTranslations('onboarding')
   const tSub = useTranslations('subscription')
   const { language } = useLanguage()
+  const fmt = usePriceFormatter()
   const { can } = useSubscriptionPlan()
   const [offers, setOffers] = useState<Offer[]>([])
   const [loading, setLoading] = useState(true)
@@ -105,7 +106,7 @@ export function OffersList({
         messageText += `תיאור:\n${shortDesc}\n\n`
       }
       messageText += `לצפייה:\n${offerUrl}\n\n` +
-        `סכום: ₪${offer.finalPrice.toLocaleString('he-IL', { minimumFractionDigits: 2 })}\n\nבברכה,\nPashkovsky Group`
+        `סכום: ${fmt(offer.finalPrice)}\n\nבברכה,\nPashkovsky Group`
 
       window.open(`https://wa.me/${phone}?text=${encodeURIComponent(messageText)}`, '_blank')
     } catch (err) {
@@ -385,7 +386,7 @@ export function OffersList({
 
             <div className="text-left">
               <div className="text-2xl font-bold text-green-400">
-                {formatPrice(offer.finalPrice)}
+                {fmt(offer.finalPrice)}
               </div>
               <div className="flex items-center gap-1 text-sm">
                 {offer.approval.approved ? (
@@ -495,7 +496,7 @@ export function OffersList({
               <div className="col-span-2">
                 <span className="text-white/60">הנחה:</span>
                 <span className="mr-2 font-medium text-red-400">
-                  {offer.discountPercent}% (-{formatPrice(offer.discountAmount)})
+                  {offer.discountPercent}% (-{fmt(offer.discountAmount)})
                 </span>
               </div>
             )}

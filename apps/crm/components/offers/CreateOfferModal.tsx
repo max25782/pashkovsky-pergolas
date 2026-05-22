@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button'
 import { X, Copy, Loader2, Box } from 'lucide-react'
 import type { OfferDraft, Offer, PergolaShape, Pergola, PergolaProductType } from '@/types/offer'
 import { DEFAULT_OFFER_VALUES, PERGOLA_TYPE_NAMES, PERGOLA_TYPE_DEFAULT_PRICES } from '@/types/offer'
-import { calculateOffer, formatPrice } from '@/lib/offer-calculator'
+import { calculateOffer } from '@/lib/offer-calculator'
+import { usePriceFormatter } from '@/lib/use-price-formatter'
 import { PergolaShapeSelector } from './PergolaShapeSelector'
 import { calculatePergolaArea, validatePergolaShape } from '@/lib/calculations/pergola-area'
 import { authFetch } from '@/lib/api/auth-fetch'
@@ -33,6 +34,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
   const params = useParams()
   const locale = (params?.locale as Locale) || 'he'
   const { language: crmLanguage } = useLanguage()
+  const fmt = usePriceFormatter()
   const toast = useToast()
   const tDeals = useTranslations('deals')
 
@@ -363,7 +365,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
         baseDescription += `\n✨ תוספות:\n${features.map(f => `• ${f}`).join('\n')}\n`
       }
       
-      baseDescription += `\n💰 מחיר סופי: ${formatPrice(calculation.finalPrice)}`
+      baseDescription += `\n💰 מחיר סופי: ${fmt(calculation.finalPrice)}`
       
       if (draft.discountPercent > 0) {
         baseDescription += ` (כולל ${draft.discountPercent}% הנחה!)`
@@ -586,7 +588,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
                         <div className="flex items-end">
                           <div className="text-sm w-full">
                             <div className="text-white/60">שטח: <span className="font-bold text-blue-400">{pergolaArea.toFixed(2)} מ״ר</span></div>
-                            <div className="text-white/60">מחיר: <span className="font-bold text-green-400">{formatPrice(pergolaPrice)}</span></div>
+                            <div className="text-white/60">מחיר: <span className="font-bold text-green-400">{fmt(pergolaPrice)}</span></div>
                           </div>
                         </div>
                       </div>
@@ -603,7 +605,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
                     </div>
                     <div>
                       <span className="text-white/80">סה״כ פרגולות:</span>
-                      <span className="mr-2 font-bold text-green-300">{calculation.pergolaTotal ? formatPrice(calculation.pergolaTotal) : '₪0'}</span>
+                      <span className="mr-2 font-bold text-green-300">{fmt(calculation.pergolaTotal ?? 0)}</span>
                     </div>
                   </div>
                 </div>
@@ -818,7 +820,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
                     <input type="number" step="10" min="0" value={draft.santaf.pricePerSqmWithStructure} onChange={(e) => updateSantaf({ pricePerSqmWithStructure: parseFloat(e.target.value) || 450 })} className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400" />
                   </div>
                 </div>
-                <div className="text-sm text-white/60">סה״כ סנטף: <span className="font-bold text-green-400">{formatPrice(calculation.santafTotal)}</span></div>
+                <div className="text-sm text-white/60">סה״כ סנטף: <span className="font-bold text-green-400">{fmt(calculation.santafTotal)}</span></div>
               </div>
             )}
           </div>
@@ -861,7 +863,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
                     <input type="number" step="0.1" min="0" value={draft.zipScreen.runningMeters || ''} onChange={(e) => updateZipScreen({ runningMeters: e.target.value ? parseFloat(e.target.value) : undefined })} className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400" placeholder="אוטומטי" />
                   </div>
                 </div>
-                <div className="text-sm text-white/60">סה״כ ZIP: <span className="font-bold text-green-400">{formatPrice(calculation.zipScreenTotal)}</span></div>
+                <div className="text-sm text-white/60">סה״כ ZIP: <span className="font-bold text-green-400">{fmt(calculation.zipScreenTotal)}</span></div>
               </div>
             )}
           </div>
@@ -1052,7 +1054,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
                     <input type="number" step="0.1" min="0" value={draft.lighting.runningMeters || ''} onChange={(e) => updateLighting({ runningMeters: e.target.value ? parseFloat(e.target.value) : undefined })} className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400" placeholder="כמות מטר" />
                   </div>
                 </div>
-                <div className="text-sm text-white/60">סה״כ תאורה: <span className="font-bold text-green-400">{formatPrice(calculation.lightingTotal)}</span></div>
+                <div className="text-sm text-white/60">סה״כ תאורה: <span className="font-bold text-green-400">{fmt(calculation.lightingTotal)}</span></div>
               </div>
             )}
           </div>
@@ -1078,7 +1080,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
                     <input type="number" step="0.1" min="0" value={draft.drainage.runningMeters || ''} onChange={(e) => updateDrainage({ runningMeters: e.target.value ? parseFloat(e.target.value) : undefined })} className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400" placeholder="כמות מטר" />
                   </div>
                 </div>
-                <div className="text-sm text-white/60">סה״כ ניקוז: <span className="font-bold text-green-400">{formatPrice(calculation.drainageTotal)}</span></div>
+                <div className="text-sm text-white/60">סה״כ ניקוז: <span className="font-bold text-green-400">{fmt(calculation.drainageTotal)}</span></div>
               </div>
             )}
           </div>
@@ -1188,7 +1190,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
                     return (
                       <div key={idx} className="flex justify-between text-white/70">
                         <span>{typeName}{getPergolas().length > 1 ? ` #${idx + 1}` : ''}:</span>
-                        <span>{formatPrice(total)}</span>
+                        <span>{fmt(total)}</span>
                       </div>
                     )
                   })}
@@ -1197,25 +1199,25 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
               {calculation.santafTotal > 0 && (
                 <div className="flex justify-between text-white/70">
                   <span>סנטף:</span>
-                  <span>{formatPrice(calculation.santafTotal)}</span>
+                  <span>{fmt(calculation.santafTotal)}</span>
                 </div>
               )}
               {calculation.zipScreenTotal > 0 && (
                 <div className="flex justify-between text-white/70">
                   <span>מסך ZIP:</span>
-                  <span>{formatPrice(calculation.zipScreenTotal)}</span>
+                  <span>{fmt(calculation.zipScreenTotal)}</span>
                 </div>
               )}
               {calculation.lightingTotal > 0 && (
                 <div className="flex justify-between text-white/70">
                   <span>תאורה:</span>
-                  <span>{formatPrice(calculation.lightingTotal)}</span>
+                  <span>{fmt(calculation.lightingTotal)}</span>
                 </div>
               )}
               {calculation.drainageTotal > 0 && (
                 <div className="flex justify-between text-white/70">
                   <span>ניקוז:</span>
-                  <span>{formatPrice(calculation.drainageTotal)}</span>
+                  <span>{fmt(calculation.drainageTotal)}</span>
                 </div>
               )}
               {draft.winterClosure.enabled && draft.winterClosure.items.length > 0 && (
@@ -1235,14 +1237,14 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
                     return (
                       <div key={index} className="flex justify-between text-white/70 text-xs">
                         <span className="truncate">{typeName} ({item.area.toFixed(2)} מ״ר){item.notes && ` - ${item.notes}`}</span>
-                        <span>{formatPrice(itemTotal)}</span>
+                        <span>{fmt(itemTotal)}</span>
                       </div>
                     );
                   })}
                   {draft.winterClosure.items.length > 1 && (
                     <div className="flex justify-between text-white/80 font-semibold">
                       <span>סה״כ סגירת חורף:</span>
-                      <span>{formatPrice(calculation.winterClosureTotal)}</span>
+                      <span>{fmt(calculation.winterClosureTotal)}</span>
                     </div>
                   )}
                 </>
@@ -1251,7 +1253,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
               {/* 1. Price before VAT */}
               <div className="flex justify-between text-base font-bold border-t border-white/20 pt-2 mt-2">
                 <span>לפני מע״מ:</span>
-                <span className="text-blue-300">{formatPrice(calculation.totalBeforeVat)}</span>
+                <span className="text-blue-300">{fmt(calculation.totalBeforeVat)}</span>
               </div>
               
               {/* VAT */}
@@ -1276,13 +1278,13 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
                     className="w-16 bg-white/10 border border-white/20 rounded px-2 py-0.5 text-white text-left text-sm focus:outline-none focus:border-blue-400"
                   />
                 </span>
-                <span>+{formatPrice(calculation.vatAmount)}</span>
+                <span>+{fmt(calculation.vatAmount)}</span>
               </div>
               
               {/* 2. Price with VAT */}
               <div className="flex justify-between text-base font-bold border-t border-white/20 pt-2">
                 <span>אחרי מע״מ:</span>
-                <span className="text-green-300">{formatPrice(calculation.priceWithVat)}</span>
+                <span className="text-green-300">{fmt(calculation.priceWithVat)}</span>
               </div>
               
               {/* Discount input */}
@@ -1295,14 +1297,14 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
               {draft.discountPercent > 0 && (
                 <div className="flex justify-between text-red-400">
                   <span>סכום הנחה:</span>
-                  <span className="font-bold">-{formatPrice(calculation.discountAmount)}</span>
+                  <span className="font-bold">-{fmt(calculation.discountAmount)}</span>
                 </div>
               )}
               
               {/* 3. Final price */}
               <div className="flex justify-between text-2xl font-bold text-green-400 border-t-2 border-white/20 pt-3 mt-3">
                 <span>מחיר סופי:</span>
-                <span>{formatPrice(calculation.finalPrice)}</span>
+                <span>{fmt(calculation.finalPrice)}</span>
               </div>
             </div>
           </div>

@@ -221,10 +221,16 @@ export function calculateOffer(draft: OfferDraft): OfferCalculation {
   }
 }
 
-export function formatPrice(price: number): string {
-  return new Intl.NumberFormat('he-IL', {
+export const LANGUAGE_CURRENCY: Record<string, { code: string; locale: string }> = {
+  he: { code: 'ILS', locale: 'he-IL' },
+  en: { code: 'USD', locale: 'en-US' },
+  ru: { code: 'RUB', locale: 'ru-RU' },
+}
+
+export function formatPrice(price: number, currencyCode = 'ILS', locale = 'he-IL'): string {
+  return new Intl.NumberFormat(locale, {
     style: 'currency',
-    currency: 'ILS',
+    currency: currencyCode,
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(price)
