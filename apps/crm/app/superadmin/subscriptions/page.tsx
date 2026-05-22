@@ -185,7 +185,7 @@ export default async function SubscriptionsPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">MRR</p>
-              <p className="text-2xl font-bold text-gray-900 mt-2">₪{Math.round(mrr).toLocaleString()}</p>
+              <p className="text-2xl font-bold text-gray-900 mt-2">${Math.round(mrr).toLocaleString()}</p>
             </div>
             <TrendingUp className="h-8 w-8 text-green-600" />
           </div>
@@ -338,9 +338,24 @@ export default async function SubscriptionsPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {company.plan || 'trial'}
-                    </span>
+                    {(() => {
+                      const PLAN_LABELS: Record<string, { label: string; style: string }> = {
+                        offer:        { label: 'Quick Offer',   style: 'bg-gray-100 text-gray-700' },
+                        pro:          { label: 'Starter',       style: 'bg-blue-100 text-blue-800' },
+                        business:     { label: 'Professional',  style: 'bg-purple-100 text-purple-800' },
+                        growth:       { label: 'Enterprise',    style: 'bg-yellow-100 text-yellow-800' },
+                        starter:      { label: 'Starter',       style: 'bg-blue-100 text-blue-800' },
+                        professional: { label: 'Professional',  style: 'bg-purple-100 text-purple-800' },
+                        enterprise:   { label: 'Enterprise',    style: 'bg-yellow-100 text-yellow-800' },
+                      }
+                      const key = company.plan || 'offer'
+                      const d = PLAN_LABELS[key] ?? { label: key, style: 'bg-gray-100 text-gray-700' }
+                      return (
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${d.style}`}>
+                          {d.label}
+                        </span>
+                      )
+                    })()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
