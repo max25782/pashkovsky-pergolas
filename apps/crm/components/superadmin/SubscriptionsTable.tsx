@@ -42,30 +42,33 @@ export function SubscriptionsTable({ subscriptions }: SubscriptionsTableProps) {
     )
   }
   
+  const PLAN_DISPLAY: Record<string, { label: string; style: string }> = {
+    starter:      { label: 'Starter',      style: 'bg-blue-100 text-blue-800' },
+    professional: { label: 'Professional', style: 'bg-purple-100 text-purple-800' },
+    enterprise:   { label: 'Enterprise',   style: 'bg-yellow-100 text-yellow-800' },
+    trial:        { label: 'Trial',        style: 'bg-gray-100 text-gray-800' },
+    // legacy keys
+    basic:        { label: 'Starter',      style: 'bg-blue-100 text-blue-800' },
+    pro:          { label: 'Professional', style: 'bg-purple-100 text-purple-800' },
+  }
+
   const getPlanBadge = (planKey: string) => {
-    const styles = {
-      trial: 'bg-gray-100 text-gray-800',
-      basic: 'bg-blue-100 text-blue-800',
-      pro: 'bg-purple-100 text-purple-800',
-      enterprise: 'bg-yellow-100 text-yellow-800',
-    }
-    
+    const d = PLAN_DISPLAY[planKey] ?? { label: planKey, style: 'bg-gray-100 text-gray-800' }
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${styles[planKey as keyof typeof styles] || styles.trial}`}>
-        {planKey}
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${d.style}`}>
+        {d.label}
       </span>
     )
   }
   
   const getPrice = (sub: Subscription) => {
     const plan = sub.subscription_plans
-    if (!plan) return '₪0'
-    
+    if (!plan) return '$0'
+    const currency = plan.currency === 'USD' ? '$' : (plan.currency ?? '$')
     if (sub.billing_cycle === 'yearly' && plan.price_yearly) {
-      return `₪${plan.price_yearly}/year`
+      return `${currency}${plan.price_yearly}/year`
     }
-    
-    return `₪${plan.price_monthly || 0}/month`
+    return `${currency}${plan.price_monthly || 0}/month`
   }
   
   return (

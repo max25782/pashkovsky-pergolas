@@ -7,26 +7,31 @@ export const PLAN_ORDER: Record<SubscriptionPlan, number> = {
   growth: 3,
 }
 
+// Plan mapping to landing page:
+//   offer    = Quick Offer only (free/lite tier)
+//   pro      = Starter ($89/mo)     — 1 user, 200 deals, CRM core
+//   business = Professional ($229/mo) — 5 users, unlimited deals, AI assistant, analytics
+//   growth   = Enterprise ($349/mo) — unlimited users, full AI, custom integrations
 const FEATURE_MIN_PLAN: Record<SaasFeature, SubscriptionPlan> = {
-  quick_offer: 'offer',
-  crm_home: 'pro',
-  leads: 'business',
-  deals: 'pro',
-  clients: 'pro',
+  quick_offer:       'offer',
+  crm_home:          'pro',
+  deals:             'pro',
+  clients:           'pro',
   save_offer_to_crm: 'pro',
-  gallery: 'pro',
-  articles: 'pro',
-  ai_media: 'growth',
-  statistics: 'business',
-  reports_finance: 'business',
-  workers: 'business',
-  inventory: 'business',
-  material_orders: 'business',
-  profiles_catalog: 'business',
-  ai_director: 'growth',
-  ai_chat: 'growth',
-  ai_analytics: 'growth',
-  integrations: 'growth',
+  gallery:           'pro',
+  articles:          'pro',
+  leads:             'business',
+  statistics:        'business',
+  reports_finance:   'business',
+  workers:           'business',
+  inventory:         'business',
+  material_orders:   'business',
+  profiles_catalog:  'business',
+  ai_chat:           'business',   // Professional plan includes AI assistant
+  ai_analytics:      'business',   // Professional plan includes Analytics & reports
+  ai_media:          'growth',
+  ai_director:       'growth',
+  integrations:      'growth',     // Enterprise: Custom integrations / API access
 }
 
 export function normalizePlan(value: unknown): SubscriptionPlan {

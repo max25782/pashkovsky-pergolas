@@ -195,12 +195,15 @@ export function CompanySettingsForm({ companyId }: CompanySettingsFormProps) {
           disabled={saving}
           className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-black"
         >
-          <option value="offer">Offer (free tier)</option>
-          <option value="pro">Pro</option>
-          <option value="business">Business</option>
-          <option value="growth">Growth (full access)</option>
+          <option value="offer">Quick Offer only (free tier)</option>
+          <option value="pro">Starter — $89/mo · 1 user · 200 deals · CRM core</option>
+          <option value="business">Professional — $229/mo · 5 users · AI assistant · Analytics</option>
+          <option value="growth">Enterprise — $349/mo · Unlimited users · Full AI · Integrations</option>
         </select>
-        <p className="text-xs text-gray-500">Controls which CRM features are available to company members.</p>
+        <p className="text-xs text-gray-500">
+          Controls which CRM features are available to company members.
+          Maps to landing page plans: Starter / Professional / Enterprise.
+        </p>
       </div>
 
       {/* Result Message */}

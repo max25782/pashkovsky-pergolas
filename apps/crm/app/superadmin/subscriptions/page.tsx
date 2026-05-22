@@ -236,6 +236,7 @@ export default async function SubscriptionsPage() {
                 const StatusIcon = statusBadge.icon
                 const plan = subscription.subscription_plans
                 const company = subscription.companies
+                const planCurrency = plan?.currency === 'USD' ? '$' : (plan?.currency ?? '$')
                 const revenue = subscription.billing_cycle === 'yearly' 
                   ? plan?.price_yearly 
                   : plan?.price_monthly
@@ -273,7 +274,7 @@ export default async function SubscriptionsPage() {
                       }
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {revenue ? `₪${revenue}/mo` : '-'}
+                      {revenue ? `${planCurrency}${revenue}/mo` : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <a href={`/superadmin/companies/${subscription.company_id}`} className="text-blue-600 hover:text-blue-900 mr-4">
@@ -379,12 +380,12 @@ export default async function SubscriptionsPage() {
               <div key={plan.id} className="border rounded-lg p-4">
                 <h3 className="font-semibold text-gray-900">{getDisplayName(plan.display_name)}</h3>
                 <p className="text-2xl font-bold text-blue-600 mt-2">
-                  ₪{plan.price_monthly}
+                  {plan.currency === 'USD' ? '$' : (plan.currency ?? '$')}{plan.price_monthly}
                   <span className="text-sm text-gray-500">/mo</span>
                 </p>
                 {plan.price_yearly && (
                   <p className="text-sm text-gray-500 mt-1">
-                    or ₪{plan.price_yearly}/year
+                    or {plan.currency === 'USD' ? '$' : (plan.currency ?? '$')}{plan.price_yearly}/year
                   </p>
                 )}
                 <div className="mt-4 space-y-2">
