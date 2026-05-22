@@ -44,7 +44,7 @@ export function OrderCard({ order, lang, onEdit, onDelete, onGeneratePdf }: Prop
             </p>
             <p className="text-sm text-white/60">
               {new Date(order.created_at).toLocaleDateString(
-                lang === 'he' ? 'he-IL' : lang === 'ru' ? 'ru-RU' : 'en-US',
+                lang === 'he' ? 'he-IL' : lang === 'ru' ? 'ru-RU' : lang === 'sr' ? 'sr-RS' : 'en-US',
               )}
             </p>
           </div>

@@ -61,7 +61,8 @@
     "language": "שפה",
     "english": "English",
     "hebrew": "עברית",
-    "russian": "Русский"
+    "russian": "Русский",
+    "serbian": "Srpski"
   },
   "auth": {
     "enterAdminToken": "הכנס אסימון מנהל",

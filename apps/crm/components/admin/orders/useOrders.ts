@@ -52,7 +52,7 @@ export function useOrders(lang: Language): UseOrdersResult {
         body: JSON.stringify(form),
       })
       if (!res.ok) throw new Error('Failed to update order')
-      toast.success(lang === 'ru' ? 'Заказ обновлён' : lang === 'en' ? 'Order updated' : 'ההזמנה עודכנה')
+      toast.success(lang === 'ru' ? 'Заказ обновлён' : lang === 'en' ? 'Order updated' : lang === 'sr' ? 'Narudžbina ažurirana' : 'ההזמנה עודכנה')
       await loadOrders()
       setEditingOrder(null)
     } catch (error) {
@@ -90,12 +90,14 @@ export function useOrders(lang: Language): UseOrdersResult {
         ? `Удалить заказ ${order.order_number}?`
         : lang === 'en'
           ? `Delete order ${order.order_number}?`
-          : `למחוק הזמנה ${order.order_number}?`
+          : lang === 'sr'
+            ? `Obrisati narudžbinu ${order.order_number}?`
+            : `למחוק הזמנה ${order.order_number}?`
     if (!confirm(confirmMsg)) return
     try {
       const res = await authFetch(`/api/admin/orders/${order.id}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('Failed to delete order')
-      toast.success(lang === 'ru' ? 'Заказ удалён' : lang === 'en' ? 'Order deleted' : 'ההזמנה נמחקה')
+      toast.success(lang === 'ru' ? 'Заказ удалён' : lang === 'en' ? 'Order deleted' : lang === 'sr' ? 'Narudžbina obrisana' : 'ההזמנה נמחקה')
       await loadOrders()
       if (editingOrder?.id === order.id) setEditingOrder(null)
     } catch (error) {
@@ -117,7 +119,7 @@ export function useOrders(lang: Language): UseOrdersResult {
       if (data.pdfUrl) {
         window.open(data.pdfUrl, '_blank')
       } else {
-        toast.info(lang === 'ru' ? 'PDF создан' : lang === 'en' ? 'PDF generated' : 'PDF נוצר')
+        toast.info(lang === 'ru' ? 'PDF создан' : lang === 'en' ? 'PDF generated' : lang === 'sr' ? 'PDF generisan' : 'PDF נוצר')
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Error generating PDF')

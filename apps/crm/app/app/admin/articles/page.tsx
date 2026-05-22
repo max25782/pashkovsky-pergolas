@@ -9,11 +9,11 @@ import { authFetch } from '@/lib/api/auth-fetch'
 interface Article {
   id: number
   slug: string
-  title: { he: string; ru: string; en: string }
-  summary: { he: string; ru: string; en: string }
+  title: { he: string; ru: string; en: string; sr: string }
+  summary: { he: string; ru: string; en: string; sr: string }
   sections: Array<{
-    heading: { he: string; ru: string; en: string }
-    body: { he: string; ru: string; en: string }
+    heading: { he: string; ru: string; en: string; sr: string }
+    body: { he: string; ru: string; en: string; sr: string }
   }>
 }
 
@@ -104,8 +104,8 @@ export default function AdminArticlesPage() {
     const newArticle: Article = {
       id: Date.now(),
       slug: '',
-      title: { he: '', ru: '', en: '' },
-      summary: { he: '', ru: '', en: '' },
+      title: { he: '', ru: '', en: '', sr: '' },
+      summary: { he: '', ru: '', en: '', sr: '' },
       sections: [],
     }
     setEditingArticle(newArticle)
@@ -118,7 +118,7 @@ export default function AdminArticlesPage() {
       ...editingArticle,
       sections: [
         ...editingArticle.sections,
-        { heading: { he: '', ru: '', en: '' }, body: { he: '', ru: '', en: '' } },
+        { heading: { he: '', ru: '', en: '', sr: '' }, body: { he: '', ru: '', en: '', sr: '' } },
       ],
     })
   }
@@ -229,7 +229,7 @@ export default function AdminArticlesPage() {
               </div>
 
               {/* Titles */}
-              {(['he', 'ru', 'en'] as const).map((lang) => (
+              {(['he', 'ru', 'en', 'sr'] as const).map((lang) => (
                 <div key={`title-${lang}`}>
                   <label className="block mb-2 font-semibold">
                     {t.articles.titleLabel} ({lang.toUpperCase()})
@@ -249,7 +249,7 @@ export default function AdminArticlesPage() {
               ))}
 
               {/* Summaries */}
-              {(['he', 'ru', 'en'] as const).map((lang) => (
+              {(['he', 'ru', 'en', 'sr'] as const).map((lang) => (
                 <div key={`summary-${lang}`}>
                   <label className="block mb-2 font-semibold">
                     {tArticles('summaryLabel')} ({lang.toUpperCase()})
@@ -296,7 +296,7 @@ export default function AdminArticlesPage() {
                       </button>
                     </div>
 
-                    {(['he', 'ru', 'en'] as const).map((lang) => (
+                    {(['he', 'ru', 'en', 'sr'] as const).map((lang) => (
                       <div key={`section-${index}-${lang}`} className="mb-4">
                         <label className="block mb-1 text-sm">
                           {tArticles('subheadingLabel')} ({lang.toUpperCase()})

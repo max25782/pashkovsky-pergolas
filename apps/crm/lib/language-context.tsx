@@ -6,8 +6,9 @@ import { defaultCrmLanguageForCompany } from '@/lib/company-default-language'
 import heMessages from '../messages/he.json'
 import ruMessages from '../messages/ru.json'
 import enMessages from '../messages/en.json'
+import srMessages from '../messages/sr.json'
 
-export type Language = 'he' | 'ru' | 'en'
+export type Language = 'he' | 'ru' | 'en' | 'sr'
 
 interface LanguageContextType {
   language: Language
@@ -25,6 +26,7 @@ const allMessages: Record<Language, Record<string, unknown>> = {
   he: heMessages as Record<string, unknown>,
   ru: ruMessages as Record<string, unknown>,
   en: enMessages as Record<string, unknown>,
+  sr: srMessages as Record<string, unknown>,
 }
 
 function loadMessages(lang: Language): Record<string, unknown> {
@@ -52,7 +54,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     }
 
     const saved = localStorage.getItem('crm_language') as Language | null
-    if (saved && ['he', 'ru', 'en'].includes(saved)) {
+    if (saved && ['he', 'ru', 'en', 'sr'].includes(saved)) {
       apply(saved)
       return () => {
         cancelled = true

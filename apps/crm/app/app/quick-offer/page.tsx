@@ -47,7 +47,7 @@ import type { Locale } from '@/lib/locales'
 import type { OfferAiOutputLanguage } from '@/lib/ai/offer-text-output-languages'
 
 function uiLanguageToAiDefault(lang: Language): OfferAiOutputLanguage {
-  if (lang === 'en' || lang === 'ru' || lang === 'he') return lang
+  if (lang === 'en' || lang === 'ru' || lang === 'he' || lang === 'sr') return lang
   return 'en'
 }
 

@@ -225,6 +225,7 @@ export const LANGUAGE_CURRENCY: Record<string, { code: string; locale: string }>
   he: { code: 'ILS', locale: 'he-IL' },
   en: { code: 'USD', locale: 'en-US' },
   ru: { code: 'RUB', locale: 'ru-RU' },
+  sr: { code: 'RSD', locale: 'sr-RS' },
 }
 
 export function formatPrice(price: number, currencyCode = 'ILS', locale = 'he-IL'): string {

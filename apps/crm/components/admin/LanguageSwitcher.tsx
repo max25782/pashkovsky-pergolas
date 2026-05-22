@@ -9,6 +9,7 @@ export function LanguageSwitcher() {
     { code: 'he' as const, label: 'he', flag: '🇮🇱' },
     { code: 'ru' as const, label: 'ru', flag: '🇷🇺' },
     { code: 'en' as const, label: 'en', flag: '🇬🇧' },
+    { code: 'sr' as const, label: 'sr', flag: '🇷🇸' },
   ]
 
   return (

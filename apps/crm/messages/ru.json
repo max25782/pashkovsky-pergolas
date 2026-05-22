@@ -61,7 +61,8 @@
     "language": "Язык",
     "english": "English",
     "hebrew": "עברית",
-    "russian": "Русский"
+    "russian": "Русский",
+    "serbian": "Сербский"
   },
   "auth": {
     "enterAdminToken": "Введите токен администратора",
