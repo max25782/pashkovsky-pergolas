@@ -513,8 +513,8 @@
     "createdAt": "נוצר",
     "lastMessage": "הודעה אחרונה",
     "page": "עמוד",
-    "whatsappGreeting": "שלום {name} שמי מקסים מחברת פשקובסקי גרופ. השארת לנו פרטים בפייסבוק. איך אני יכול לעזור לך?",
-    "whatsappGreetingNoName": "שלום! שמי מקסים מחברת פשקובסקי גרופ. השארת לנו פרטים בפייסבוק. איך אני יכול לעזור לך?",
+    "whatsappGreeting": "שלום {name}! שמי מקסים מחברת פשקובסקי גרופ (פרגולות). השארת לנו פרטים בפייסבוק. איך אני יכול לעזור לך? https://www.pashkovsky-group.com/he",
+    "whatsappGreetingNoName": "שלום! שמי מקסים מחברת פשקובסקי גרופ (פרגולות). השארת לנו פרטים בפייסבוק. איך אני יכול לעזור לך? https://www.pashkovsky-group.com/he",
     "groupByStatus": "לפי סטטוס",
     "groupBySource": "לפי מקור"
   },
