@@ -23,7 +23,6 @@ import type {
   PergolaProductType,
   QuickOfferFenceVariant,
   QuickOfferGlazingSystem,
-  QuickOfferProductType,
   QuickOfferRailingsLocation,
   WinterClosureItem,
 } from '@/types/offer'
@@ -34,6 +33,11 @@ import {
   type Offer,
 } from '@/types/offer'
 import { calculateOffer, quickOfferRailingsFenceAreaSqm } from '@/lib/offer-calculator'
+import {
+  hasAnyQuickOfferProduct,
+  primaryQuickProduct,
+  resolveQuickOfferIncludes,
+} from '@/lib/quick-offer-includes'
 import { usePriceFormatter } from '@/lib/use-price-formatter'
 import { calculatePergolaArea } from '@/lib/calculations/pergola-area'
 import { PergolaShapeSelector } from '@/components/offers/PergolaShapeSelector'
@@ -498,7 +502,7 @@ function ResultScreen({
   const [show3D, setShow3D] = useState(true)
   const configuratorRef = useRef<OfferConfiguratorEmbedHandle>(null)
 
-  const resultProductKind = draft.quickProduct ?? 'pergola'
+  const resultIncludes = resolveQuickOfferIncludes(draft)
 
   useEffect(() => {
     if (savedDealId) return
@@ -530,7 +534,7 @@ function ResultScreen({
   }, [result.offerId, savedDealId])
 
   useEffect(() => {
-    if (resultProductKind !== 'pergola' || !show3D || configuratorEditUrl) return
+    if (!resultIncludes.pergola || !show3D || configuratorEditUrl) return
     setConfiguratorLoading(true)
     authFetch(`/api/offers/${result.offerId}/configurator-link`, {
       method: 'POST',
@@ -543,7 +547,7 @@ function ResultScreen({
       })
       .catch(() => {})
       .finally(() => setConfiguratorLoading(false))
-  }, [resultProductKind, show3D, result.offerId, configuratorEditUrl, language])
+  }, [resultIncludes.pergola, show3D, result.offerId, configuratorEditUrl, language])
 
   async function handleDownloadPdf() {
     setDownloadingPdf(true)
@@ -587,11 +591,10 @@ function ResultScreen({
     }
   }
 
-  const resultProductKind2 = draft.quickProduct ?? 'pergola'
   const resultPergolas = draft.pergolas?.length ? draft.pergolas : []
 
   const pergolaRows: Array<{ label: string; value: number }> =
-    resultProductKind2 === 'pergola' && resultPergolas.length > 0
+    resultIncludes.pergola && resultPergolas.length > 0
       ? resultPergolas.flatMap((p, i) => {
           if (!p?.shape) return []
           const area = calculatePergolaArea(p.shape)
@@ -662,7 +665,7 @@ function ResultScreen({
               <Box className="w-5 h-5 text-blue-400" />
               <span className="font-semibold text-white">{t('section3D')}</span>
             </div>
-            {resultProductKind === 'pergola' && (
+            {resultIncludes.pergola && (
               <button
                 type="button"
                 onClick={() => setShow3D((v) => !v)}
@@ -677,7 +680,7 @@ function ResultScreen({
               </button>
             )}
           </div>
-          {resultProductKind === 'pergola' && show3D && (
+          {resultIncludes.pergola && show3D && (
             <div className="relative h-[580px] rounded-b-xl overflow-hidden">
               {configuratorLoading ? (
                 <div className="h-full flex items-center justify-center text-white/40">
@@ -695,7 +698,7 @@ function ResultScreen({
               )}
             </div>
           )}
-          {resultProductKind !== 'pergola' && (
+          {!resultIncludes.pergola && (
             <div className="px-5 py-12 text-center text-white/45 text-sm">{t('configuratorPergolaOnly')}</div>
           )}
         </div>
@@ -846,6 +849,9 @@ function buildDefaultDraft(): OfferDraft {
     dealId: '',
     customerName: 'הצעה מהירה',
     quickProduct: DEFAULT_OFFER_VALUES.quickProduct,
+    includePergola: true,
+    includeRailings: false,
+    includeFence: false,
     quickRailings: { ...DEFAULT_OFFER_VALUES.quickRailings },
     quickFence: { ...DEFAULT_OFFER_VALUES.quickFence },
     pergolas: [{ ...DEFAULT_OFFER_VALUES.pergola }],
@@ -890,12 +896,30 @@ export default function QuickOfferPage() {
 
   const calculation = useMemo(() => calculateOffer(draft), [draft])
 
-  const productKind: QuickOfferProductType = draft.quickProduct ?? 'pergola'
+  const includes = useMemo(() => resolveQuickOfferIncludes(draft), [draft])
 
   const pergolas: Pergola[] = draft.pergolas?.length ? draft.pergolas : [{ ...DEFAULT_OFFER_VALUES.pergola }]
 
+  function setProductInclude(
+    key: 'pergola' | 'railings' | 'fence',
+    enabled: boolean,
+  ) {
+    setDraft((d) => {
+      const cur = resolveQuickOfferIncludes(d)
+      const next = { ...cur, [key]: enabled }
+      if (!hasAnyQuickOfferProduct(next)) return d
+      return {
+        ...d,
+        includePergola: next.pergola,
+        includeRailings: next.railings,
+        includeFence: next.fence,
+        quickProduct: primaryQuickProduct(next),
+      }
+    })
+  }
+
   const pergolaRows: Array<{ label: string; value: number }> = useMemo(() => {
-    if (productKind !== 'pergola' || pergolas.length === 0) return []
+    if (!includes.pergola || pergolas.length === 0) return []
     return pergolas.flatMap((p, i) => {
       if (!p?.shape) return []
       const area = calculatePergolaArea(p.shape)
@@ -907,7 +931,7 @@ export default function QuickOfferPage() {
           : `פרגולה (${area.toFixed(2)} מ״ר)`
       return [{ label, value: price }]
     })
-  }, [productKind, pergolas])
+  }, [includes.pergola, pergolas])
 
   function updatePergola(index: number, patch: Partial<Pergola>) {
     setDraft((d) => {
@@ -951,21 +975,24 @@ export default function QuickOfferPage() {
     setGeneratingAi(true)
     setError(null)
     try {
-      const pk = draft.quickProduct ?? 'pergola'
+      const inc = resolveQuickOfferIncludes(draft)
       let base = ''
-      if (pk === 'railings' && draft.quickRailings) {
-        const qr = draft.quickRailings
-        const sqm = quickOfferRailingsFenceAreaSqm(qr.metersTotal, qr.heightCm)
-        base = `הצעת מחיר למעקות אלומיניום:\n\n📐 שטח (מ״ר): ${sqm}\n📏 אורך: ${qr.metersTotal} מ׳ · גובה: ${qr.heightCm ?? '—'} ס״מ\nפרופיל: ${qr.profileType || '—'}\nצבע: ${qr.color || '—'}\n`
-      } else if (pk === 'fence' && draft.quickFence) {
-        const qf = draft.quickFence
-        const sqm = quickOfferRailingsFenceAreaSqm(qf.metersTotal, qf.heightCm)
-        base = `הצעת מחיר לגדר:\n\n📐 שטח (מ״ר): ${sqm}\n📏 אורך: ${qf.metersTotal} מ׳ · גובה: ${qf.heightCm ?? '—'} ס״מ\nצבע: ${qf.color || '—'}\n`
-      } else {
+      if (inc.pergola) {
         base = `הצעת מחיר לפרגולת אלומיניום מתקדמת:\n\n📐 שטח: ${calculation.area} מ"ר\n`
       }
+      if (inc.railings && draft.quickRailings) {
+        const qr = draft.quickRailings
+        const sqm = quickOfferRailingsFenceAreaSqm(qr.metersTotal, qr.heightCm)
+        base += `מעקות אלומיניום:\n📐 שטח (מ״ר): ${sqm}\n📏 אורך: ${qr.metersTotal} מ׳ · גובה: ${qr.heightCm ?? '—'} ס״מ\n`
+      }
+      if (inc.fence && draft.quickFence) {
+        const qf = draft.quickFence
+        const sqm = quickOfferRailingsFenceAreaSqm(qf.metersTotal, qf.heightCm)
+        base += `גדר:\n📐 שטח (מ״ר): ${sqm}\n📏 אורך: ${qf.metersTotal} מ׳ · גובה: ${qf.heightCm ?? '—'} ס״מ\n`
+      }
+      if (!base.trim()) base = `הצעת מחיר:\n\n📐 שטח: ${calculation.area} מ"ר\n`
       const features: string[] = []
-      if (pk === 'pergola' && draft.santaf.enabled)
+      if (inc.pergola && draft.santaf.enabled)
         features.push(`סנטף BH ${draft.santaf.withStructure ? 'עם קונסטרוקציה' : 'בסיסי'}`)
       if (draft.zipScreen.enabled) features.push(`מסך ZIP ${draft.zipScreen.type === 'electric' ? 'חשמלי' : 'ידני'}`)
       if (draft.lighting.enabled) features.push('תאורת לד משולבת')
@@ -1026,8 +1053,12 @@ export default function QuickOfferPage() {
   }, [draft.options?.notes, calculation.finalPrice, t, aiOutputLang])
 
   const handleSubmit = useCallback(async () => {
-    const pk = draft.quickProduct ?? 'pergola'
-    if (pk === 'railings' && draft.quickRailings) {
+    const inc = resolveQuickOfferIncludes(draft)
+    if (!hasAnyQuickOfferProduct(inc)) {
+      setError(t('errorNoProduct'))
+      return
+    }
+    if (inc.railings && draft.quickRailings) {
       const qr = draft.quickRailings
       if (!qr.metersTotal || qr.metersTotal <= 0) {
         setError(t('errorRailingsMeters'))
@@ -1047,7 +1078,7 @@ export default function QuickOfferPage() {
         return
       }
     }
-    if (pk === 'fence' && draft.quickFence) {
+    if (inc.fence && draft.quickFence) {
       const qf = draft.quickFence
       if (!qf.metersTotal || qf.metersTotal <= 0) {
         setError(t('errorFenceMeters'))
@@ -1071,7 +1102,14 @@ export default function QuickOfferPage() {
     setSubmitting(true)
     setError(null)
     try {
-      const body = { ...draft, ...calculation }
+      const body = {
+        ...draft,
+        ...calculation,
+        includePergola: inc.pergola,
+        includeRailings: inc.railings,
+        includeFence: inc.fence,
+        quickProduct: primaryQuickProduct(inc),
+      }
       const res = await authFetch('/api/quick-offer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1132,26 +1170,35 @@ export default function QuickOfferPage() {
           <div className="space-y-4">
             <SectionCard title={t('sectionProductType')} defaultOpen>
               <Field label={t('fieldProductKind')}>
-                <div className="flex flex-wrap gap-2">
-                  {(['pergola', 'railings', 'fence'] as const).map((pk) => (
-                    <button
-                      key={pk}
-                      type="button"
-                      onClick={() => setDraft((d) => ({ ...d, quickProduct: pk }))}
-                      className={toggleCls(productKind === pk)}
+                <div className="flex flex-wrap gap-4">
+                  {(
+                    [
+                      ['pergola', 'workTypes.pergola', includes.pergola],
+                      ['railings', 'workTypes.railings', includes.railings],
+                      ['fence', 'workTypes.fence', includes.fence],
+                    ] as const
+                  ).map(([key, labelKey, checked]) => (
+                    <label
+                      key={key}
+                      className="flex items-center gap-2 cursor-pointer text-white"
                     >
-                      {pk === 'pergola'
-                        ? tDeals('workTypes.pergola')
-                        : pk === 'railings'
-                          ? tDeals('workTypes.railings')
-                          : tDeals('workTypes.fence')}
-                    </button>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) =>
+                          setProductInclude(key, e.target.checked)
+                        }
+                        className="w-4 h-4 accent-blue-500"
+                      />
+                      {tDeals(labelKey)}
+                    </label>
                   ))}
                 </div>
+                <p className="text-xs text-white/50 mt-2">{t('productComboHint')}</p>
               </Field>
             </SectionCard>
 
-            {productKind === 'pergola' && (
+            {includes.pergola && (
               <div className="space-y-3">
                 {pergolas.map((pergola, index) => (
                   <SectionCard
@@ -1225,7 +1272,7 @@ export default function QuickOfferPage() {
               </div>
             )}
 
-            {productKind === 'railings' && draft.quickRailings && (
+            {includes.railings && draft.quickRailings && (
               <SectionCard title={tDeals('railingsDetails')}>
                 <Field label={tDeals('metersTotal')}>
                   <input
@@ -1342,7 +1389,7 @@ export default function QuickOfferPage() {
               </SectionCard>
             )}
 
-            {productKind === 'fence' && draft.quickFence && (
+            {includes.fence && draft.quickFence && (
               <SectionCard title={tDeals('fenceDetails')}>
                 <Field label={tDeals('metersTotal')}>
                   <input
@@ -1426,7 +1473,7 @@ export default function QuickOfferPage() {
             )}
 
             {/* Color */}
-            {productKind === 'pergola' && (
+            {includes.pergola && (
             <SectionCard title={t('sectionColor')} defaultOpen={false}>
               <Field label={t('fieldColorType')}>
                 <div className="flex flex-wrap gap-2">
@@ -1458,7 +1505,7 @@ export default function QuickOfferPage() {
             )}
 
             {/* Santaf */}
-            {productKind === 'pergola' && (
+            {includes.pergola && (
             <SectionCard title={t('sectionSantaf')} defaultOpen={false}>
               <div className="flex items-center gap-3">
                 <input

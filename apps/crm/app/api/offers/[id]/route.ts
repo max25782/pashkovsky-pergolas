@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import type { Pergola, PergolaShape } from '@/types/offer'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
+import { pergolaFieldsFromOfferRow } from '@/lib/pdf/map-offer-db-row-for-pdf'
 import { requireCompanyAccess } from '@/lib/auth'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
@@ -185,26 +185,18 @@ export async function DELETE(
 }
 
 // Helper function to transform DB row to Offer object
-function transformOfferFromDB(data: any) {
-  const pergolasData = data.pergolas_data as Pergola[] | null | undefined
-  const hasPergolasArray = pergolasData && Array.isArray(pergolasData) && pergolasData.length > 0
-
-  const pergolaSingle = hasPergolasArray
-    ? pergolasData![0]
-    : {
-        shape: data.pergola_shape_data
-          ? (data.pergola_shape_data as PergolaShape)
-          : {
-              type: 'rectangle' as const,
-              width: data.pergola_width || 0,
-              length: data.pergola_length || 0,
-            },
-        height: data.pergola_height,
-        location: data.pergola_location,
-        pricePerSqm: data.pergola_price_per_sqm,
-        width: data.pergola_width,
-        length: data.pergola_length,
-      }
+function transformOfferFromDB(data: Record<string, unknown>) {
+  const pf = pergolaFieldsFromOfferRow({
+    pergolas_data: data.pergolas_data,
+    pergola_shape_data: data.pergola_shape_data,
+    pergola_width: data.pergola_width as number | null,
+    pergola_length: data.pergola_length as number | null,
+    pergola_height: data.pergola_height as number | null,
+    pergola_location: data.pergola_location as string | null,
+    pergola_price_per_sqm: data.pergola_price_per_sqm as number | null,
+    quick_offer_extra: data.quick_offer_extra,
+  })
+  const quickExtra = pf.quickOfferExtra
 
   return {
     id: data.id,
@@ -212,9 +204,15 @@ function transformOfferFromDB(data: any) {
     customerName: data.customer_name,
     customerPhone: data.customer_phone,
     customerCity: data.customer_city,
-
-    pergolas: hasPergolasArray ? pergolasData : undefined,
-    pergola: pergolaSingle,
+    quickProduct: pf.quickProduct,
+    quickRailings: pf.quickRailings,
+    quickFence: pf.quickFence,
+    quickOfferExtra: quickExtra,
+    includePergola: quickExtra?.includePergola,
+    includeRailings: quickExtra?.includeRailings,
+    includeFence: quickExtra?.includeFence,
+    pergolas: pf.pergolas,
+    pergola: pf.pergola,
     
     color: {
       type: data.color_type,
@@ -273,6 +271,8 @@ function transformOfferFromDB(data: any) {
     
     area: data.area,
     pergolaTotal: data.pergola_total,
+    railingsLineTotal: quickExtra?.railingsLineTotal,
+    fenceLineTotal: quickExtra?.fenceLineTotal,
     santafTotal: data.santaf_total,
     zipScreenTotal: data.zip_screen_total,
     lightingTotal: data.lighting_total,

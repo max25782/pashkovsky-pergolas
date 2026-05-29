@@ -9,13 +9,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { getCompanyIdAsync } from '@/lib/middleware/company-context'
-import type {
-  OfferDraft,
-  Pergola,
-  PergolaShape,
-  QuickOfferExtraPersisted,
-  QuickOfferProductType,
-} from '@/types/offer'
+import type { OfferDraft, Pergola, PergolaShape } from '@/types/offer'
+import {
+  buildQuickOfferExtra,
+  hasAnyQuickOfferProduct,
+  primaryQuickProduct,
+  resolveQuickOfferIncludes,
+} from '@/lib/quick-offer-includes'
+import { validateQuickFence, validateQuickRailings } from '@/lib/quick-offer-product-validation'
 
 export const runtime = 'nodejs'
 
@@ -26,36 +27,6 @@ const supabase =
   SUPABASE_URL && SERVICE_KEY
     ? createClient(SUPABASE_URL, SERVICE_KEY, { db: { schema: 'public' } })
     : undefined
-
-function parseQuickProduct(d: Partial<OfferDraft>): QuickOfferProductType {
-  const v = d.quickProduct
-  if (v === 'railings' || v === 'fence' || v === 'pergola') return v
-  return 'pergola'
-}
-
-function validateQuickRailings(draft: Partial<OfferDraft>): string | null {
-  const qr = draft.quickRailings
-  if (!qr) return 'quickRailings is required'
-  if (!qr.metersTotal || Number(qr.metersTotal) <= 0) return 'Railings: meters must be > 0'
-  if (qr.heightCm == null || Number(qr.heightCm) <= 0) return 'Railings: height (cm) required for m² pricing'
-  if (!qr.profileType?.trim()) return 'Railings: profile is required'
-  if (!qr.color?.trim()) return 'Railings: color is required'
-  if (!qr.locationType) return 'Railings: location is required'
-  const gs = String(qr.glazingSystem ?? '').trim()
-  if (!['aluminum_glass', 'wet_glazing', 'dry_glazing'].includes(gs)) return 'Railings: glazing system is required'
-  return null
-}
-
-function validateQuickFence(draft: Partial<OfferDraft>): string | null {
-  const qf = draft.quickFence
-  if (!qf) return 'quickFence is required'
-  if (!qf.metersTotal || Number(qf.metersTotal) <= 0) return 'Fence: meters must be > 0'
-  if (qf.heightCm == null || Number(qf.heightCm) <= 0) return 'Fence: height (cm) required for m² pricing'
-  const fv = String(qf.fenceVariant ?? '').trim()
-  if (!['classic', 'hitech', 'hitech_angular'].includes(fv)) return 'Fence: variant is required'
-  if (!qf.color?.trim()) return 'Fence: color is required'
-  return null
-}
 
 export async function POST(req: NextRequest) {
   const auth = await requireAuthAsync(req)
@@ -74,19 +45,33 @@ export async function POST(req: NextRequest) {
   }
 
   const draft = body as Partial<OfferDraft> & Record<string, unknown>
-  const quickProduct = parseQuickProduct(draft)
+  const includes = resolveQuickOfferIncludes(draft)
+  if (!hasAnyQuickOfferProduct(includes)) {
+    return NextResponse.json({ error: 'Select at least one product line' }, { status: 400 })
+  }
 
-  if (quickProduct === 'railings') {
+  const quickProduct = primaryQuickProduct(includes)
+
+  if (includes.railings) {
     const err = validateQuickRailings(draft)
     if (err) return NextResponse.json({ error: err }, { status: 400 })
   }
-  if (quickProduct === 'fence') {
+  if (includes.fence) {
     const err = validateQuickFence(draft)
     if (err) return NextResponse.json({ error: err }, { status: 400 })
   }
 
+  const productCount = [includes.pergola, includes.railings, includes.fence].filter(Boolean).length
   const projectType =
-    quickProduct === 'railings' ? 'railing' : quickProduct === 'fence' ? 'fence' : null
+    productCount > 1
+      ? null
+      : includes.railings
+        ? 'railing'
+        : includes.fence
+          ? 'fence'
+          : null
+  const workType =
+    productCount > 1 ? 'other' : quickProduct
 
   // ── 1. Create a hidden deal (excluded from CRM board until saved) ──────────
   const { data: deal, error: dealError } = await supabase
@@ -96,7 +81,7 @@ export async function POST(req: NextRequest) {
       customer_name: 'הצעה מהירה',
       customer_phone: '',
       deal_status: 'in_progress',
-      work_type: quickProduct,
+      work_type: workType,
       project_type: projectType,
       source: 'quick_offer',
       currency: 'ILS',
@@ -115,7 +100,7 @@ export async function POST(req: NextRequest) {
     await supabase!.from('deals').delete().eq('id', dealId)
   }
 
-  if (quickProduct === 'railings' && draft.quickRailings) {
+  if (includes.railings && draft.quickRailings) {
     const qr = draft.quickRailings
     const gsInsert = String(qr.glazingSystem).trim() as 'aluminum_glass' | 'wet_glazing' | 'dry_glazing'
     const { error: railingsError } = await supabase.from('deal_railings_details').insert({
@@ -137,7 +122,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  if (quickProduct === 'fence' && draft.quickFence) {
+  if (includes.fence && draft.quickFence) {
     const qf = draft.quickFence
     const { error: fenceError } = await supabase.from('deal_fence_details').insert({
       deal_id: dealId,
@@ -155,35 +140,23 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const quickOfferExtra: QuickOfferExtraPersisted | null =
-    quickProduct === 'pergola'
-      ? null
-      : {
-          quickProduct,
-          ...(quickProduct === 'railings' && draft.quickRailings
-            ? { quickRailings: draft.quickRailings }
-            : {}),
-          ...(quickProduct === 'fence' && draft.quickFence ? { quickFence: draft.quickFence } : {}),
-        }
+  const quickOfferExtra = buildQuickOfferExtra(draft, {
+    railingsLineTotal:
+      draft.railingsLineTotal != null ? Number(draft.railingsLineTotal) : undefined,
+    fenceLineTotal: draft.fenceLineTotal != null ? Number(draft.fenceLineTotal) : undefined,
+  })
 
   // ── 2. Build offer row from body ────────────────────────────────────────────
   const pergolas = (draft.pergolas as Pergola[] | undefined) ?? []
   const firstPergola = pergolas[0]
 
-  const pergolasData =
-    quickProduct === 'pergola' && pergolas.length > 0 ? pergolas : null
+  const pergolasData = includes.pergola && pergolas.length > 0 ? pergolas : null
   const pergolaShapeData =
-    quickProduct === 'pergola' && firstPergola?.shape
-      ? firstPergola.shape
-      : (null as PergolaShape | null)
+    includes.pergola && firstPergola?.shape ? firstPergola.shape : (null as PergolaShape | null)
   const pergolaWidth =
-    quickProduct === 'pergola' && firstPergola?.shape?.type === 'rectangle'
-      ? firstPergola.shape.width
-      : null
+    includes.pergola && firstPergola?.shape?.type === 'rectangle' ? firstPergola.shape.width : null
   const pergolaLength =
-    quickProduct === 'pergola' && firstPergola?.shape?.type === 'rectangle'
-      ? firstPergola.shape.length
-      : null
+    includes.pergola && firstPergola?.shape?.type === 'rectangle' ? firstPergola.shape.length : null
 
   const color = draft.color as { type?: string; ralCode?: string; woodName?: string } | undefined
   const roof = draft.roof as { type?: string; santafColor?: string } | undefined
@@ -206,8 +179,8 @@ export async function POST(req: NextRequest) {
       pergola_shape_data: pergolaShapeData,
       pergola_width: pergolaWidth,
       pergola_length: pergolaLength,
-      pergola_height: quickProduct === 'pergola' ? firstPergola?.height ?? null : null,
-      pergola_location: quickProduct === 'pergola' ? firstPergola?.location ?? null : null,
+      pergola_height: includes.pergola ? firstPergola?.height ?? null : null,
+      pergola_location: includes.pergola ? firstPergola?.location ?? null : null,
       pergola_price_per_sqm: firstPergola?.pricePerSqm ?? 750,
 
       // Color & roof
@@ -257,9 +230,9 @@ export async function POST(req: NextRequest) {
       pergola_total:
         draft.pergolaTotal != null
           ? Number(draft.pergolaTotal)
-          : draft.railingsLineTotal != null
+          : !includes.pergola && draft.railingsLineTotal != null
             ? Number(draft.railingsLineTotal)
-            : draft.fenceLineTotal != null
+            : !includes.pergola && draft.fenceLineTotal != null
               ? Number(draft.fenceLineTotal)
               : 0,
       quick_offer_extra: quickOfferExtra,

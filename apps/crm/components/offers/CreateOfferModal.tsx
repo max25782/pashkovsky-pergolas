@@ -6,9 +6,23 @@ import { useTranslations } from 'next-intl'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { X, Copy, Loader2, Box } from 'lucide-react'
-import type { OfferDraft, Offer, PergolaShape, Pergola, PergolaProductType } from '@/types/offer'
+import type {
+  OfferDraft,
+  Offer,
+  PergolaShape,
+  Pergola,
+  PergolaProductType,
+  QuickOfferFenceVariant,
+  QuickOfferGlazingSystem,
+  QuickOfferRailingsLocation,
+} from '@/types/offer'
 import { DEFAULT_OFFER_VALUES, PERGOLA_TYPE_NAMES, PERGOLA_TYPE_DEFAULT_PRICES } from '@/types/offer'
-import { calculateOffer } from '@/lib/offer-calculator'
+import { calculateOffer, quickOfferRailingsFenceAreaSqm } from '@/lib/offer-calculator'
+import {
+  hasAnyQuickOfferProduct,
+  primaryQuickProduct,
+  resolveQuickOfferIncludes,
+} from '@/lib/quick-offer-includes'
 import { usePriceFormatter } from '@/lib/use-price-formatter'
 import { PergolaShapeSelector } from './PergolaShapeSelector'
 import { calculatePergolaArea, validatePergolaShape } from '@/lib/calculations/pergola-area'
@@ -37,6 +51,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
   const fmt = usePriceFormatter()
   const toast = useToast()
   const tDeals = useTranslations('deals')
+  const tQuick = useTranslations('quickOffer')
 
   const [postCreateStep, setPostCreateStep] = useState<PostCreateStep>('form')
   const [createdOffer, setCreatedOffer] = useState<Offer | null>(null)
@@ -46,27 +61,37 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
   const [configuratorLinkLoading, setConfiguratorLinkLoading] = useState(false)
   const [configuratorLinkError, setConfiguratorLinkError] = useState<string | null>(null)
 
-  const [draft, setDraft] = useState<OfferDraft>({
-    dealId,
-    customerName,
-    customerPhone,
-    customerCity,
-    pergolas: [{ ...DEFAULT_OFFER_VALUES.pergola }], // Start with one pergola, can add more
-    color: { ...DEFAULT_OFFER_VALUES.color },
-    roof: { ...DEFAULT_OFFER_VALUES.roof },
-    shadingRatio: DEFAULT_OFFER_VALUES.shadingRatio,
-    finishType: DEFAULT_OFFER_VALUES.finishType,
-    finishValue: DEFAULT_OFFER_VALUES.finishValue,
-    santaf: { ...DEFAULT_OFFER_VALUES.santaf },
-    zipScreen: { ...DEFAULT_OFFER_VALUES.zipScreen },
-    lighting: { ...DEFAULT_OFFER_VALUES.lighting },
-    drainage: { ...DEFAULT_OFFER_VALUES.drainage },
-    winterClosure: { ...DEFAULT_OFFER_VALUES.winterClosure },
-    options: { ...DEFAULT_OFFER_VALUES.options },
-    vatPercent: DEFAULT_OFFER_VALUES.vatPercent,
-    discountPercent: 0,
-    images: []
-  })
+  function buildInitialDraft(): OfferDraft {
+    return {
+      dealId,
+      customerName,
+      customerPhone,
+      customerCity,
+      includePergola: true,
+      includeRailings: false,
+      includeFence: false,
+      quickProduct: DEFAULT_OFFER_VALUES.quickProduct,
+      quickRailings: { ...DEFAULT_OFFER_VALUES.quickRailings },
+      quickFence: { ...DEFAULT_OFFER_VALUES.quickFence },
+      pergolas: [{ ...DEFAULT_OFFER_VALUES.pergola }],
+      color: { ...DEFAULT_OFFER_VALUES.color },
+      roof: { ...DEFAULT_OFFER_VALUES.roof },
+      shadingRatio: DEFAULT_OFFER_VALUES.shadingRatio,
+      finishType: DEFAULT_OFFER_VALUES.finishType,
+      finishValue: DEFAULT_OFFER_VALUES.finishValue,
+      santaf: { ...DEFAULT_OFFER_VALUES.santaf },
+      zipScreen: { ...DEFAULT_OFFER_VALUES.zipScreen },
+      lighting: { ...DEFAULT_OFFER_VALUES.lighting },
+      drainage: { ...DEFAULT_OFFER_VALUES.drainage },
+      winterClosure: { ...DEFAULT_OFFER_VALUES.winterClosure },
+      options: { ...DEFAULT_OFFER_VALUES.options },
+      vatPercent: DEFAULT_OFFER_VALUES.vatPercent,
+      discountPercent: 0,
+      images: [],
+    }
+  }
+
+  const [draft, setDraft] = useState<OfferDraft>(buildInitialDraft)
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -74,15 +99,93 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
   const [aiSuggestion, setAiSuggestion] = useState<string | null>(null)
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false)
 
-  // Calculate prices in real-time
   const calculation = useMemo(() => calculateOffer(draft), [draft])
+  const includes = useMemo(() => resolveQuickOfferIncludes(draft), [draft])
+
+  function setProductInclude(key: 'pergola' | 'railings' | 'fence', enabled: boolean) {
+    setDraft((d) => {
+      const cur = resolveQuickOfferIncludes(d)
+      const next = { ...cur, [key]: enabled }
+      if (!hasAnyQuickOfferProduct(next)) return d
+      return {
+        ...d,
+        includePergola: next.pergola,
+        includeRailings: next.railings,
+        includeFence: next.fence,
+        quickProduct: primaryQuickProduct(next),
+      }
+    })
+  }
+
+  function patchQuickRailings(patch: Partial<NonNullable<OfferDraft['quickRailings']>>) {
+    setDraft((d) => ({
+      ...d,
+      quickRailings: { ...(d.quickRailings ?? { ...DEFAULT_OFFER_VALUES.quickRailings }), ...patch },
+    }))
+  }
+
+  function patchQuickFence(patch: Partial<NonNullable<OfferDraft['quickFence']>>) {
+    setDraft((d) => ({
+      ...d,
+      quickFence: { ...(d.quickFence ?? { ...DEFAULT_OFFER_VALUES.quickFence }), ...patch },
+    }))
+  }
 
   const handleSubmit = useCallback(async () => {
     setIsSubmitting(true)
     setError(null)
 
+    const inc = resolveQuickOfferIncludes(draft)
+    if (!hasAnyQuickOfferProduct(inc)) {
+      setError(tQuick('errorNoProduct'))
+      setIsSubmitting(false)
+      return
+    }
+    if (inc.railings && draft.quickRailings) {
+      if (!draft.quickRailings.metersTotal || draft.quickRailings.metersTotal <= 0) {
+        setError(tQuick('errorRailingsMeters'))
+        setIsSubmitting(false)
+        return
+      }
+      if (draft.quickRailings.heightCm == null || draft.quickRailings.heightCm <= 0) {
+        setError(tQuick('errorRailingsHeight'))
+        setIsSubmitting(false)
+        return
+      }
+      if (!draft.quickRailings.profileType?.trim() || !draft.quickRailings.color?.trim()) {
+        setError(tQuick('errorRailingsFields'))
+        setIsSubmitting(false)
+        return
+      }
+    }
+    if (inc.fence && draft.quickFence) {
+      if (!draft.quickFence.metersTotal || draft.quickFence.metersTotal <= 0) {
+        setError(tQuick('errorFenceMeters'))
+        setIsSubmitting(false)
+        return
+      }
+      if (draft.quickFence.heightCm == null || draft.quickFence.heightCm <= 0) {
+        setError(tQuick('errorFenceHeight'))
+        setIsSubmitting(false)
+        return
+      }
+      if (!draft.quickFence.color?.trim()) {
+        setError(tQuick('errorFenceColor'))
+        setIsSubmitting(false)
+        return
+      }
+    }
+
     try {
-      const requestBody = { ...draft, ...calculation }
+      const requestBody = {
+        ...draft,
+        ...calculation,
+        pergolas: inc.pergola ? draft.pergolas : [],
+        includePergola: inc.pergola,
+        includeRailings: inc.railings,
+        includeFence: inc.fence,
+        quickProduct: primaryQuickProduct(inc),
+      }
       
       const response = await authFetch('/api/offers', {
         method: 'POST',
@@ -113,17 +216,24 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
 
       const newOffer = (await response.json()) as Offer
       onCreated?.(newOffer)
-      setCreatedOffer(newOffer)
-      setConfiguratorUrls(null)
-      setConfiguratorLinkError(null)
-      setPostCreateStep('configurator')
+      if (inc.pergola) {
+        setCreatedOffer(newOffer)
+        setConfiguratorUrls(null)
+        setConfiguratorLinkError(null)
+        setPostCreateStep('configurator')
+      } else {
+        toast.success('הצעת המחיר נוצרה בהצלחה')
+        setPostCreateStep('form')
+        setCreatedOffer(null)
+        onClose()
+      }
     } catch (err: unknown) {
       console.error('Error creating offer:', err)
       setError((err instanceof Error ? err.message : String(err)) || 'Failed to create offer. Please check console for details.')
     } finally {
       setIsSubmitting(false)
     }
-  }, [draft, calculation, onCreated])
+  }, [draft, calculation, onCreated, onClose, tQuick, toast])
 
   useEffect(() => {
     if (!isOpen) {
@@ -132,8 +242,13 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
       setConfiguratorUrls(null)
       setConfiguratorLinkError(null)
       setConfiguratorLinkLoading(false)
+    } else {
+      setDraft(buildInitialDraft())
+      setError(null)
+      setAiSuggestion(null)
+      setPostCreateStep('form')
     }
-  }, [isOpen])
+  }, [isOpen, dealId, customerName, customerPhone, customerCity])
 
   useEffect(() => {
     if (postCreateStep !== 'configurator' || createdOffer === null || configuratorUrls !== null) return
@@ -338,14 +453,31 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
     
     try {
       // Build description from offer data
-      let baseDescription = `הצעת מחיר לפרגולת אלומיניום מתקדמת:\n\n`
-      
-      // Add pergola details
-      baseDescription += `📐 מידות: ${calculation.area} מ"ר\n`
-      
-      // Add features
+      const inc = resolveQuickOfferIncludes(draft)
+      let baseDescription = ''
+      if (inc.pergola) {
+        baseDescription += `הצעת מחיר לפרגולת אלומיניום מתקדמת:\n\n📐 מידות: ${calculation.area} מ"ר\n`
+      }
+      if (inc.railings && draft.quickRailings) {
+        const sqm = quickOfferRailingsFenceAreaSqm(
+          draft.quickRailings.metersTotal,
+          draft.quickRailings.heightCm,
+        )
+        baseDescription += `\nמעקות: ${sqm} מ״ר\n`
+      }
+      if (inc.fence && draft.quickFence) {
+        const sqm = quickOfferRailingsFenceAreaSqm(
+          draft.quickFence.metersTotal,
+          draft.quickFence.heightCm,
+        )
+        baseDescription += `\nגדר: ${sqm} מ״ר\n`
+      }
+      if (!baseDescription.trim()) {
+        baseDescription = `הצעת מחיר:\n\n📐 ${calculation.area} מ"ר\n`
+      }
+
       const features = []
-      if (draft.santaf.enabled) {
+      if (inc.pergola && draft.santaf.enabled) {
         features.push(`סנטף BH ${draft.santaf.withStructure ? 'עם קונסטרוקציה' : 'בסיסי'}`)
       }
       if (draft.zipScreen.enabled) {
@@ -416,10 +548,14 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
     }
   }, [aiSuggestion, updateOptions])
 
-  const pergolasSaveDisabled =
-    getPergolas().some(
+  const saveDisabled = useMemo(() => {
+    if (!hasAnyQuickOfferProduct(includes)) return true
+    if (!includes.pergola) return false
+    const pergolas = draft.pergolas || (draft.pergola ? [draft.pergola] : [])
+    return pergolas.some(
       (p) => !validatePergolaShape(p.shape).valid || calculatePergolaArea(p.shape) <= 0,
     )
+  }, [includes, draft.pergolas, draft.pergola])
 
   return (
     <Dialog
@@ -476,7 +612,32 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
             </div>
           </div>
 
-          {/* Pergolas Section */}
+          <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+            <h3 className="text-lg font-semibold mb-2">{tQuick('sectionProductType')}</h3>
+            <p className="text-sm text-white/70 mb-3">{tQuick('fieldProductKind')}</p>
+            <div className="flex flex-wrap gap-4 mb-2">
+              {(
+                [
+                  ['pergola', 'workTypes.pergola', includes.pergola],
+                  ['railings', 'workTypes.railings', includes.railings],
+                  ['fence', 'workTypes.fence', includes.fence],
+                ] as const
+              ).map(([key, labelKey, checked]) => (
+                <label key={key} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={(e) => setProductInclude(key, e.target.checked)}
+                    className="w-4 h-4"
+                  />
+                  <span>{tDeals(labelKey)}</span>
+                </label>
+              ))}
+            </div>
+            <p className="text-xs text-white/50">{tQuick('productComboHint')}</p>
+          </div>
+
+          {includes.pergola && (
           <div className="bg-white/5 rounded-lg p-4 border border-white/10">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">פרגולות</h3>
@@ -617,7 +778,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
                   <Button
                     type="button"
                     className="shrink-0 self-stretch bg-teal-600 hover:bg-teal-500 text-white flex items-center justify-center gap-2 sm:self-auto"
-                    disabled={isSubmitting || pergolasSaveDisabled}
+                    disabled={isSubmitting || saveDisabled}
                     onClick={(e) => {
                       e.stopPropagation()
                       void handleSubmit()
@@ -630,9 +791,214 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
               </div>
             )}
           </div>
+          )}
+
+          {includes.railings && draft.quickRailings && (
+            <div className="bg-white/5 rounded-lg p-4 border border-white/10 space-y-3">
+              <h3 className="text-lg font-semibold">{tDeals('railingsDetails')}</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm text-white/80 mb-1">{tDeals('metersTotal')}</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.1}
+                    value={draft.quickRailings.metersTotal || ''}
+                    onChange={(e) => patchQuickRailings({ metersTotal: Number(e.target.value) || 0 })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/80 mb-1">{tDeals('heightCm')}</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={draft.quickRailings.heightCm ?? ''}
+                    onChange={(e) =>
+                      patchQuickRailings({
+                        heightCm: e.target.value ? Number(e.target.value) : undefined,
+                      })
+                    }
+                    className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-white/50">
+                {tQuick('computedAreaSqm', {
+                  area: quickOfferRailingsFenceAreaSqm(
+                    draft.quickRailings.metersTotal,
+                    draft.quickRailings.heightCm,
+                  ).toFixed(2),
+                })}
+              </p>
+              <div>
+                <label className="block text-sm text-white/80 mb-1">{tDeals('profileType')}</label>
+                <input
+                  value={draft.quickRailings.profileType}
+                  onChange={(e) => patchQuickRailings({ profileType: e.target.value })}
+                  className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-white/80 mb-1">{tDeals('color')}</label>
+                <input
+                  value={draft.quickRailings.color}
+                  onChange={(e) => patchQuickRailings({ color: e.target.value })}
+                  className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-white/80 mb-1">{tDeals('locationType')}</label>
+                <select
+                  value={draft.quickRailings.locationType}
+                  onChange={(e) =>
+                    patchQuickRailings({
+                      locationType: e.target.value as QuickOfferRailingsLocation,
+                    })
+                  }
+                  className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white"
+                >
+                  <option value="balcony">{tDeals('locationTypes.balcony')}</option>
+                  <option value="stairs">{tDeals('locationTypes.stairs')}</option>
+                  <option value="roof">{tDeals('locationTypes.roof')}</option>
+                  <option value="yard">{tDeals('locationTypes.yard')}</option>
+                  <option value="other">{tDeals('locationTypes.other')}</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm text-white/80 mb-2">{tDeals('glazingSystem')}</label>
+                <div className="flex flex-wrap gap-2">
+                  {(
+                    [
+                      ['aluminum_glass', 'glazingAluminumGlass'],
+                      ['wet_glazing', 'glazingWet'],
+                      ['dry_glazing', 'glazingDry'],
+                    ] as const
+                  ).map(([v, msgKey]) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => patchQuickRailings({ glazingSystem: v as QuickOfferGlazingSystem })}
+                      className={`px-3 py-1 rounded text-sm border ${
+                        draft.quickRailings!.glazingSystem === v
+                          ? 'bg-blue-600 border-blue-500 text-white'
+                          : 'bg-white/10 border-white/20 text-white/80'
+                      }`}
+                    >
+                      {tDeals(msgKey)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm text-white/80 mb-1">₪/מ״ר</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={draft.quickRailings.pricePerSqm}
+                  onChange={(e) => patchQuickRailings({ pricePerSqm: Number(e.target.value) || 0 })}
+                  className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white"
+                />
+              </div>
+              {calculation.railingsLineTotal != null && calculation.railingsLineTotal > 0 && (
+                <div className="text-sm text-green-400">
+                  {tDeals('workTypes.railings')}: {fmt(calculation.railingsLineTotal)}
+                </div>
+              )}
+            </div>
+          )}
+
+          {includes.fence && draft.quickFence && (
+            <div className="bg-white/5 rounded-lg p-4 border border-white/10 space-y-3">
+              <h3 className="text-lg font-semibold">{tDeals('fenceDetails')}</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm text-white/80 mb-1">{tDeals('metersTotal')}</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.1}
+                    value={draft.quickFence.metersTotal || ''}
+                    onChange={(e) => patchQuickFence({ metersTotal: Number(e.target.value) || 0 })}
+                    className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/80 mb-1">{tDeals('heightCm')}</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={draft.quickFence.heightCm ?? ''}
+                    onChange={(e) =>
+                      patchQuickFence({
+                        heightCm: e.target.value ? Number(e.target.value) : undefined,
+                      })
+                    }
+                    className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-white/50">
+                {tQuick('computedAreaSqm', {
+                  area: quickOfferRailingsFenceAreaSqm(
+                    draft.quickFence.metersTotal,
+                    draft.quickFence.heightCm,
+                  ).toFixed(2),
+                })}
+              </p>
+              <div>
+                <label className="block text-sm text-white/80 mb-2">{tDeals('fenceVariant')}</label>
+                <div className="flex flex-wrap gap-2">
+                  {(
+                    [
+                      ['classic', 'fenceClassic'],
+                      ['hitech', 'fenceHitech'],
+                      ['hitech_angular', 'fenceHitechAngular'],
+                    ] as const
+                  ).map(([v, msgKey]) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => patchQuickFence({ fenceVariant: v as QuickOfferFenceVariant })}
+                      className={`px-3 py-1 rounded text-sm border ${
+                        draft.quickFence!.fenceVariant === v
+                          ? 'bg-blue-600 border-blue-500 text-white'
+                          : 'bg-white/10 border-white/20 text-white/80'
+                      }`}
+                    >
+                      {tDeals(msgKey)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm text-white/80 mb-1">{tDeals('color')}</label>
+                <input
+                  value={draft.quickFence.color}
+                  onChange={(e) => patchQuickFence({ color: e.target.value })}
+                  className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-white/80 mb-1">₪/מ״ר</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={draft.quickFence.pricePerSqm}
+                  onChange={(e) => patchQuickFence({ pricePerSqm: Number(e.target.value) || 0 })}
+                  className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white"
+                />
+              </div>
+              {calculation.fenceLineTotal != null && calculation.fenceLineTotal > 0 && (
+                <div className="text-sm text-green-400">
+                  {tDeals('workTypes.fence')}: {fmt(calculation.fenceLineTotal)}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Shading Ratio and Finish (shared for all pergolas) */}
-          {getPergolas().length > 0 && (
+          {includes.pergola && getPergolas().length > 0 && (
             <div className="bg-white/5 rounded-lg p-4 border border-white/10">
               <h3 className="text-lg font-semibold mb-3">הגדרות כלליות לפרגולות</h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -679,7 +1045,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
           </div>
           )}
 
-          {/* Color */}
+          {includes.pergola && (
           <div className="bg-white/5 rounded-lg p-4 border border-white/10">
             <h3 className="text-lg font-semibold mb-3">צבע אלומיניום</h3>
             <div className="space-y-3">
@@ -695,8 +1061,9 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
               {draft.color.type === 'wood' && <input type="text" placeholder="סוג דמוי עץ" value={draft.color.woodName || ''} onChange={(e) => updateColor({ woodName: e.target.value || undefined })} className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-400" />}
             </div>
           </div>
+          )}
 
-          {/* Roof */}
+          {includes.pergola && (
           <div className="bg-white/5 rounded-lg p-4 border border-white/10">
             <h3 className="text-lg font-semibold mb-3">סוג גג</h3>
             <div className="space-y-3">
@@ -717,8 +1084,9 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
               )}
             </div>
           </div>
+          )}
 
-          {/* Santaf */}
+          {includes.pergola && (
           <div className="bg-white/5 rounded-lg p-4 border border-white/10">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-lg font-semibold">סנטף (מסכים)</h3>
@@ -730,7 +1098,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
             {draft.santaf.enabled && (
               <div className="space-y-4">
                 {/* Dimensions - only show if pergola is not included */}
-                {!draft.pergola && (
+                {!includes.pergola && (
                   <div>
                     <label className="block text-sm text-white/80 mb-2">מידות (מ״ר)</label>
                     <div className="grid grid-cols-2 gap-4">
@@ -824,6 +1192,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
               </div>
             )}
           </div>
+          )}
 
           {/* ZIP Screen */}
           <div className="bg-white/5 rounded-lg p-4 border border-white/10">
@@ -1180,6 +1549,18 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
             <h3 className="text-lg font-semibold mb-3">סיכום מחירים</h3>
             <div className="space-y-2 text-sm">
               {/* Components */}
+              {calculation.railingsLineTotal != null && calculation.railingsLineTotal > 0 && (
+                <div className="flex justify-between text-white/70">
+                  <span>{tDeals('workTypes.railings')}:</span>
+                  <span>{fmt(calculation.railingsLineTotal)}</span>
+                </div>
+              )}
+              {calculation.fenceLineTotal != null && calculation.fenceLineTotal > 0 && (
+                <div className="flex justify-between text-white/70">
+                  <span>{tDeals('workTypes.fence')}:</span>
+                  <span>{fmt(calculation.fenceLineTotal)}</span>
+                </div>
+              )}
               {calculation.pergolaTotal ? (
                 <>
                   {getPergolas().map((pg, idx) => {
@@ -1332,7 +1713,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
             <Button 
               type="button" 
               onClick={(e) => { e.stopPropagation(); void handleSubmit() }} 
-              disabled={isSubmitting || pergolasSaveDisabled} 
+              disabled={isSubmitting || saveDisabled} 
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               {isSubmitting ? 'שומר...' : 'שמור הצעת מחיר'}

@@ -1,9 +1,17 @@
 import type { Offer, Pergola, PergolaShape, QuickOfferExtraPersisted } from '@/types/offer'
 
-/** Railings/fence quick offers must not reuse default pergola geometry for PDF / plans. */
+/** Railings/fence-only quick offers must not reuse default pergola geometry for PDF / plans. */
 export function isQuickOfferRailingsOrFenceRow(row: { quick_offer_extra?: unknown }): boolean {
   const ex = row.quick_offer_extra as QuickOfferExtraPersisted | null | undefined
-  const qp = ex?.quickProduct
+  if (!ex) return false
+  if (ex.includePergola === true) return false
+  if (
+    ex.includePergola === false &&
+    (ex.includeRailings === true || ex.includeFence === true)
+  ) {
+    return true
+  }
+  const qp = ex.quickProduct
   return qp === 'railings' || qp === 'fence'
 }
 

@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { DEFAULT_OFFER_VALUES, PergolaShape } from '@/types/offer'
+import { DEFAULT_OFFER_VALUES, PergolaShape, type OfferDraft } from '@/types/offer'
 import { calculatePergolaArea, validatePergolaShape } from '@/lib/calculations/pergola-area'
 import { getCompanyIdAsync } from '@/lib/middleware/company-context'
+import {
+  buildQuickOfferExtra,
+  hasAnyQuickOfferProduct,
+  resolveQuickOfferIncludes,
+} from '@/lib/quick-offer-includes'
+import { validateQuickFence, validateQuickRailings } from '@/lib/quick-offer-product-validation'
+import { pergolaFieldsFromOfferRow } from '@/lib/pdf/map-offer-db-row-for-pdf'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -33,6 +40,21 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
+    const draftBody = body as Partial<OfferDraft> & Record<string, unknown>
+    const includes = resolveQuickOfferIncludes(draftBody)
+
+    if (!hasAnyQuickOfferProduct(includes)) {
+      return NextResponse.json({ error: 'Select at least one product line' }, { status: 400 })
+    }
+
+    if (includes.railings) {
+      const err = validateQuickRailings(draftBody)
+      if (err) return NextResponse.json({ error: err }, { status: 400 })
+    }
+    if (includes.fence) {
+      const err = validateQuickFence(draftBody)
+      if (err) return NextResponse.json({ error: err }, { status: 400 })
+    }
 
     // Validate required fields
     const {
@@ -72,23 +94,24 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Support multiple pergolas - use pergolas array if available, otherwise fall back to single pergola
-    const pergolas = body.pergolas || (body.pergola ? [body.pergola] : [])
-    
-    // Validate all pergola shapes
-    for (const perg of pergolas) {
-      if (perg && perg.shape) {
-        const shapeValidation = validatePergolaShape(perg.shape)
-        if (!shapeValidation.valid) {
-          return NextResponse.json(
-            { error: `Invalid pergola shape: ${shapeValidation.errors.join(', ')}` },
-            { status: 400 }
-          )
+    // Support multiple pergolas when pergola line is included
+    const pergolasRaw = body.pergolas || (body.pergola ? [body.pergola] : [])
+    const pergolas = includes.pergola ? pergolasRaw : []
+
+    if (includes.pergola) {
+      for (const perg of pergolas) {
+        if (perg?.shape) {
+          const shapeValidation = validatePergolaShape(perg.shape)
+          if (!shapeValidation.valid) {
+            return NextResponse.json(
+              { error: `Invalid pergola shape: ${shapeValidation.errors.join(', ')}` },
+              { status: 400 },
+            )
+          }
         }
       }
     }
-    
-    // For backward compatibility, use first pergola as single pergola
+
     const pergola = pergolas.length > 0 ? pergolas[0] : undefined
 
     // Ensure required objects exist with defaults
@@ -101,8 +124,7 @@ export async function POST(req: NextRequest) {
     const finalWinterClosure = winterClosure || { enabled: false }
     const finalOptions = options || { notes: null }
 
-    // Validate: If pergola is not included but Santaf is enabled, Santaf dimensions are required
-    if (!pergola && finalSantaf.enabled) {
+    if (!includes.pergola && finalSantaf.enabled) {
       if (!finalSantaf.width || !finalSantaf.length) {
         return NextResponse.json(
           { error: 'Santaf dimensions (width and length) are required when pergola is not included' },
@@ -131,8 +153,23 @@ export async function POST(req: NextRequest) {
     const storedVatPercent =
       Number.isFinite(rawVatPct) ? Math.min(100, Math.max(0, rawVatPct)) : 18
 
+    const quickOfferExtra = buildQuickOfferExtra(draftBody, {
+      railingsLineTotal:
+        body.railingsLineTotal != null ? Number(body.railingsLineTotal) : undefined,
+      fenceLineTotal: body.fenceLineTotal != null ? Number(body.fenceLineTotal) : undefined,
+    })
+
+    const pergolaTotalStored =
+      body.pergolaTotal != null
+        ? Number(body.pergolaTotal)
+        : !includes.pergola && body.railingsLineTotal != null
+          ? Number(body.railingsLineTotal)
+          : !includes.pergola && body.fenceLineTotal != null
+            ? Number(body.fenceLineTotal)
+            : 0
+
     // Prepare insert data with proper defaults
-    const insertData: any = {
+    const insertData: Record<string, unknown> = {
       deal_id: dealId,
       customer_name: customerName,
       customer_phone: body.customerPhone || null,
@@ -142,7 +179,8 @@ export async function POST(req: NextRequest) {
       company_id: companyId,
       
       // Pergolas - support multiple pergolas (new)
-      pergolas_data: pergolas.length > 0 ? pergolas as any : null, // JSONB array of pergolas
+      pergolas_data: includes.pergola && pergolas.length > 0 ? pergolas : null,
+      quick_offer_extra: quickOfferExtra,
       
       // Pergola - single pergola for backward compatibility (use first pergola if array exists)
       pergola_shape_type: pergola?.shape?.type || null,
@@ -210,7 +248,7 @@ export async function POST(req: NextRequest) {
       
       // Calculated values (ensure they are numbers, not undefined or NaN)
       area: Number(finalArea) || 0,
-      pergola_total: Number(pergolaTotal) || 0,
+      pergola_total: pergolaTotalStored,
       santaf_total: Number(santafTotal) || 0,
       zip_screen_total: Number(zipScreenTotal) || 0,
       lighting_total: Number(lightingTotal) || 0,
@@ -250,6 +288,56 @@ export async function POST(req: NextRequest) {
         { error: 'Failed to create offer', details: error.message, code: error.code },
         { status: 500 }
       )
+    }
+
+    if (includes.railings && draftBody.quickRailings) {
+      const qr = draftBody.quickRailings
+      const gsInsert = String(qr.glazingSystem).trim() as 'aluminum_glass' | 'wet_glazing' | 'dry_glazing'
+      const railPayload = {
+        deal_id: dealId,
+        company_id: companyId,
+        meters_total: Number(qr.metersTotal),
+        height_cm: qr.heightCm != null ? Number(qr.heightCm) : null,
+        profile_type: String(qr.profileType).trim(),
+        color: String(qr.color).trim(),
+        location_type: String(qr.locationType).trim() as 'balcony' | 'stairs' | 'roof' | 'yard' | 'other',
+        glass_type: qr.glassType != null && String(qr.glassType).trim() !== '' ? String(qr.glassType).trim() : null,
+        glazing_system: gsInsert,
+        notes: qr.notes != null && String(qr.notes).trim() !== '' ? String(qr.notes).trim() : null,
+      }
+      const { data: existingRail } = await supabase
+        .from('deal_railings_details')
+        .select('deal_id')
+        .eq('deal_id', dealId)
+        .maybeSingle()
+      if (existingRail) {
+        await supabase.from('deal_railings_details').update(railPayload).eq('deal_id', dealId)
+      } else {
+        await supabase.from('deal_railings_details').insert(railPayload)
+      }
+    }
+
+    if (includes.fence && draftBody.quickFence) {
+      const qf = draftBody.quickFence
+      const fencePayload = {
+        deal_id: dealId,
+        company_id: companyId,
+        meters_total: Number(qf.metersTotal),
+        height_cm: qf.heightCm != null ? Number(qf.heightCm) : null,
+        fence_variant: String(qf.fenceVariant).trim() as 'classic' | 'hitech' | 'hitech_angular',
+        color: String(qf.color).trim(),
+        notes: qf.notes != null && String(qf.notes).trim() !== '' ? String(qf.notes).trim() : null,
+      }
+      const { data: existingFence } = await supabase
+        .from('deal_fence_details')
+        .select('deal_id')
+        .eq('deal_id', dealId)
+        .maybeSingle()
+      if (existingFence) {
+        await supabase.from('deal_fence_details').update(fencePayload).eq('deal_id', dealId)
+      } else {
+        await supabase.from('deal_fence_details').insert(fencePayload)
+      }
     }
 
     // Transform to camelCase for response
@@ -319,40 +407,36 @@ export async function GET(req: NextRequest) {
 }
 
 // Helper function to transform DB row to Offer object
-function transformOfferFromDB(data: any) {
+function transformOfferFromDB(data: Record<string, unknown>) {
+  const pf = pergolaFieldsFromOfferRow({
+    pergolas_data: data.pergolas_data,
+    pergola_shape_data: data.pergola_shape_data,
+    pergola_width: data.pergola_width as number | null,
+    pergola_length: data.pergola_length as number | null,
+    pergola_height: data.pergola_height as number | null,
+    pergola_location: data.pergola_location as string | null,
+    pergola_price_per_sqm: data.pergola_price_per_sqm as number | null,
+    quick_offer_extra: data.quick_offer_extra,
+  })
+  const quickExtra = pf.quickOfferExtra
+
   return {
     id: data.id,
     dealId: data.deal_id,
     customerName: data.customer_name,
     customerPhone: data.customer_phone,
     customerCity: data.customer_city,
-    
-    // Support multiple pergolas - prefer pergolas_data array, fall back to single pergola
-    ...(data.pergolas_data || data.pergola_shape_data || data.pergola_width ? {
-      // Use pergolas array if available
-      pergolas: data.pergolas_data || undefined,
-      // Single pergola for backward compatibility (use first from array or single pergola)
-      pergola: data.pergolas_data && Array.isArray(data.pergolas_data) && data.pergolas_data.length > 0
-        ? data.pergolas_data[0]
-        : data.pergola_shape_data || data.pergola_width
-          ? {
-              // New shape-based structure
-              shape: data.pergola_shape_data
-                ? (data.pergola_shape_data as PergolaShape)
-                : {
-                    // Fallback to legacy format if shape_data is missing
-                    type: 'rectangle' as const,
-                    width: data.pergola_width || 0,
-                    length: data.pergola_length || 0,
-                  },
-              height: data.pergola_height,
-              location: data.pergola_location,
-              pricePerSqm: data.pergola_price_per_sqm,
-              // Legacy fields for backward compatibility
-              width: data.pergola_width,
-              length: data.pergola_length,
-            }
-          : undefined,
+    quickProduct: pf.quickProduct,
+    quickRailings: pf.quickRailings,
+    quickFence: pf.quickFence,
+    quickOfferExtra: quickExtra,
+    includePergola: quickExtra?.includePergola,
+    includeRailings: quickExtra?.includeRailings,
+    includeFence: quickExtra?.includeFence,
+
+    ...(pf.pergolas || pf.pergola ? {
+      pergolas: pf.pergolas,
+      pergola: pf.pergola,
     } : {}),
     
     color: {
@@ -412,6 +496,8 @@ function transformOfferFromDB(data: any) {
     
     area: data.area,
     pergolaTotal: data.pergola_total,
+    railingsLineTotal: quickExtra?.railingsLineTotal,
+    fenceLineTotal: quickExtra?.fenceLineTotal,
     santafTotal: data.santaf_total,
     zipScreenTotal: data.zip_screen_total,
     lightingTotal: data.lighting_total,

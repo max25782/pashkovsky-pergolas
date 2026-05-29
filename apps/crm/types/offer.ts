@@ -157,8 +157,14 @@ export interface QuickOfferFenceDraft {
 /** Stored on offers.quick_offer_extra for PDF / round-trip. */
 export interface QuickOfferExtraPersisted {
   quickProduct: QuickOfferProductType
+  includePergola?: boolean
+  includeRailings?: boolean
+  includeFence?: boolean
   quickRailings?: QuickOfferRailingsDraft
   quickFence?: QuickOfferFenceDraft
+  /** Persisted line totals for mixed offers (PDF). */
+  railingsLineTotal?: number
+  fenceLineTotal?: number
 }
 
 export interface Pricing {
@@ -277,6 +283,10 @@ export interface OfferDraft {
   configuratorMeta?: ConfiguratorMeta | null
 
   quickProduct?: QuickOfferProductType
+  /** Multi-product quick offer (when set, overrides exclusive quickProduct). */
+  includePergola?: boolean
+  includeRailings?: boolean
+  includeFence?: boolean
   quickRailings?: QuickOfferRailingsDraft
   quickFence?: QuickOfferFenceDraft
 }

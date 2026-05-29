@@ -154,6 +154,8 @@
     "subtitle": "צור הצעת מחיר ללא לקוח — שמור ב-CRM בהמשך אם תרצה",
     "sectionProductType": "סוג ההצעה",
     "fieldProductKind": "מה מציעים?",
+    "productComboHint": "אפשר לשלב פרגולה, מעקות וגדר באותה הצעה. מסך ZIP עובד גם בלי פרגולה (לפי שטח מעקות/גדר).",
+    "errorNoProduct": "בחר לפחות מוצר אחד",
     "computedAreaSqm": "שטח משוער (אורך × גובה): {area} מ״ר",
     "configuratorPergolaOnly": "תצוגת תלת-ממד זמינה להצעות פרגולה בלבד.",
     "errorRailingsMeters": "נא להזין מטרים תקינים למעקות",

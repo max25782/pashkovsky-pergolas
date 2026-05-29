@@ -80,6 +80,8 @@ async function fetchOffer(id: string): Promise<Offer | null> {
     options: { notes: data.options_notes },
     area: data.area,
     pergolaTotal: data.pergola_total,
+    railingsLineTotal: pf.quickOfferExtra?.railingsLineTotal,
+    fenceLineTotal: pf.quickOfferExtra?.fenceLineTotal,
     santafTotal: data.santaf_total,
     zipScreenTotal: data.zip_screen_total,
     lightingTotal: data.lighting_total,

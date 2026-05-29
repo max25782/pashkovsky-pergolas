@@ -154,6 +154,8 @@
     "subtitle": "Create a quote without a client — save to CRM later if you want",
     "sectionProductType": "Offer type",
     "fieldProductKind": "What are you quoting?",
+    "productComboHint": "Combine pergola, railings, and fence in one quote. ZIP screen works without a pergola (uses railing/fence area).",
+    "errorNoProduct": "Select at least one product",
     "computedAreaSqm": "Estimated area (length × height): {area} m²",
     "configuratorPergolaOnly": "3D preview is available for pergola quotes only.",
     "errorRailingsMeters": "Enter valid railing meters",

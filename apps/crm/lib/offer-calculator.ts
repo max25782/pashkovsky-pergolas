@@ -1,6 +1,7 @@
-import type { OfferDraft, OfferCalculation, QuickOfferProductType } from '@/types/offer'
+import type { OfferDraft, OfferCalculation } from '@/types/offer'
 import { calculatePergolaArea } from '@/lib/calculations/pergola-area'
 import { calculateSuntufSheets, calculateSuntufPriceByArea } from '@/lib/calculations/suntuf-sheets'
+import { resolveQuickOfferIncludes } from '@/lib/quick-offer-includes'
 
 /** Face area m² for quick-offer railings/fence: length (m) × height (m). */
 export function quickOfferRailingsFenceAreaSqm(
@@ -28,8 +29,22 @@ function normalizeVatPercent(value: unknown): number {
   return Math.min(100, Math.max(0, n))
 }
 
+function railFenceSqmForZip(draft: OfferDraft, inc: ReturnType<typeof resolveQuickOfferIncludes>): number {
+  let sqm = 0
+  if (inc.railings && draft.quickRailings) {
+    sqm += quickOfferRailingsFenceAreaSqm(
+      draft.quickRailings.metersTotal,
+      draft.quickRailings.heightCm,
+    )
+  }
+  if (inc.fence && draft.quickFence) {
+    sqm += quickOfferRailingsFenceAreaSqm(draft.quickFence.metersTotal, draft.quickFence.heightCm)
+  }
+  return sqm
+}
+
 export function calculateOffer(draft: OfferDraft): OfferCalculation {
-  const productKind: QuickOfferProductType = draft.quickProduct ?? 'pergola'
+  const inc = resolveQuickOfferIncludes(draft)
 
   // Support multiple pergolas - use pergolas array if available, otherwise fall back to single pergola
   const pergolas = draft.pergolas || (draft.pergola ? [draft.pergola] : [])
@@ -37,23 +52,24 @@ export function calculateOffer(draft: OfferDraft): OfferCalculation {
   let railingsLineTotal: number | undefined
   let fenceLineTotal: number | undefined
 
-  if (productKind === 'railings' && draft.quickRailings) {
+  if (inc.railings && draft.quickRailings) {
     const qr = draft.quickRailings
     const sqm = quickOfferRailingsFenceAreaSqm(qr.metersTotal, qr.heightCm)
     const p = quickOfferLinePerSqmLegacy(qr)
     railingsLineTotal = sqm * p
-  } else if (productKind === 'fence' && draft.quickFence) {
+  }
+  if (inc.fence && draft.quickFence) {
     const qf = draft.quickFence
     const sqm = quickOfferRailingsFenceAreaSqm(qf.metersTotal, qf.heightCm)
     const p = quickOfferLinePerSqmLegacy(qf)
     fenceLineTotal = sqm * p
   }
 
-  // 1. Calculate total area from all pergolas (pergola product only)
+  // 1. Calculate total area from all pergolas (when pergola line is included)
   let pergolaArea = 0
   let pergolaTotal = 0
 
-  if (productKind === 'pergola') {
+  if (inc.pergola) {
     for (const pergola of pergolas) {
       if (pergola?.shape) {
         const singleArea = calculatePergolaArea(pergola.shape)
@@ -78,9 +94,8 @@ export function calculateOffer(draft: OfferDraft): OfferCalculation {
   // Use pergola area for general area calculation
   const area = pergolaArea || santafArea
 
-  // 3. Pergola line total (pergola product only)
-  const pergolaTotalFinal =
-    productKind === 'pergola' && pergolas.length > 0 ? pergolaTotal : undefined
+  // 3. Pergola line total (when pergola is included)
+  const pergolaTotalFinal = inc.pergola && pergolaTotal > 0 ? pergolaTotal : undefined
 
   const mainProductTotal =
     (pergolaTotalFinal ?? 0) + (railingsLineTotal ?? 0) + (fenceLineTotal ?? 0)
@@ -142,14 +157,9 @@ export function calculateOffer(draft: OfferDraft): OfferCalculation {
       ? draft.zipScreen.pricePerSqmElectric
       : draft.zipScreen.pricePerSqmManual
 
-    const railFenceSqmForZip =
-      productKind === 'railings' && draft.quickRailings
-        ? quickOfferRailingsFenceAreaSqm(draft.quickRailings.metersTotal, draft.quickRailings.heightCm)
-        : productKind === 'fence' && draft.quickFence
-          ? quickOfferRailingsFenceAreaSqm(draft.quickFence.metersTotal, draft.quickFence.heightCm)
-          : 0
-    // Use running meters if set; else m² (pergola roof or railings/fence face) × ZIP ₪/m²
-    const zipQty = draft.zipScreen.runningMeters || railFenceSqmForZip || area
+    const railFenceSqm = railFenceSqmForZip(draft, inc)
+    // Use running meters if set; else m² (pergola roof and/or railings/fence face) × ZIP ₪/m²
+    const zipQty = draft.zipScreen.runningMeters || railFenceSqm || area
     zipScreenTotal = zipQty * zipPrice
   }
   
@@ -194,11 +204,12 @@ export function calculateOffer(draft: OfferDraft): OfferCalculation {
   const finalPrice = priceWithVat - discountAmount
 
   // Summary quantity: m² (pergola roof area, or railings/fence face area for ZIP fallback / AI)
+  const railFenceOnlySqm = railFenceSqmForZip(draft, inc)
   const areaDisplay =
-    productKind === 'railings' && draft.quickRailings
-      ? quickOfferRailingsFenceAreaSqm(draft.quickRailings.metersTotal, draft.quickRailings.heightCm)
-      : productKind === 'fence' && draft.quickFence
-        ? quickOfferRailingsFenceAreaSqm(draft.quickFence.metersTotal, draft.quickFence.heightCm)
+    inc.pergola && pergolaArea > 0
+      ? pergolaArea
+      : railFenceOnlySqm > 0
+        ? railFenceOnlySqm
         : area
 
   return {

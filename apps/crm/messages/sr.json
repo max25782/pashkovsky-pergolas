@@ -154,6 +154,8 @@
     "subtitle": "Kreirajte ponudu bez klijenta — sačuvajte u CRM kasnije ako želite",
     "sectionProductType": "Tip ponude",
     "fieldProductKind": "Šta nudite?",
+    "productComboHint": "Možete kombinovati pergolu, ograde i plot u jednoj ponudi. ZIP ekran radi i bez pergole (po površini ograde/plota).",
+    "errorNoProduct": "Izaberite bar jedan proizvod",
     "computedAreaSqm": "Procenjena površina (dužina × visina): {area} m²",
     "configuratorPergolaOnly": "3D pregled je dostupan samo za ponude pergola.",
     "errorRailingsMeters": "Unesite ispravne metre ograde",

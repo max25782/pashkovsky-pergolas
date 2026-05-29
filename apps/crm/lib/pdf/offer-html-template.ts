@@ -1,5 +1,9 @@
 import type { Offer } from '@/types/offer'
 import { quickOfferRailingsFenceAreaSqm } from '@/lib/offer-calculator'
+import {
+  resolveQuickOfferIncludes,
+  resolveQuickOfferIncludesFromExtra,
+} from '@/lib/quick-offer-includes'
 import { rectanglePlanSvgFragment } from '@/lib/pdf/plan-view-svg'
 import { getHebrewFontsCss, getLogoDataUri } from './font-loader'
 import { pdfT, resolvePdfLocale, pdfHtmlDir, pdfBcp47Locale, pdfCurrencySymbol, type PdfDict } from '@/lib/pdf/offer-pdf-i18n'
@@ -98,71 +102,20 @@ function buildPergolaLineName(offer: Offer, pergolaType: string | null | undefin
   return parts.join(' · ')
 }
 
+function pdfQuickOfferIncludes(offer: Offer) {
+  const fromExtra = resolveQuickOfferIncludesFromExtra(offer.quickOfferExtra)
+  if (fromExtra) return fromExtra
+  return resolveQuickOfferIncludes(offer)
+}
+
 function collectLineRows(offer: Offer, dict: PdfDict): LineRow[] {
   const rows: LineRow[] = []
   const area = offer.area > 0 ? offer.area : 1
-  const qp = offer.quickProduct ?? offer.quickOfferExtra?.quickProduct ?? 'pergola'
+  const inc = pdfQuickOfferIncludes(offer)
   const qExtra = offer.quickOfferExtra
 
-  if (qp === 'railings' && qExtra?.quickRailings) {
-    const qr = qExtra.quickRailings
-    const lineTotal = offer.pergolaTotal ?? 0
-    const sqm = quickOfferRailingsFenceAreaSqm(qr.metersTotal, qr.heightCm)
-    const up = Math.max(
-      0,
-      Number(
-        (qr as { pricePerSqm?: number; pricePerMeter?: number }).pricePerSqm ??
-          (qr as { pricePerMeter?: number }).pricePerMeter,
-      ) || 0,
-    )
-    if (lineTotal > 0 && sqm > 0 && up > 0) {
-      const glazingLabels: Record<string, string> = {
-        aluminum_glass: dict.off_gl_al_glass,
-        wet_glazing: dict.off_gl_wet,
-        dry_glazing: dict.off_gl_dry,
-      }
-      const locLabels: Record<string, string> = {
-        balcony: dict.off_loc_balcony,
-        stairs: dict.off_loc_stairs,
-        roof: dict.off_loc_roof,
-        yard: dict.off_loc_yard,
-        other: dict.off_loc_other,
-      }
-      rows.push({
-        description: `${dict.off_rail_prefix} ${escapeHtml(qr.profileType)} · ${glazingLabels[qr.glazingSystem] ?? qr.glazingSystem} · ${dict.off_rail_loc}: ${locLabels[qr.locationType] ?? qr.locationType} · ${dict.off_color_prefix} ${escapeHtml(qr.color)}`,
-        unitLabel: dict.off_unit_sqm,
-        quantity: Math.round(sqm * 1000) / 1000,
-        unitPrice: Math.round(up * 100) / 100,
-        lineTotal,
-      })
-    }
-  } else if (qp === 'fence' && qExtra?.quickFence) {
-    const qf = qExtra.quickFence
-    const lineTotal = offer.pergolaTotal ?? 0
-    const sqm = quickOfferRailingsFenceAreaSqm(qf.metersTotal, qf.heightCm)
-    const up = Math.max(
-      0,
-      Number(
-        (qf as { pricePerSqm?: number; pricePerMeter?: number }).pricePerSqm ??
-          (qf as { pricePerMeter?: number }).pricePerMeter,
-      ) || 0,
-    )
-    const fenceLabels: Record<string, string> = {
-      classic: dict.off_fence_classic,
-      hitech: dict.off_fence_hitech,
-      hitech_angular: dict.off_fence_hitech_ang,
-    }
-    if (lineTotal > 0 && sqm > 0 && up > 0) {
-      rows.push({
-        description: `${dict.off_fence_prefix} ${fenceLabels[qf.fenceVariant] ?? qf.fenceVariant} · ${dict.off_color_prefix} ${escapeHtml(qf.color)}`,
-        unitLabel: dict.off_unit_sqm,
-        quantity: Math.round(sqm * 1000) / 1000,
-        unitPrice: Math.round(up * 100) / 100,
-        lineTotal,
-      })
-    }
-  } else {
-    const pergolas = offer.pergolas || (offer.pergola ? [offer.pergola] : [])
+  const pergolas = offer.pergolas || (offer.pergola ? [offer.pergola] : [])
+  if (inc.pergola) {
     if (pergolas.length > 0) {
       const { calculatePergolaArea } = require('@/lib/calculations/pergola-area') as typeof import('@/lib/calculations/pergola-area')
       for (const pg of pergolas) {
@@ -185,6 +138,75 @@ function collectLineRows(offer: Offer, dict: PdfDict): LineRow[] {
         quantity: Math.round(area * 100) / 100,
         unitPrice: Math.round(up * 100) / 100,
         lineTotal: offer.pergolaTotal,
+      })
+    }
+  }
+
+  const qr = qExtra?.quickRailings ?? offer.quickRailings
+  if (inc.railings && qr) {
+    const sqm = quickOfferRailingsFenceAreaSqm(qr.metersTotal, qr.heightCm)
+    const up = Math.max(
+      0,
+      Number(
+        (qr as { pricePerSqm?: number; pricePerMeter?: number }).pricePerSqm ??
+          (qr as { pricePerMeter?: number }).pricePerMeter,
+      ) || 0,
+    )
+    const lineTotal =
+      offer.railingsLineTotal ??
+      qExtra?.railingsLineTotal ??
+      (!inc.pergola ? offer.pergolaTotal : undefined) ??
+      (sqm > 0 && up > 0 ? sqm * up : 0)
+    if (lineTotal > 0 && sqm > 0 && up > 0) {
+      const glazingLabels: Record<string, string> = {
+        aluminum_glass: dict.off_gl_al_glass,
+        wet_glazing: dict.off_gl_wet,
+        dry_glazing: dict.off_gl_dry,
+      }
+      const locLabels: Record<string, string> = {
+        balcony: dict.off_loc_balcony,
+        stairs: dict.off_loc_stairs,
+        roof: dict.off_loc_roof,
+        yard: dict.off_loc_yard,
+        other: dict.off_loc_other,
+      }
+      rows.push({
+        description: `${dict.off_rail_prefix} ${escapeHtml(qr.profileType)} · ${glazingLabels[qr.glazingSystem] ?? qr.glazingSystem} · ${dict.off_rail_loc}: ${locLabels[qr.locationType] ?? qr.locationType} · ${dict.off_color_prefix} ${escapeHtml(qr.color)}`,
+        unitLabel: dict.off_unit_sqm,
+        quantity: Math.round(sqm * 1000) / 1000,
+        unitPrice: Math.round(up * 100) / 100,
+        lineTotal,
+      })
+    }
+  }
+
+  const qf = qExtra?.quickFence ?? offer.quickFence
+  if (inc.fence && qf) {
+    const sqm = quickOfferRailingsFenceAreaSqm(qf.metersTotal, qf.heightCm)
+    const up = Math.max(
+      0,
+      Number(
+        (qf as { pricePerSqm?: number; pricePerMeter?: number }).pricePerSqm ??
+          (qf as { pricePerMeter?: number }).pricePerMeter,
+      ) || 0,
+    )
+    const lineTotal =
+      offer.fenceLineTotal ??
+      qExtra?.fenceLineTotal ??
+      (!inc.pergola && !inc.railings ? offer.pergolaTotal : undefined) ??
+      (sqm > 0 && up > 0 ? sqm * up : 0)
+    const fenceLabels: Record<string, string> = {
+      classic: dict.off_fence_classic,
+      hitech: dict.off_fence_hitech,
+      hitech_angular: dict.off_fence_hitech_ang,
+    }
+    if (lineTotal > 0 && sqm > 0 && up > 0) {
+      rows.push({
+        description: `${dict.off_fence_prefix} ${fenceLabels[qf.fenceVariant] ?? qf.fenceVariant} · ${dict.off_color_prefix} ${escapeHtml(qf.color)}`,
+        unitLabel: dict.off_unit_sqm,
+        quantity: Math.round(sqm * 1000) / 1000,
+        unitPrice: Math.round(up * 100) / 100,
+        lineTotal,
       })
     }
   }
