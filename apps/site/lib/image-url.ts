@@ -46,6 +46,8 @@ export function getImageBaseUrl(): string {
   return USE_S3 ? S3_BASE_URL : ''
 }
 
+import { SITE_URL } from '@/lib/site-url'
+
 /**
  * Get absolute URL for Open Graph images (always returns absolute URL)
  * Social networks require absolute URLs for Open Graph images
@@ -57,8 +59,6 @@ export function getOgImageUrl(path: string): string {
   if (path.startsWith('http://') || path.startsWith('https://')) {
     return path
   }
-  
-  const SITE_URL = 'https://pashkovsky-group.com'
   
   // If S3 is configured, use S3 URL
   if (USE_S3 && S3_BASE_URL) {

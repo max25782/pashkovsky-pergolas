@@ -11,6 +11,7 @@ import GA from '@/components/ga'
 import { Suspense } from 'react'
 import FloatingWhatsApp from '@/components/contact/FloatingWhatsApp'
 import { getOgImageUrl } from '@/lib/image-url'
+import { OG_IMAGE_PATH, SITE_URL } from '@/lib/site-url'
 import { StructuredData } from '@/components/seo/structured-data'
 import { CookieConsentBanner } from '@/components/cookie-consent-banner'
 
@@ -19,12 +20,11 @@ const ChatWidget = dynamic(() => import('@/components/ai-chat/ChatWidget'), {
   loading: () => null,
 })
 
-// Generate absolute URL for Open Graph image
-const ogImagePath = '/images/pergulot/ashkelon2/IMG_20240312_134433.webp'
-const ogImageUrl = getOgImageUrl(ogImagePath)
+// JPEG on S3 — WhatsApp/Facebook often skip WebP previews
+const ogImageUrl = getOgImageUrl(OG_IMAGE_PATH)
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://pashkovsky-group.com'),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: 'Pashkovsky Group | פרגולות ומעקות אלומיניום בישראל',
     template: '%s | Pashkovsky Group',
@@ -35,17 +35,16 @@ export const metadata: Metadata = {
     'פרגולות אלומיניום', 'מעקות זכוכית', 'מסתורי כביסה',
     'Pergolas Israel', 'Pashkovski Group', 'אלומיניום איכותי', 'פרגולות חשמליות'
   ],
-  authors: [{ name: 'Pashkovsky Group', url: 'https://pashkovsky-group.com' }],
+  authors: [{ name: 'Pashkovsky Group', url: SITE_URL }],
   openGraph: {
     title: 'Pashkovsky Group | פרגולות ומעקות אלומיניום',
     description: 'פרגולות אלומיניום, מעקות ומסתורים בעיצוב יוקרתי וברמה הגבוהה בישראל.',
-    url: 'https://pashkovsky-group.com',
-    siteName: 'Pashkovsky-group.com',
+    url: SITE_URL,
+    siteName: 'Pashkovsky Group',
     images: [
       {
         url: ogImageUrl,
-        width: 1200,
-        height: 630,
+        type: 'image/jpeg',
         alt: 'פרגולות אלומיניום בעיצוב יוקרתי',
       },
     ],
@@ -53,11 +52,11 @@ export const metadata: Metadata = {
     type: 'website',
   },
   alternates: {
-    canonical: 'https://pashkovsky-group.com',
+    canonical: SITE_URL,
     languages: {
-      'he': 'https://pashkovsky-group.com/he',
-      'ru': 'https://pashkovsky-group.com/ru',
-      'en': 'https://pashkovsky-group.com/en',
+      he: `${SITE_URL}/he`,
+      ru: `${SITE_URL}/ru`,
+      en: `${SITE_URL}/en`,
     },
   },
   twitter: {

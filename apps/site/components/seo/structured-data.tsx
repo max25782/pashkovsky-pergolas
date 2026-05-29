@@ -1,13 +1,14 @@
 import { Locale } from '@/lib/locales'
 import { getOgImageUrl } from '@/lib/image-url'
+import { OG_IMAGE_PATH, SITE_URL } from '@/lib/site-url'
 
 interface StructuredDataProps {
   locale: Locale
 }
 
 export function StructuredData({ locale }: StructuredDataProps) {
-  const baseUrl = 'https://pashkovsky-group.com'
-  const ogImageUrl = getOgImageUrl('/images/pergulot/ashkelon2/IMG_20240312_134433.webp')
+  const baseUrl = SITE_URL
+  const ogImageUrl = getOgImageUrl(OG_IMAGE_PATH)
   
   const organizationSchema = {
     '@context': 'https://schema.org',

@@ -1,5 +1,5 @@
 /**
- * Company-Branded Email Template
+ * Company-Branded Email Template ..
  * Email template with company logo, colors, and signature
  */
 

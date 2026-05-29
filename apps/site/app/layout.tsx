@@ -1,9 +1,10 @@
 import './globals.css'
 import type { Metadata } from 'next'
 import Script from 'next/script'
+import { SITE_URL } from '@/lib/site-url'
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://pashkovsky-group.com'),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: 'Pashkovsky Group | פרגולות ומעקות אלומיניום בישראל',
     template: '%s | Pashkovsky Group',

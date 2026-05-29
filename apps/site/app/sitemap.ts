@@ -1,7 +1,8 @@
 import type { MetadataRoute } from 'next'
+import { SITE_URL } from '@/lib/site-url'
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = 'https://pashkovsky-group.com'
+  const base = SITE_URL
   const lastmod = new Date()
   const locales: Array<'he'|'ru'|'en'> = ['he','ru','en']
 
