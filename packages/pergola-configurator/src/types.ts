@@ -12,6 +12,10 @@ export interface PergolaParams {
   color: string
   lamellaAngleDeg: number
   attachedToWall: boolean
+  /** פרגולה תלויה — מתלים מקדמת הפרגולה לקיר (יחס גובה קיר 1:3 לעומק). */
+  hangingPergola: boolean
+  /** כמות מתלים לאורך הרוחב */
+  hangerCount: number
   lamellaGapCm: number
   beamLed: boolean
   lamellaStanding: boolean

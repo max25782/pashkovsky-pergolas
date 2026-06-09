@@ -5,6 +5,7 @@ import type { ReactElement } from 'react'
 import * as THREE from 'three'
 import type { PergolaMeshProps } from './types'
 import { cm } from './utils'
+import { hangerPositionsCm } from './hanging-pergola'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -131,6 +132,7 @@ interface SectionMeshProps {
   /** Intermediate post positions along depth beams (cm from front edge) */
   depthPostPositionsCm: number[]
   attachedToWall: boolean
+  hangingPergola: boolean
 }
 
 function SectionMesh({
@@ -154,6 +156,7 @@ function SectionMesh({
   widthPostPositionsCm,
   depthPostPositionsCm,
   attachedToWall,
+  hangingPergola,
 }: SectionMeshProps): ReactElement {
   const { cx, cz, widthM, depthM } = section
   const innerWidth = Math.max(0, widthM - frameDepth * 2)
@@ -247,8 +250,9 @@ function SectionMesh({
 
   return (
     <group>
-      {/* Corner posts — skip back corners when attached to wall */}
-      {corners
+      {/* Corner posts — hanging: none; wall-attached: skip back corners */}
+      {!hangingPergola &&
+        corners
         .filter((c) => !skipPostCorners.has(c.key))
         .filter((c) => !(attachedToWall && (c.key === 'tl' || c.key === 'tr')))
         .map((c) => (
@@ -257,9 +261,9 @@ function SectionMesh({
           </mesh>
         ))}
 
-      {/* Intermediate posts along outer beams */}
-      {widthPostEls}
-      {depthPostEls}
+      {/* Intermediate posts along outer beams — none when hanging */}
+      {!hangingPergola && widthPostEls}
+      {!hangingPergola && depthPostEls}
 
       {/* Perimeter frame beams */}
       <mesh position={[cx, height, cz - depthM / 2 + frameDepth / 2]} castShadow receiveShadow material={metalMat}>
@@ -298,6 +302,91 @@ function SectionMesh({
 
       {/* Lamellas */}
       {lamellaEls}
+    </group>
+  )
+}
+
+function HangerTube({
+  start,
+  end,
+  radiusM,
+  material,
+}: {
+  start: THREE.Vector3
+  end: THREE.Vector3
+  radiusM: number
+  material: THREE.MeshStandardMaterial
+}): ReactElement {
+  const { position, rotation, length } = useMemo(() => {
+    const dir = new THREE.Vector3().subVectors(end, start)
+    const len = dir.length()
+    const mid = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5)
+    const quat = new THREE.Quaternion().setFromUnitVectors(
+      new THREE.Vector3(0, 1, 0),
+      dir.normalize(),
+    )
+    const euler = new THREE.Euler().setFromQuaternion(quat)
+    return { position: mid, rotation: euler, length: len }
+  }, [start, end])
+
+  return (
+    <mesh position={position} rotation={rotation} castShadow receiveShadow material={material}>
+      <cylinderGeometry args={[radiusM, radiusM, length, 10]} />
+    </mesh>
+  )
+}
+
+function HangingHangersMesh({
+  widthCm,
+  depthCm,
+  heightM,
+  hangerCount,
+  metalMat,
+}: {
+  widthCm: number
+  depthCm: number
+  heightM: number
+  hangerCount: number
+  metalMat: THREE.MeshStandardMaterial
+}): ReactElement {
+  const widthM = cm(widthCm)
+  const depthM = cm(depthCm)
+  const positionsCm = hangerPositionsCm(widthCm, hangerCount)
+  const wallRiseM = cm(depthCm / 3)
+  const frontZ = depthM / 2
+  const backZ = -depthM / 2
+  const tubeRadius = cm(3.5)
+
+  return (
+    <group>
+      {positionsCm.map((posCm) => {
+        const x = -widthM / 2 + cm(posCm)
+        const start = new THREE.Vector3(x, heightM, frontZ)
+        const end = new THREE.Vector3(x, heightM + wallRiseM, backZ)
+        return (
+          <HangerTube
+            key={`hanger-${posCm}`}
+            start={start}
+            end={end}
+            radiusM={tubeRadius}
+            material={metalMat}
+          />
+        )
+      })}
+      {/* Wall brackets */}
+      {positionsCm.map((posCm) => {
+        const x = -widthM / 2 + cm(posCm)
+        return (
+          <mesh
+            key={`bracket-${posCm}`}
+            position={[x, heightM + wallRiseM, backZ - cm(2)]}
+            castShadow
+            material={metalMat}
+          >
+            <boxGeometry args={[cm(8), cm(6), cm(4)]} />
+          </mesh>
+        )
+      })}
     </group>
   )
 }
@@ -447,9 +536,19 @@ export function PergolaMesh({
             widthPostPositionsCm={intermediatePostPositionsCm(secWidthCm)}
             depthPostPositionsCm={intermediatePostPositionsCm(secDepthCm)}
             attachedToWall={params.attachedToWall ?? false}
+            hangingPergola={params.hangingPergola ?? false}
           />
         )
       })}
+      {params.hangingPergola && shape === 'rectangle' && (
+        <HangingHangersMesh
+          widthCm={params.widthCm}
+          depthCm={params.depthCm}
+          heightM={height}
+          hangerCount={params.hangerCount ?? 2}
+          metalMat={metalMat}
+        />
+      )}
     </group>
   )
 }

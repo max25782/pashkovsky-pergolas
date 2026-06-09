@@ -29,6 +29,9 @@ export interface ConfiguratorTranslations {
   selectedDivider: string
   selectedLamella: string
   attachedToWall: string
+  hangingPergola: string
+  hangerCount: string
+  hangerWallRiseHint: string
   beamLed: string
   lamellaStanding: string
   lamellaAlongWidth: string
@@ -70,6 +73,9 @@ export function getTranslations(locale: ConfiguratorLocale): ConfiguratorTransla
       selectedDivider: 'перегородка',
       selectedLamella: 'затенение',
       attachedToWall: 'Крепится к стене',
+      hangingPergola: 'Подвесная пергола (трубы к стене)',
+      hangerCount: 'Количество подвесов',
+      hangerWallRiseHint: 'Высота на стене (1:3 к глубине): {rise} см',
       beamLed: 'LED подсветка в балках',
       lamellaStanding: 'Ламели вертикально',
       lamellaAlongWidth: 'Ламели поперёк (по ширине)',
@@ -111,6 +117,9 @@ export function getTranslations(locale: ConfiguratorLocale): ConfiguratorTransla
       selectedDivider: 'divider',
       selectedLamella: 'shading',
       attachedToWall: 'Attached to wall',
+      hangingPergola: 'Hanging pergola (wall hangers)',
+      hangerCount: 'Number of hangers',
+      hangerWallRiseHint: 'Wall mount height (1:3 vs depth): {rise} cm',
       beamLed: 'LED lighting in beams',
       lamellaStanding: 'Lamellas vertical',
       lamellaAlongWidth: 'Lamellas across width',
@@ -151,6 +160,9 @@ export function getTranslations(locale: ConfiguratorLocale): ConfiguratorTransla
     selectedDivider: 'חוצץ',
     selectedLamella: 'הצללה',
     attachedToWall: 'מחובר לקיר',
+    hangingPergola: 'פרגולה תלויה (מתלים לקיר)',
+    hangerCount: 'כמות מתלים',
+    hangerWallRiseHint: 'גובה בקיר (יחס 1:3 לעומק): {rise} ס"מ',
     beamLed: 'תאורת LED בקורות',
     lamellaStanding: 'למלות בעמידה',
     lamellaAlongWidth: 'למלות לאורך הרוחב',

@@ -6,6 +6,7 @@ import type { ConfiguratorLocale } from './locale'
 import type { PergolaParams, ProfileMeta } from './types'
 import { clamp } from './utils'
 import { getTranslations } from './translations'
+import { clampHangerCount, hangerWallRiseCm } from './hanging-pergola'
 
 interface ControlsPanelProps {
   locale: ConfiguratorLocale
@@ -58,6 +59,7 @@ export function ControlsPanel({
   const [gapDraft, setGapDraft] = useState(String(params.lamellaGapCm))
   const [arm1WidthDraft, setArm1WidthDraft] = useState(String(params.arm1WidthCm))
   const [arm1DepthDraft, setArm1DepthDraft] = useState(String(params.arm1DepthCm))
+  const [hangerCountDraft, setHangerCountDraft] = useState(String(params.hangerCount))
 
   useEffect(() => { setWidthDraft(String(params.widthCm)) }, [params.widthCm])
   useEffect(() => { setDepthDraft(String(params.depthCm)) }, [params.depthCm])
@@ -65,6 +67,7 @@ export function ControlsPanel({
   useEffect(() => { setGapDraft(String(params.lamellaGapCm)) }, [params.lamellaGapCm])
   useEffect(() => { setArm1WidthDraft(String(params.arm1WidthCm)) }, [params.arm1WidthCm])
   useEffect(() => { setArm1DepthDraft(String(params.arm1DepthCm)) }, [params.arm1DepthCm])
+  useEffect(() => { setHangerCountDraft(String(params.hangerCount)) }, [params.hangerCount])
 
   function commitNumber(
     key: 'widthCm' | 'depthCm' | 'heightCm' | 'lamellaGapCm' | 'arm1WidthCm' | 'arm1DepthCm',
@@ -119,7 +122,12 @@ export function ControlsPanel({
               <button
                 key={s}
                 type="button"
-                onClick={() => onUpdate('shapeType', s)}
+                onClick={() => {
+                  onUpdate('shapeType', s)
+                  if (s !== 'rectangle' && params.hangingPergola) {
+                    onUpdate('hangingPergola', false)
+                  }
+                }}
                 className={
                   'flex-1 rounded border py-1 text-[11px] font-medium transition-colors ' +
                   (params.shapeType === s
@@ -228,10 +236,54 @@ export function ControlsPanel({
       <label className="flex items-center gap-2 cursor-pointer">
         <input type="checkbox" checked={params.attachedToWall}
           onChange={(e) => onUpdate('attachedToWall', e.target.checked)}
-          className="h-3.5 w-3.5 rounded border-gray-300 text-green-600 focus:ring-green-500"
+          disabled={params.hangingPergola}
+          className="h-3.5 w-3.5 rounded border-gray-300 text-green-600 focus:ring-green-500 disabled:opacity-50"
         />
         <span className="text-xs text-gray-700">{t.attachedToWall}</span>
       </label>
+
+      <label className="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={params.hangingPergola}
+          disabled={params.shapeType !== 'rectangle'}
+          onChange={(e) => {
+            const on = e.target.checked
+            onUpdate('hangingPergola', on)
+            if (on) onUpdate('attachedToWall', true)
+          }}
+          className="h-3.5 w-3.5 rounded border-gray-300 text-green-600 focus:ring-green-500 disabled:opacity-50"
+        />
+        <span className="text-xs text-gray-700">{t.hangingPergola}</span>
+      </label>
+
+      {params.hangingPergola && params.shapeType === 'rectangle' && (
+        <div className={field}>
+          <label className={lbl}>{t.hangerCount}</label>
+          <input
+            className={inp}
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={8}
+            value={hangerCountDraft}
+            onChange={(e) => setHangerCountDraft(e.target.value)}
+            onBlur={() => {
+              const parsed = parseInt(hangerCountDraft, 10)
+              onUpdate('hangerCount', clampHangerCount(parsed))
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                const parsed = parseInt(hangerCountDraft, 10)
+                onUpdate('hangerCount', clampHangerCount(parsed))
+              }
+            }}
+          />
+          <p className="mt-1 text-[10px] text-gray-400">
+            {t.hangerWallRiseHint.replace('{rise}', String(hangerWallRiseCm(params.depthCm)))}
+          </p>
+        </div>
+      )}
 
       <label className="flex items-center gap-2 cursor-pointer">
         <input type="checkbox" checked={params.beamLed}

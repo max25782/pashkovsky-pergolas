@@ -34,6 +34,11 @@ function parseParams(body: Record<string, unknown>): PergolaParamsPayload | null
     color: String(body.color ?? '#9aa0a6'),
     lamellaAngleDeg: Number(body.lamellaAngleDeg) || 0,
     attachedToWall: Boolean(body.attachedToWall),
+    hangingPergola: Boolean(body.hangingPergola),
+    hangerCount:
+      typeof body.hangerCount === 'number'
+        ? Math.min(8, Math.max(1, Math.round(Number(body.hangerCount))))
+        : 2,
     lamellaGapCm: Number(body.lamellaGapCm) || 2,
     beamLed: Boolean(body.beamLed),
     lamellaStanding: Boolean(body.lamellaStanding),
@@ -125,6 +130,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       color: pergolaParams.color,
       lamellaAngleDeg: pergolaParams.lamellaAngleDeg,
       attachedToWall: pergolaParams.attachedToWall,
+      hangingPergola: pergolaParams.hangingPergola ?? false,
+      hangerCount: pergolaParams.hangerCount ?? 2,
       lamellaGapCm: pergolaParams.lamellaGapCm,
       beamLed: pergolaParams.beamLed,
       lamellaStanding: pergolaParams.lamellaStanding,

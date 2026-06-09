@@ -226,6 +226,8 @@ export interface ConfiguratorParams {
   color: string
   lamellaAngleDeg: number
   attachedToWall: boolean
+  hangingPergola?: boolean
+  hangerCount?: number
   lamellaGapCm: number
   beamLed: boolean
   lamellaStanding: boolean

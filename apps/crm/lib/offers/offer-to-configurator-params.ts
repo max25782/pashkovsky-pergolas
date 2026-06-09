@@ -15,6 +15,8 @@ export function offerToConfiguratorInitialParams(offer: Offer): Partial<PergolaP
       color: saved.color,
       lamellaAngleDeg: saved.lamellaAngleDeg,
       attachedToWall: saved.attachedToWall,
+      hangingPergola: saved.hangingPergola ?? false,
+      hangerCount: saved.hangerCount ?? 2,
       lamellaGapCm: saved.lamellaGapCm,
       beamLed: saved.beamLed,
       lamellaStanding: saved.lamellaStanding,

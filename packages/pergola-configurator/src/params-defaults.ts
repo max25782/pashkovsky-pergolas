@@ -11,6 +11,8 @@ export function defaultPergolaParams(initial?: Partial<PergolaParams>): PergolaP
     color: initial?.color ?? '#9aa0a6',
     lamellaAngleDeg: initial?.lamellaAngleDeg ?? 0,
     attachedToWall: initial?.attachedToWall ?? false,
+    hangingPergola: initial?.hangingPergola ?? false,
+    hangerCount: initial?.hangerCount ?? 2,
     lamellaGapCm: initial?.lamellaGapCm ?? 2,
     beamLed: initial?.beamLed ?? false,
     lamellaStanding: initial?.lamellaStanding ?? false,

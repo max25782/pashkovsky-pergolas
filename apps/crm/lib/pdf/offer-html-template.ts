@@ -511,6 +511,17 @@ function configuratorParamsTechHtml(offer: Offer, dict: PdfDict): string {
   if (p.lamellaAlongWidth) rows.push([dict.off_lamella_along_width, dict.off_yes])
   if (p.beamLed) rows.push([dict.off_beam_led, dict.off_yes])
   if (p.attachedToWall) rows.push([dict.off_attached_wall, dict.off_yes])
+  if (p.hangingPergola) {
+    rows.push([dict.off_hanging_pergola, dict.off_yes])
+    rows.push([
+      dict.off_hanger_count,
+      String(p.hangerCount ?? 2),
+    ])
+    rows.push([
+      dict.off_hanger_wall_rise,
+      `${Math.round((p.depthCm / 3) * 10) / 10} ${dict.off_cm}`,
+    ])
+  }
 
   if (rows.length === 0) return ''
 

@@ -12,6 +12,8 @@ export interface PergolaParamsPayload {
   color: string
   lamellaAngleDeg: number
   attachedToWall: boolean
+  hangingPergola?: boolean
+  hangerCount?: number
   lamellaGapCm: number
   beamLed?: boolean
   lamellaStanding?: boolean
@@ -247,6 +249,8 @@ export async function applyConfiguratorSyncToOffer(
       color: params.color,
       lamellaAngleDeg: params.lamellaAngleDeg,
       attachedToWall: params.attachedToWall,
+      hangingPergola: params.hangingPergola ?? false,
+      hangerCount: params.hangerCount ?? 2,
       lamellaGapCm: params.lamellaGapCm,
       beamLed: params.beamLed ?? false,
       lamellaStanding: params.lamellaStanding ?? false,

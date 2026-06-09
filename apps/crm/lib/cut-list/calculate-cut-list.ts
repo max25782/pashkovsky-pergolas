@@ -1,6 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import type { Offer } from '@/types/offer'
+import { hangerPipeLengthCm } from '@pashkovsky/pergola-configurator'
 import { chooseStockLength, STOCK_LENGTHS_CM, type ProfileCategory } from './stock-lengths'
 import { calculateSuntufSheets } from '@/lib/calculations/suntuf-sheets'
 
@@ -223,6 +224,8 @@ export function calculateCutList(offer: Offer): CutListResult {
   const depthCm = cfg?.depthCm ?? (isRect && shape?.type === 'rectangle' ? shape.length * 100 : 0)
   const heightCm = cfg?.heightCm ?? 260
   const attachedToWall = cfg?.attachedToWall ?? false
+  const hangingPergola = cfg?.hangingPergola ?? false
+  const hangerCount = Math.min(8, Math.max(1, Math.round(cfg?.hangerCount ?? 2)))
   const lamellaAlongWidth = cfg?.lamellaAlongWidth ?? false
   const lamellaGapCm = cfg?.lamellaGapCm ?? 2
   const lamellaStanding = cfg?.lamellaStanding ?? false
@@ -236,7 +239,7 @@ export function calculateCutList(offer: Offer): CutListResult {
 
   // ── Posts ──────────────────────────────────────────────────────────────────
   // Corner posts: 4 if free-standing, 2 if attached to wall (front only)
-  const cornerPostQty = attachedToWall ? 2 : 4
+  const cornerPostQty = hangingPergola ? 0 : attachedToWall ? 2 : 4
 
   // Intermediate posts along outer beams — max 400 cm span, split equally
   const POST_MAX_SPAN = 400
@@ -245,16 +248,26 @@ export function calculateCutList(offer: Offer): CutListResult {
     return Math.ceil(spanCm / POST_MAX_SPAN) - 1
   }
   // Width beams: front beam always has posts, back beam only if free-standing
-  const widthBeamCount = attachedToWall ? 1 : 2
+  const widthBeamCount = hangingPergola ? 0 : attachedToWall ? 1 : 2
   const widthIntermediatePosts = intermediatePostCount(widthCm) * widthBeamCount
-  // Depth beams: only for free-standing (wall side has no posts)
-  const depthBeamCount = attachedToWall ? 0 : 2
+  const depthBeamCount = hangingPergola ? 0 : attachedToWall ? 0 : 2
   const depthIntermediatePosts = intermediatePostCount(depthCm) * depthBeamCount
   const totalPostQty = cornerPostQty + widthIntermediatePosts + depthIntermediatePosts
 
   const postPieces: CutPiece[] = totalPostQty > 0
     ? [{ label: 'עמוד', lengthCm: heightCm, qty: totalPostQty }]
     : []
+
+  const hangerPieces: CutPiece[] =
+    hangingPergola && depthCm > 0
+      ? [
+          {
+            label: 'צינור מתלה (תלוייה)',
+            lengthCm: hangerPipeLengthCm(depthCm),
+            qty: hangerCount,
+          },
+        ]
+      : []
 
   // ── Frame beams ────────────────────────────────────────────────────────────
   // 2 width beams (front + back) + 2 depth beams (sides)
@@ -320,7 +333,10 @@ export function calculateCutList(offer: Offer): CutListResult {
   // ── Build groups ───────────────────────────────────────────────────────────
   const groups: ProfileGroup[] = []
 
-  const postGroup = buildGroup('post', cfg?.postProfileId ?? null, postName, postPieces)
+  const postGroup = buildGroup('post', cfg?.postProfileId ?? null, postName, [
+    ...postPieces,
+    ...hangerPieces,
+  ])
   if (postGroup) groups.push(postGroup)
 
   const beamGroup = buildGroup('beam', cfg?.beamProfileId ?? null, beamName, beamPieces)

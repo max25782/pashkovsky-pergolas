@@ -98,6 +98,12 @@ function Pergola3DInner({
             typeof p.lamellaAngleDeg === 'number' ? p.lamellaAngleDeg : prev.lamellaAngleDeg,
           attachedToWall:
             typeof p.attachedToWall === 'boolean' ? p.attachedToWall : prev.attachedToWall,
+          hangingPergola:
+            typeof p.hangingPergola === 'boolean' ? p.hangingPergola : prev.hangingPergola,
+          hangerCount:
+            typeof p.hangerCount === 'number'
+              ? Math.min(8, Math.max(1, Math.round(p.hangerCount)))
+              : prev.hangerCount,
           lamellaGapCm: typeof p.lamellaGapCm === 'number' ? p.lamellaGapCm : prev.lamellaGapCm,
           beamLed: typeof p.beamLed === 'boolean' ? p.beamLed : prev.beamLed,
           lamellaStanding:
