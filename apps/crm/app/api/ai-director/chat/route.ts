@@ -135,7 +135,7 @@ async function saveMessage(sessionId: string, role: 'user' | 'assistant', conten
 async function preflightExternalDataApi(apiBaseUrl: string): Promise<void> {
   // Skip check if URL is not configured
   if (!apiBaseUrl || apiBaseUrl.trim() === '') {
-    console.warn('[AI Director] NEXT_PUBLIC_APP_URL is not set - Bedrock agent may not be able to fetch data')
+    console.warn('[AI Director] NEXT_PUBLIC_APP_URL is not set - AI Director may not be able to fetch CRM data')
     return
   }
 
@@ -160,7 +160,7 @@ async function preflightExternalDataApi(apiBaseUrl: string): Promise<void> {
       console.warn('[AI Director] Preflight check failed:', {
         status: response.status,
         url: healthUrl,
-        hint: 'Bedrock agent may not be able to fetch data, but chat will still work',
+        hint: 'AI Director may not be able to fetch data, but chat will still work',
       })
     } else {
     }
@@ -169,7 +169,6 @@ async function preflightExternalDataApi(apiBaseUrl: string): Promise<void> {
     console.warn('[AI Director] Preflight check error (non-blocking):', {
       error: error instanceof Error ? error.message : String(error),
       url: normalizedUrl,
-      hint: 'This is a soft check. Bedrock agent will attempt to fetch data when needed.',
     })
   }
 }
@@ -330,27 +329,8 @@ export async function POST(req: NextRequest) {
     }
 
     if (bedrockResponse.error) {
-      console.error('[AI Director] Bedrock error:', bedrockResponse.error)
-      
-      // Check if error is about security token - this means Bedrock Agent can't authenticate to data API
-      if (bedrockResponse.error.includes('security token') || bedrockResponse.error.includes('token') || bedrockResponse.error.includes('Unauthorized')) {
-        return NextResponse.json({ 
-          error: 'AI Director configuration error',
-          details: 'Bedrock Agent cannot authenticate to data API. Please verify:',
-          hints: [
-            '1. AI_DIRECTOR_API_TOKEN is set in environment variables',
-            '2. Bedrock Agent Action Groups are configured to use api_token from sessionAttributes',
-            '3. Action Groups pass x-api-token header when calling data API endpoints',
-            `Current token configured: ${process.env.AI_DIRECTOR_API_TOKEN ? 'YES' : 'NO'}`,
-          ],
-          originalError: bedrockResponse.error,
-        }, { status: 500 })
-      }
-      
-      return NextResponse.json({ 
-        error: bedrockResponse.error,
-        hint: 'Check AWS CloudWatch logs for Bedrock Agent for more details',
-      }, { status: 500 })
+      console.error('[AI Director] error:', bedrockResponse.error)
+      return NextResponse.json({ error: bedrockResponse.error }, { status: 500 })
     }
 
     // Save AI response
