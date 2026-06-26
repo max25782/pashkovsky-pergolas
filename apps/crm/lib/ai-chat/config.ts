@@ -214,7 +214,7 @@ export const fewShotExamples: Array<{ role: 'user' | 'model'; parts: Array<{ tex
 ]
 
 export const AI_CONFIG = {
-  model: 'gemini-2.0-flash', // Stable model with streaming support
+  model: 'gemini-2.5-flash', // Stable model with streaming support
   maxTokens: 800, // Shorter responses
   temperature: 0.7, // More focused
   maxHistoryMessages: 20,
