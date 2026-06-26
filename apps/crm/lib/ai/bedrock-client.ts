@@ -126,6 +126,7 @@ async function dispatchCRMFunction(
   args: Record<string, unknown>,
   apiBaseUrl: string,
   apiToken: string,
+  companyId: string,
 ): Promise<string> {
   const path = FUNCTION_TO_PATH[functionName]
   if (!path) {
@@ -133,8 +134,10 @@ async function dispatchCRMFunction(
   }
 
   const qs = new URLSearchParams()
+  // Always inject company_id from session — Gemini doesn't need to pass it explicitly
+  if (companyId) qs.set('company_id', companyId)
   for (const [k, v] of Object.entries(args)) {
-    if (v != null) qs.set(k, String(v))
+    if (v != null && k !== 'company_id') qs.set(k, String(v))
   }
 
   const url = `${apiBaseUrl}${path}?${qs.toString()}`
@@ -287,7 +290,7 @@ export async function callBedrockAgent({
       messages.push({ role: 'model', parts: [{ functionCall: { name, args } }] })
 
       // Execute the function
-      const fnResult = await dispatchCRMFunction(name, args, apiBaseUrl, apiToken)
+      const fnResult = await dispatchCRMFunction(name, args, apiBaseUrl, apiToken, companyId)
 
       // Add function response to history
       messages.push({
