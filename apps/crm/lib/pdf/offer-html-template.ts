@@ -515,7 +515,7 @@ function configuratorParamsTechHtml(offer: Offer, dict: PdfDict): string {
     rows.push([dict.off_hanging_pergola, dict.off_yes])
     rows.push([
       dict.off_hanger_count,
-      String(p.hangerCount ?? 2),
+      String(2 + Math.min(6, Math.max(0, Math.round(p.hangerCount ?? 0)))),
     ])
     rows.push([
       dict.off_hanger_wall_rise,

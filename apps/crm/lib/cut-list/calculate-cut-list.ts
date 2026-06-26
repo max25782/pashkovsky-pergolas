@@ -225,7 +225,8 @@ export function calculateCutList(offer: Offer): CutListResult {
   const heightCm = cfg?.heightCm ?? 260
   const attachedToWall = cfg?.attachedToWall ?? false
   const hangingPergola = cfg?.hangingPergola ?? false
-  const hangerCount = Math.min(8, Math.max(1, Math.round(cfg?.hangerCount ?? 2)))
+  // hangerCount stores EXTRA middle hangers; total = 2 edges + middle
+  const hangerCount = 2 + Math.min(6, Math.max(0, Math.round(cfg?.hangerCount ?? 0)))
   const lamellaAlongWidth = cfg?.lamellaAlongWidth ?? false
   const lamellaGapCm = cfg?.lamellaGapCm ?? 2
   const lamellaStanding = cfg?.lamellaStanding ?? false

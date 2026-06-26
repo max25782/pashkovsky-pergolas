@@ -59,7 +59,8 @@ export function ControlsPanel({
   const [gapDraft, setGapDraft] = useState(String(params.lamellaGapCm))
   const [arm1WidthDraft, setArm1WidthDraft] = useState(String(params.arm1WidthCm))
   const [arm1DepthDraft, setArm1DepthDraft] = useState(String(params.arm1DepthCm))
-  const [hangerCountDraft, setHangerCountDraft] = useState(String(params.hangerCount))
+  // hangerCount = number of EXTRA middle hangers (edges are always present)
+  const [hangerCountDraft, setHangerCountDraft] = useState(String(params.hangerCount ?? 0))
 
   useEffect(() => { setWidthDraft(String(params.widthCm)) }, [params.widthCm])
   useEffect(() => { setDepthDraft(String(params.depthCm)) }, [params.depthCm])
@@ -264,22 +265,25 @@ export function ControlsPanel({
             className={inp}
             type="number"
             inputMode="numeric"
-            min={1}
-            max={8}
+            min={0}
+            max={6}
             value={hangerCountDraft}
             onChange={(e) => setHangerCountDraft(e.target.value)}
             onBlur={() => {
               const parsed = parseInt(hangerCountDraft, 10)
-              onUpdate('hangerCount', clampHangerCount(parsed))
+              onUpdate('hangerCount', clampHangerCount(Number.isNaN(parsed) ? 0 : parsed))
             }}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 const parsed = parseInt(hangerCountDraft, 10)
-                onUpdate('hangerCount', clampHangerCount(parsed))
+                onUpdate('hangerCount', clampHangerCount(Number.isNaN(parsed) ? 0 : parsed))
               }
             }}
           />
           <p className="mt-1 text-[10px] text-gray-400">
+            {t.hangerCountHint.replace('{total}', String(2 + (params.hangerCount ?? 0)))}
+          </p>
+          <p className="mt-0.5 text-[10px] text-gray-400">
             {t.hangerWallRiseHint.replace('{rise}', String(hangerWallRiseCm(params.depthCm)))}
           </p>
         </div>

@@ -12,7 +12,7 @@ export function defaultPergolaParams(initial?: Partial<PergolaParams>): PergolaP
     lamellaAngleDeg: initial?.lamellaAngleDeg ?? 0,
     attachedToWall: initial?.attachedToWall ?? false,
     hangingPergola: initial?.hangingPergola ?? false,
-    hangerCount: initial?.hangerCount ?? 2,
+    hangerCount: initial?.hangerCount ?? 0,
     lamellaGapCm: initial?.lamellaGapCm ?? 2,
     beamLed: initial?.beamLed ?? false,
     lamellaStanding: initial?.lamellaStanding ?? false,
