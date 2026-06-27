@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
   } catch (error: unknown) {
     console.error('Error in GET /api/workers:', error)
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : String(error) },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }
@@ -134,14 +134,14 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error('Error creating worker:', error)
-      return NextResponse.json({ error: 'Failed to create worker', details: error.message }, { status: 500 })
+      return NextResponse.json({ error: 'Failed to create worker' }, { status: 500 })
     }
 
     return NextResponse.json({ worker: transformWorkerFromDB(data) })
   } catch (error: unknown) {
     console.error('Error in POST /api/workers:', error)
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : String(error) },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

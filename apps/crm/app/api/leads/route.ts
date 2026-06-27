@@ -58,15 +58,14 @@ export async function POST(req: NextRequest) {
       let errText: any
       try { errText = await resp.json() } catch { errText = await resp.text() }
       console.error('Supabase insert error:', resp.status, errText)
-      return new Response(JSON.stringify({ error: 'Supabase error', status: resp.status, detail: errText }), {
+      return new Response(JSON.stringify({ error: 'Failed to submit lead' }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' },
       })
     }
   } catch (e: unknown) {
     console.error('Leads API error', e)
-    const detail = e instanceof Error ? e.message : String(e)
-    return new Response(JSON.stringify({ error: 'Server error', detail }), {
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     })

@@ -82,7 +82,7 @@ export async function GET() {
 
     if (membershipsError) {
       console.error('[companies/me] company_members query:', membershipsError)
-      return NextResponse.json({ error: 'Company lookup failed', details: membershipsError.message }, { status: 500 })
+      return NextResponse.json({ error: 'Company lookup failed' }, { status: 500 })
     }
 
     if (!rows || rows.length === 0) {

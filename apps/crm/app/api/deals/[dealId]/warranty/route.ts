@@ -142,7 +142,7 @@ export async function GET(
   } catch (e) {
     console.error('[warranty PDF]', e)
     return NextResponse.json(
-      { error: 'Failed to generate PDF', details: e instanceof Error ? e.message : String(e) },
+      { error: 'Failed to generate PDF' },
       { status: 500 },
     )
   }

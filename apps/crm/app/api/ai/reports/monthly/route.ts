@@ -8,6 +8,10 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { checkRateLimit } from '@/lib/rate-limit'
+
+// 10 AI report generations per company per hour
+const AI_REPORT_RATE_LIMIT = { maxRequests: 10, windowMs: 60 * 60 * 1000 }
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY!
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -334,8 +338,20 @@ export async function GET(request: NextRequest) {
     if (!auth) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // 2. Rate limit per company (10 AI reports/hour)
+    const rateLimitResult = checkRateLimit(`ai-report-monthly:${auth.companyId}`, AI_REPORT_RATE_LIMIT)
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Try again later.' },
+        {
+          status: 429,
+          headers: { 'Retry-After': String(Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000)) },
+        }
+      )
+    }
     
-    // 2. Parse month parameter
+    // 3. Parse month parameter
     const monthParam = request.nextUrl.searchParams.get('month')
     const month = monthParam || getCurrentMonthString()
     const dateRange = getMonthDateRange(month)
@@ -401,7 +417,7 @@ export async function GET(request: NextRequest) {
   } catch (error: unknown) {
     console.error('[Monthly Report] Error:', error)
     return NextResponse.json(
-      { error: 'Failed to generate report', details: error instanceof Error ? error.message : String(error) },
+      { error: 'Failed to generate report' },
       { status: 500 }
     )
   }

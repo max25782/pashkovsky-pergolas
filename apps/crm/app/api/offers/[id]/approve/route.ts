@@ -51,7 +51,7 @@ export async function POST(
     if (error) {
       console.error('Error approving offer:', error)
       return NextResponse.json(
-        { error: 'Failed to approve offer', details: error.message },
+        { error: 'Failed to approve offer' },
         { status: 500 }
       )
     }
@@ -68,7 +68,7 @@ export async function POST(
   } catch (error: unknown) {
     console.error('Error in POST /api/offers/[id]/approve:', error)
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : String(error) },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

@@ -39,10 +39,19 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // 2. Parse period
+    // 2. Parse period and required company_id
     const { searchParams } = new URL(req.url)
     const period = searchParams.get('period') || 'last30days'
-    
+    const companyId = searchParams.get('company_id')
+
+    // company_id is mandatory to prevent cross-tenant data processing
+    if (!companyId) {
+      return NextResponse.json(
+        { error: 'company_id query parameter is required' },
+        { status: 400 }
+      )
+    }
+
     let dateFilter: { from: string; to: string }
     const today = new Date()
     const todayStr = today.toISOString().split('T')[0]
@@ -73,17 +82,18 @@ export async function POST(req: NextRequest) {
         )
     }
 
-    // 3. Fetch leads in period
+    // 3. Fetch leads in period — scoped to requested company only
     const { data: leads, error: leadsError } = await supabase
       .from('leads')
       .select('*')
+      .eq('company_id', companyId)
       .gte('created_at', `${dateFilter.from}T00:00:00Z`)
       .lte('created_at', `${dateFilter.to}T23:59:59Z`)
       .order('created_at', { ascending: false })
 
     if (leadsError) {
       return NextResponse.json(
-        { error: 'Failed to fetch leads', details: leadsError.message },
+        { error: 'Failed to fetch leads' },
         { status: 500 }
       )
     }
@@ -189,11 +199,11 @@ export async function POST(req: NextRequest) {
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error)
     console.error('[Batch Scoring] Error:', {
-      error: msg?.substring(0, 500), // Limit log size
+      error: msg?.substring(0, 500),
     })
 
     return NextResponse.json(
-      { error: 'Failed to batch score leads', details: msg },
+      { error: 'Failed to batch score leads' },
       { status: 500 }
     )
   }

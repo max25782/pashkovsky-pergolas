@@ -1,10 +1,19 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+
+function isAuthorized(req: NextRequest): boolean {
+  const token = req.headers.get('x-debug-token') || req.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
+  const expected = process.env.DEBUG_TOKEN || process.env.ADMIN_TOKEN
+  return !!expected && token === expected
+}
 
 /**
  * Debug endpoint to check S3 configuration
  * GET /api/debug/s3-config
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
+  if (!isAuthorized(req)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
   const config = {
     // Environment variables check
     env: {

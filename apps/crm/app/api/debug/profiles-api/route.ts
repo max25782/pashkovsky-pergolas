@@ -1,6 +1,16 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
-export async function GET() {
+function isAuthorized(req: NextRequest): boolean {
+  const token = req.headers.get('x-debug-token') || req.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
+  const expected = process.env.DEBUG_TOKEN || process.env.ADMIN_TOKEN
+  return !!expected && token === expected
+}
+
+export async function GET(req: NextRequest) {
+  if (!isAuthorized(req)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   // Read env var INSIDE the handler to guarantee runtime evaluation
   const PROFILES_API_URL = process.env.PROFILES_API_URL || 'http://localhost:3002'
 

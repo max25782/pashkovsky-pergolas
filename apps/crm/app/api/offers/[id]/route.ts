@@ -107,7 +107,7 @@ export async function GET(
   } catch (error: unknown) {
     console.error('Error in GET /api/offers/[id]:', error)
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : String(error) },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }
@@ -159,7 +159,7 @@ export async function DELETE(
     if (detach.errorMessage !== null) {
       console.error('[DELETE offer] detach relations failed:', detach.errorMessage)
       return NextResponse.json(
-        { error: 'Failed to detach related records', details: detach.errorMessage },
+        { error: 'Failed to detach related records' },
         { status: 500 },
       )
     }
@@ -169,7 +169,7 @@ export async function DELETE(
     if (delErr !== null) {
       console.error('Error deleting offer:', delErr)
       return NextResponse.json(
-        { error: 'Failed to delete offer', details: delErr.message, code: delErr.code },
+        { error: 'Failed to delete offer' },
         { status: 500 },
       )
     }
@@ -178,7 +178,7 @@ export async function DELETE(
   } catch (error: unknown) {
     console.error('Error in DELETE /api/offers/[id]:', error)
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : String(error) },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

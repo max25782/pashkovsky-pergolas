@@ -1,6 +1,12 @@
 /**
- * Simple in-memory rate limiter
- * For production, consider Redis or Upstash
+ * In-memory rate limiter.
+ *
+ * IMPORTANT — production warning:
+ * On Vercel / serverless environments each cold-start creates a fresh process,
+ * so this in-memory store resets between invocations.  For strict production
+ * enforcement swap the store for Redis (Upstash) using the same interface.
+ * Current usage: auth routes (login, register, password-reset) and the
+ * public AI-chat endpoint which stores counts in Supabase instead.
  */
 
 interface RateLimitEntry {

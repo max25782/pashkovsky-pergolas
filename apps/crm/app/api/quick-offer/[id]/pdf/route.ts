@@ -152,7 +152,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   } catch (e) {
     console.error('[quick-offer/pdf]', e)
     return NextResponse.json(
-      { error: 'Failed to generate PDF', details: e instanceof Error ? e.message : String(e) },
+      { error: 'Failed to generate PDF' },
       { status: 500 },
     )
   }

@@ -180,7 +180,7 @@ export async function GET(
   } catch (e) {
     console.error('[cut-list-pdf]', e)
     return NextResponse.json(
-      { error: 'Failed to generate cut list PDF', details: e instanceof Error ? e.message : String(e) },
+      { error: 'Failed to generate cut list PDF' },
       { status: 500 },
     )
   }

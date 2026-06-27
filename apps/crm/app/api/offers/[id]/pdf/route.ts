@@ -6,6 +6,10 @@ import type { PdfLocale } from '@/lib/pdf/pdf-locale'
 import { uploadToS3 } from '@/lib/s3-upload'
 import type { Offer } from '@/types/offer'
 import { pergolaFieldsFromOfferRow } from '@/lib/pdf/map-offer-db-row-for-pdf'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
+
+// 30 PDF generations per IP per hour (Puppeteer is CPU-intensive)
+const PDF_RATE_LIMIT = { maxRequests: 30, windowMs: 60 * 60 * 1000 }
 
 // Force Node.js runtime (not Edge) for Puppeteer/Chromium compatibility
 export const runtime = 'nodejs'
@@ -158,6 +162,19 @@ export async function POST(
     )
   }
 
+  // Rate limit per IP to protect Puppeteer resources
+  const ip = getClientIp(req)
+  const rateLimitResult = checkRateLimit(`pdf-offer:${ip}`, PDF_RATE_LIMIT)
+  if (!rateLimitResult.allowed) {
+    return NextResponse.json(
+      { error: 'Too many PDF requests. Try again later.' },
+      {
+        status: 429,
+        headers: { 'Retry-After': String(Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000)) },
+      }
+    )
+  }
+
   try {
     // Check for force regeneration parameter
     const { searchParams } = new URL(req.url)
@@ -217,11 +234,7 @@ export async function POST(
     }
     
     return NextResponse.json(
-      { 
-        error: 'Failed to generate PDF', 
-        details: errorMessage,
-        originalError: process.env.NODE_ENV === 'development' && err instanceof Error ? err.message : undefined
-      },
+      { error: 'Failed to generate PDF' },
       { status: 500 }
     )
   }
@@ -258,7 +271,7 @@ export async function GET(
   } catch (error: unknown) {
     console.error('Error fetching PDF:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch PDF', details: error instanceof Error ? error.message : String(error) },
+      { error: 'Failed to fetch PDF' },
       { status: 500 }
     )
   }
