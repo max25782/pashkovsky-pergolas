@@ -86,7 +86,7 @@ export async function PATCH(
   } catch (error: unknown) {
     console.error('Error in PATCH /api/workers/[id]:', error)
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : String(error) },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }
@@ -144,7 +144,7 @@ export async function DELETE(
   } catch (error: unknown) {
     console.error('Error in DELETE /api/workers/[id]:', error)
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : String(error) },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

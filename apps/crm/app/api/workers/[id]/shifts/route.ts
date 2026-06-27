@@ -155,7 +155,7 @@ export async function GET(
   } catch (err: unknown) {
     console.error('Error in GET /api/workers/[id]/shifts:', err)
     return NextResponse.json(
-      { error: 'Internal server error', details: err instanceof Error ? err.message : 'Unknown' },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }
@@ -277,7 +277,7 @@ export async function POST(
   } catch (err: unknown) {
     console.error('Error in POST /api/workers/[id]/shifts:', err)
     return NextResponse.json(
-      { error: 'Internal server error', details: err instanceof Error ? err.message : 'Unknown' },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

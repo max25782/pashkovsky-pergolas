@@ -176,7 +176,7 @@ export async function POST(req: NextRequest) {
         mode: body.mode,
       })
       return NextResponse.json(
-        { error: 'Failed to build analytics context', details: msg },
+        { error: 'Failed to build analytics context' },
         { status: 500 }
       )
     }
@@ -202,7 +202,7 @@ export async function POST(req: NextRequest) {
         mode: body.mode,
       })
       return NextResponse.json(
-        { error: 'Failed to get AI response', details: llmResponse.error },
+        { error: 'Failed to get AI response' },
         { status: 500 }
       )
     }

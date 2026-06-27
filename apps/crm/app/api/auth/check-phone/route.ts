@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
       console.error('[Check Phone] Error:', error)
       // If RLS blocks, return error
       return NextResponse.json(
-        { error: 'Unable to check phone number', details: error.message },
+        { error: 'Unable to check phone number' },
         { status: 500 }
       )
     }

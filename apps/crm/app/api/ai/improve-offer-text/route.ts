@@ -16,6 +16,10 @@ import {
   parseOfferAiOutputLanguage,
   type OfferAiOutputLanguage,
 } from '@/lib/ai/offer-text-output-languages'
+import { checkRateLimit } from '@/lib/rate-limit'
+
+// 20 AI calls per company per hour
+const AI_IMPROVE_RATE_LIMIT = { maxRequests: 20, windowMs: 60 * 60 * 1000 }
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY!
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -170,8 +174,20 @@ export async function POST(request: NextRequest) {
     if (!auth) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    
-    // 2. Parse request
+
+    // 2. Rate limit per company (20 AI calls/hour)
+    const rateLimitResult = checkRateLimit(`ai-improve:${auth.companyId}`, AI_IMPROVE_RATE_LIMIT)
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Try again later.' },
+        {
+          status: 429,
+          headers: { 'Retry-After': String(Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000)) },
+        }
+      )
+    }
+
+    // 3. Parse request
     const body: ImproveTextRequest = await request.json()
     const { text, context } = body
     const outputLanguage = parseOfferAiOutputLanguage(body.outputLanguage)
@@ -185,7 +201,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Text too long (max 2000 characters)' }, { status: 400 })
     }
     
-    // 3. Check API key
+    // 4. Check API key
     if (!GEMINI_API_KEY) {
       console.error('[AI Improve] GEMINI_API_KEY not configured!')
       return NextResponse.json({ error: 'AI service not configured' }, { status: 500 })
@@ -223,7 +239,7 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     console.error('[Offer AI] Error:', error)
     return NextResponse.json(
-      { error: 'Failed to improve text', details: error instanceof Error ? error.message : String(error) },
+      { error: 'Failed to improve text' },
       { status: 500 }
     )
   }

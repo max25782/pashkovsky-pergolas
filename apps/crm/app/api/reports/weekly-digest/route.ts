@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
     })
 
     return NextResponse.json(
-      { error: 'Failed to fetch digests', details: msg },
+      { error: 'Failed to fetch digests' },
       { status: 500 }
     )
   }

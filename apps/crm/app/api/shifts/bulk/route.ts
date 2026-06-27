@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
   } catch (err: unknown) {
     console.error('Error in POST /api/shifts/bulk:', err)
     return NextResponse.json(
-      { error: 'Internal server error', details: err instanceof Error ? err.message : 'Unknown' },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

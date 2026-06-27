@@ -24,25 +24,43 @@ export default function StatisticsPage() {
         setLoading(true)
         
         const supabase = createClient()
+
+        // Fetch the authenticated user's company_id from the API to use as an
+        // explicit filter — defense-in-depth on top of RLS.
+        let companyId: string | null = null
+        try {
+          const res = await fetch('/api/companies/me')
+          if (res.ok) {
+            const data = await res.json()
+            companyId = data.company_id ?? null
+          }
+        } catch {
+          // Continue — RLS will still filter by the session user's company
+        }
         
-        const { data, error: dbError } = await supabase
+        let query = supabase
           .from('deals')
           .select('*')
           .or('source.is.null,source.neq.quick_offer')
           .order('created_at', { ascending: false })
           .limit(1000)
-        
+
+        if (companyId) {
+          query = query.eq('company_id', companyId)
+        }
+
+        const { data, error: dbError } = await query
         
         if (dbError) {
           console.error('[Statistics] DB error:', dbError)
-          setError(dbError.message)
+          setError('Failed to load data')
           return
         }
         
         setDeals(data || [])
       } catch (e: unknown) {
         console.error('[Statistics] Error:', e)
-        setError(e instanceof Error ? e.message : String(e))
+        setError('Failed to load data')
       } finally {
         setLoading(false)
       }

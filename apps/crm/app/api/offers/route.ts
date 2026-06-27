@@ -285,7 +285,7 @@ export async function POST(req: NextRequest) {
       console.error('Error creating offer:', error)
       console.error('Insert data:', JSON.stringify(insertData, null, 2))
       return NextResponse.json(
-        { error: 'Failed to create offer', details: error.message, code: error.code },
+        { error: 'Failed to create offer' },
         { status: 500 }
       )
     }
@@ -388,7 +388,7 @@ export async function GET(req: NextRequest) {
     if (error) {
       console.error('Error fetching offers:', error)
       return NextResponse.json(
-        { error: 'Failed to fetch offers', details: error.message },
+        { error: 'Failed to fetch offers' },
         { status: 500 }
       )
     }
@@ -400,7 +400,7 @@ export async function GET(req: NextRequest) {
   } catch (error: unknown) {
     console.error('Error in GET /api/offers:', error)
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : String(error) },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

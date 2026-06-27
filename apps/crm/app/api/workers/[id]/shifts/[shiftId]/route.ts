@@ -172,7 +172,7 @@ export async function PATCH(
   } catch (err: unknown) {
     console.error('Error in PATCH /api/workers/[id]/shifts/[shiftId]:', err)
     return NextResponse.json(
-      { error: 'Internal server error', details: err instanceof Error ? err.message : 'Unknown' },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }
@@ -221,7 +221,7 @@ export async function DELETE(
   } catch (err: unknown) {
     console.error('Error in DELETE /api/workers/[id]/shifts/[shiftId]:', err)
     return NextResponse.json(
-      { error: 'Internal server error', details: err instanceof Error ? err.message : 'Unknown' },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

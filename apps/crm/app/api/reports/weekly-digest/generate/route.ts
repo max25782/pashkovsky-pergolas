@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
     })
 
     return NextResponse.json(
-      { error: 'Failed to generate digest', details: msg },
+      { error: 'Failed to generate digest' },
       { status: 500 }
     )
   }

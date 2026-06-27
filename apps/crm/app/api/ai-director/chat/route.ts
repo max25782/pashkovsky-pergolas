@@ -8,6 +8,10 @@ import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { checkAIDirectorAccess } from '@/lib/middleware/ai-director-subscription'
 import { callBedrockAgent } from '@/lib/ai/bedrock-client'
 import { createClient } from '@supabase/supabase-js'
+import { checkRateLimit } from '@/lib/rate-limit'
+
+// 30 Bedrock agent calls per company per hour
+const BEDROCK_RATE_LIMIT = { maxRequests: 30, windowMs: 60 * 60 * 1000 }
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -258,6 +262,18 @@ export async function POST(req: NextRequest) {
 
     const accessCheck = await checkAIDirectorAccess(authCheck.user.id)
     if (accessCheck) return accessCheck
+
+    // Rate limit per company (30 Bedrock calls/hour)
+    const rateLimitResult = checkRateLimit(`ai-director:${companyId}`, BEDROCK_RATE_LIMIT)
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Try again later.' },
+        {
+          status: 429,
+          headers: { 'Retry-After': String(Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000)) },
+        }
+      )
+    }
     
     if (!message || typeof message !== 'string') {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 })

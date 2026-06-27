@@ -51,7 +51,7 @@ export async function DELETE(
     if (checkError) {
       console.error('[SuperAdmin] Error checking company:', checkError)
       return NextResponse.json(
-        { error: 'Failed to check company', details: checkError.message },
+        { error: 'Failed to check company' },
         { status: 500 }
       )
     }
@@ -137,7 +137,7 @@ export async function DELETE(
       }
       
       return NextResponse.json(
-        { error: 'Failed to delete company', details: deleteError.message },
+        { error: 'Failed to delete company' },
         { status: 500 }
       )
     }

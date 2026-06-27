@@ -130,7 +130,7 @@ export async function POST(
     })
 
     return NextResponse.json(
-      { error: 'Failed to score lead', details: msg },
+      { error: 'Failed to score lead' },
       { status: 500 }
     )
   }
