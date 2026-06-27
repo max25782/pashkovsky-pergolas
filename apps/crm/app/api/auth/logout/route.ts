@@ -47,10 +47,21 @@ export async function POST(req: NextRequest) {
       console.error('[Logout] Error revoking token:', error)
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: 'Logged out successfully',
     })
+
+    // Clear the HttpOnly auth cookie set during login
+    response.cookies.set('token', '', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 0,
+      path: '/',
+    })
+
+    return response
 
   } catch (error) {
     console.error('[Logout] Unexpected error:', error)

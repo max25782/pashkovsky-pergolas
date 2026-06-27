@@ -6,8 +6,8 @@ export async function GET(req: NextRequest) {
   const token = searchParams.get('hub.verify_token')
   const challenge = searchParams.get('hub.challenge')
 
-  const verifyToken =
-    process.env.WHATSAPP_VERIFY_TOKEN || process.env.FB_LEADS_VERIFY_TOKEN || 'pashkovsky-leads-verify-2024'
+  const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN || process.env.FB_LEADS_VERIFY_TOKEN
+  if (!verifyToken) return new Response('Forbidden', { status: 403 })
 
   if (mode === 'subscribe' && token === verifyToken && challenge) {
     return new Response(challenge, { status: 200 })

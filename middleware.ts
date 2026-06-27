@@ -45,7 +45,12 @@ async function verifyAuth(request: NextRequest) {
     }
 
     // Verify JWT token
-    const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'your-secret-key')
+    const jwtSecret = process.env.JWT_SECRET
+    if (!jwtSecret) {
+      console.error('[Middleware] JWT_SECRET is not configured')
+      return { authenticated: false, userId: null, companyId: null }
+    }
+    const secret = new TextEncoder().encode(jwtSecret)
     const { payload } = await jwtVerify(token, secret)
     
     // Extract user_id and company_id from token
@@ -69,11 +74,16 @@ export async function middleware(request: NextRequest) {
   const hostname = request.headers.get('host') || ''
   const subdomain = hostname.split('.')[0]
   
-  // ===== PROTECT ALL /app/** ROUTES FIRST (before locale handling) =====
+  // ===== PROTECT ALL /app/** ROUTES =====
+  // Login now sets an HttpOnly 'token' cookie, so middleware can verify it here.
   if (pathname.startsWith('/app')) {
-    // SKIP middleware auth check for /app routes
-    // Admin token is stored in localStorage (not accessible in middleware)
-    // Client-side pages will handle auth check and redirect if needed
+    const auth = await verifyAuth(request)
+    if (!auth.authenticated) {
+      const loginUrl = request.nextUrl.clone()
+      loginUrl.pathname = '/login'
+      loginUrl.searchParams.set('redirect', pathname)
+      return NextResponse.redirect(loginUrl)
+    }
     return NextResponse.next()
   }
   

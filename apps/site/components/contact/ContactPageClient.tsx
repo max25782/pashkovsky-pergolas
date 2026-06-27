@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { trackFormSubmit, trackWhatsApp, trackPhoneCall } from '@/lib/gtag-events'
 import { getCookie } from '@/lib/cookies'
+import { TurnstileWidget } from '@/components/captcha/TurnstileWidget'
 
 interface Props { locale: Locale }
 
@@ -13,6 +14,7 @@ export default function ContactPageClient({ locale }: Props){
   const t = createTranslator(locale)
   const toast = useToast()
   const [showSuccess, setShowSuccess] = useState(false)
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -26,7 +28,8 @@ export default function ContactPageClient({ locale }: Props){
 
     // Send to CRM Public Leads API
     const crmUrl = process.env.NEXT_PUBLIC_CRM_API_URL || 'https://crm.pashkovsky-group.com'
-    const siteToken = process.env.NEXT_PUBLIC_CRM_SITE_TOKEN || 'dev-token'
+    const siteToken = process.env.NEXT_PUBLIC_CRM_SITE_TOKEN
+    if (!siteToken) { console.error('NEXT_PUBLIC_CRM_SITE_TOKEN not configured'); return }
 
     try {
       const resp = await fetch(`${crmUrl}/api/public/leads`, {
@@ -42,6 +45,7 @@ export default function ContactPageClient({ locale }: Props){
           message: city ? `City: ${city}` : '',
           source: utmSource || 'website',
           ...(gclid && { gclid }),
+          'cf-turnstile-response': turnstileToken,
         }),
       })
       if (!resp.ok) throw new Error('Failed to save')
@@ -146,6 +150,11 @@ export default function ContactPageClient({ locale }: Props){
                 <label className="block text-sm text-white/70 mb-1">{t('הודעה','Сообщение','Message')}</label>
                 <textarea name="message" rows={5} placeholder={t('ספרו לנו בקצרה מה תרצו (מידות/סוג פרגולה/מרפסת וכו׳)','Коротко опишите, что вы хотите (размеры/тип перголы/балкон и т.д.)','Briefly tell us what you need (sizes/type of pergola/balcony, etc.)')} className="w-full rounded-xl bg-white/10 border border-white/20 px-4 py-3 outline-none focus:border-white/40" />
               </div>
+              <TurnstileWidget
+                onVerify={setTurnstileToken}
+                onExpire={() => setTurnstileToken(null)}
+                className="mb-2"
+              />
               <div className="flex flex-wrap gap-3 pt-2">
                 <button type="submit" className="inline-flex items-center px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-500 transition font-semibold">
                   {t('שליחת פרטים','Отправить данные','Send details')}

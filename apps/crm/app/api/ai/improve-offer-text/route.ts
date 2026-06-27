@@ -16,6 +16,7 @@ import {
   parseOfferAiOutputLanguage,
   type OfferAiOutputLanguage,
 } from '@/lib/ai/offer-text-output-languages'
+import { aiImproveLimiter, checkLimit } from '@/lib/middleware/rate-limit'
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY!
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -171,7 +172,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     
-    // 2. Parse request
+    // 2. Rate limit — 30 improvements per company per day
+    const rl = await checkLimit(aiImproveLimiter, `company:${auth.companyId}`)
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Daily AI improvement limit reached. Try again tomorrow.' },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } },
+      )
+    }
+
+    // 3. Parse request
     const body: ImproveTextRequest = await request.json()
     const { text, context } = body
     const outputLanguage = parseOfferAiOutputLanguage(body.outputLanguage)
@@ -185,17 +195,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Text too long (max 2000 characters)' }, { status: 400 })
     }
     
-    // 3. Check API key
+    // 4. Check API key
     if (!GEMINI_API_KEY) {
       console.error('[AI Improve] GEMINI_API_KEY not configured!')
       return NextResponse.json({ error: 'AI service not configured' }, { status: 500 })
     }
     
     
-    // 4. Improve text with AI
+    // 5. Improve text with AI
     const improvedText = await improveTextWithGemini(text, context, outputLanguage)
     
-    // 5. Log the improvement (optional, for analytics)
+    // 6. Log the improvement (optional, for analytics)
     if (supabase) {
       try {
         await supabase.from('ai_text_improvements').insert({
@@ -222,10 +232,7 @@ export async function POST(request: NextRequest) {
     })
   } catch (error: unknown) {
     console.error('[Offer AI] Error:', error)
-    return NextResponse.json(
-      { error: 'Failed to improve text', details: error instanceof Error ? error.message : String(error) },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'AI service temporarily unavailable' }, { status: 500 })
   }
 }
 

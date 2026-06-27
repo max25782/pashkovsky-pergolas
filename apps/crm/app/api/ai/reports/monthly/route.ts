@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { aiReportLimiter, checkLimit } from '@/lib/middleware/rate-limit'
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY!
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -334,8 +335,17 @@ export async function GET(request: NextRequest) {
     if (!auth) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    
-    // 2. Parse month parameter
+
+    // 2. Rate limit — 3 monthly reports per company per day
+    const rl = await checkLimit(aiReportLimiter, `monthly:${auth.companyId}`)
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Report generation limit reached. Try again tomorrow.' },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } },
+      )
+    }
+
+    // 3. Parse month parameter
     const monthParam = request.nextUrl.searchParams.get('month')
     const month = monthParam || getCurrentMonthString()
     const dateRange = getMonthDateRange(month)
@@ -401,7 +411,7 @@ export async function GET(request: NextRequest) {
   } catch (error: unknown) {
     console.error('[Monthly Report] Error:', error)
     return NextResponse.json(
-      { error: 'Failed to generate report', details: error instanceof Error ? error.message : String(error) },
+      { error: 'Report generation temporarily unavailable' },
       { status: 500 }
     )
   }

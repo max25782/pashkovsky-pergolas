@@ -258,7 +258,7 @@ export async function GET(
   } catch (error: unknown) {
     console.error('Error fetching PDF:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch PDF', details: error instanceof Error ? error.message : String(error) },
+      { error: 'Failed to fetch PDF' },
       { status: 500 }
     )
   }

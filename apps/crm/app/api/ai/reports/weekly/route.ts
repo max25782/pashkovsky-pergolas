@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { aiReportLimiter, checkLimit } from '@/lib/middleware/rate-limit'
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY!
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -307,16 +308,25 @@ export async function GET(request: NextRequest) {
     if (!auth) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    
-    // 2. Parse week parameter
+
+    // 2. Rate limit — 3 weekly reports per company per day
+    const rl = await checkLimit(aiReportLimiter, `weekly:${auth.companyId}`)
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Report generation limit reached. Try again tomorrow.' },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } },
+      )
+    }
+
+    // 3. Parse week parameter
     const weekParam = request.nextUrl.searchParams.get('week')
     const week = weekParam || getCurrentWeekString()
     const dateRange = getWeekDateRange(week)
     
-    // 3. Collect data
+    // 4. Collect data
     const weeklyData = await collectWeeklyData(auth.companyId, dateRange)
     
-    // 4. Generate AI report
+    // 5. Generate AI report
     const aiReport = await generateAIReport(weeklyData)
     
     return NextResponse.json({
@@ -328,10 +338,7 @@ export async function GET(request: NextRequest) {
     })
   } catch (error: unknown) {
     console.error('[Weekly Report] Error:', error)
-    return NextResponse.json(
-      { error: 'Failed to generate report', details: error instanceof Error ? error.message : String(error) },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Report generation temporarily unavailable' }, { status: 500 })
   }
 }
 

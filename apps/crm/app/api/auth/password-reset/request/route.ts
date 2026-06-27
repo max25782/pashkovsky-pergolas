@@ -18,7 +18,7 @@ const supabase = SUPABASE_URL && SERVICE_KEY
  */
 export async function POST(req: NextRequest) {
   // Rate limiting
-  const rateLimitResult = rateLimiters.auth.passwordReset(req as any)
+  const rateLimitResult = await rateLimiters.auth.passwordReset(req)
   if (!rateLimitResult.allowed) {
     return NextResponse.json(
       { 

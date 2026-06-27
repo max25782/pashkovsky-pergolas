@@ -6,6 +6,7 @@ import type { Locale } from '@/lib/locales'
 import { useToast } from '@/components/ui/toast'
 import { trackFormSubmit, trackWhatsApp, trackClick } from '@/lib/gtag-events'
 import { getCookie } from '@/lib/cookies'
+import { TurnstileWidget } from '@/components/captcha/TurnstileWidget'
 
 interface ContactSectionProps {
   locale?: Locale
@@ -77,6 +78,7 @@ export default function ContactSection({ locale = 'he', pageName = 'unknown' }: 
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({ name: '', phone: '', city: '' })
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -91,7 +93,8 @@ export default function ContactSection({ locale = 'he', pageName = 'unknown' }: 
 
     // Отправляем на CRM Public Leads API
     const crmUrl = process.env.NEXT_PUBLIC_CRM_API_URL || 'https://crm.pashkovsky-group.com'
-    const siteToken = process.env.NEXT_PUBLIC_CRM_SITE_TOKEN || 'dev-token'
+    const siteToken = process.env.NEXT_PUBLIC_CRM_SITE_TOKEN
+    if (!siteToken) { console.error('NEXT_PUBLIC_CRM_SITE_TOKEN not configured'); return }
     
     try {
       const resp = await fetch(`${crmUrl}/api/public/leads`, {
@@ -107,6 +110,7 @@ export default function ContactSection({ locale = 'he', pageName = 'unknown' }: 
           message: form.city ? `City: ${form.city}` : '',
           source: utmSource || 'website',
           ...(gclid && { gclid }),
+          'cf-turnstile-response': turnstileToken,
         })
       })
       
@@ -228,6 +232,11 @@ export default function ContactSection({ locale = 'he', pageName = 'unknown' }: 
                       className="w-full border border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500"
                     />
 
+                    <TurnstileWidget
+                      onVerify={setTurnstileToken}
+                      onExpire={() => setTurnstileToken(null)}
+                      className="flex justify-center"
+                    />
                     <button
                       type="submit"
                       disabled={loading}

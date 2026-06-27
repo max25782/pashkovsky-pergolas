@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3'
+import { galleryLimiter, checkLimit, getClientIp } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -30,6 +31,15 @@ export async function GET(
   context: { params: { category: string } }
 ) {
   const { category } = context.params
+
+  const ip = getClientIp(req)
+  const rl = await checkLimit(galleryLimiter, ip)
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { items: [], error: 'Too many requests' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } },
+    )
+  }
 
   const s3Client = getS3Client()
 

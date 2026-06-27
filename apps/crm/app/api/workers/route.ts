@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
   } catch (error: unknown) {
     console.error('Error in GET /api/workers:', error)
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : String(error) },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }
@@ -141,7 +141,7 @@ export async function POST(req: NextRequest) {
   } catch (error: unknown) {
     console.error('Error in POST /api/workers:', error)
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : String(error) },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

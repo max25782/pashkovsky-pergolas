@@ -6,6 +6,7 @@ import type { Locale } from '@/lib/locales'
 import { useToast } from '@/components/ui/toast'
 import { trackFormSubmit, trackWhatsApp, trackClick } from '@/lib/gtag-events'
 import { getCookie } from '@/lib/cookies'
+import { TurnstileWidget } from '@/components/captcha/TurnstileWidget'
 
 interface ContactCtaButtonProps {
   locale?: Locale
@@ -72,6 +73,7 @@ export default function ContactCtaButton({ locale = 'he', className, buttonText 
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({ name: '', phone: '', city: '' })
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -84,7 +86,12 @@ export default function ContactCtaButton({ locale = 'he', className, buttonText 
 
     // Send to CRM Public Leads API
     const crmUrl = process.env.NEXT_PUBLIC_CRM_API_URL || 'https://crm.pashkovsky-group.com'
-    const siteToken = process.env.NEXT_PUBLIC_CRM_SITE_TOKEN || 'dev-token'
+    const siteToken = process.env.NEXT_PUBLIC_CRM_SITE_TOKEN
+    if (!siteToken) {
+      toast.error('Configuration error')
+      setLoading(false)
+      return
+    }
     
     try {
       const resp = await fetch(`${crmUrl}/api/public/leads`, {
@@ -100,6 +107,7 @@ export default function ContactCtaButton({ locale = 'he', className, buttonText 
           message: form.city ? `City: ${form.city}` : '',
           source: utmSource || 'website',
           ...(gclid && { gclid }),
+          'cf-turnstile-response': turnstileToken,
         }),
       })
       if (!resp.ok) {
@@ -202,6 +210,11 @@ export default function ContactCtaButton({ locale = 'he', className, buttonText 
                       onChange={handleChange}
                       required
                       className="w-full border border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                    <TurnstileWidget
+                      onVerify={setTurnstileToken}
+                      onExpire={() => setTurnstileToken(null)}
+                      className="flex justify-center"
                     />
                     <button
                       type="submit"

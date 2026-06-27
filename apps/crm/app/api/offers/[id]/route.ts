@@ -107,7 +107,7 @@ export async function GET(
   } catch (error: unknown) {
     console.error('Error in GET /api/offers/[id]:', error)
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : String(error) },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }
@@ -178,7 +178,7 @@ export async function DELETE(
   } catch (error: unknown) {
     console.error('Error in DELETE /api/offers/[id]:', error)
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : String(error) },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

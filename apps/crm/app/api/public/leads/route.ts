@@ -4,6 +4,7 @@ import { PublicLeadSchema } from '@/lib/validation/public-lead'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { sendWhatsAppTemplate } from '@/lib/whatsapp-send'
 import { uploadLeadConversion } from '@/lib/googleAds/offlineConversion'
+import { verifyTurnstile } from '@/lib/captcha/turnstile'
 
 function getSupabase(): SupabaseClient | null {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -109,7 +110,7 @@ export async function POST(request: NextRequest) {
 
     // 2. Rate limiting
     const clientIp = getClientIp(request)
-    const rateLimitResult = checkRateLimit(
+    const rateLimitResult = await checkRateLimit(
       `lead:${clientIp}`,
       RATE_LIMIT_CONFIG
     )
@@ -138,8 +139,25 @@ export async function POST(request: NextRequest) {
 
     // 3. Parse and validate body
     const body = await request.json()
-    
-    // 4. Honeypot check (if 'website' field is filled, it's a bot)
+
+    // 4. Cloudflare Turnstile CAPTCHA verification
+    const turnstileToken = typeof body['cf-turnstile-response'] === 'string'
+      ? body['cf-turnstile-response']
+      : null
+    const captcha = await verifyTurnstile(turnstileToken, clientIp)
+    if (!captcha.success) {
+      console.warn('[Public Leads] Turnstile failed', {
+        ip: clientIp,
+        errorCodes: captcha.errorCodes,
+      })
+      return jsonResponse(
+        { error: 'CAPTCHA verification failed. Please try again.' },
+        { status: 403 },
+        request,
+      )
+    }
+
+    // 5. Honeypot check (if 'website' field is filled, it's a bot)
     if (body.website && body.website.trim() !== '') {
       console.warn('[Public Leads] Honeypot triggered', {
         ip: clientIp,
@@ -149,7 +167,7 @@ export async function POST(request: NextRequest) {
       return jsonResponse({ success: true, id: 'blocked' }, undefined, request)
     }
 
-    // 5. Validate with Zod
+    // 6. Validate with Zod
     const validationResult = PublicLeadSchema.safeParse(body)
     
     if (!validationResult.success) {
@@ -172,7 +190,7 @@ export async function POST(request: NextRequest) {
 
     const leadData = validationResult.data
 
-    // 6. Get default company ID and Supabase client
+    // 7. Get default company ID and Supabase client
     const defaultCompanyId = process.env.DEFAULT_COMPANY_ID
     const supabase = getSupabase()
 
@@ -193,7 +211,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 7. Save to database
+    // 8. Save to database
     const { data: lead, error: dbError } = await supabase
       .from('leads')
       .insert({
@@ -226,10 +244,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 8. Success
+    // 9. Success
     const duration = Date.now() - startTime
 
-    // 9. Send WhatsApp welcome message (fire-and-forget)
+    // 10. Send WhatsApp welcome message (fire-and-forget)
     const templateName = process.env.WHATSAPP_TEMPLATE_NAME || 'hi'
     sendWhatsAppTemplate(leadData.phone, templateName, [leadData.name])
       .then((r) => {
@@ -237,7 +255,7 @@ export async function POST(request: NextRequest) {
       })
       .catch((e) => console.warn('[Public Leads] WhatsApp send error:', e))
 
-    // 10. Google Ads offline conversion (fire-and-forget, never block lead creation)
+    // 11. Google Ads offline conversion (fire-and-forget, never block lead creation)
     if (leadData.gclid) {
       uploadLeadConversion(leadData.gclid, 1)
         .then(async () => {

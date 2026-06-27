@@ -1,141 +1,110 @@
 /**
- * Rate Limiting Middleware
- * Simple in-memory rate limiter (can be replaced with Redis for production)
+ * Rate Limiting via Upstash Redis
+ *
+ * Replaces the previous in-memory Map which reset on every serverless cold start
+ * (making it completely ineffective on Vercel). Upstash Redis persists across invocations.
  */
 
-interface RateLimitEntry {
-  count: number
-  resetAt: number
+import { Ratelimit } from '@upstash/ratelimit'
+import { Redis } from '@upstash/redis'
+
+function buildRedis(): Redis | null {
+  const url = process.env.UPSTASH_REDIS_REST_URL
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN
+  if (!url || !token) return null
+  return new Redis({ url, token })
 }
 
-// In-memory store (use Redis in production)
-const rateLimitStore = new Map<string, RateLimitEntry>()
+const redis = buildRedis()
 
-// Cleanup expired entries every 5 minutes
-setInterval(() => {
-  const now = Date.now()
-  for (const [key, entry] of rateLimitStore.entries()) {
-    if (entry.resetAt < now) {
-      rateLimitStore.delete(key)
-    }
-  }
-}, 5 * 60 * 1000)
+function makeLimiter(maxRequests: number, window: Parameters<typeof Ratelimit.slidingWindow>[1], prefix: string) {
+  if (!redis) return null
+  return new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(maxRequests, window),
+    prefix: `rl:${prefix}`,
+  })
+}
 
-export interface RateLimitOptions {
-  maxRequests: number
-  windowMs: number // Time window in milliseconds
-  identifier?: string // Custom identifier (default: IP address)
+// Auth limiters — strict
+const loginLimiter     = makeLimiter(5,  '15 m', 'login')
+const registerLimiter  = makeLimiter(3,  '1 h',  'register')
+const pwResetLimiter   = makeLimiter(3,  '1 h',  'pwreset')
+const emailVerifyLimiter = makeLimiter(5, '1 h', 'emailverify')
+
+// AI limiters — per company (key passed by caller)
+export const aiImproveLimiter   = makeLimiter(30, '1 d', 'ai:improve')
+export const aiReportLimiter    = makeLimiter(3,  '1 d', 'ai:report')
+export const aiDirectorLimiter  = makeLimiter(50, '1 d', 'ai:director')
+export const aiScoreLimiter     = makeLimiter(50, '1 d', 'ai:score')
+
+// Site public limiters — per IP
+export const pdfLimiter         = makeLimiter(5,  '1 h', 'site:pdf')
+export const galleryLimiter     = makeLimiter(60, '1 m', 'site:gallery')
+
+function getClientIp(req: Request): string {
+  const forwarded = req.headers.get('x-forwarded-for')
+  if (forwarded) return forwarded.split(',')[0].trim()
+  return req.headers.get('x-real-ip') ?? 'unknown'
 }
 
 export interface RateLimitResult {
   allowed: boolean
   remaining: number
   resetAt: number
-  retryAfter?: number // Seconds until retry is allowed
+  retryAfter?: number
 }
 
 /**
- * Check rate limit
- * @param req - Next.js request
- * @param options - Rate limit options
- * @returns Rate limit result
+ * Check a named rate limit bucket. Returns { allowed: true } if Redis is not
+ * configured (fail-open for dev environments without Upstash).
  */
-export function checkRateLimit(
-  req: Request,
-  options: RateLimitOptions
-): RateLimitResult {
-  const { maxRequests, windowMs, identifier } = options
-
-  // Get identifier (IP address or custom)
-  const id = identifier || getClientIp(req)
-  const key = `${id}:${windowMs}`
-
-  const now = Date.now()
-  const entry = rateLimitStore.get(key)
-
-  // If no entry or window expired, create new entry
-  if (!entry || entry.resetAt < now) {
-    const newEntry: RateLimitEntry = {
-      count: 1,
-      resetAt: now + windowMs,
-    }
-    rateLimitStore.set(key, newEntry)
-
-    return {
-      allowed: true,
-      remaining: maxRequests - 1,
-      resetAt: newEntry.resetAt,
-    }
+export async function checkLimit(
+  limiter: Ratelimit | null,
+  identifier: string,
+): Promise<RateLimitResult> {
+  if (!limiter) {
+    return { allowed: true, remaining: 999, resetAt: Date.now() + 60_000 }
   }
-
-  // Check if limit exceeded
-  if (entry.count >= maxRequests) {
-    const retryAfter = Math.ceil((entry.resetAt - now) / 1000)
-    return {
-      allowed: false,
-      remaining: 0,
-      resetAt: entry.resetAt,
-      retryAfter,
-    }
-  }
-
-  // Increment count
-  entry.count++
-  rateLimitStore.set(key, entry)
-
+  const { success, remaining, reset } = await limiter.limit(identifier)
   return {
-    allowed: true,
-    remaining: maxRequests - entry.count,
-    resetAt: entry.resetAt,
+    allowed: success,
+    remaining,
+    resetAt: reset,
+    retryAfter: success ? undefined : Math.ceil((reset - Date.now()) / 1000),
   }
 }
 
-/**
- * Get client IP address from request
- */
-function getClientIp(req: Request): string {
-  // Check various headers (for proxies/load balancers)
-  const forwarded = req.headers.get('x-forwarded-for')
-  if (forwarded) {
-    return forwarded.split(',')[0].trim()
-  }
+// ---------------------------------------------------------------------------
+// Auth rate limiter helpers — called as await rateLimiters.auth.login(req)
+// ---------------------------------------------------------------------------
 
-  const realIp = req.headers.get('x-real-ip')
-  if (realIp) {
-    return realIp
-  }
-
-  // Fallback (won't work in serverless, but good for dev)
-  return 'unknown'
-}
-
-/**
- * Rate limit middleware for API routes
- */
-export function rateLimit(options: RateLimitOptions) {
-  return (req: Request): RateLimitResult => {
-    return checkRateLimit(req, options)
-  }
-}
-
-/**
- * Predefined rate limiters
- */
 export const rateLimiters = {
-  // Auth endpoints - stricter limits
   auth: {
-    login: rateLimit({ maxRequests: 5, windowMs: 15 * 60 * 1000 }), // 5 attempts per 15 minutes
-    register: rateLimit({ maxRequests: 3, windowMs: 60 * 60 * 1000 }), // 3 per hour
-    passwordReset: rateLimit({ maxRequests: 3, windowMs: 60 * 60 * 1000 }), // 3 per hour
-    verifyEmail: rateLimit({ maxRequests: 5, windowMs: 60 * 60 * 1000 }), // 5 per hour
-  },
-
-  // General API - more lenient
-  api: {
-    default: rateLimit({ maxRequests: 100, windowMs: 60 * 1000 }), // 100 per minute
-    strict: rateLimit({ maxRequests: 20, windowMs: 60 * 1000 }), // 20 per minute
+    login:         (req: Request) => checkLimit(loginLimiter,       getClientIp(req)),
+    register:      (req: Request) => checkLimit(registerLimiter,    getClientIp(req)),
+    passwordReset: (req: Request) => checkLimit(pwResetLimiter,     getClientIp(req)),
+    verifyEmail:   (req: Request) => checkLimit(emailVerifyLimiter, getClientIp(req)),
   },
 }
 
+export interface RateLimitOptions {
+  maxRequests: number
+  windowMs: number
+  identifier?: string
+}
 
+/** Drop-in for auth routes that call checkRateLimit(req, options) */
+export async function checkRateLimit(
+  req: Request,
+  options: RateLimitOptions,
+): Promise<RateLimitResult> {
+  const id = options.identifier ?? getClientIp(req)
+  const windowSec = Math.round(options.windowMs / 1000)
+  const window = `${windowSec} s` as Parameters<typeof Ratelimit.slidingWindow>[1]
+  const limiter = makeLimiter(options.maxRequests, window, `custom:${options.maxRequests}:${windowSec}`)
+  return checkLimit(limiter, id)
+}
 
+/** Alias of checkRateLimit — kept for backward compatibility with platform/tenant barrel */
+export const rateLimit = checkRateLimit

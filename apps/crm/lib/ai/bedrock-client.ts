@@ -160,11 +160,9 @@ async function dispatchCRMFunction(
 
 function buildSystemInstruction(companyId: string, userLanguage: string): string {
   const langInstruction =
-    userLanguage === 'he'
-      ? 'Respond in Hebrew (עברית).'
-      : userLanguage === 'ru'
-        ? 'Respond in Russian (Русский).'
-        : 'Respond in English.'
+    userLanguage === 'ru'
+      ? 'Respond in Russian (Русский). Use Russian for all output.'
+      : 'Respond ONLY in Hebrew (עברית). Never switch to English, even if the user writes in English.'
 
   return `You are an AI Director for a pergola/aluminum products CRM system. You help managers analyze their sales pipeline, deals, leads, and team performance.
 

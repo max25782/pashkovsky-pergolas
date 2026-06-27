@@ -8,19 +8,15 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { applyConfiguratorSubmissionToOffer } from '@/lib/configurator/apply-configurator-to-offer'
 import { uploadConfiguratorScreenshot } from '@/lib/configurator/upload-configurator-screenshot'
 import type { PergolaParamsPayload } from '@/lib/configurator/apply-configurator-to-offer'
+import { verifyTurnstile } from '@/lib/captcha/turnstile'
+import { galleryLimiter, checkLimit, getClientIp } from '@/lib/rate-limit'
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 function createServiceClient(): SupabaseClient | undefined {
   if (!url || !serviceKey) return undefined
   return createClient(url, serviceKey, { db: { schema: 'public' } })
-}
-
-function createAnonClient(): SupabaseClient | undefined {
-  if (!url || !anonKey) return undefined
-  return createClient(url, anonKey, { db: { schema: 'public' } })
 }
 
 function siteBaseUrl(): string {
@@ -31,18 +27,46 @@ function siteBaseUrl(): string {
   )
 }
 
-export async function POST(req: NextRequest) {
-  const serviceSupabase = createServiceClient()
-  const insertClient = serviceSupabase ?? createAnonClient()
+// Rate limit: reuse gallery limiter bucket (60 req/min per IP) for configurator saves
+const configuratorLimiter = galleryLimiter
 
-  if (!insertClient) {
+export async function POST(req: NextRequest) {
+  // 1. IP rate limit
+  const ip = getClientIp(req)
+  const rl = await checkLimit(configuratorLimiter, `config:${ip}`)
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please try again later.' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } },
+    )
+  }
+
+  // 2. Always require service role — anon fallback removed so DB INSERT policy is enforced
+  const serviceSupabase = createServiceClient()
+  if (!serviceSupabase) {
     return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
   }
+  const insertClient = serviceSupabase
 
   try {
     const body = await req.json()
     const linkToken = typeof body.linkToken === 'string' ? body.linkToken.trim() : ''
     const screenshot = typeof body.screenshot === 'string' ? body.screenshot : null
+
+    // 3. Turnstile CAPTCHA — required for non-linked saves (public submissions)
+    // Linked saves (customer editing a specific offer via linkToken) are already gated by the token.
+    if (!linkToken) {
+      const turnstileToken = typeof body['cf-turnstile-response'] === 'string'
+        ? body['cf-turnstile-response']
+        : null
+      const captcha = await verifyTurnstile(turnstileToken, ip)
+      if (!captcha.success) {
+        return NextResponse.json(
+          { error: 'CAPTCHA verification failed. Please try again.' },
+          { status: 403 },
+        )
+      }
+    }
 
     if (!body || typeof body !== 'object') {
       return NextResponse.json({ error: 'Invalid config' }, { status: 400 })

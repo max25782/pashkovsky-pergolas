@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createBrowser } from '@/lib/pdf/create-browser'
+import { pdfLimiter, checkLimit, getClientIp } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -21,6 +22,15 @@ function resolveBaseUrl(req: NextRequest): string {
  * Query params are forwarded to the page (e.g. sections=pergola_classic,fences).
  */
 export async function GET(req: NextRequest) {
+  const ip = getClientIp(req)
+  const rl = await checkLimit(pdfLimiter, ip)
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: 'Too many PDF requests. Please try again later.' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } },
+    )
+  }
+
   let page = null
   try {
     const base = resolveBaseUrl(req)
@@ -71,6 +81,6 @@ export async function GET(req: NextRequest) {
         /* ignore */
       }
     }
-    return NextResponse.json({ error: message }, { status: 500 })
+    return NextResponse.json({ error: 'PDF generation failed' }, { status: 500 })
   }
 }

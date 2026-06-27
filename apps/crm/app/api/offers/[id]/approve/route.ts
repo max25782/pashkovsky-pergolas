@@ -68,7 +68,7 @@ export async function POST(
   } catch (error: unknown) {
     console.error('Error in POST /api/offers/[id]/approve:', error)
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : String(error) },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

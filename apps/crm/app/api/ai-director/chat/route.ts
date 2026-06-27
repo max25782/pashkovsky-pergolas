@@ -8,6 +8,7 @@ import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { checkAIDirectorAccess } from '@/lib/middleware/ai-director-subscription'
 import { callBedrockAgent } from '@/lib/ai/bedrock-client'
 import { createClient } from '@supabase/supabase-js'
+import { aiDirectorLimiter, checkLimit } from '@/lib/middleware/rate-limit'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -56,21 +57,16 @@ async function callBedrockAgentViaLambda(params: {
 }
 
 /**
- * Detect language from message content
+ * Detect language from message content.
+ * Defaults to Hebrew — the primary language of this CRM.
+ * Only overrides if the message is clearly Russian (Cyrillic).
+ * English input from the user does NOT switch the response to English.
  */
 function detectLanguage(message: string): string {
-  // Hebrew characters
-  if (/[\u0590-\u05FF]/.test(message)) {
-    return 'he'
-  }
-  
-  // Russian/Cyrillic characters
   if (/[\u0400-\u04FF]/.test(message)) {
     return 'ru'
   }
-  
-  // Default to English
-  return 'en'
+  return 'he'
 }
 
 /**
@@ -227,10 +223,7 @@ export async function GET(req: NextRequest) {
     })
   } catch (error: unknown) {
     console.error('[AI Director] GET error:', error)
-    return NextResponse.json(
-      { error: (error instanceof Error ? error.message : String(error)) || 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to load chat history' }, { status: 500 })
   }
 }
 
@@ -262,7 +255,16 @@ export async function POST(req: NextRequest) {
     if (!message || typeof message !== 'string') {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 })
     }
-    
+
+    // Rate limit — 50 messages per company per day
+    const rl = await checkLimit(aiDirectorLimiter, `director:${companyId}`)
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Daily AI Director message limit reached. Try again tomorrow.' },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } },
+      )
+    }
+
     // Detect language from message if not provided
     const detectedLanguage = language || detectLanguage(message)
     
@@ -344,10 +346,7 @@ export async function POST(req: NextRequest) {
     })
   } catch (error: unknown) {
     console.error('[AI Director] Chat error:', error)
-    return NextResponse.json(
-      { error: (error instanceof Error ? error.message : String(error)) || 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'AI Director temporarily unavailable' }, { status: 500 })
   }
 }
 

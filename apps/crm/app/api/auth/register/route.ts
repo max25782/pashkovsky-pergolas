@@ -28,7 +28,7 @@ function generateSlug(name: string): string {
  */
 export async function POST(req: NextRequest) {
   // Rate limiting
-  const rateLimitResult = rateLimiters.auth.register(req as any)
+  const rateLimitResult = await rateLimiters.auth.register(req)
   if (!rateLimitResult.allowed) {
     return NextResponse.json(
       { 

@@ -1,28 +1,20 @@
 /**
- * Simple in-memory rate limiter
- * For production, consider Redis or Upstash
+ * Public-route rate limiter backed by Upstash Redis.
+ *
+ * Replaces the previous in-memory Map which silently resets on every
+ * serverless cold start (completely ineffective on Vercel).
+ *
+ * Required env vars (shared with apps/crm):
+ *   UPSTASH_REDIS_REST_URL
+ *   UPSTASH_REDIS_REST_TOKEN
  */
 
-interface RateLimitEntry {
-  count: number
-  resetAt: number
-}
-
-const rateLimitStore = new Map<string, RateLimitEntry>()
-
-// Cleanup old entries every 5 minutes
-setInterval(() => {
-  const now = Date.now()
-  for (const [key, entry] of rateLimitStore.entries()) {
-    if (entry.resetAt < now) {
-      rateLimitStore.delete(key)
-    }
-  }
-}, 5 * 60 * 1000)
+import { Ratelimit } from '@upstash/ratelimit'
+import { Redis } from '@upstash/redis'
 
 export interface RateLimitConfig {
-  maxRequests: number  // Max requests per window
-  windowMs: number     // Window duration in milliseconds
+  maxRequests: number
+  windowMs: number
 }
 
 export interface RateLimitResult {
@@ -31,48 +23,55 @@ export interface RateLimitResult {
   resetAt: number
 }
 
+function buildRedis(): Redis | null {
+  const url = process.env.UPSTASH_REDIS_REST_URL
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN
+  if (!url || !token) return null
+  return new Redis({ url, token })
+}
+
+// Lazily built cache of Ratelimit instances keyed by config string
+const limiterCache = new Map<string, Ratelimit>()
+
+function getLimiter(config: RateLimitConfig): Ratelimit | null {
+  const redis = buildRedis()
+  if (!redis) return null
+
+  const key = `${config.maxRequests}:${config.windowMs}`
+  if (!limiterCache.has(key)) {
+    const windowSec = Math.round(config.windowMs / 1000)
+    limiterCache.set(
+      key,
+      new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(config.maxRequests, `${windowSec} s`),
+        prefix: `rl:public`,
+      }),
+    )
+  }
+  return limiterCache.get(key)!
+}
+
 /**
- * Check if request is allowed under rate limit
+ * Check if identifier (e.g. `lead:<ip>`) is within the rate limit window.
+ * Fails open when Upstash is not configured (dev without Redis).
  */
 export function checkRateLimit(
   identifier: string,
-  config: RateLimitConfig
-): RateLimitResult {
-  const now = Date.now()
-  const entry = rateLimitStore.get(identifier)
+  config: RateLimitConfig,
+): Promise<RateLimitResult> | RateLimitResult {
+  const limiter = getLimiter(config)
 
-  // No existing entry or expired
-  if (!entry || entry.resetAt < now) {
-    const resetAt = now + config.windowMs
-    rateLimitStore.set(identifier, {
-      count: 1,
-      resetAt,
-    })
-    return {
-      allowed: true,
-      remaining: config.maxRequests - 1,
-      resetAt,
-    }
+  if (!limiter) {
+    console.warn('[rate-limit] Upstash not configured — rate limit skipped')
+    return { allowed: true, remaining: config.maxRequests, resetAt: Date.now() + config.windowMs }
   }
 
-  // Check if limit exceeded
-  if (entry.count >= config.maxRequests) {
-    return {
-      allowed: false,
-      remaining: 0,
-      resetAt: entry.resetAt,
-    }
-  }
-
-  // Increment count
-  entry.count++
-  rateLimitStore.set(identifier, entry)
-
-  return {
-    allowed: true,
-    remaining: config.maxRequests - entry.count,
-    resetAt: entry.resetAt,
-  }
+  return limiter.limit(identifier).then(({ success, remaining, reset }) => ({
+    allowed: success,
+    remaining,
+    resetAt: reset,
+  }))
 }
 
 /**

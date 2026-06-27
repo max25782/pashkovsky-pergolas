@@ -19,7 +19,7 @@ const supabase = SUPABASE_URL && SERVICE_KEY
  */
 export async function POST(req: NextRequest) {
   // Rate limiting
-  const rateLimitResult = rateLimiters.auth.login(req as any)
+  const rateLimitResult = await rateLimiters.auth.login(req)
   if (!rateLimitResult.allowed) {
     return NextResponse.json(
       { 
@@ -153,7 +153,8 @@ export async function POST(req: NextRequest) {
     })
 
     // Return user data with JWT token and refresh token
-    return NextResponse.json({
+    // Also set an HttpOnly cookie so middleware can enforce server-side auth on /app routes
+    const response = NextResponse.json({
       success: true,
       token,
       refreshToken,
@@ -178,6 +179,16 @@ export async function POST(req: NextRequest) {
         role: defaultMembership.role,
       },
     }, { status: 200 })
+
+    response.cookies.set('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24, // 24 hours — matches JWT expiry
+      path: '/',
+    })
+
+    return response
 
   } catch (error) {
     console.error('[Login] Unexpected error:', error)
