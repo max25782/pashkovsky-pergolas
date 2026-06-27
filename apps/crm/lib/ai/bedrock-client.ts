@@ -176,6 +176,17 @@ You have access to CRM data tools. Use them when the user asks about:
 DEAL STAGES (in order):
 new → measure → offer → offer_approved → material_ordered → approved → production → install → done
 
+STAGE TRANSLATION TABLE — always use Hebrew names when displaying stages to the user:
+- new              → חדש
+- measure          → מדידה
+- offer            → הצעה
+- offer_approved   → הצעה אושרה
+- material_ordered → חומר הוזמן
+- approved         → מאושר
+- production       → ייצור
+- install          → התקנה
+- done             → הושלם
+
 STAGE GROUPS (use these definitions automatically — never ask the user to clarify):
 - "active" deals = stages: measure, offer, offer_approved, material_ordered, approved, production, install
 - "new" deals = stage: new
