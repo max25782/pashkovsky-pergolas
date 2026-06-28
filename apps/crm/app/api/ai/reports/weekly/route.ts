@@ -237,7 +237,7 @@ async function generateAIReport(data: WeeklyData): Promise<string> {
 השתמש באימוג'ים 📊 💰 👷 📈 ⚡ כדי להפוך את הדוח לקריא יותר.
 החזר את הדוח בפורמט Markdown.`
 
-  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`
+  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`
   
   const response = await fetch(apiUrl, {
     method: 'POST',

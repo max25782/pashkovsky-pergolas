@@ -56,8 +56,9 @@ export interface RateLimitResult {
 }
 
 /**
- * Check a named rate limit bucket. Returns { allowed: true } if Redis is not
- * configured (fail-open for dev environments without Upstash).
+ * Check a named rate limit bucket.
+ * Fails open (allows the request) when Redis is not configured or unreachable,
+ * so a Redis outage or connection blip never blocks core functionality.
  */
 export async function checkLimit(
   limiter: Ratelimit | null,
@@ -66,12 +67,17 @@ export async function checkLimit(
   if (!limiter) {
     return { allowed: true, remaining: 999, resetAt: Date.now() + 60_000 }
   }
-  const { success, remaining, reset } = await limiter.limit(identifier)
-  return {
-    allowed: success,
-    remaining,
-    resetAt: reset,
-    retryAfter: success ? undefined : Math.ceil((reset - Date.now()) / 1000),
+  try {
+    const { success, remaining, reset } = await limiter.limit(identifier)
+    return {
+      allowed: success,
+      remaining,
+      resetAt: reset,
+      retryAfter: success ? undefined : Math.ceil((reset - Date.now()) / 1000),
+    }
+  } catch (err) {
+    console.error('[RateLimit] Redis error — failing open:', err instanceof Error ? err.message : err)
+    return { allowed: true, remaining: 999, resetAt: Date.now() + 60_000 }
   }
 }
 

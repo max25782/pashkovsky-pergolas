@@ -22,7 +22,7 @@ console.log('\nTesting API...')
 
 // Test API call
 async function testGemini() {
-  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`
+  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`
   
   try {
     const response = await fetch(apiUrl, {

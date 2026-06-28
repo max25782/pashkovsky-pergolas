@@ -67,7 +67,7 @@ async function improveTextWithGemini(
     ? `${contextStr}\n\nText to improve:\n${text}`
     : `Text to improve:\n${text}`
 
-  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`
+  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`
 
   const response = await fetch(apiUrl, {
     method: 'POST',
@@ -231,7 +231,8 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error: unknown) {
-    console.error('[Offer AI] Error:', error)
+    const msg = error instanceof Error ? error.message : String(error)
+    console.error('[Offer AI] Unhandled error:', msg)
     return NextResponse.json({ error: 'AI service temporarily unavailable' }, { status: 500 })
   }
 }
@@ -241,7 +242,7 @@ export async function GET() {
   return NextResponse.json({
     service: 'AI Offer Text Improvement',
     status: GEMINI_API_KEY ? 'available' : 'unavailable',
-    model: 'gemini-2.0-flash',
+    model: 'gemini-2.5-flash',
   })
 }
 

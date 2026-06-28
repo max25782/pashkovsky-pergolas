@@ -264,7 +264,7 @@ ${previousData ? '8. **📉 ניתוח השוואתי** - מה השתנה מהח
 הדגש מספרים חשובים באמצעות **bold**.
 הפוך את הדוח למקצועי, אבל גם קריא ומעניין.`
 
-  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`
+  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`
   
   const response = await fetch(apiUrl, {
     method: 'POST',
