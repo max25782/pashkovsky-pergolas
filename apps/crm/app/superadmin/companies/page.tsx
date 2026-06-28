@@ -36,7 +36,10 @@ async function getCompanies() {
       industry,
       primary_email,
       created_at,
-      trial_ends_at
+      trial_ends_at,
+      registration_source,
+      utm_source,
+      utm_campaign
     `)
     .order('created_at', { ascending: false })
   
@@ -70,38 +73,73 @@ export default async function CompaniesPage() {
       <CompaniesTable companies={companies} />
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <p className="text-sm font-medium text-gray-600">Total Companies</p>
-          <p className="text-2xl font-bold text-gray-900 mt-2">{companies.length}</p>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow p-6">
-          <p className="text-sm font-medium text-gray-600">Active</p>
-          <p className="text-2xl font-bold text-gray-900 mt-2">
-            {companies.filter(c => c.status === 'active').length}
-          </p>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow p-6">
-          <p className="text-sm font-medium text-gray-600">Trial</p>
-          <p className="text-2xl font-bold text-gray-900 mt-2">
-            {companies.filter(c => c.status === 'trial').length}
-          </p>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow p-6">
-          <p className="text-sm font-medium text-gray-600">This Month</p>
-          <p className="text-2xl font-bold text-gray-900 mt-2">
-            {companies.filter(c => {
-              const created = new Date(c.created_at)
-              const now = new Date()
-              return created.getMonth() === now.getMonth() && 
-                     created.getFullYear() === now.getFullYear()
-            }).length}
-          </p>
-        </div>
-      </div>
+      {(() => {
+        const now = new Date()
+        const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+        const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+
+        const thisMonthCount = companies.filter(c => new Date(c.created_at) >= firstOfMonth).length
+        const last7Count     = companies.filter(c => new Date(c.created_at) >= sevenDaysAgo).length
+
+        // Source breakdown
+        const sourceMap: Record<string, number> = {}
+        companies.forEach(c => {
+          const src = c.registration_source ?? 'direct'
+          sourceMap[src] = (sourceMap[src] ?? 0) + 1
+        })
+        const topSource = Object.entries(sourceMap).sort((a, b) => b[1] - a[1])[0]
+
+        return (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div className="bg-white rounded-lg shadow p-6">
+                <p className="text-sm font-medium text-gray-600">Total</p>
+                <p className="text-2xl font-bold text-gray-900 mt-2">{companies.length}</p>
+              </div>
+              <div className="bg-white rounded-lg shadow p-6">
+                <p className="text-sm font-medium text-gray-600">Active</p>
+                <p className="text-2xl font-bold text-gray-900 mt-2">
+                  {companies.filter(c => c.status === 'active').length}
+                </p>
+              </div>
+              <div className="bg-white rounded-lg shadow p-6">
+                <p className="text-sm font-medium text-gray-600">Trial</p>
+                <p className="text-2xl font-bold text-gray-900 mt-2">
+                  {companies.filter(c => c.status === 'trial').length}
+                </p>
+              </div>
+              <div className="bg-white rounded-lg shadow p-6">
+                <p className="text-sm font-medium text-gray-600">This Month</p>
+                <p className="text-2xl font-bold text-gray-900 mt-2">{thisMonthCount}</p>
+              </div>
+            </div>
+
+            {/* Acquisition breakdown */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Acquisition Breakdown</h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center p-3 bg-blue-50 rounded-lg">
+                  <p className="text-2xl font-bold text-blue-700">{last7Count}</p>
+                  <p className="text-xs text-blue-600 mt-1">Last 7 days</p>
+                </div>
+                {Object.entries(sourceMap)
+                  .sort((a, b) => b[1] - a[1])
+                  .map(([src, count]) => (
+                    <div key={src} className="text-center p-3 bg-gray-50 rounded-lg">
+                      <p className="text-2xl font-bold text-gray-800">{count}</p>
+                      <p className="text-xs text-gray-500 mt-1 capitalize">{src.replace('_', ' ')}</p>
+                    </div>
+                  ))}
+              </div>
+              {topSource && (
+                <p className="text-xs text-gray-400 mt-3">
+                  Top channel: <span className="font-medium text-gray-600">{topSource[0].replace('_', ' ')}</span> ({topSource[1]} companies)
+                </p>
+              )}
+            </div>
+          </>
+        )
+      })()}
     </div>
   )
 }

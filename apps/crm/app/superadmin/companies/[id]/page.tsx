@@ -6,7 +6,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import Link from 'next/link'
-import { ArrowLeft, Building2, Mail, Calendar, CreditCard, Users } from 'lucide-react'
+import { ArrowLeft, Building2, Mail, Calendar, CreditCard, Users, MousePointerClick } from 'lucide-react'
 import { SendMagicLinkButton } from '@/components/superadmin/SendMagicLinkButton'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -84,6 +84,14 @@ export default async function CompanyDetailsPage({ params }: PageProps) {
     .order('created_at', { ascending: false })
     .limit(10)
 
+  // Fetch platform-level audit log events for this company
+  const { data: auditEvents } = await supabaseAdmin
+    .from('platform_audit_logs')
+    .select('id, event_type, payload, created_at, actor_user_id, actor_admin_id')
+    .eq('company_id', companyId)
+    .order('created_at', { ascending: false })
+    .limit(20)
+
   return (
     <div className="p-8 max-w-7xl mx-auto">
       {/* Header */}
@@ -131,6 +139,62 @@ export default async function CompanyDetailsPage({ params }: PageProps) {
               <dt className="text-sm font-medium text-gray-500">Company ID</dt>
               <dd className="mt-1 text-xs text-gray-600 font-mono">{company.id}</dd>
             </div>
+          </dl>
+        </div>
+
+        {/* Acquisition Source */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+            <MousePointerClick className="h-5 w-5" />
+            Acquisition
+          </h2>
+          <dl className="space-y-3">
+            <div>
+              <dt className="text-sm font-medium text-gray-500">Registration Channel</dt>
+              <dd className="mt-1">
+                {company.registration_source ? (
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    company.registration_source === 'google_ads'   ? 'bg-blue-100 text-blue-800'   :
+                    company.registration_source === 'organic'      ? 'bg-green-100 text-green-800' :
+                    company.registration_source === 'google_oauth' ? 'bg-red-100 text-red-800'     :
+                    company.registration_source === 'manual'       ? 'bg-orange-100 text-orange-800':
+                    company.registration_source === 'referral'     ? 'bg-purple-100 text-purple-800':
+                    'bg-gray-100 text-gray-700'
+                  }`}>
+                    {company.registration_source.replace('_', ' ')}
+                  </span>
+                ) : (
+                  <span className="text-sm text-gray-400">Unknown</span>
+                )}
+              </dd>
+            </div>
+            {company.utm_source && (
+              <div>
+                <dt className="text-sm font-medium text-gray-500">UTM Source</dt>
+                <dd className="mt-1 text-sm text-gray-900">{company.utm_source}</dd>
+              </div>
+            )}
+            {company.utm_medium && (
+              <div>
+                <dt className="text-sm font-medium text-gray-500">UTM Medium</dt>
+                <dd className="mt-1 text-sm text-gray-900">{company.utm_medium}</dd>
+              </div>
+            )}
+            {company.utm_campaign && (
+              <div>
+                <dt className="text-sm font-medium text-gray-500">UTM Campaign</dt>
+                <dd className="mt-1 text-sm text-gray-900">{company.utm_campaign}</dd>
+              </div>
+            )}
+            {company.referrer_url && (
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Referrer URL</dt>
+                <dd className="mt-1 text-sm text-gray-600 break-all">{company.referrer_url}</dd>
+              </div>
+            )}
+            {!company.utm_source && !company.utm_medium && !company.utm_campaign && !company.referrer_url && (
+              <p className="text-sm text-gray-400">No UTM parameters captured</p>
+            )}
           </dl>
         </div>
 
@@ -263,6 +327,61 @@ export default async function CompanyDetailsPage({ params }: PageProps) {
             </ul>
           ) : (
             <p className="text-gray-500">No history found</p>
+          )}
+        </div>
+
+        {/* Activity Log */}
+        <div className="bg-white rounded-lg shadow p-6 lg:col-span-2">
+          <h2 className="text-xl font-semibold mb-4">Activity Log</h2>
+          {auditEvents && auditEvents.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 text-sm">
+                <thead>
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">When</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {auditEvents.map((event) => (
+                    <tr key={event.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                          event.event_type === 'company_created' ? 'bg-green-100 text-green-800' :
+                          event.event_type === 'plan_changed'    ? 'bg-blue-100 text-blue-800'  :
+                          event.event_type === 'company_deleted' ? 'bg-red-100 text-red-800'    :
+                          'bg-gray-100 text-gray-700'
+                        }`}>
+                          {event.event_type.replace(/_/g, ' ')}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-600 max-w-xs">
+                        {event.payload && typeof event.payload === 'object' && Object.keys(event.payload).length > 0 ? (
+                          <ul className="space-y-0.5">
+                            {Object.entries(event.payload as Record<string, unknown>)
+                              .filter(([, v]) => v !== null && v !== undefined && v !== '')
+                              .map(([k, v]) => (
+                                <li key={k}>
+                                  <span className="text-gray-400">{k.replace(/_/g, ' ')}:</span>{' '}
+                                  <span className="text-gray-700">{String(v)}</span>
+                                </li>
+                              ))}
+                          </ul>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
+                        {new Date(event.created_at).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-gray-500">No activity recorded</p>
           )}
         </div>
       </div>

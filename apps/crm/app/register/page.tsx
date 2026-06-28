@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
 function RegisterPageContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -18,6 +19,38 @@ function RegisterPageContent() {
     company_name: '',
     industry: 'aluminum',
   })
+
+  // UTM params and referrer captured at page load
+  const utmSource   = searchParams.get('utm_source')   ?? undefined
+  const utmMedium   = searchParams.get('utm_medium')   ?? undefined
+  const utmCampaign = searchParams.get('utm_campaign') ?? undefined
+
+  function getReferrer(): string | undefined {
+    try {
+      return document.referrer || undefined
+    } catch {
+      return undefined
+    }
+  }
+
+  function deriveSource(medium?: string): string {
+    if (!medium) return 'direct'
+    if (medium === 'cpc' || medium === 'paid') return 'google_ads'
+    if (medium === 'organic') return 'organic'
+    if (medium === 'referral') return 'referral'
+    return 'direct'
+  }
+
+  // Store UTM params in a short-lived cookie so the server-side OAuth callback can read them
+  function storeUtmsForOAuth() {
+    const utms = new URLSearchParams()
+    if (utmSource)   utms.set('utm_source', utmSource)
+    if (utmMedium)   utms.set('utm_medium', utmMedium)
+    if (utmCampaign) utms.set('utm_campaign', utmCampaign)
+    const referrer = getReferrer()
+    if (referrer)    utms.set('referrer_url', referrer)
+    document.cookie = `reg_utm=${encodeURIComponent(utms.toString())}; path=/; max-age=600; SameSite=Lax`
+  }
 
   // Check if user is already logged in
   useEffect(() => {
@@ -37,6 +70,9 @@ function RegisterPageContent() {
     try {
       setLoading(true)
       setError(null)
+
+      // Persist UTMs in a cookie so the server-side OAuth callback can read them
+      storeUtmsForOAuth()
       
       const supabase = createClient()
       const { error } = await supabase.auth.signInWithOAuth({
@@ -111,11 +147,16 @@ function RegisterPageContent() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          user_id: authData.user.id,
-          email: formData.email,
-          full_name: formData.full_name,
-          company_name: formData.company_name,
-          industry: formData.industry,
+          user_id:             authData.user.id,
+          email:               formData.email,
+          full_name:           formData.full_name,
+          company_name:        formData.company_name,
+          industry:            formData.industry,
+          registration_source: deriveSource(utmMedium),
+          utm_source:          utmSource,
+          utm_medium:          utmMedium,
+          utm_campaign:        utmCampaign,
+          referrer_url:        getReferrer(),
         }),
       })
 

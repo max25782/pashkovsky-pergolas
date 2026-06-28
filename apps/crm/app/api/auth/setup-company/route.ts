@@ -36,7 +36,18 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { user_id, email, full_name, company_name, industry } = body
+    const {
+      user_id,
+      email,
+      full_name,
+      company_name,
+      industry,
+      registration_source,
+      utm_source,
+      utm_medium,
+      utm_campaign,
+      referrer_url,
+    } = body
 
     // Validate required fields
     if (!user_id || !email || !company_name) {
@@ -45,6 +56,18 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       )
     }
+
+    // Derive canonical source if not provided
+    function deriveSource(medium?: string, provided?: string): string {
+      if (provided) return provided
+      if (!medium) return 'direct'
+      if (medium === 'cpc' || medium === 'paid') return 'google_ads'
+      if (medium === 'organic') return 'organic'
+      if (medium === 'referral') return 'referral'
+      return 'direct'
+    }
+
+    const resolvedSource = deriveSource(utm_medium, registration_source)
 
 
     // Step 1: Check if user already has a company
@@ -67,12 +90,17 @@ export async function POST(req: NextRequest) {
     const { data: company, error: companyError } = await supabase
       .from('companies')
       .insert({
-        name: company_name,
+        name:                company_name,
         slug,
-        status: 'trial',
-        plan: 'trial',
-        industry: industry || 'general',
-        primary_email: email,
+        status:              'trial',
+        plan:                'trial',
+        industry:            industry || 'general',
+        primary_email:       email,
+        registration_source: resolvedSource,
+        utm_source:          utm_source   || null,
+        utm_medium:          utm_medium   || null,
+        utm_campaign:        utm_campaign || null,
+        referrer_url:        referrer_url || null,
       })
       .select()
       .single()

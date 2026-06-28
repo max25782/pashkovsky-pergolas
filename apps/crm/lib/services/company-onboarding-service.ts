@@ -123,12 +123,11 @@ async function createCompanyForUser(userId: string, email: string): Promise<Comp
     }
   }
 
-  // Minimal insert - only required fields
   const companyData = {
-    name: companyName,
-    slug: finalSlug,
-    primary_email: email,
-    // source: 'manual', // Column doesn't exist in schema
+    name:                companyName,
+    slug:                finalSlug,
+    primary_email:       email,
+    registration_source: 'manual',
   }
 
   const { data, error } = await supabaseAdmin

@@ -68,9 +68,53 @@ export async function GET(request: NextRequest) {
     )
   }
 
+  // When the OAuth flow is initiated from the register page (?setup=true),
+  // create the company for the new user and capture acquisition source.
+  const isSetup = url.searchParams.get('setup') === 'true'
+  if (isSetup && sessionData?.user) {
+    const oauthUser = sessionData.user
 
-  // Note: Trial activation happens in /app/page.tsx after redirect
-  // This keeps callback minimal and fast
+    // Read UTMs that the register page stored in a short-lived cookie before redirecting to Google
+    const regUtmRaw = request.cookies.get('reg_utm')?.value
+    const utmParams: Record<string, string> = {}
+    if (regUtmRaw) {
+      try {
+        new URLSearchParams(decodeURIComponent(regUtmRaw)).forEach((v, k) => {
+          utmParams[k] = v
+        })
+      } catch {
+        // Ignore malformed cookie
+      }
+    }
+
+    const fullName    = oauthUser.user_metadata?.full_name as string | undefined
+    const companyName = fullName
+      ?? (oauthUser.email?.split('@')[0].replace(/[^a-zA-Z0-9]/g, '') || 'My Company')
+
+    try {
+      const setupRes = await fetch(new URL('/api/auth/setup-company', url.origin).toString(), {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id:             oauthUser.id,
+          email:               oauthUser.email,
+          full_name:           fullName,
+          company_name:        companyName,
+          registration_source: 'google_oauth',
+          utm_source:          utmParams['utm_source']   ?? null,
+          utm_medium:          utmParams['utm_medium']   ?? null,
+          utm_campaign:        utmParams['utm_campaign'] ?? null,
+          referrer_url:        utmParams['referrer_url'] ?? null,
+        }),
+      })
+      if (!setupRes.ok) {
+        const body = await setupRes.json().catch(() => ({}))
+        console.error('[Callback] setup-company failed:', body)
+      }
+    } catch (setupErr) {
+      console.error('[Callback] setup-company request error:', setupErr)
+    }
+  }
 
   // Log cookie details
   cookiesToSet.forEach((_c, _i) => {
