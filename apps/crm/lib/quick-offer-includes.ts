@@ -55,7 +55,7 @@ export function usesQuickOfferIncludeFlags(draft: Partial<OfferDraft>): boolean 
 
 export function buildQuickOfferExtra(
   draft: Partial<OfferDraft>,
-  calc?: Pick<OfferCalculation, 'railingsLineTotal' | 'fenceLineTotal'>,
+  calc?: Pick<OfferCalculation, 'railingsLineTotal' | 'fenceLineTotal' | 'fenceLineTotals'>,
 ): QuickOfferExtraPersisted | null {
   const inc = resolveQuickOfferIncludes(draft)
   const hasNewFlags = usesQuickOfferIncludeFlags(draft)
@@ -68,12 +68,25 @@ export function buildQuickOfferExtra(
     includeFence: inc.fence,
   }
   if (inc.railings && draft.quickRailings) extra.quickRailings = draft.quickRailings
-  if (inc.fence && draft.quickFence) extra.quickFence = draft.quickFence
+  if (inc.fence) {
+    // Prefer the new array format; fall back to legacy single fence for backward compat
+    const fences = draft.quickFences && draft.quickFences.length > 0
+      ? draft.quickFences
+      : draft.quickFence ? [draft.quickFence] : []
+    if (fences.length > 0) {
+      extra.quickFences = fences
+      // Keep legacy field for old PDF templates that still read quickFence
+      extra.quickFence = fences[0]
+    }
+  }
   if (calc?.railingsLineTotal != null && calc.railingsLineTotal > 0) {
     extra.railingsLineTotal = calc.railingsLineTotal
   }
   if (calc?.fenceLineTotal != null && calc.fenceLineTotal > 0) {
     extra.fenceLineTotal = calc.fenceLineTotal
+  }
+  if (calc?.fenceLineTotals && calc.fenceLineTotals.length > 0) {
+    extra.fenceLineTotals = calc.fenceLineTotals
   }
   return extra
 }

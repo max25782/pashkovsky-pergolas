@@ -29,6 +29,13 @@ function normalizeVatPercent(value: unknown): number {
   return Math.min(100, Math.max(0, n))
 }
 
+/** Resolve the list of fences: prefer quickFences array, fall back to legacy quickFence. */
+export function resolveQuickFences(draft: OfferDraft): import('@/types/offer').QuickOfferFenceDraft[] {
+  if (draft.quickFences && draft.quickFences.length > 0) return draft.quickFences
+  if (draft.quickFence) return [draft.quickFence]
+  return []
+}
+
 function railFenceSqmForZip(draft: OfferDraft, inc: ReturnType<typeof resolveQuickOfferIncludes>): number {
   let sqm = 0
   if (inc.railings && draft.quickRailings) {
@@ -37,8 +44,10 @@ function railFenceSqmForZip(draft: OfferDraft, inc: ReturnType<typeof resolveQui
       draft.quickRailings.heightCm,
     )
   }
-  if (inc.fence && draft.quickFence) {
-    sqm += quickOfferRailingsFenceAreaSqm(draft.quickFence.metersTotal, draft.quickFence.heightCm)
+  if (inc.fence) {
+    for (const qf of resolveQuickFences(draft)) {
+      sqm += quickOfferRailingsFenceAreaSqm(qf.metersTotal, qf.heightCm)
+    }
   }
   return sqm
 }
@@ -51,6 +60,7 @@ export function calculateOffer(draft: OfferDraft): OfferCalculation {
 
   let railingsLineTotal: number | undefined
   let fenceLineTotal: number | undefined
+  let fenceLineTotals: number[] | undefined
 
   if (inc.railings && draft.quickRailings) {
     const qr = draft.quickRailings
@@ -58,11 +68,16 @@ export function calculateOffer(draft: OfferDraft): OfferCalculation {
     const p = quickOfferLinePerSqmLegacy(qr)
     railingsLineTotal = sqm * p
   }
-  if (inc.fence && draft.quickFence) {
-    const qf = draft.quickFence
-    const sqm = quickOfferRailingsFenceAreaSqm(qf.metersTotal, qf.heightCm)
-    const p = quickOfferLinePerSqmLegacy(qf)
-    fenceLineTotal = sqm * p
+  if (inc.fence) {
+    const fences = resolveQuickFences(draft)
+    if (fences.length > 0) {
+      fenceLineTotals = fences.map((qf) => {
+        const sqm = quickOfferRailingsFenceAreaSqm(qf.metersTotal, qf.heightCm)
+        const p = quickOfferLinePerSqmLegacy(qf)
+        return sqm * p
+      })
+      fenceLineTotal = fenceLineTotals.reduce((s, v) => s + v, 0)
+    }
   }
 
   // 1. Calculate total area from all pergolas (when pergola line is included)
@@ -217,6 +232,7 @@ export function calculateOffer(draft: OfferDraft): OfferCalculation {
     pergolaTotal: pergolaTotalFinal,
     railingsLineTotal,
     fenceLineTotal,
+    fenceLineTotals,
     santafTotal,
     zipScreenTotal,
     lightingTotal,

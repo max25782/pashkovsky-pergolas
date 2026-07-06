@@ -16,12 +16,20 @@ export function validateQuickRailings(draft: Partial<OfferDraft>): string | null
 }
 
 export function validateQuickFence(draft: Partial<OfferDraft>): string | null {
-  const qf = draft.quickFence
-  if (!qf) return 'quickFence is required'
-  if (!qf.metersTotal || Number(qf.metersTotal) <= 0) return 'Fence: meters must be > 0'
-  if (qf.heightCm == null || Number(qf.heightCm) <= 0) return 'Fence: height (cm) required for m² pricing'
-  const fv = String(qf.fenceVariant ?? '').trim()
-  if (!['classic', 'hitech', 'hitech_angular'].includes(fv)) return 'Fence: variant is required'
-  if (!qf.color?.trim()) return 'Fence: color is required'
+  // Support new quickFences array; fall back to legacy quickFence
+  const fences =
+    draft.quickFences && draft.quickFences.length > 0
+      ? draft.quickFences
+      : draft.quickFence ? [draft.quickFence] : []
+  if (fences.length === 0) return 'quickFence is required'
+  for (let i = 0; i < fences.length; i++) {
+    const qf = fences[i]
+    const label = fences.length > 1 ? ` (section ${i + 1})` : ''
+    if (!qf.metersTotal || Number(qf.metersTotal) <= 0) return `Fence${label}: meters must be > 0`
+    if (qf.heightCm == null || Number(qf.heightCm) <= 0) return `Fence${label}: height (cm) required for m² pricing`
+    const fv = String(qf.fenceVariant ?? '').trim()
+    if (!['classic', 'hitech', 'hitech_angular'].includes(fv)) return `Fence${label}: variant is required`
+    if (!qf.color?.trim()) return `Fence${label}: color is required`
+  }
   return null
 }

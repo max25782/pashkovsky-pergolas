@@ -180,35 +180,44 @@ function collectLineRows(offer: Offer, dict: PdfDict): LineRow[] {
     }
   }
 
-  const qf = qExtra?.quickFence ?? offer.quickFence
-  if (inc.fence && qf) {
-    const sqm = quickOfferRailingsFenceAreaSqm(qf.metersTotal, qf.heightCm)
-    const up = Math.max(
-      0,
-      Number(
-        (qf as { pricePerSqm?: number; pricePerMeter?: number }).pricePerSqm ??
-          (qf as { pricePerMeter?: number }).pricePerMeter,
-      ) || 0,
-    )
-    const lineTotal =
-      offer.fenceLineTotal ??
-      qExtra?.fenceLineTotal ??
-      (!inc.pergola && !inc.railings ? offer.pergolaTotal : undefined) ??
-      (sqm > 0 && up > 0 ? sqm * up : 0)
+  if (inc.fence) {
+    const fences =
+      (qExtra?.quickFences && qExtra.quickFences.length > 0)
+        ? qExtra.quickFences
+        : (qExtra?.quickFence ?? offer.quickFence)
+          ? [qExtra?.quickFence ?? offer.quickFence!]
+          : []
     const fenceLabels: Record<string, string> = {
       classic: dict.off_fence_classic,
       hitech: dict.off_fence_hitech,
       hitech_angular: dict.off_fence_hitech_ang,
     }
-    if (lineTotal > 0 && sqm > 0 && up > 0) {
-      rows.push({
-        description: `${dict.off_fence_prefix} ${fenceLabels[qf.fenceVariant] ?? qf.fenceVariant} · ${dict.off_color_prefix} ${escapeHtml(qf.color)}`,
-        unitLabel: dict.off_unit_sqm,
-        quantity: Math.round(sqm * 1000) / 1000,
-        unitPrice: Math.round(up * 100) / 100,
-        lineTotal,
-      })
-    }
+    fences.forEach((qf, idx) => {
+      const sqm = quickOfferRailingsFenceAreaSqm(qf.metersTotal, qf.heightCm)
+      const up = Math.max(
+        0,
+        Number(
+          (qf as { pricePerSqm?: number; pricePerMeter?: number }).pricePerSqm ??
+            (qf as { pricePerMeter?: number }).pricePerMeter,
+        ) || 0,
+      )
+      const perSectionTotal = qExtra?.fenceLineTotals?.[idx]
+      const lineTotal =
+        perSectionTotal ??
+        (fences.length === 1
+          ? (offer.fenceLineTotal ?? qExtra?.fenceLineTotal ?? (!inc.pergola && !inc.railings ? offer.pergolaTotal : undefined) ?? (sqm > 0 && up > 0 ? sqm * up : 0))
+          : (sqm > 0 && up > 0 ? sqm * up : 0))
+      if (lineTotal > 0 && sqm > 0 && up > 0) {
+        const label = fences.length > 1 ? ` ${idx + 1}` : ''
+        rows.push({
+          description: `${dict.off_fence_prefix}${label} ${fenceLabels[qf.fenceVariant] ?? qf.fenceVariant} · ${dict.off_color_prefix} ${escapeHtml(qf.color)}`,
+          unitLabel: dict.off_unit_sqm,
+          quantity: Math.round(sqm * 1000) / 1000,
+          unitPrice: Math.round(up * 100) / 100,
+          lineTotal,
+        })
+      }
+    })
   }
 
   if (offer.santaf?.enabled && offer.santafTotal > 0) {
@@ -403,22 +412,30 @@ function formatAllPergolasTechnicalHtml(offer: Offer, dict: PdfDict): string {
     ${qr.notes ? `<tr><td>${dict.off_notes}</td><td>${escapeHtml(qr.notes)}</td></tr>` : ''}`
   }
 
-  if (pk === 'fence' && qx?.quickFence) {
-    const qf = qx.quickFence
-    const sqm = quickOfferRailingsFenceAreaSqm(qf.metersTotal, qf.heightCm)
-    const fenceLabels: Record<string, string> = {
-      classic: dict.off_fence_short_classic,
-      hitech: dict.off_fence_short_hitech,
-      hitech_angular: dict.off_fence_short_hitech_ang,
-    }
-    return `
-    <tr><td colspan="2" class="tech-h">${dict.off_fence_spec_title}</td></tr>
+  if (pk === 'fence') {
+    const fences =
+      (qx?.quickFences && qx.quickFences.length > 0)
+        ? qx.quickFences
+        : qx?.quickFence ? [qx.quickFence] : []
+    if (fences.length > 0) {
+      const fenceLabels: Record<string, string> = {
+        classic: dict.off_fence_short_classic,
+        hitech: dict.off_fence_short_hitech,
+        hitech_angular: dict.off_fence_short_hitech_ang,
+      }
+      return fences.map((qf, idx) => {
+        const sqm = quickOfferRailingsFenceAreaSqm(qf.metersTotal, qf.heightCm)
+        const titleSuffix = fences.length > 1 ? ` ${idx + 1}` : ''
+        return `
+    <tr><td colspan="2" class="tech-h">${dict.off_fence_spec_title}${titleSuffix}</td></tr>
     <tr><td>${dict.off_len}</td><td>${escapeHtml(String(qf.metersTotal))} ${dict.off_dim_m}</td></tr>
     <tr><td>${dict.off_height}</td><td>${qf.heightCm != null ? escapeHtml(String(qf.heightCm)) : dash} ${dict.off_cm}</td></tr>
     <tr><td>${dict.off_est_area}</td><td>${sqm.toFixed(2)} ${dict.off_unit_sqm_dot}</td></tr>
     <tr><td>${dict.off_fence_type}</td><td>${escapeHtml(fenceLabels[qf.fenceVariant] ?? qf.fenceVariant)}</td></tr>
     <tr><td>${dict.off_color}</td><td>${escapeHtml(qf.color || dash)}</td></tr>
     ${qf.notes ? `<tr><td>${dict.off_notes}</td><td>${escapeHtml(qf.notes)}</td></tr>` : ''}`
+      }).join('\n')
+    }
   }
 
   const pergolas = offer.pergolas || (offer.pergola ? [offer.pergola] : [])

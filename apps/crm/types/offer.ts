@@ -161,10 +161,15 @@ export interface QuickOfferExtraPersisted {
   includeRailings?: boolean
   includeFence?: boolean
   quickRailings?: QuickOfferRailingsDraft
+  /** @deprecated Use quickFences array instead */
   quickFence?: QuickOfferFenceDraft
+  /** Multiple fence sections in one offer. */
+  quickFences?: QuickOfferFenceDraft[]
   /** Persisted line totals for mixed offers (PDF). */
   railingsLineTotal?: number
   fenceLineTotal?: number
+  /** Per-section fence line totals (matches quickFences index). */
+  fenceLineTotals?: number[]
 }
 
 export interface Pricing {
@@ -290,7 +295,10 @@ export interface OfferDraft {
   includeRailings?: boolean
   includeFence?: boolean
   quickRailings?: QuickOfferRailingsDraft
+  /** @deprecated Use quickFences array instead */
   quickFence?: QuickOfferFenceDraft
+  /** Multiple fence sections — replaces the single quickFence field. */
+  quickFences?: QuickOfferFenceDraft[]
 }
 
 export interface OfferCalculation {
@@ -298,8 +306,10 @@ export interface OfferCalculation {
   pergolaTotal?: number
   /** Main line for Quick Offer when product is railings (₪). */
   railingsLineTotal?: number
-  /** Main line for Quick Offer when product is fence (₪). */
+  /** Combined total for all fence sections (₪). */
   fenceLineTotal?: number
+  /** Per-section fence line totals — matches quickFences index. */
+  fenceLineTotals?: number[]
   santafTotal: number
   zipScreenTotal: number
   lightingTotal: number

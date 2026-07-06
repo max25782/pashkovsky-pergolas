@@ -964,11 +964,39 @@ export default function QuickOfferPage() {
     }))
   }
 
-  function patchQuickFence(patch: Partial<NonNullable<OfferDraft['quickFence']>>) {
-    setDraft((d) => ({
-      ...d,
-      quickFence: { ...(d.quickFence ?? { ...DEFAULT_OFFER_VALUES.quickFence }), ...patch },
-    }))
+  function getQuickFences() {
+    if (draft.quickFences && draft.quickFences.length > 0) return draft.quickFences
+    if (draft.quickFence) return [draft.quickFence]
+    return [{ ...DEFAULT_OFFER_VALUES.quickFence }]
+  }
+
+  function patchQuickFenceAt(index: number, patch: Partial<NonNullable<OfferDraft['quickFences']>[number]>) {
+    setDraft((d) => {
+      const fences = d.quickFences && d.quickFences.length > 0
+        ? d.quickFences
+        : d.quickFence ? [d.quickFence] : [{ ...DEFAULT_OFFER_VALUES.quickFence }]
+      const updated = fences.map((f, i) => i === index ? { ...f, ...patch } : f)
+      return { ...d, quickFences: updated, quickFence: undefined }
+    })
+  }
+
+  function addQuickFence() {
+    setDraft((d) => {
+      const fences = d.quickFences && d.quickFences.length > 0
+        ? d.quickFences
+        : d.quickFence ? [d.quickFence] : [{ ...DEFAULT_OFFER_VALUES.quickFence }]
+      return { ...d, quickFences: [...fences, { ...DEFAULT_OFFER_VALUES.quickFence }], quickFence: undefined }
+    })
+  }
+
+  function removeQuickFence(index: number) {
+    setDraft((d) => {
+      const fences = d.quickFences && d.quickFences.length > 0
+        ? d.quickFences
+        : d.quickFence ? [d.quickFence] : []
+      const updated = fences.filter((_, i) => i !== index)
+      return { ...d, quickFences: updated.length > 0 ? updated : [{ ...DEFAULT_OFFER_VALUES.quickFence }], quickFence: undefined }
+    })
   }
 
   // Build a comprehensive spec sheet from the full offer draft for the AI
@@ -1157,30 +1185,35 @@ export default function QuickOfferPage() {
         return
       }
     }
-    if (inc.fence && draft.quickFence) {
-      const qf = draft.quickFence
-      if (!qf.metersTotal || qf.metersTotal <= 0) {
-        setError(t('errorFenceMeters'))
-        return
-      }
-      if (qf.heightCm == null || qf.heightCm <= 0) {
-        setError(t('errorFenceHeight'))
-        return
-      }
-      if (!qf.color?.trim()) {
-        setError(t('errorFenceColor'))
-        return
-      }
-      const fv = String(qf.fenceVariant ?? '').trim()
-      if (!['classic', 'hitech', 'hitech_angular'].includes(fv)) {
-        setError(t('errorFenceVariant'))
-        return
+    if (inc.fence) {
+      const fences = getQuickFences()
+      for (let i = 0; i < fences.length; i++) {
+        const qf = fences[i]
+        const label = fences.length > 1 ? ` (${i + 1})` : ''
+        if (!qf.metersTotal || qf.metersTotal <= 0) {
+          setError(t('errorFenceMeters') + label)
+          return
+        }
+        if (qf.heightCm == null || qf.heightCm <= 0) {
+          setError(t('errorFenceHeight') + label)
+          return
+        }
+        if (!qf.color?.trim()) {
+          setError(t('errorFenceColor') + label)
+          return
+        }
+        const fv = String(qf.fenceVariant ?? '').trim()
+        if (!['classic', 'hitech', 'hitech_angular'].includes(fv)) {
+          setError(t('errorFenceVariant') + label)
+          return
+        }
       }
     }
 
     setSubmitting(true)
     setError(null)
     try {
+      const fences = getQuickFences()
       const body = {
         ...draft,
         ...calculation,
@@ -1188,6 +1221,8 @@ export default function QuickOfferPage() {
         includeRailings: inc.railings,
         includeFence: inc.fence,
         quickProduct: primaryQuickProduct(inc),
+        quickFences: inc.fence ? fences : undefined,
+        quickFence: undefined,
       }
       const res = await authFetch('/api/quick-offer', {
         method: 'POST',
@@ -1468,86 +1503,114 @@ export default function QuickOfferPage() {
               </SectionCard>
             )}
 
-            {includes.fence && draft.quickFence && (
+            {includes.fence && (
               <SectionCard title={tDeals('fenceDetails')}>
-                <Field label={tDeals('metersTotal')}>
-                  <input
-                    type="number"
-                    min={0}
-                    step={0.1}
-                    className={inputCls}
-                    value={draft.quickFence.metersTotal || ''}
-                    onChange={(e) => patchQuickFence({ metersTotal: Number(e.target.value) || 0 })}
-                  />
-                </Field>
-                <Field label={tDeals('heightCm')}>
-                  <input
-                    type="number"
-                    min={1}
-                    className={inputCls}
-                    placeholder="120"
-                    value={draft.quickFence.heightCm ?? ''}
-                    onChange={(e) =>
-                      patchQuickFence({
-                        heightCm: e.target.value ? Number(e.target.value) : undefined,
-                      })
-                    }
-                  />
-                </Field>
-                <p className="text-xs text-white/50">
-                  {t('computedAreaSqm', {
-                    area: quickOfferRailingsFenceAreaSqm(
-                      draft.quickFence.metersTotal,
-                      draft.quickFence.heightCm,
-                    ).toFixed(2),
-                  })}
-                </p>
-                <Field label={tDeals('fenceVariant')}>
-                  <div className="flex flex-wrap gap-2">
-                    {(
-                      [
-                        ['classic', 'fenceClassic'],
-                        ['hitech', 'fenceHitech'],
-                        ['hitech_angular', 'fenceHitechAngular'],
-                      ] as const
-                    ).map(([v, msgKey]) => (
-                      <button
-                        key={v}
-                        type="button"
-                        onClick={() => patchQuickFence({ fenceVariant: v as QuickOfferFenceVariant })}
-                        className={toggleCls(draft.quickFence!.fenceVariant === v)}
-                      >
-                        {tDeals(msgKey)}
-                      </button>
-                    ))}
+                <div className="flex justify-end mb-2">
+                  <button
+                    type="button"
+                    onClick={addQuickFence}
+                    className="flex items-center gap-1 px-3 py-1 rounded text-sm bg-blue-600 hover:bg-blue-500 text-white border border-blue-500"
+                  >
+                    + {tDeals('workTypes.fence')}
+                  </button>
+                </div>
+                {getQuickFences().map((fence, fenceIdx) => (
+                  <div key={fenceIdx} className="border border-white/10 rounded-lg p-3 space-y-3 mb-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-white/70">
+                        {tDeals('workTypes.fence')} {getQuickFences().length > 1 ? fenceIdx + 1 : ''}
+                      </span>
+                      {getQuickFences().length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeQuickFence(fenceIdx)}
+                          className="text-red-400 hover:text-red-300 text-xs px-2 py-0.5 rounded border border-red-400/30"
+                        >
+                          ✕ הסר
+                        </button>
+                      )}
+                    </div>
+                    <Field label={tDeals('metersTotal')}>
+                      <input
+                        type="number"
+                        min={0}
+                        step={0.1}
+                        className={inputCls}
+                        value={fence.metersTotal || ''}
+                        onChange={(e) => patchQuickFenceAt(fenceIdx, { metersTotal: Number(e.target.value) || 0 })}
+                      />
+                    </Field>
+                    <Field label={tDeals('heightCm')}>
+                      <input
+                        type="number"
+                        min={1}
+                        className={inputCls}
+                        placeholder="120"
+                        value={fence.heightCm ?? ''}
+                        onChange={(e) => patchQuickFenceAt(fenceIdx, { heightCm: e.target.value ? Number(e.target.value) : undefined })}
+                      />
+                    </Field>
+                    <p className="text-xs text-white/50">
+                      {t('computedAreaSqm', {
+                        area: quickOfferRailingsFenceAreaSqm(fence.metersTotal, fence.heightCm).toFixed(2),
+                      })}
+                    </p>
+                    <Field label={tDeals('fenceVariant')}>
+                      <div className="flex flex-wrap gap-2">
+                        {(
+                          [
+                            ['classic', 'fenceClassic'],
+                            ['hitech', 'fenceHitech'],
+                            ['hitech_angular', 'fenceHitechAngular'],
+                          ] as const
+                        ).map(([v, msgKey]) => (
+                          <button
+                            key={v}
+                            type="button"
+                            onClick={() => patchQuickFenceAt(fenceIdx, { fenceVariant: v as QuickOfferFenceVariant })}
+                            className={toggleCls(fence.fenceVariant === v)}
+                          >
+                            {tDeals(msgKey)}
+                          </button>
+                        ))}
+                      </div>
+                    </Field>
+                    <Field label={tDeals('color')}>
+                      <input
+                        className={inputCls}
+                        value={fence.color}
+                        onChange={(e) => patchQuickFenceAt(fenceIdx, { color: e.target.value })}
+                      />
+                    </Field>
+                    <Field label={t('fieldPricePerSqm')}>
+                      <input
+                        type="number"
+                        min={0}
+                        className={inputCls}
+                        value={fence.pricePerSqm}
+                        onChange={(e) => patchQuickFenceAt(fenceIdx, { pricePerSqm: Number(e.target.value) || 0 })}
+                      />
+                    </Field>
+                    <Field label={tDeals('notes')}>
+                      <input
+                        className={inputCls}
+                        placeholder={tDeals('notes')}
+                        value={fence.notes ?? ''}
+                        onChange={(e) => patchQuickFenceAt(fenceIdx, { notes: e.target.value })}
+                      />
+                    </Field>
+                    {calculation.fenceLineTotals?.[fenceIdx] != null && calculation.fenceLineTotals[fenceIdx] > 0 && (
+                      <div className="text-sm text-green-400">
+                        {tDeals('workTypes.fence')}: {fmt(calculation.fenceLineTotals[fenceIdx])}
+                      </div>
+                    )}
                   </div>
-                </Field>
-                <Field label={tDeals('color')}>
-                  <input
-                    className={inputCls}
-                    value={draft.quickFence.color}
-                    onChange={(e) => patchQuickFence({ color: e.target.value })}
-                  />
-                </Field>
-                <Field label={t('fieldPricePerSqm')}>
-                  <input
-                    type="number"
-                    min={0}
-                    className={inputCls}
-                    value={draft.quickFence.pricePerSqm}
-                    onChange={(e) =>
-                      patchQuickFence({ pricePerSqm: Number(e.target.value) || 0 })
-                    }
-                  />
-                </Field>
-                <Field label={tDeals('notes')}>
-                  <input
-                    className={inputCls}
-                    placeholder={tDeals('notes')}
-                    value={draft.quickFence.notes ?? ''}
-                    onChange={(e) => patchQuickFence({ notes: e.target.value })}
-                  />
-                </Field>
+                ))}
+                {(calculation.fenceLineTotal ?? 0) > 0 && getQuickFences().length > 1 && (
+                  <div className="text-sm font-semibold text-green-400 border-t border-white/10 pt-2">
+                    {tDeals('workTypes.fence')} סה״כ: {fmt(calculation.fenceLineTotal!)}
+                  </div>
+                )}
               </SectionCard>
             )}
 

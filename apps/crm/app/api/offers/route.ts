@@ -157,6 +157,9 @@ export async function POST(req: NextRequest) {
       railingsLineTotal:
         body.railingsLineTotal != null ? Number(body.railingsLineTotal) : undefined,
       fenceLineTotal: body.fenceLineTotal != null ? Number(body.fenceLineTotal) : undefined,
+      fenceLineTotals: Array.isArray(body.fenceLineTotals)
+        ? (body.fenceLineTotals as number[]).map(Number)
+        : undefined,
     })
 
     const pergolaTotalStored =
@@ -317,26 +320,33 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    if (includes.fence && draftBody.quickFence) {
-      const qf = draftBody.quickFence
-      const fencePayload = {
-        deal_id: dealId,
-        company_id: companyId,
-        meters_total: Number(qf.metersTotal),
-        height_cm: qf.heightCm != null ? Number(qf.heightCm) : null,
-        fence_variant: String(qf.fenceVariant).trim() as 'classic' | 'hitech' | 'hitech_angular',
-        color: String(qf.color).trim(),
-        notes: qf.notes != null && String(qf.notes).trim() !== '' ? String(qf.notes).trim() : null,
-      }
-      const { data: existingFence } = await supabase
-        .from('deal_fence_details')
-        .select('deal_id')
-        .eq('deal_id', dealId)
-        .maybeSingle()
-      if (existingFence) {
-        await supabase.from('deal_fence_details').update(fencePayload).eq('deal_id', dealId)
-      } else {
-        await supabase.from('deal_fence_details').insert(fencePayload)
+    if (includes.fence) {
+      // Use quickFences array; fall back to single quickFence for backward compat
+      const fences = (draftBody.quickFences && draftBody.quickFences.length > 0)
+        ? draftBody.quickFences
+        : draftBody.quickFence ? [draftBody.quickFence] : []
+      // Persist the first fence section to deal_fence_details (legacy single-row table)
+      if (fences.length > 0) {
+        const qf = fences[0]
+        const fencePayload = {
+          deal_id: dealId,
+          company_id: companyId,
+          meters_total: Number(qf.metersTotal),
+          height_cm: qf.heightCm != null ? Number(qf.heightCm) : null,
+          fence_variant: String(qf.fenceVariant).trim() as 'classic' | 'hitech' | 'hitech_angular',
+          color: String(qf.color).trim(),
+          notes: qf.notes != null && String(qf.notes).trim() !== '' ? String(qf.notes).trim() : null,
+        }
+        const { data: existingFence } = await supabase
+          .from('deal_fence_details')
+          .select('deal_id')
+          .eq('deal_id', dealId)
+          .maybeSingle()
+        if (existingFence) {
+          await supabase.from('deal_fence_details').update(fencePayload).eq('deal_id', dealId)
+        } else {
+          await supabase.from('deal_fence_details').insert(fencePayload)
+        }
       }
     }
 
@@ -429,6 +439,7 @@ function transformOfferFromDB(data: Record<string, unknown>) {
     quickProduct: pf.quickProduct,
     quickRailings: pf.quickRailings,
     quickFence: pf.quickFence,
+    quickFences: quickExtra?.quickFences ?? (pf.quickFence ? [pf.quickFence] : undefined),
     quickOfferExtra: quickExtra,
     includePergola: quickExtra?.includePergola,
     includeRailings: quickExtra?.includeRailings,
