@@ -971,44 +971,118 @@ export default function QuickOfferPage() {
     }))
   }
 
+  // Build a comprehensive spec sheet from the full offer draft for the AI
+  const buildOfferSpecText = useCallback((): string => {
+    const inc = resolveQuickOfferIncludes(draft)
+    const lines: string[] = []
+
+    if (draft.customerName) lines.push(`לקוח: ${draft.customerName}`)
+    if (draft.customerCity) lines.push(`עיר: ${draft.customerCity}`)
+    lines.push('')
+
+    if (inc.pergola && draft.pergolas && draft.pergolas.length > 0) {
+      draft.pergolas.forEach((p, i) => {
+        const typeName = p.pergolaType ? PERGOLA_TYPE_NAMES[p.pergolaType] : 'פרגולת אלומיניום'
+        const prefix = (draft.pergolas?.length ?? 0) > 1 ? `פרגולה ${i + 1}: ` : ''
+        lines.push(`${prefix}${typeName}`)
+        if (p.shape.type === 'rectangle') {
+          lines.push(`מידות: ${p.shape.width} × ${p.shape.length} מ' (${calculatePergolaArea(p.shape).toFixed(1)} מ"ר)`)
+        } else {
+          lines.push(`צורה: ${p.shape.type} | שטח: ${calculatePergolaArea(p.shape).toFixed(1)} מ"ר`)
+        }
+        if (p.height) lines.push(`גובה: ${p.height} ס"מ`)
+        if (p.location) lines.push(`מיקום: ${p.location}`)
+      })
+    }
+
+    if (inc.railings && draft.quickRailings) {
+      const sqm = quickOfferRailingsFenceAreaSqm(draft.quickRailings.metersTotal, draft.quickRailings.heightCm)
+      lines.push(`מעקות: ${sqm.toFixed(1)} מ"ר (${draft.quickRailings.metersTotal}מ' רצים, גובה ${draft.quickRailings.heightCm} ס"מ)`)
+      if (draft.quickRailings.profileType) lines.push(`פרופיל מעקה: ${draft.quickRailings.profileType}`)
+      if (draft.quickRailings.color) lines.push(`צבע מעקה: ${draft.quickRailings.color}`)
+    }
+
+    if (inc.fence && draft.quickFence) {
+      const sqm = quickOfferRailingsFenceAreaSqm(draft.quickFence.metersTotal, draft.quickFence.heightCm)
+      lines.push(`גדר: ${sqm.toFixed(1)} מ"ר (${draft.quickFence.metersTotal}מ' רצים, גובה ${draft.quickFence.heightCm} ס"מ)`)
+      if (draft.quickFence.color) lines.push(`צבע גדר: ${draft.quickFence.color}`)
+    }
+
+    if (inc.pergola) {
+      const colorMap: Record<string, string> = { white: 'לבן', black: 'שחור', cream: 'קרם', ral: 'RAL מיוחד', wood: 'עץ' }
+      const colorLabel = colorMap[draft.color.type] ?? draft.color.type
+      const colorDetail = draft.color.type === 'ral' && draft.color.ralCode
+        ? `${colorLabel} ${draft.color.ralCode}`
+        : draft.color.type === 'wood' && draft.color.woodName
+          ? `${colorLabel} – ${draft.color.woodName}`
+          : colorLabel
+      lines.push(`צבע: ${colorDetail}`)
+      if (draft.roof.type === 'santaf') lines.push(`גג: סנטף BH${draft.roof.santafColor ? ` (${draft.roof.santafColor})` : ''}`)
+      else if (draft.roof.type === 'triplexGlass') lines.push('גג: זכוכית טריפלקס')
+    }
+
+    const addons: string[] = []
+    if (inc.pergola && draft.santaf.enabled) {
+      addons.push(`סנטף BH ${draft.santaf.withStructure ? 'עם קונסטרוקציה' : 'בסיסי'} — ${fmt(calculation.santafTotal ?? 0)}`)
+    }
+    if (draft.zipScreen.enabled) {
+      addons.push(`מסך ZIP ${draft.zipScreen.type === 'electric' ? 'חשמלי' : 'ידני'}${draft.zipScreen.runningMeters ? ` (${draft.zipScreen.runningMeters}מ')` : ''} — ${fmt(calculation.zipScreenTotal ?? 0)}`)
+    }
+    if (draft.lighting.enabled) {
+      addons.push(`תאורת לד${draft.lighting.runningMeters ? ` (${draft.lighting.runningMeters}מ')` : ''} — ${fmt(calculation.lightingTotal ?? 0)}`)
+    }
+    if (draft.drainage.enabled) {
+      addons.push(`מערכת ניקוז${draft.drainage.runningMeters ? ` (${draft.drainage.runningMeters}מ')` : ''} — ${fmt(calculation.drainageTotal ?? 0)}`)
+    }
+    if (draft.winterClosure.enabled && draft.winterClosure.items && draft.winterClosure.items.length > 0) {
+      const winterTypeMap: Record<string, string> = {
+        foldingGlass: 'זכוכית מתקפלת', windows7000: 'חלונות 7000', windows9000: 'חלונות 9000',
+        fixedGlass: 'זכוכית קבועה', slidingShowcase7000: 'ויטרינה הזזה 7000',
+        slidingShowcase9000: 'ויטרינה הזזה 9000', sliderGlass: 'זכוכית הזזה',
+      }
+      const winterItems = draft.winterClosure.items.map((item) => `${winterTypeMap[item.type] ?? item.type} ${item.area}מ"ר`).join(', ')
+      addons.push(`סגירת חורף: ${winterItems} — ${fmt(calculation.winterClosureTotal ?? 0)}`)
+    }
+    if (addons.length > 0) {
+      lines.push('')
+      lines.push('תוספות:')
+      addons.forEach((a) => lines.push(`- ${a}`))
+    }
+
+    lines.push('')
+    if (draft.discountPercent > 0) lines.push(`הנחה: ${draft.discountPercent}%`)
+    lines.push(`מחיר לפני מע"מ: ${fmt(calculation.totalBeforeVat)}`)
+    lines.push(`מע"מ (${draft.vatPercent}%): ${fmt(calculation.vatAmount)}`)
+    lines.push(`מחיר סופי כולל מע"מ: ${fmt(calculation.finalPrice)}`)
+
+    const existingNotes = draft.options?.notes?.trim()
+    if (existingNotes) {
+      lines.push('')
+      lines.push('הערות נוספות:')
+      lines.push(existingNotes)
+    }
+
+    return lines.join('\n')
+  }, [draft, calculation, fmt])
+
   const generateAiDescription = useCallback(async () => {
     setGeneratingAi(true)
     setError(null)
     try {
-      const inc = resolveQuickOfferIncludes(draft)
-      let base = ''
-      if (inc.pergola) {
-        base = `הצעת מחיר לפרגולת אלומיניום מתקדמת:\n\n📐 שטח: ${calculation.area} מ"ר\n`
-      }
-      if (inc.railings && draft.quickRailings) {
-        const qr = draft.quickRailings
-        const sqm = quickOfferRailingsFenceAreaSqm(qr.metersTotal, qr.heightCm)
-        base += `מעקות אלומיניום:\n📐 שטח (מ״ר): ${sqm}\n📏 אורך: ${qr.metersTotal} מ׳ · גובה: ${qr.heightCm ?? '—'} ס״מ\n`
-      }
-      if (inc.fence && draft.quickFence) {
-        const qf = draft.quickFence
-        const sqm = quickOfferRailingsFenceAreaSqm(qf.metersTotal, qf.heightCm)
-        base += `גדר:\n📐 שטח (מ״ר): ${sqm}\n📏 אורך: ${qf.metersTotal} מ׳ · גובה: ${qf.heightCm ?? '—'} ס״מ\n`
-      }
-      if (!base.trim()) base = `הצעת מחיר:\n\n📐 שטח: ${calculation.area} מ"ר\n`
-      const features: string[] = []
-      if (inc.pergola && draft.santaf.enabled)
-        features.push(`סנטף BH ${draft.santaf.withStructure ? 'עם קונסטרוקציה' : 'בסיסי'}`)
-      if (draft.zipScreen.enabled) features.push(`מסך ZIP ${draft.zipScreen.type === 'electric' ? 'חשמלי' : 'ידני'}`)
-      if (draft.lighting.enabled) features.push('תאורת לד משולבת')
-      if (draft.drainage.enabled) features.push('מערכת ניקוז')
-      if (draft.winterClosure.enabled) features.push('סגירת זכוכיות')
-      if (features.length > 0) base += `\n✨ תוספות:\n${features.map((f) => `• ${f}`).join('\n')}\n`
-      base += `\n💰 מחיר סופי: ${fmt(calculation.finalPrice)}`
-      if (draft.discountPercent > 0) base += ` (כולל ${draft.discountPercent}% הנחה!)`
-
+      const specText = buildOfferSpecText()
       const res = await authFetch('/api/ai/improve-offer-text', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          text: base,
+          text: specText,
           outputLanguage: aiOutputLang,
-          context: { customerName: 'לקוח', pergolaType: 'אלומיניום', price: calculation.finalPrice },
+          context: {
+            customerName: draft.customerName || 'לקוח',
+            pergolaType: draft.pergolas?.[0]?.pergolaType
+              ? PERGOLA_TYPE_NAMES[draft.pergolas[0].pergolaType]
+              : 'פרגולת אלומיניום',
+            price: calculation.finalPrice,
+          },
         }),
       })
       if (!res.ok) {
@@ -1022,21 +1096,26 @@ export default function QuickOfferPage() {
     } finally {
       setGeneratingAi(false)
     }
-  }, [draft, calculation, t, aiOutputLang])
+  }, [buildOfferSpecText, draft.customerName, draft.pergolas, calculation.finalPrice, t, aiOutputLang])
 
   const improveAiText = useCallback(async () => {
-    const currentNotes = draft.options?.notes?.trim()
-    if (!currentNotes) return
     setImprovingAi(true)
     setError(null)
     try {
+      const specText = buildOfferSpecText()
       const res = await authFetch('/api/ai/improve-offer-text', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          text: currentNotes,
+          text: specText,
           outputLanguage: aiOutputLang,
-          context: { customerName: 'לקוח', pergolaType: 'אלומיניום', price: calculation.finalPrice },
+          context: {
+            customerName: draft.customerName || 'לקוח',
+            pergolaType: draft.pergolas?.[0]?.pergolaType
+              ? PERGOLA_TYPE_NAMES[draft.pergolas[0].pergolaType]
+              : 'פרגולת אלומיניום',
+            price: calculation.finalPrice,
+          },
         }),
       })
       if (!res.ok) {
@@ -1050,7 +1129,7 @@ export default function QuickOfferPage() {
     } finally {
       setImprovingAi(false)
     }
-  }, [draft.options?.notes, calculation.finalPrice, t, aiOutputLang])
+  }, [buildOfferSpecText, draft.customerName, draft.pergolas, calculation.finalPrice, t, aiOutputLang])
 
   const handleSubmit = useCallback(async () => {
     const inc = resolveQuickOfferIncludes(draft)

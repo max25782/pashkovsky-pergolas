@@ -399,42 +399,140 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
     setDraft(prev => ({ ...prev, options: { ...prev.options, ...updates } }))
   }, [])
   
-  const improveNotesWithAI = useCallback(async () => {
-    const currentNotes = draft.options.notes || ''
-    if (!currentNotes.trim()) {
-      setError('אנא כתוב טקסט להערות לפני שימוש ב-AI')
-      return
+  // Build a comprehensive spec sheet from the full offer draft for the AI
+  const buildOfferSpecText = useCallback((): string => {
+    const inc = resolveQuickOfferIncludes(draft)
+    const lines: string[] = []
+
+    if (customerName) lines.push(`לקוח: ${customerName}`)
+    if (customerCity) lines.push(`עיר: ${customerCity}`)
+    lines.push('')
+
+    // Pergola section
+    if (inc.pergola && draft.pergolas && draft.pergolas.length > 0) {
+      draft.pergolas.forEach((p, i) => {
+        const typeName = p.pergolaType ? PERGOLA_TYPE_NAMES[p.pergolaType] : 'פרגולת אלומיניום'
+        const prefix = draft.pergolas!.length > 1 ? `פרגולה ${i + 1}: ` : ''
+        lines.push(`${prefix}${typeName}`)
+
+        if (p.shape.type === 'rectangle') {
+          lines.push(`מידות: ${p.shape.width} × ${p.shape.length} מ' (${calculatePergolaArea(p.shape).toFixed(1)} מ"ר)`)
+        } else {
+          lines.push(`צורה: ${p.shape.type === 'L' ? 'L' : p.shape.type === 'U' ? 'U' : 'X'} | שטח: ${calculatePergolaArea(p.shape).toFixed(1)} מ"ר`)
+        }
+
+        if (p.height) lines.push(`גובה: ${p.height} ס"מ`)
+        if (p.location) lines.push(`מיקום: ${p.location}`)
+      })
     }
-    
-    
+
+    if (inc.railings && draft.quickRailings) {
+      const sqm = quickOfferRailingsFenceAreaSqm(draft.quickRailings.metersTotal, draft.quickRailings.heightCm)
+      lines.push(`מעקות: ${sqm.toFixed(1)} מ"ר (${draft.quickRailings.metersTotal}מ' רצים, גובה ${draft.quickRailings.heightCm} ס"מ)`)
+      if (draft.quickRailings.profileType) lines.push(`פרופיל מעקה: ${draft.quickRailings.profileType}`)
+      if (draft.quickRailings.color) lines.push(`צבע מעקה: ${draft.quickRailings.color}`)
+    }
+
+    if (inc.fence && draft.quickFence) {
+      const sqm = quickOfferRailingsFenceAreaSqm(draft.quickFence.metersTotal, draft.quickFence.heightCm)
+      lines.push(`גדר: ${sqm.toFixed(1)} מ"ר (${draft.quickFence.metersTotal}מ' רצים, גובה ${draft.quickFence.heightCm} ס"מ)`)
+      if (draft.quickFence.color) lines.push(`צבע גדר: ${draft.quickFence.color}`)
+    }
+
+    // Color & finish
+    if (inc.pergola) {
+      const colorMap: Record<string, string> = { white: 'לבן', black: 'שחור', cream: 'קרם', ral: 'RAL מיוחד', wood: 'עץ' }
+      const colorLabel = colorMap[draft.color.type] ?? draft.color.type
+      const colorDetail = draft.color.type === 'ral' && draft.color.ralCode
+        ? `${colorLabel} ${draft.color.ralCode}`
+        : draft.color.type === 'wood' && draft.color.woodName
+          ? `${colorLabel} – ${draft.color.woodName}`
+          : colorLabel
+      lines.push(`צבע: ${colorDetail}`)
+
+      if (draft.roof.type === 'santaf') lines.push(`גג: סנטף BH${draft.roof.santafColor ? ` (${draft.roof.santafColor})` : ''}`)
+      else if (draft.roof.type === 'triplexGlass') lines.push('גג: זכוכית טריפלקס')
+    }
+
+    // Add-ons
+    const addons: string[] = []
+    if (inc.pergola && draft.santaf.enabled) {
+      addons.push(`סנטף BH ${draft.santaf.withStructure ? 'עם קונסטרוקציה' : 'בסיסי'} — ${fmt(calculation.santafTotal ?? 0)}`)
+    }
+    if (draft.zipScreen.enabled) {
+      addons.push(`מסך ZIP ${draft.zipScreen.type === 'electric' ? 'חשמלי' : 'ידני'}${draft.zipScreen.runningMeters ? ` (${draft.zipScreen.runningMeters}מ')` : ''} — ${fmt(calculation.zipScreenTotal ?? 0)}`)
+    }
+    if (draft.lighting.enabled) {
+      addons.push(`תאורת לד${draft.lighting.runningMeters ? ` (${draft.lighting.runningMeters}מ')` : ''} — ${fmt(calculation.lightingTotal ?? 0)}`)
+    }
+    if (draft.drainage.enabled) {
+      addons.push(`מערכת ניקוז${draft.drainage.runningMeters ? ` (${draft.drainage.runningMeters}מ')` : ''} — ${fmt(calculation.drainageTotal ?? 0)}`)
+    }
+    if (draft.winterClosure.enabled && draft.winterClosure.items && draft.winterClosure.items.length > 0) {
+      const winterTypeMap: Record<string, string> = {
+        foldingGlass: 'זכוכית מתקפלת', windows7000: 'חלונות 7000', windows9000: 'חלונות 9000',
+        fixedGlass: 'זכוכית קבועה', slidingShowcase7000: 'ויטרינה הזזה 7000',
+        slidingShowcase9000: 'ויטרינה הזזה 9000', sliderGlass: 'זכוכית הזזה',
+      }
+      const winterItems = draft.winterClosure.items.map(item => `${winterTypeMap[item.type] ?? item.type} ${item.area}מ"ר`).join(', ')
+      addons.push(`סגירת חורף: ${winterItems} — ${fmt(calculation.winterClosureTotal ?? 0)}`)
+    }
+    if (addons.length > 0) {
+      lines.push('')
+      lines.push('תוספות:')
+      addons.forEach(a => lines.push(`- ${a}`))
+    }
+
+    // Pricing
+    lines.push('')
+    if (draft.discountPercent > 0) {
+      lines.push(`הנחה: ${draft.discountPercent}%`)
+    }
+    lines.push(`מחיר לפני מע"מ: ${fmt(calculation.totalBeforeVat)}`)
+    lines.push(`מע"מ (${draft.vatPercent}%): ${fmt(calculation.vatAmount)}`)
+    lines.push(`מחיר סופי כולל מע"מ: ${fmt(calculation.finalPrice)}`)
+
+    // Existing notes (if any) — append as extra context
+    const existingNotes = draft.options.notes?.trim()
+    if (existingNotes) {
+      lines.push('')
+      lines.push('הערות נוספות:')
+      lines.push(existingNotes)
+    }
+
+    return lines.join('\n')
+  }, [draft, calculation, customerName, customerCity, fmt])
+
+  const improveNotesWithAI = useCallback(async () => {
     setIsImprovingText(true)
     setError(null)
     setAiSuggestion(null)
-    
+
     try {
+      const specText = buildOfferSpecText()
+
       const response = await authFetch('/api/ai/improve-offer-text', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          text: currentNotes,
+          text: specText,
           outputLanguage: crmLanguage,
           context: {
             customerName: customerName,
-            pergolaType: 'אלומיניום',
+            pergolaType: draft.pergolas?.[0]?.pergolaType
+              ? PERGOLA_TYPE_NAMES[draft.pergolas[0].pergolaType]
+              : 'פרגולת אלומיניום',
             price: calculation.finalPrice,
           },
         }),
       })
-      
-      
+
       if (!response.ok) {
         const errorData = await response.json()
         console.error('[AI Improve] Error response:', errorData)
         throw new Error(errorData.error || 'Failed to improve text')
       }
-      
+
       const data = await response.json()
       setAiSuggestion(data.improvedText)
     } catch (err: unknown) {
@@ -443,103 +541,48 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
     } finally {
       setIsImprovingText(false)
     }
-  }, [draft.options.notes, customerName, calculation.finalPrice, crmLanguage])
+  }, [buildOfferSpecText, customerName, draft.pergolas, calculation.finalPrice, crmLanguage])
 
   // Generate complete professional description automatically
   const generateCompleteDescription = useCallback(async () => {
-    
     setIsGeneratingDescription(true)
     setError(null)
-    
-    try {
-      // Build description from offer data
-      const inc = resolveQuickOfferIncludes(draft)
-      let baseDescription = ''
-      if (inc.pergola) {
-        baseDescription += `הצעת מחיר לפרגולת אלומיניום מתקדמת:\n\n📐 מידות: ${calculation.area} מ"ר\n`
-      }
-      if (inc.railings && draft.quickRailings) {
-        const sqm = quickOfferRailingsFenceAreaSqm(
-          draft.quickRailings.metersTotal,
-          draft.quickRailings.heightCm,
-        )
-        baseDescription += `\nמעקות: ${sqm} מ״ר\n`
-      }
-      if (inc.fence && draft.quickFence) {
-        const sqm = quickOfferRailingsFenceAreaSqm(
-          draft.quickFence.metersTotal,
-          draft.quickFence.heightCm,
-        )
-        baseDescription += `\nגדר: ${sqm} מ״ר\n`
-      }
-      if (!baseDescription.trim()) {
-        baseDescription = `הצעת מחיר:\n\n📐 ${calculation.area} מ"ר\n`
-      }
 
-      const features = []
-      if (inc.pergola && draft.santaf.enabled) {
-        features.push(`סנטף BH ${draft.santaf.withStructure ? 'עם קונסטרוקציה' : 'בסיסי'}`)
-      }
-      if (draft.zipScreen.enabled) {
-        features.push(`מסך ZIP ${draft.zipScreen.type === 'electric' ? 'חשמלי' : 'ידני'}`)
-      }
-      if (draft.lighting.enabled) {
-        features.push('תאורת לד משולבת')
-      }
-      if (draft.drainage.enabled) {
-        features.push('מערכת ניקוז')
-      }
-      if (draft.winterClosure.enabled) {
-        features.push('סגירת חורף (זכוכית)')
-      }
-      
-      if (features.length > 0) {
-        baseDescription += `\n✨ תוספות:\n${features.map(f => `• ${f}`).join('\n')}\n`
-      }
-      
-      baseDescription += `\n💰 מחיר סופי: ${fmt(calculation.finalPrice)}`
-      
-      if (draft.discountPercent > 0) {
-        baseDescription += ` (כולל ${draft.discountPercent}% הנחה!)`
-      }
-      
-      
-      // Now improve it with AI
+    try {
+      const specText = buildOfferSpecText()
+
       const response = await authFetch('/api/ai/improve-offer-text', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          text: baseDescription,
+          text: specText,
           outputLanguage: crmLanguage,
           context: {
             customerName: customerName,
-            pergolaType: 'אלומיניום',
+            pergolaType: draft.pergolas?.[0]?.pergolaType
+              ? PERGOLA_TYPE_NAMES[draft.pergolas[0].pergolaType]
+              : 'פרגולת אלומיניום',
             price: calculation.finalPrice,
           },
         }),
       })
-      
-      
+
       if (!response.ok) {
         const errorData = await response.json()
         console.error('[AI Generate] Error response:', errorData)
         throw new Error(errorData.error || 'Failed to generate description')
       }
-      
+
       const data = await response.json()
-      
-      // Set the generated text directly as notes
       updateOptions({ notes: data.improvedText })
-      setAiSuggestion(null) // Clear any previous suggestions
+      setAiSuggestion(null)
     } catch (err: unknown) {
       console.error('[AI Generate] Error:', err)
       setError((err instanceof Error ? err.message : String(err)) || 'שגיאה ביצירת תיאור אוטומטי')
     } finally {
       setIsGeneratingDescription(false)
     }
-  }, [draft, calculation, customerName, updateOptions, crmLanguage])
+  }, [buildOfferSpecText, customerName, draft.pergolas, calculation.finalPrice, crmLanguage, updateOptions])
 
   const acceptAiSuggestion = useCallback(() => {
     if (aiSuggestion) {

@@ -3,34 +3,45 @@ import type { OfferAiOutputLanguage } from './offer-text-output-languages'
 function outputLanguageDirective(lang: OfferAiOutputLanguage): string {
   switch (lang) {
     case 'en':
-      return 'Write the entire improved text in English only.'
+      return 'Write the entire output in English only.'
     case 'ru':
-      return 'Write the entire improved text in Russian only (Cyrillic).'
+      return 'Write the entire output in Russian only (Cyrillic).'
     case 'sr':
-      return 'Write the entire improved text in Serbian only. Prefer Latin script (srpski) for business quotes unless the input is clearly Cyrillic.'
+      return 'Write the entire output in Serbian only. Prefer Latin script (srpski) for business quotes unless the input is clearly Cyrillic.'
     case 'he':
-      return 'Write the entire improved text in Hebrew only.'
+      return 'Write the entire output in Hebrew only.'
     default:
-      return 'Write the entire improved text in English only.'
+      return 'Write the entire output in English only.'
   }
 }
 
 /**
- * System instructions for Gemini: preserve numbers, output only in the chosen language.
+ * System instructions for Gemini: generate a professional client-facing offer letter
+ * from the provided product specifications.
  */
 export function buildOfferImprovementSystemPrompt(outputLanguage: OfferAiOutputLanguage): string {
   const langRule = outputLanguageDirective(outputLanguage)
-  return `You improve commercial offer and quote text for aluminum pergolas, railings, fences, ZIP screens, lighting, drainage, and glass closures.
+  return `You are an expert copywriter for a premium aluminum pergola and outdoor construction company in Israel.
+
+Your task: transform the product specifications and offer data provided by the user into a warm, professional, client-facing offer letter that will be shown to the customer.
+
+OUTPUT FORMAT:
+- A brief personalized greeting addressing the customer by name (if provided)
+- A clear description of the main product(s) with key specifications (type, dimensions, color, shape)
+- A list of included features and add-ons presented attractively
+- The pricing clearly stated (final price with VAT, mention any discount as a special benefit)
+- A short closing sentence emphasizing quality, warranty, and service
+- No section headers, no bullet symbols in the final output — use flowing, warm, professional prose
+- Keep it concise: 3–5 paragraphs maximum
 
 STRICT RULES:
-1. Never change numbers, prices, dimensions, quantities, currency symbols, percentages, or units.
-2. Improve style, clarity, and professionalism only.
+1. Never change, round, or omit any number, price, dimension, or percentage from the input.
+2. Never invent specifications, features, or prices not present in the input.
 3. ${langRule}
-4. If the input text is in another language, translate faithfully into the target language while keeping every digit and amount exactly as in the source.
-5. Do not invent specifications, prices, or sizes that are not implied by the input.
-6. Improve structure and readability; emphasize quality and value where appropriate.
-7. If the text is very short, expand it professionally without adding new numeric claims.
-8. If the text is already strong, change it minimally.
+4. Do not add markdown formatting, code fences, titles, or meta-commentary.
+5. Sound warm and professional — like a premium contractor, not a robot.
+6. If customer name is provided, address them personally in the greeting.
+7. Emphasize quality materials, professional installation, and long-term value.
 
-Return ONLY the improved offer text — no title line, no markdown code fences, no meta-commentary.`
+Return ONLY the offer letter text.`
 }
