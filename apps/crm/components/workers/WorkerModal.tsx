@@ -82,11 +82,22 @@ export function WorkerModal({ worker, onClose, onSave }: Props) {
     }
   }
 
-  const fields: { label: string; key: keyof WorkerFormData; type: string; required: boolean }[] = [
+  const ROLE_OPTIONS = [
+    'קבלן',
+    'עובד',
+    'מנהל',
+    'נהג',
+    'מעצב',
+    'אחר',
+  ]
+
+  const isCustomRole = form.role !== '' && !ROLE_OPTIONS.includes(form.role)
+  const selectValue = isCustomRole ? 'אחר' : form.role
+
+  const textFields: { label: string; key: keyof WorkerFormData; type: string; required: boolean }[] = [
     { label: t.workers.firstName, key: 'firstName', type: 'text', required: true },
     { label: t.workers.lastName, key: 'lastName', type: 'text', required: true },
     { label: t.workers.phone, key: 'phone', type: 'tel', required: false },
-    { label: t.workers.role, key: 'role', type: 'text', required: false },
   ]
 
   return (
@@ -108,7 +119,7 @@ export function WorkerModal({ worker, onClose, onSave }: Props) {
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {fields.map(({ label, key, type, required }) => (
+          {textFields.map(({ label, key, type, required }) => (
             <div key={key}>
               <label className="block text-sm font-medium text-white/80 mb-2">{label}</label>
               <input
@@ -120,6 +131,35 @@ export function WorkerModal({ worker, onClose, onSave }: Props) {
               />
             </div>
           ))}
+
+          <div>
+            <label className="block text-sm font-medium text-white/80 mb-2">{t.workers.role}</label>
+            <select
+              value={selectValue}
+              onChange={(e) => {
+                if (e.target.value === 'אחר') {
+                  update('role', '')
+                } else {
+                  update('role', e.target.value)
+                }
+              }}
+              className="w-full px-3 py-2 rounded bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">— בחר תפקיד —</option>
+              {ROLE_OPTIONS.map((r) => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </select>
+            {(selectValue === 'אחר' || isCustomRole) && (
+              <input
+                type="text"
+                value={form.role}
+                onChange={(e) => update('role', e.target.value)}
+                placeholder="הכנס תפקיד..."
+                className="mt-2 w-full px-3 py-2 rounded bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            )}
+          </div>
 
           <div>
             <label className="block text-sm font-medium text-white/80 mb-2">{t.workers.dailyRate}</label>
