@@ -6,6 +6,7 @@ import { isAppointmentConfirmation, extractAppointment } from '@/lib/ai-chat/app
 import { sendCalendarInvite } from '@/lib/ai-chat/calendar-invite'
 import { sanitizeInput } from '@/lib/ai-chat/xss-filter'
 import { fetchImagesByContext } from '@/lib/ai-chat/image-fetcher'
+import { stripThoughtBlock } from '@/lib/ai-chat/response-sanitizer'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -277,15 +278,18 @@ async function* streamGeminiResponse(
 
   // Concatenate all text parts into a single answer, then stream it out in chunks
   const parts = candidates[0]?.content?.parts || []
-  const fullText = parts
+  const rawText = parts
     .map((p: any) => (typeof p?.text === 'string' ? p.text : ''))
     .join('')
     .trim()
 
-  if (!fullText) {
+  if (!rawText) {
     console.error('[AI Chat] Empty text in Gemini response:', JSON.stringify(data).slice(0, 500))
     throw new Error('No chunks received from Gemini API. Check API key and model availability.')
   }
+
+  // Strip any THOUGHT: chain-of-thought block before the real answer
+  const fullText = stripThoughtBlock(rawText)
 
   // Check if AI wants to send images (format: [IMAGE:url1,url2,url3])
   const imageMatch = fullText.match(/\[IMAGE:([^\]]+)\]/)

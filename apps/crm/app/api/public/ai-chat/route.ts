@@ -14,6 +14,7 @@ import { SYSTEM_PROMPT, AI_CONFIG, fewShotExamples } from '@/lib/ai-chat/config'
 import { isAppointmentConfirmation, extractAppointment } from '@/lib/ai-chat/appointment-detector'
 import { sendCalendarInvite } from '@/lib/ai-chat/calendar-invite'
 import { fetchImagesByContext } from '@/lib/ai-chat/image-fetcher'
+import { stripThoughtBlock } from '@/lib/ai-chat/response-sanitizer'
 
 // Environment variables
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -167,7 +168,10 @@ async function* streamGeminiResponse(
   }
 
   const data = await response.json()
-  const fullText: string = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || ''
+  const rawText: string = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || ''
+
+  // Strip any THOUGHT: chain-of-thought block before the real answer
+  const fullText = stripThoughtBlock(rawText)
 
   // Strip [IMAGE:...] tag and fetch real presigned images
   const imageMatch = fullText.match(/\[IMAGE:([^\]]+)\]/)

@@ -64,8 +64,8 @@ async function improveTextWithGemini(
   const systemPrompt = buildOfferImprovementSystemPrompt(outputLanguage)
   const contextStr = formatContextForModel(context)
   const userMessage = contextStr
-    ? `${contextStr}\n\nText to improve:\n${text}`
-    : `Text to improve:\n${text}`
+    ? `${contextStr}\n\nOffer specifications:\n${text}`
+    : `Offer specifications:\n${text}`
 
   const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`
 
@@ -87,7 +87,7 @@ async function improveTextWithGemini(
       ],
       generationConfig: {
         temperature: 0.7,
-        maxOutputTokens: 900,
+        maxOutputTokens: 1500,
       },
     }),
   })
@@ -191,8 +191,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Text is required' }, { status: 400 })
     }
     
-    if (text.length > 2000) {
-      return NextResponse.json({ error: 'Text too long (max 2000 characters)' }, { status: 400 })
+    if (text.length > 6000) {
+      return NextResponse.json({ error: 'Text too long (max 6000 characters)' }, { status: 400 })
     }
     
     // 4. Check API key

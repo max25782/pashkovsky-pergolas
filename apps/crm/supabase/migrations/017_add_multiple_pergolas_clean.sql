@@ -1,5 +1,4 @@
-ALTER TABLE offers 
-ADD COLUMN IF NOT EXISTS pergolas_data JSONB;
+ALTER TABLE offers ADD COLUMN pergolas_data JSONB;
 
 UPDATE offers 
 SET pergolas_data = jsonb_build_array(

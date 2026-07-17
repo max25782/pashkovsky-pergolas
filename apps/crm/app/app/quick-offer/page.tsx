@@ -1004,36 +1004,52 @@ export default function QuickOfferPage() {
     const inc = resolveQuickOfferIncludes(draft)
     const lines: string[] = []
 
-    if (draft.customerName) lines.push(`לקוח: ${draft.customerName}`)
+    if (draft.customerName && draft.customerName !== 'הצעה מהירה') lines.push(`לקוח: ${draft.customerName}`)
     if (draft.customerCity) lines.push(`עיר: ${draft.customerCity}`)
     lines.push('')
 
     if (inc.pergola && draft.pergolas && draft.pergolas.length > 0) {
       draft.pergolas.forEach((p, i) => {
         const typeName = p.pergolaType ? PERGOLA_TYPE_NAMES[p.pergolaType] : 'פרגולת אלומיניום'
-        const prefix = (draft.pergolas?.length ?? 0) > 1 ? `פרגולה ${i + 1}: ` : ''
-        lines.push(`${prefix}${typeName}`)
+        const multi = (draft.pergolas?.length ?? 0) > 1
+        if (multi) lines.push(`פרגולה ${i + 1}:`)
+        lines.push(`סוג: ${typeName}`)
+        const area = calculatePergolaArea(p.shape)
         if (p.shape.type === 'rectangle') {
-          lines.push(`מידות: ${p.shape.width} × ${p.shape.length} מ' (${calculatePergolaArea(p.shape).toFixed(1)} מ"ר)`)
+          // shape stores dimensions in cm; convert to meters for the AI
+          const wM = (p.shape.width / 100).toFixed(2)
+          const lM = (p.shape.length / 100).toFixed(2)
+          lines.push(`מידות: ${wM} × ${lM} מ' (${area.toFixed(2)} מ"ר)`)
         } else {
-          lines.push(`צורה: ${p.shape.type} | שטח: ${calculatePergolaArea(p.shape).toFixed(1)} מ"ר`)
+          lines.push(`צורה: ${p.shape.type} | שטח: ${area.toFixed(2)} מ"ר`)
         }
-        if (p.height) lines.push(`גובה: ${p.height} ס"מ`)
+        if (p.height) lines.push(`גובה: ${(p.height / 100).toFixed(2)} מ'`)
+        if (p.pricePerSqm) lines.push(`מחיר לְמ"ר: ${fmt(p.pricePerSqm)}`)
+        const lineTotal = area * p.pricePerSqm
+        if (lineTotal > 0) lines.push(`סה"כ פרגולה${multi ? ` ${i + 1}` : ''}: ${fmt(lineTotal)}`)
         if (p.location) lines.push(`מיקום: ${p.location}`)
       })
     }
 
     if (inc.railings && draft.quickRailings) {
       const sqm = quickOfferRailingsFenceAreaSqm(draft.quickRailings.metersTotal, draft.quickRailings.heightCm)
-      lines.push(`מעקות: ${sqm.toFixed(1)} מ"ר (${draft.quickRailings.metersTotal}מ' רצים, גובה ${draft.quickRailings.heightCm} ס"מ)`)
+      lines.push(`מעקות: ${sqm.toFixed(1)} מ"ר (${draft.quickRailings.metersTotal} מ' רצים, גובה ${draft.quickRailings.heightCm} ס"מ)`)
       if (draft.quickRailings.profileType) lines.push(`פרופיל מעקה: ${draft.quickRailings.profileType}`)
       if (draft.quickRailings.color) lines.push(`צבע מעקה: ${draft.quickRailings.color}`)
     }
 
-    if (inc.fence && draft.quickFence) {
-      const sqm = quickOfferRailingsFenceAreaSqm(draft.quickFence.metersTotal, draft.quickFence.heightCm)
-      lines.push(`גדר: ${sqm.toFixed(1)} מ"ר (${draft.quickFence.metersTotal}מ' רצים, גובה ${draft.quickFence.heightCm} ס"מ)`)
-      if (draft.quickFence.color) lines.push(`צבע גדר: ${draft.quickFence.color}`)
+    // Use quickFences array (multiple fences support); fall back to legacy quickFence
+    if (inc.fence) {
+      const fences = draft.quickFences && draft.quickFences.length > 0
+        ? draft.quickFences
+        : draft.quickFence ? [draft.quickFence] : []
+      fences.forEach((qf, fi) => {
+        const label = fences.length > 1 ? ` (${fi + 1})` : ''
+        const sqm = quickOfferRailingsFenceAreaSqm(qf.metersTotal, qf.heightCm)
+        lines.push(`גדר${label}: ${sqm.toFixed(1)} מ"ר (${qf.metersTotal} מ' רצים, גובה ${qf.heightCm} ס"מ)`)
+        if (qf.color) lines.push(`צבע גדר${label}: ${qf.color}`)
+        if (calculation.fenceLineTotals?.[fi]) lines.push(`מחיר גדר${label}: ${fmt(calculation.fenceLineTotals[fi])}`)
+      })
     }
 
     if (inc.pergola) {
@@ -1051,16 +1067,24 @@ export default function QuickOfferPage() {
 
     const addons: string[] = []
     if (inc.pergola && draft.santaf.enabled) {
-      addons.push(`סנטף BH ${draft.santaf.withStructure ? 'עם קונסטרוקציה' : 'בסיסי'} — ${fmt(calculation.santafTotal ?? 0)}`)
+      const santafMode = draft.santaf.withStructure ? 'עם קונסטרוקציה' : 'בסיסי'
+      const santafPrice = draft.santaf.withStructure
+        ? draft.santaf.pricePerSqmWithStructure
+        : draft.santaf.pricePerSqmBasic
+      addons.push(`סנטף BH ${santafMode} — ${fmt(santafPrice)} ₪/מ"ר | סה"כ: ${fmt(calculation.santafTotal ?? 0)}`)
     }
     if (draft.zipScreen.enabled) {
-      addons.push(`מסך ZIP ${draft.zipScreen.type === 'electric' ? 'חשמלי' : 'ידני'}${draft.zipScreen.runningMeters ? ` (${draft.zipScreen.runningMeters}מ')` : ''} — ${fmt(calculation.zipScreenTotal ?? 0)}`)
+      const zipMode = draft.zipScreen.type === 'electric' ? 'חשמלי' : 'ידני'
+      const zipMeters = draft.zipScreen.runningMeters ? ` ${draft.zipScreen.runningMeters} מ'` : ''
+      addons.push(`מסך ZIP ${zipMode}${zipMeters} — סה"כ: ${fmt(calculation.zipScreenTotal ?? 0)}`)
     }
     if (draft.lighting.enabled) {
-      addons.push(`תאורת לד${draft.lighting.runningMeters ? ` (${draft.lighting.runningMeters}מ')` : ''} — ${fmt(calculation.lightingTotal ?? 0)}`)
+      const lightMeters = draft.lighting.runningMeters ? ` ${draft.lighting.runningMeters} מ'` : ''
+      addons.push(`תאורת לד${lightMeters} — ${fmt(draft.lighting.pricePerMeter)} ₪/מ' | סה"כ: ${fmt(calculation.lightingTotal ?? 0)}`)
     }
     if (draft.drainage.enabled) {
-      addons.push(`מערכת ניקוז${draft.drainage.runningMeters ? ` (${draft.drainage.runningMeters}מ')` : ''} — ${fmt(calculation.drainageTotal ?? 0)}`)
+      const drainMeters = draft.drainage.runningMeters ? ` ${draft.drainage.runningMeters} מ'` : ''
+      addons.push(`מערכת ניקוז${drainMeters} — ${fmt(draft.drainage.pricePerMeter)} ₪/מ' | סה"כ: ${fmt(calculation.drainageTotal ?? 0)}`)
     }
     if (draft.winterClosure.enabled && draft.winterClosure.items && draft.winterClosure.items.length > 0) {
       const winterTypeMap: Record<string, string> = {
@@ -1068,8 +1092,10 @@ export default function QuickOfferPage() {
         fixedGlass: 'זכוכית קבועה', slidingShowcase7000: 'ויטרינה הזזה 7000',
         slidingShowcase9000: 'ויטרינה הזזה 9000', sliderGlass: 'זכוכית הזזה',
       }
-      const winterItems = draft.winterClosure.items.map((item) => `${winterTypeMap[item.type] ?? item.type} ${item.area}מ"ר`).join(', ')
-      addons.push(`סגירת חורף: ${winterItems} — ${fmt(calculation.winterClosureTotal ?? 0)}`)
+      draft.winterClosure.items.forEach((item) => {
+        const typeName = winterTypeMap[item.type] ?? item.type
+        addons.push(`סגירת זכוכיות: ${typeName} — ${item.area} מ"ר × ${fmt(item.pricePerSqm)}/מ"ר = ${fmt(item.area * item.pricePerSqm)}`)
+      })
     }
     if (addons.length > 0) {
       lines.push('')
@@ -1079,14 +1105,14 @@ export default function QuickOfferPage() {
 
     lines.push('')
     if (draft.discountPercent > 0) lines.push(`הנחה: ${draft.discountPercent}%`)
-    lines.push(`מחיר לפני מע"מ: ${fmt(calculation.totalBeforeVat)}`)
-    lines.push(`מע"מ (${draft.vatPercent}%): ${fmt(calculation.vatAmount)}`)
+    lines.push(`סה"כ לפני מע"מ: ${fmt(calculation.totalBeforeVat)}`)
+    lines.push(`מע"מ ${draft.vatPercent}%: ${fmt(calculation.vatAmount)}`)
     lines.push(`מחיר סופי כולל מע"מ: ${fmt(calculation.finalPrice)}`)
 
     const existingNotes = draft.options?.notes?.trim()
     if (existingNotes) {
       lines.push('')
-      lines.push('הערות נוספות:')
+      lines.push('הערות:')
       lines.push(existingNotes)
     }
 
