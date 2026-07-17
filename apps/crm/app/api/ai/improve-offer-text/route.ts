@@ -70,17 +70,20 @@ async function improveTextWithGemini(
 
   const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`
 
+  // Use systemInstruction for the system prompt (proper Gemini API format).
+  // Sending it as a 'user' turn followed immediately by another 'user' turn
+  // violates the alternating turn requirement and causes Gemini to ignore the
+  // system prompt, producing generic text instead of spec-driven output.
   const response = await fetch(apiUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
+      systemInstruction: {
+        parts: [{ text: systemPrompt }],
+      },
       contents: [
-        {
-          role: 'user',
-          parts: [{ text: systemPrompt }],
-        },
         {
           role: 'user',
           parts: [{ text: userMessage }],
