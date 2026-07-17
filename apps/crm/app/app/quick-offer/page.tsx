@@ -1016,14 +1016,12 @@ export default function QuickOfferPage() {
         lines.push(`סוג: ${typeName}`)
         const area = calculatePergolaArea(p.shape)
         if (p.shape.type === 'rectangle') {
-          // shape stores dimensions in cm; convert to meters for the AI
-          const wM = (p.shape.width / 100).toFixed(2)
-          const lM = (p.shape.length / 100).toFixed(2)
-          lines.push(`מידות: ${wM} × ${lM} מ' (${area.toFixed(2)} מ"ר)`)
+          // shape stores dimensions in meters (form shows ×100 for display as cm)
+          lines.push(`מידות: ${p.shape.width} × ${p.shape.length} מ' (${area.toFixed(2)} מ"ר)`)
         } else {
           lines.push(`צורה: ${p.shape.type} | שטח: ${area.toFixed(2)} מ"ר`)
         }
-        if (p.height) lines.push(`גובה: ${(p.height / 100).toFixed(2)} מ'`)
+        if (p.height) lines.push(`גובה: ${p.height} מ'`)
         if (p.pricePerSqm) lines.push(`מחיר לְמ"ר: ${fmt(p.pricePerSqm)}`)
         const lineTotal = area * p.pricePerSqm
         if (lineTotal > 0) lines.push(`סה"כ פרגולה${multi ? ` ${i + 1}` : ''}: ${fmt(lineTotal)}`)

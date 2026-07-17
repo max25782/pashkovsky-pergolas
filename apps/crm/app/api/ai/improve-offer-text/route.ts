@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { buildOfferImprovementSystemPrompt } from '@/lib/ai/offer-improvement-prompt'
+import { stripThoughtBlock } from '@/lib/ai-chat/response-sanitizer'
 import {
   parseOfferAiOutputLanguage,
   type OfferAiOutputLanguage,
@@ -99,9 +100,10 @@ async function improveTextWithGemini(
   }
   
   const data = await response.json()
-  const improvedText = data.candidates?.[0]?.content?.parts?.[0]?.text || text
-  
-  return improvedText.trim()
+  const raw: string = data.candidates?.[0]?.content?.parts?.[0]?.text || text
+  const improvedText = stripThoughtBlock(raw)
+
+  return improvedText
 }
 
 // Authentication helper
