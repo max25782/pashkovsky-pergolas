@@ -1060,5 +1060,88 @@
       "actions": "Actions",
       "noIntegrations": "No integrations found"
     }
+  },
+  "planEditor": {
+    "title": "Plan Editor",
+    "canvas": {
+      "closeContourTooltip": "click to close the contour"
+    },
+    "edgeEditor": {
+      "lengthLabel": "Length",
+      "angleLabel": "Angle"
+    },
+    "adjustPanel": {
+      "closeContourButton": "Close contour",
+      "closeContourNeedMoreSides": "At least 3 sides required",
+      "closeContourSelfIntersects": "The contour crosses itself — cannot close. Check the shape.",
+      "alignButton": "Align",
+      "notClosedHint": "Contour is not closed",
+      "notAdjustedHint": "Run alignment first",
+      "openSizesButton": "Edit sizes",
+      "to3DButton": "To 3D",
+      "acceptButton": "Accept",
+      "cancelButton": "Cancel",
+      "noGap": "The contour was already closed — nothing to distribute.",
+      "gapDistributed": "There was a {gap}mm discrepancy, now distributed across the sides.",
+      "singleCulprit": "Side {edge} moved by {residual}mm (average {avg}mm) — please re-check this measurement.",
+      "ambiguous": "A discrepancy could not be attributed to a single side — sides {edges} are mathematically indistinguishable. Re-measure both, or add a diagonal.",
+      "underDetermined": "{count} sides have no confirmed angle — the result is approximate; consider re-measuring them."
+    },
+    "sizesPanel": {
+      "title": "Sizes",
+      "lengthHeader": "Length",
+      "angleHeader": "Angle, °",
+      "wallHeader": "Wall",
+      "wallCheckboxTitle": "Attached to wall — no posts on this side, the beam mounts directly to the wall",
+      "emptyMessage": "No sides yet — start drawing the contour first.",
+      "closeButton": "Close",
+      "edgeLabel": "{from} → {to}"
+    },
+    "paramsPanel": {
+      "title": "Construction parameters",
+      "toggleOpenButton": "Construction parameters",
+      "toggleCloseButton": "Close",
+      "lamellaPatternLabel": "Lamella layout",
+      "lamellaPatternOption": "{widths} mm",
+      "lamellaGapLabel": "Lamella gap, mm",
+      "lamellaDirectionLabel": "Lamella direction, °",
+      "lamellaOnEdgeLabel": "On edge",
+      "lamellaOnEdgeHint": "Rotate the lamella cross-section 90°: the profile's thickness becomes the visible width, changing the pitch and piece count (recalculates the cut list).",
+      "visturModeLabel": "Vistur (factory-welded frame)",
+      "visturModeHint": "The pergola is welded into a finished frame at the factory: lamella length is reduced by the factory assembly clearances (default 30mm total, 15mm per end) — affects real cut-list lengths.",
+      "beamProfileLabel": "Perimeter beam profile",
+      "purlinProfileLabel": "Purlin profile",
+      "purlinProfileNone": "No purlins",
+      "postProfileLabel": "Post profile"
+    },
+    "preview3D": {
+      "title": "3D preview",
+      "building": "Building the 3D scene…",
+      "closeButton": "Close",
+      "roleCount": "{role}: {count}",
+      "role": {
+        "beam": "beams",
+        "post": "posts",
+        "lamella": "lamellas",
+        "purlin": "purlins",
+        "hanger": "hangers"
+      },
+      "ledStripLength": "LED strip: {meters} m",
+      "lamellaBreakdownLabel": "Lamella profiles:",
+      "profileCount": "{profile}: {count}",
+      "stockComparisonTitle": "Stock length comparison",
+      "stockLengthHeader": "Stock length",
+      "barsHeader": "Bars",
+      "wasteHeader": "Waste"
+    },
+    "drawing": {
+      "openButton": "Drawing",
+      "title": "Top plan — axial dimensions",
+      "sheetPlan": "Top plan",
+      "sheetLamellaLayout": "Lamella layout",
+      "sheetCellFrame": "Cell frame (shop)",
+      "sheetOrderCutting": "Order & cutting",
+      "nonOrthogonalWarning": "Non-orthogonal shape. Post placement and beam division are approximate. Verify manually before manufacturing."
+    }
   }
 }

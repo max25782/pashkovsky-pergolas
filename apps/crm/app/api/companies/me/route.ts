@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { fetchWithTimeout, DEFAULT_SUPABASE_TIMEOUT_MS } from '@/lib/supabase/fetch-with-timeout'
 
 export const dynamic = 'force-dynamic'
 
@@ -51,7 +52,13 @@ export async function GET() {
     const service = createServiceClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      { auth: { persistSession: false, autoRefreshToken: false } }
+      {
+        auth: { persistSession: false, autoRefreshToken: false },
+        // See lib/supabase/fetch-with-timeout.ts — the "401 in 1084724ms"
+        // (~18min) incident this route caused: bound every network call
+        // this client makes, not just auth.getUser() above.
+        global: { fetch: fetchWithTimeout(DEFAULT_SUPABASE_TIMEOUT_MS) },
+      }
     )
 
     let first = await service

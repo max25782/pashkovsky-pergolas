@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { NextIntlClientProvider } from 'next-intl'
 import { defaultCrmLanguageForCompany } from '@/lib/company-default-language'
+import { fetchWithTimeout, DEFAULT_SUPABASE_TIMEOUT_MS } from '@/lib/supabase/fetch-with-timeout'
 import heMessages from '../messages/he.json'
 import ruMessages from '../messages/ru.json'
 import enMessages from '../messages/en.json'
@@ -61,7 +62,11 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    fetch('/api/companies/me', { credentials: 'same-origin' })
+    // Bounded (see fetch-with-timeout.ts) — same "companies/me" call chain
+    // that hung ~18 minutes server-side on a stalled Supabase connection;
+    // a stalled connection on THIS leg would otherwise leave the language
+    // provider stuck on its initial 'en' default indefinitely too.
+    fetchWithTimeout(DEFAULT_SUPABASE_TIMEOUT_MS)('/api/companies/me', { credentials: 'same-origin' })
       .then((res) => {
         if (!res.ok) return defaultCrmLanguageForCompany(null)
         return res.json().then((data: { company_name?: string }) =>

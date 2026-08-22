@@ -1060,5 +1060,88 @@
       "actions": "Akcije",
       "noIntegrations": "Nije pronađena nijedna integracija"
     }
+  },
+  "planEditor": {
+    "title": "Uređivač plana",
+    "canvas": {
+      "closeContourTooltip": "klik zatvara konturu"
+    },
+    "edgeEditor": {
+      "lengthLabel": "Dužina",
+      "angleLabel": "Ugao"
+    },
+    "adjustPanel": {
+      "closeContourButton": "Zatvori konturu",
+      "closeContourNeedMoreSides": "Potrebne su najmanje 3 stranice",
+      "closeContourSelfIntersects": "Kontura seče samu sebe — zatvaranje nije moguće. Provalite oblik.",
+      "alignButton": "Izravnaj",
+      "notClosedHint": "Kontura nije zatvorena",
+      "notAdjustedHint": "Prvo izvršite izravnavanje",
+      "openSizesButton": "Izmeni dimenzije",
+      "to3DButton": "U 3D",
+      "acceptButton": "Prihvati",
+      "cancelButton": "Otkaži",
+      "noGap": "Kontura je već bila zatvorena — nema šta da se raspodeli.",
+      "gapDistributed": "Postojalo je odstupanje od {gap}mm, raspodeljeno po stranicama.",
+      "singleCulprit": "Stranica {edge} je pomerena za {residual}mm (prosek {avg}mm) — provalite ovo merenje.",
+      "ambiguous": "Odstupanje se ne može pripisati jednoj stranici — stranice {edges} su matematički nerazlučive. Ponovo izmerite obe ili dodajte dijagonalu.",
+      "underDetermined": "{count} stranica nema potvrđen ugao — rezultat je približan; preporučujemo dodatno merenje."
+    },
+    "sizesPanel": {
+      "title": "Dimenzije",
+      "lengthHeader": "Dužina",
+      "angleHeader": "Ugao, °",
+      "wallHeader": "Zid",
+      "wallCheckboxTitle": "Uz zid — na ovoj strani nema stubova, greda se montira direktno na zid",
+      "emptyMessage": "Još nema stranica — prvo nacrtajte konturu.",
+      "closeButton": "Zatvori",
+      "edgeLabel": "{from} → {to}"
+    },
+    "paramsPanel": {
+      "title": "Parametri konstrukcije",
+      "toggleOpenButton": "Parametri konstrukcije",
+      "toggleCloseButton": "Zatvori",
+      "lamellaPatternLabel": "Raspored lamela",
+      "lamellaPatternOption": "{widths} mm",
+      "lamellaGapLabel": "Razmak između lamela, mm",
+      "lamellaDirectionLabel": "Pravac lamela, °",
+      "lamellaOnEdgeLabel": "Na ivicu",
+      "lamellaOnEdgeHint": "Rotira presek lamele za 90°: debljina profila postaje vidljiva širina, menja se korak i broj komada (ponovo računa listu rezanja).",
+      "visturModeLabel": "Vistur (fabrički zavaren ram)",
+      "visturModeHint": "Pergola se sklapa u fabrici kao ceo zavareni ram: dužina lamele se umanjuje za fabričke montažne zazore (podrazumevano 30mm ukupno, 15mm po kraju) — utiče na stvarne dužine u listi rezanja.",
+      "beamProfileLabel": "Profil obodne grede",
+      "purlinProfileLabel": "Profil rožnjače",
+      "purlinProfileNone": "Bez rožnjača",
+      "postProfileLabel": "Profil stuba"
+    },
+    "preview3D": {
+      "title": "3D pregled",
+      "building": "Gradi se 3D scena…",
+      "closeButton": "Zatvori",
+      "roleCount": "{role}: {count}",
+      "role": {
+        "beam": "grede",
+        "post": "stubovi",
+        "lamella": "lamele",
+        "purlin": "rožnjače",
+        "hanger": "vešaljke"
+      },
+      "ledStripLength": "LED traka: {meters} m",
+      "lamellaBreakdownLabel": "Profili lamela:",
+      "profileCount": "{profile}: {count}",
+      "stockComparisonTitle": "Poređenje dužina profila",
+      "stockLengthHeader": "Dužina profila",
+      "barsHeader": "Šipke",
+      "wasteHeader": "Otpad"
+    },
+    "drawing": {
+      "openButton": "Crtež",
+      "title": "Osnova — osne mere",
+      "sheetPlan": "Osnova",
+      "sheetLamellaLayout": "Raspored lamela",
+      "sheetCellFrame": "Ćelija-ram (fabrika)",
+      "sheetOrderCutting": "Porudžbina i sečenje",
+      "nonOrthogonalWarning": "Oblik je neortogonalan. Raspored stubova i podela greda su približni. Provjerite ručno pre proizvodnje."
+    }
   }
 }

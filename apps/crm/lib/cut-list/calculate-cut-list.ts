@@ -55,7 +55,7 @@ function profileDimsCm(profileId: string | null | undefined): { a: number; b: nu
 // Public types
 // ---------------------------------------------------------------------------
 
-export interface CutPiece {
+export interface CutListItem {
   label: string
   lengthCm: number
   qty: number
@@ -63,7 +63,7 @@ export interface CutPiece {
 
 export interface StockBar {
   stockLengthCm: number
-  cuts: CutPiece[]
+  cuts: CutListItem[]
   usedCm: number
   wasteCm: number
 }
@@ -73,7 +73,7 @@ export interface ProfileGroup {
   profileId: string | null
   profileName: string
   stockLengthCm: number
-  pieces: CutPiece[]
+  pieces: CutListItem[]
   bars: StockBar[]
   totalBars: number
   totalUsedCm: number
@@ -117,10 +117,10 @@ export const KERF_CM = 0.5
  * plus a remainder, labelling each segment with a "(חלק N/M)" suffix.
  * Each segment boundary costs KERF_CM of material.
  */
-function expandToSegments(pieces: CutPiece[], stockLengthCm: number): CutPiece[] {
+function expandToSegments(pieces: CutListItem[], stockLengthCm: number): CutListItem[] {
   // Usable length per bar after reserving kerf for the first cut at bar start
   // We account for kerf inside packIntoBars instead — here just split by net length.
-  const result: CutPiece[] = []
+  const result: CutListItem[] = []
   for (const p of pieces) {
     for (let i = 0; i < p.qty; i++) {
       if (p.lengthCm <= stockLengthCm) {
@@ -153,7 +153,7 @@ function expandToSegments(pieces: CutPiece[], stockLengthCm: number): CutPiece[]
  * We conservatively add kerf to every cut for simplicity (slight overestimate
  * of 0.5 cm per bar, which is acceptable).
  */
-function packIntoBars(pieces: CutPiece[], stockLengthCm: number): StockBar[] {
+function packIntoBars(pieces: CutListItem[], stockLengthCm: number): StockBar[] {
   const cuts = expandToSegments(pieces, stockLengthCm)
 
   const bars: StockBar[] = []
@@ -178,7 +178,7 @@ function buildGroup(
   category: ProfileCategory,
   profileId: string | null,
   profileName: string,
-  pieces: CutPiece[],
+  pieces: CutListItem[],
 ): ProfileGroup | null {
   if (pieces.length === 0) return null
 
@@ -255,11 +255,11 @@ export function calculateCutList(offer: Offer): CutListResult {
   const depthIntermediatePosts = intermediatePostCount(depthCm) * depthBeamCount
   const totalPostQty = cornerPostQty + widthIntermediatePosts + depthIntermediatePosts
 
-  const postPieces: CutPiece[] = totalPostQty > 0
+  const postPieces: CutListItem[] = totalPostQty > 0
     ? [{ label: 'עמוד', lengthCm: heightCm, qty: totalPostQty }]
     : []
 
-  const hangerPieces: CutPiece[] =
+  const hangerPieces: CutListItem[] =
     hangingPergola && depthCm > 0
       ? [
           {
@@ -277,7 +277,7 @@ export function calculateCutList(offer: Offer): CutListResult {
   const beamSegments = widthCm > BEAM_MAX_SPAN ? Math.ceil(widthCm / BEAM_MAX_SPAN) : 1
   const intermediateBeamQty = beamSegments - 1
 
-  const beamPieces: CutPiece[] = []
+  const beamPieces: CutListItem[] = []
   if (widthCm > 0) beamPieces.push({ label: 'קורת מסגרת רוחב', lengthCm: widthCm, qty: 2 })
   if (depthCm > 0) beamPieces.push({ label: 'קורת מסגרת עומק', lengthCm: depthCm, qty: 2 })
 
@@ -300,7 +300,7 @@ export function calculateCutList(offer: Offer): CutListResult {
   const dividerLengthCm = Math.max(0, depthCm - dividerDeductionCm)
 
   // Intermediate (divider) beams — separate group if a different profile is chosen
-  const dividerPieces: CutPiece[] = []
+  const dividerPieces: CutListItem[] = []
   if (intermediateBeamQty > 0 && depthCm > 0) {
     const dividerTarget = cfg?.dividerProfileId ? dividerPieces : beamPieces
     const deductLabel = dividerDeductionCm > 0 ? ` (עומק ${depthCm} − ${dividerDeductionCm} ס״מ)` : ''
@@ -327,7 +327,7 @@ export function calculateCutList(offer: Offer): CutListResult {
     lamellaQty = Math.max(1, minCount)
   }
 
-  const lamellaPieces: CutPiece[] = lamellaQty > 0 && lamellaLengthCm > 0
+  const lamellaPieces: CutListItem[] = lamellaQty > 0 && lamellaLengthCm > 0
     ? [{ label: 'למילה', lengthCm: lamellaLengthCm, qty: lamellaQty }]
     : []
 

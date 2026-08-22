@@ -1060,5 +1060,88 @@
       "actions": "פעולות",
       "noIntegrations": "לא נמצאו אינטגרציות"
     }
+  },
+  "planEditor": {
+    "title": "עורך תוכנית",
+    "canvas": {
+      "closeContourTooltip": "קליק יסגור את המתאר"
+    },
+    "edgeEditor": {
+      "lengthLabel": "אורך",
+      "angleLabel": "זווית"
+    },
+    "adjustPanel": {
+      "closeContourButton": "סגור מתאר",
+      "closeContourNeedMoreSides": "נדרשות לפחות 3 צלעות",
+      "closeContourSelfIntersects": "המתאר חוצה את עצמו — לא ניתן לסגור. בדקו את הצורה.",
+      "alignButton": "יישר",
+      "notClosedHint": "המתאר אינו סגור",
+      "notAdjustedHint": "יש לבצע יישור קודם",
+      "openSizesButton": "ערוך מידות",
+      "to3DButton": "ל-3D",
+      "acceptButton": "אשר",
+      "cancelButton": "בטל",
+      "noGap": "המתאר היה סגור כבר — אין מה לפזר.",
+      "gapDistributed": "היה פער של {gap} מ״מ, שחולק בין הצלעות.",
+      "singleCulprit": "צלע {edge} זזה ב-{residual} מ״מ (בממוצע {avg} מ״מ) — כדאי לבדוק את המדידה הזו.",
+      "ambiguous": "לא ניתן לייחס את הפער לצלע אחת — הצלעות {edges} אינן ניתנות להבחנה מתמטית. מדדו שוב את שתיהן, או הוסיפו קו אלכסון.",
+      "underDetermined": "ל-{count} צלעות אין זווית מאושרת — התוצאה משוערת; מומלץ למדוד מחדש."
+    },
+    "sizesPanel": {
+      "title": "מידות",
+      "lengthHeader": "אורך",
+      "angleHeader": "זווית, °",
+      "wallHeader": "קיר",
+      "wallCheckboxTitle": "מחובר לקיר — אין עמודים בצלע הזו, הקורה מתחברת ישירות לקיר",
+      "emptyMessage": "אין עדיין צלעות — יש לצייר את המתאר קודם.",
+      "closeButton": "סגור",
+      "edgeLabel": "{from} → {to}"
+    },
+    "paramsPanel": {
+      "title": "פרמטרי מבנה",
+      "toggleOpenButton": "פרמטרי מבנה",
+      "toggleCloseButton": "סגור",
+      "lamellaPatternLabel": "סידור למלות",
+      "lamellaPatternOption": "{widths} מ״מ",
+      "lamellaGapLabel": "מרווח בין למלות, מ״מ",
+      "lamellaDirectionLabel": "כיוון למלות, °",
+      "lamellaOnEdgeLabel": "על הצד",
+      "lamellaOnEdgeHint": "סיבוב חתך הלמלה ב-90°: עומק הפרופיל הופך לרוחב הנראה, משנה את הצעד ואת מספר החלקים (מחשב מחדש את גיליון החיתוך).",
+      "visturModeLabel": "ויסטור (מסגרת מרותכת במפעל)",
+      "visturModeHint": "הפרגולה מורכבת במפעל כמסגרת שלמה: אורך הלמלה מתקצר בהתאם למרווחי הרכבה (ברירת מחדל 30 מ״מ סה״כ, 15 מ״מ מכל קצה) — משפיע על אורכי החיתוך האמיתיים.",
+      "beamProfileLabel": "פרופיל קורת היקף",
+      "purlinProfileLabel": "פרופיל מריש ביניים",
+      "purlinProfileNone": "בלי מריש ביניים",
+      "postProfileLabel": "פרופיל עמוד"
+    },
+    "preview3D": {
+      "title": "תצוגת 3D",
+      "building": "בונה סצנת 3D…",
+      "closeButton": "סגור",
+      "roleCount": "{role}: {count}",
+      "role": {
+        "beam": "קורות",
+        "post": "עמודים",
+        "lamella": "למלות",
+        "purlin": "מרישי ביניים",
+        "hanger": "תליות"
+      },
+      "ledStripLength": "רצועת LED: {meters} מ׳",
+      "lamellaBreakdownLabel": "פרופילי למלות:",
+      "profileCount": "{profile}: {count}",
+      "stockComparisonTitle": "השוואת אורכי חוטרים",
+      "stockLengthHeader": "אורך חוטר",
+      "barsHeader": "חוטרים",
+      "wasteHeader": "פסולת"
+    },
+    "drawing": {
+      "openButton": "שרטוט",
+      "title": "תוכנית מלמעלה — מידות צירים",
+      "sheetPlan": "תוכנית מלמעלה",
+      "sheetLamellaLayout": "פריסת למלות",
+      "sheetCellFrame": "תא-מסגרת (מפעל)",
+      "sheetOrderCutting": "הזמנה וחיתוך",
+      "nonOrthogonalWarning": "הצורה אינה אורתוגונלית. מיקום העמודים וחלוקת הקורות הם משוערים בלבד. יש לבדוק ידנית לפני הייצור."
+    }
   }
 }

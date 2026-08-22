@@ -1,5 +1,8 @@
 import type { Point2D, Vector2D, CutPiece, PergolaSpec, ProfileDimensions } from './types'
 import { isCCW } from './miter'
+import { computeSpanDivisionPointsMm } from './lamellaSpans'
+import { resolveLamellaPattern, patternMaxLamellaSpanMm, type LamellaPatternEntry } from './lamellaPattern'
+import { sanitizeContour } from './contourSanitize'
 
 const DEG = 180 / Math.PI
 const RAD = Math.PI / 180
@@ -192,6 +195,14 @@ export function longPointOffset(miterDeg: number, profileWidthMm: number): numbe
 
 // ── Main export ───────────────────────────────────────────────────────────────
 
+/** Cut data for one end of a lamella (sub-)piece — either the real contour cut or a straight purlin-crossing cut. */
+interface EndCut {
+  cutMiterDeg: number
+  cutHand: 'L' | 'R' | 'straight'
+}
+
+const STRAIGHT_END_CUT: EndCut = { cutMiterDeg: 0, cutHand: 'straight' }
+
 /**
  * Compute all lamella CutPieces for one pergola specification.
  *
@@ -203,9 +214,74 @@ export function longPointOffset(miterDeg: number, profileWidthMm: number): numbe
  *   • Three lengths: axis (centerline), long-point, short-point.
  *   • Per end: cutMiterDeg = plan angle, cutBevelDeg = lamellaAngleDeg.
  *
+ * PITCH (fixed bug — see prompt "ламели рендерятся сплошной плитой"):
+ *   For a single-profile (homogeneous) layout, pitch = visibleWidthMm +
+ *   spec.lamellaGapMm. The old code used lamellaGapMm directly as the
+ *   pitch, ignoring the profile's own width — any profile wider than the
+ *   configured "gap" produced heavily overlapping pieces that visually
+ *   merged into a solid slab. First scan line starts at tMin +
+ *   visibleWidthMm/2 (its near edge flush with the contour), not tMin +
+ *   gapMm/2 (which let the first/last lamella overhang past the contour
+ *   edge whenever gapMm < visibleWidthMm).
+ *
+ * MIXED-WIDTH PATTERN (spec.lamellaPattern — see prompt "смешанные ламели"):
+ *   The homogeneous case above is really just a pattern of length 1 — there
+ *   is only one code path (see resolveLamellaPattern in lamellaPattern.ts).
+ *   With N profiles cycling, the pitch between adjacent rows is NOT
+ *   constant: it depends on BOTH rows' visible widths,
+ *     spacing(i→i+1) = visibleWidth(i)/2 + lamellaGapMm + visibleWidth(i+1)/2
+ *   so a 70→40→20→70… cycle at gap=20 gives spacings 75, 50, 65, 75, 50,
+ *   65… (not a single number). The scan advances row-by-row (not by a fixed
+ *   pitch) starting at tMin + visibleWidth(pattern[0])/2, wrapping the
+ *   pattern index with modulo once it reaches the end.
+ *
+ * VISIBLE WIDTH (spec.lamellaOnEdge — a CORE parameter, not a render flag):
+ *   By default (lamellaOnEdge falsy) the lamella lies flat: profile.widthMm
+ *   is the horizontal face seen from below (the "40/gap/40/gap..." pattern),
+ *   profile.heightMm is the vertical thickness. lamellaOnEdge=true rotates
+ *   the cross-section 90° about the lamella's own length axis — the
+ *   profile's heightMm becomes the visible (horizontal, pitch-driving) width
+ *   and widthMm becomes vertical. This changes the SCAN PITCH, hence the
+ *   piece count and the cut list — it must trigger a full recompute, exactly
+ *   like changing the profile or the gap does. See lamellaOnEdge tests.
+ *   Applies uniformly to every profile in the pattern.
+ *
+ * SEGMENTATION (spec.purlinProfileId → interruptsLamella === true):
+ *   A purlin that physically interrupts the lamella run cuts it into one
+ *   piece per span between purlins, each inner end straight (miter=0), the
+ *   outer ends keeping the real contour cut. Division points come from
+ *   computeSpanDivisionPointsMm — the SAME points computePurlins uses to
+ *   place the purlins themselves, so a segment boundary always lines up
+ *   with an actual purlin, never a "phantom" cut. The span limit used is
+ *   patternMaxLamellaSpanMm — the SMALLEST maxLamellaSpanMm among all
+ *   profiles in the pattern (the thinnest slat governs), so computePurlins
+ *   (which resolves the same pattern) always agrees on the same crossings
+ *   regardless of which row a given purlin happens to fall under.
+ *   interruptsLamella=false (or no purlinProfileId / no profile in the
+ *   pattern defines maxLamellaSpanMm) keeps the pre-existing behaviour: one
+ *   continuous piece per scan-line segment.
+ *
+ * VISTUR ASSEMBLY CLEARANCE (spec.visturTolerances — see visturTolerances.ts
+ * and prompt "рама-вистур"): undefined ⇒ no change, every length below is
+ * exactly the raw scan-clip span, same as always. When set, each segment's
+ * end(s) that meet the FRAME'S OWN outer perimeter beam (isFirstSeg /
+ * isLastSeg below — i.e. a real contour cut, not a straight internal
+ * purlin-crossing cut) are retracted lamellaLengthReductionMm / 2 mm before
+ * lengthAxisMm/lengthLongMm/lengthShortMm and the piece's own start
+ * position are computed from them. An internal purlin-crossing segment
+ * boundary is NEVER retracted — that joint sits inside the same welded
+ * frame, not at its outer edge, so it needs no factory-assembly clearance.
+ * A single-segment row (no purlin interruption) therefore loses the FULL
+ * lamellaLengthReductionMm (both ends real); a 3-segment interrupted row
+ * loses lamellaLengthReductionMm/2 at each of its two OUTER segments only,
+ * its middle segment(s) unchanged — the total material removed across one
+ * full row is always exactly lamellaLengthReductionMm, regardless of how
+ * many purlins cut it up.
+ *
  * @param spec      PergolaSpec; contour auto-normalised to CCW winding.
  * @param profiles  Map from profileId → ProfileDimensions.
- *                  Must contain the spec's lamellaProfileId.
+ *                  Must contain every profile id in spec.lamellaPattern (or
+ *                  spec.lamellaProfileId when lamellaPattern is unset).
  */
 export function computeLamellas(
   spec: PergolaSpec,
@@ -213,15 +289,23 @@ export function computeLamellas(
 ): CutPiece[] {
   const {
     contour, lamellaDirectionDeg, lamellaGapMm,
-    lamellaAngleDeg, heightMm, color, lamellaProfileId,
+    lamellaAngleDeg, heightMm, color, purlinProfileId,
+    lamellaOnEdge,
   } = spec
 
-  const profile = profiles.get(lamellaProfileId)
-  if (!profile) {
-    throw new Error(`Profile "${lamellaProfileId}" not found in profiles map`)
-  }
+  // See PergolaSpec.lamellaPattern / MIXED-WIDTH PATTERN above — the
+  // homogeneous case (no lamellaPattern set) is a pattern of length 1
+  // resolved through the exact same call, not a separate branch.
+  const pattern = resolveLamellaPattern(spec, profiles)
 
-  const pts: Point2D[] = isCCW(contour) ? contour : [...contour].reverse()
+  const effectiveTiltDeg = lamellaOnEdge ? lamellaAngleDeg + 90 : lamellaAngleDeg
+
+  // Same entry-point sanitisation as computeFrame (see contourSanitize.ts) —
+  // computeLamellas is called independently of computeFrame (both read
+  // spec.contour directly, see e.g. apps/crm's plan-editor debug page), so
+  // it needs its own defence against a raw, editor-drawn contour.
+  const cleanContour = sanitizeContour(contour)
+  const pts: Point2D[] = isCCW(cleanContour) ? cleanContour : [...cleanContour].reverse()
 
   const θ    = lamellaDirectionDeg * RAD
   const dir: Vector2D  = [Math.cos(θ), Math.sin(θ)]
@@ -231,60 +315,119 @@ export function computeLamellas(
   const tMin = Math.min(...projections)
   const tMax = Math.max(...projections)
 
+  // Global purlin crossing points, in the same absolute along-`dir` frame as
+  // ScanHit.s below — undefined purlinProfileId / no interruptsLamella / no
+  // profile in the pattern defining maxLamellaSpanMm ⇒ [] ⇒ every row stays
+  // one piece (pre-existing behaviour, exercised by all the older fixtures).
+  const purlinProfile = purlinProfileId ? profiles.get(purlinProfileId) : undefined
+  const divisionPointsMm =
+    purlinProfile?.interruptsLamella === true
+      ? computeSpanDivisionPointsMm(
+          Math.min(...pts.map(p => dot2(p, dir))),
+          Math.max(...pts.map(p => dot2(p, dir))),
+          patternMaxLamellaSpanMm(pattern),
+        )
+      : []
+
+  // Row-by-row scan positions: NOT a fixed pitch — see MIXED-WIDTH PATTERN
+  // above. `entry` is the pattern slot for THIS row; spacing to the NEXT
+  // row depends on both this row's and the next row's visible width.
+  const rows: Array<{ scanT: number; entry: LamellaPatternEntry }> = []
+  {
+    let scanT = tMin + pattern[0].visibleWidthMm * 0.5
+    let i = 0
+    while (scanT < tMax) {
+      const entry = pattern[i % pattern.length]
+      rows.push({ scanT, entry })
+      const next = pattern[(i + 1) % pattern.length]
+      scanT += entry.visibleWidthMm * 0.5 + lamellaGapMm + next.visibleWidthMm * 0.5
+      i++
+    }
+  }
+
+  // undefined ⇒ 0 (standard on-site assembly, no retraction at all) — see
+  // VISTUR ASSEMBLY CLEARANCE above.
+  const lengthReductionMm = spec.visturTolerances?.lamellaLengthReductionMm ?? 0
+  const endRetractMm = lengthReductionMm / 2
+
   const pieces: CutPiece[] = []
   let id = 0
 
-  for (let scanT = tMin + lamellaGapMm * 0.5; scanT < tMax; scanT += lamellaGapMm) {
+  for (const { scanT, entry } of rows) {
+    const { profileId: lamellaProfileId, visibleWidthMm } = entry
     const anchor: Point2D = [perp[0] * scanT, perp[1] * scanT]
     const hits = scanLineClip(dir, perp, scanT, anchor, pts)
 
     for (let k = 0; k + 1 < hits.length; k += 2) {
       const h0 = hits[k]
       const h1 = hits[k + 1]
-      const lengthAxisMm = h1.s - h0.s
-      if (lengthAxisMm < MIN_SEGMENT_MM) continue
+      if (h1.s - h0.s < MIN_SEGMENT_MM) continue
 
-      const startPt: Point2D = [
-        anchor[0] + h0.s * dir[0],
-        anchor[1] + h0.s * dir[1],
-      ]
+      const rowCrossings = divisionPointsMm.filter(t => t > h0.s + MIN_SEGMENT_MM && t < h1.s - MIN_SEGMENT_MM)
+      const boundsS = [h0.s, ...rowCrossings, h1.s]
 
-      const { cutMiterDeg: cms, cutHand: chs } = cutAtEdge(dir, pts, h0.edgeIndex)
-      const { cutMiterDeg: cme, cutHand: che } = cutAtEdge(dir, pts, h1.edgeIndex)
+      const startCut: EndCut = cutAtEdge(dir, pts, h0.edgeIndex)
+      const endCut: EndCut = cutAtEdge(dir, pts, h1.edgeIndex)
 
-      // The bevel is always the lamella's tilt angle, regardless of which edge
-      const cbs = lamellaAngleDeg
-      const cbe = lamellaAngleDeg
+      for (let seg = 0; seg + 1 < boundsS.length; seg++) {
+        const isFirstSeg = seg === 0
+        const isLastSeg = seg === boundsS.length - 2
 
-      // Three lengths: only the miter contributes to the length axis measurement
-      const δStart = longPointOffset(cms, profile.widthMm)
-      const δEnd   = longPointOffset(cme, profile.widthMm)
-      const lengthLongMm  = lengthAxisMm + δStart + δEnd
-      const lengthShortMm = lengthAxisMm - δStart - δEnd
+        // Retract ONLY the end(s) that are a real contour cut (the frame's
+        // OWN outer perimeter beam) — an internal purlin-crossing straight
+        // cut (neither isFirstSeg nor isLastSeg boundary) is left exactly
+        // where the purlin division point says, see VISTUR ASSEMBLY
+        // CLEARANCE above.
+        const sStart = boundsS[seg] + (isFirstSeg ? endRetractMm : 0)
+        const sEnd = boundsS[seg + 1] - (isLastSeg ? endRetractMm : 0)
+        const lengthAxisMm = sEnd - sStart
+        if (lengthAxisMm < MIN_SEGMENT_MM) continue
 
-      pieces.push({
-        id:       `lamella-${id++}`,
-        role:     'lamella',
-        profileId: lamellaProfileId,
+        const cutStart: EndCut = isFirstSeg ? startCut : STRAIGHT_END_CUT
+        const cutEnd: EndCut = isLastSeg ? endCut : STRAIGHT_END_CUT
 
-        lengthAxisMm,
-        lengthLongMm,
-        lengthShortMm,
+        const startPt: Point2D = [
+          anchor[0] + sStart * dir[0],
+          anchor[1] + sStart * dir[1],
+        ]
 
-        cutMiterStartDeg: cms,
-        cutBevelStartDeg: cbs,
-        cutHandStart:     chs,
+        // The bevel is always the lamella's effective tilt (open/close angle,
+        // plus the +90° from lamellaOnEdge if set), regardless of which edge
+        const cbs = effectiveTiltDeg
+        const cbe = effectiveTiltDeg
 
-        cutMiterEndDeg: cme,
-        cutBevelEndDeg: cbe,
-        cutHandEnd:     che,
+        // Three lengths: only the miter contributes to the length axis
+        // measurement, using the VISIBLE (in-plan) width — see lamellaOnEdge.
+        const δStart = longPointOffset(cutStart.cutMiterDeg, visibleWidthMm)
+        const δEnd   = longPointOffset(cutEnd.cutMiterDeg, visibleWidthMm)
+        const lengthLongMm  = lengthAxisMm + δStart + δEnd
+        const lengthShortMm = lengthAxisMm - δStart - δEnd
 
-        // plan (x, y) → world (x, heightMm, y);  Y is up in Three.js
-        position: [startPt[0], heightMm, startPt[1]],
-        // rotation[0]: lamella tilt; rotation[1]: azimuth (−θ: Three.js +Y goes X→−Z)
-        rotation: [lamellaAngleDeg * RAD, -θ, 0],
-        color,
-      })
+        pieces.push({
+          id:       `lamella-${id++}`,
+          role:     'lamella',
+          profileId: lamellaProfileId,
+
+          lengthAxisMm,
+          lengthLongMm,
+          lengthShortMm,
+
+          cutMiterStartDeg: cutStart.cutMiterDeg,
+          cutBevelStartDeg: cbs,
+          cutHandStart:     cutStart.cutHand,
+
+          cutMiterEndDeg: cutEnd.cutMiterDeg,
+          cutBevelEndDeg: cbe,
+          cutHandEnd:     cutEnd.cutHand,
+
+          // plan (x, y) → world (x, heightMm, y);  Y is up in Three.js
+          position: [startPt[0], heightMm, startPt[1]],
+          // rotation[0]: effective tilt (lamellaAngleDeg, +90° if onEdge);
+          // rotation[1]: azimuth (−θ: Three.js +Y goes X→−Z)
+          rotation: [effectiveTiltDeg * RAD, -θ, 0],
+          color,
+        })
+      }
     }
   }
 

@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
+import { fetchWithTimeout, DEFAULT_SUPABASE_TIMEOUT_MS } from './fetch-with-timeout'
 
 /**
  * Create Supabase client for Server Components
@@ -34,6 +35,12 @@ export function createClient() {
           // 3. Using Route Handlers for operations that require token refresh
         },
       },
+      // See fetch-with-timeout.ts — the "GET /api/companies/me 401 in
+      // 1084724ms" incident: an unbounded getUser() call can sit on a
+      // stalled connection for ~18 minutes before the OS gives up. Every
+      // server-side auth.getUser()/getSession() call goes through this
+      // factory, so this one line covers all of them.
+      global: { fetch: fetchWithTimeout(DEFAULT_SUPABASE_TIMEOUT_MS) },
     }
   )
 }

@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ['framer-motion', '@pashkovsky/pergola-configurator'],
+  transpilePackages: ['framer-motion', '@pashkovsky/pergola-configurator', '@pashkovsky/plan-editor'],
   experimental: {
     serverActions: {
       bodySizeLimit: '25mb', // Gallery upload allows up to 10MB per file; 25MB for multiple files

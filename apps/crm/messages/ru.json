@@ -1060,5 +1060,88 @@
       "actions": "Действия",
       "noIntegrations": "Интеграции не найдены"
     }
+  },
+  "planEditor": {
+    "title": "Редактор плана",
+    "canvas": {
+      "closeContourTooltip": "клик замкнёт контур"
+    },
+    "edgeEditor": {
+      "lengthLabel": "Длина",
+      "angleLabel": "Угол"
+    },
+    "adjustPanel": {
+      "closeContourButton": "Замкнуть контур",
+      "closeContourNeedMoreSides": "Нужно минимум 3 стороны",
+      "closeContourSelfIntersects": "Контур пересекает сам себя — замыкание невозможно. Проверьте форму.",
+      "alignButton": "Выровнять",
+      "notClosedHint": "Контур не замкнут",
+      "notAdjustedHint": "Сначала выполните выравнивание",
+      "openSizesButton": "Изменить размеры",
+      "to3DButton": "В 3D",
+      "acceptButton": "Принять",
+      "cancelButton": "Отменить",
+      "noGap": "Контур и так был замкнут — распределять нечего.",
+      "gapDistributed": "Была невязка {gap}мм, распределена по сторонам.",
+      "singleCulprit": "Сторону {edge} подвинуло на {residual}мм при среднем {avg}мм — проверьте этот замер.",
+      "ambiguous": "Невязку невозможно приписать одной стороне — стороны {edges} математически неразличимы. Перемерьте обе или задайте диагональ.",
+      "underDetermined": "У {count} сторон угол не подтверждён — результат приблизителен, рекомендуем домерить."
+    },
+    "sizesPanel": {
+      "title": "Размеры",
+      "lengthHeader": "Длина",
+      "angleHeader": "Угол, °",
+      "wallHeader": "Стена",
+      "wallCheckboxTitle": "К стене — стойки на этой стороне не ставятся, балка крепится прямо к стене",
+      "emptyMessage": "Сторон пока нет — сначала нарисуйте контур.",
+      "closeButton": "Закрыть",
+      "edgeLabel": "{from} → {to}"
+    },
+    "paramsPanel": {
+      "title": "Параметры конструктива",
+      "toggleOpenButton": "Параметры конструктива",
+      "toggleCloseButton": "Закрыть",
+      "lamellaPatternLabel": "Раскладка ламелей",
+      "lamellaPatternOption": "{widths} мм",
+      "lamellaGapLabel": "Зазор между ламелями, мм",
+      "lamellaDirectionLabel": "Направление ламелей, °",
+      "lamellaOnEdgeLabel": "На ребро",
+      "lamellaOnEdgeHint": "Повернуть сечение ламели на 90°: толщина профиля становится видимой шириной, меняется шаг и число деталей (пересчитывает лист раскроя).",
+      "visturModeLabel": "Вистур (заводская рама)",
+      "visturModeHint": "Пергола собирается на заводе целой рамой: длина ламели уменьшается на заводские зазоры сборки (по умолчанию 30мм суммарно, 15мм с каждого конца) — влияет на реальные длины в раскрое.",
+      "beamProfileLabel": "Профиль балки периметра",
+      "purlinProfileLabel": "Профиль прогона",
+      "purlinProfileNone": "Без прогонов",
+      "postProfileLabel": "Профиль стойки"
+    },
+    "preview3D": {
+      "title": "Просмотр 3D",
+      "building": "Строим 3D-сцену…",
+      "closeButton": "Закрыть",
+      "roleCount": "{role}: {count}",
+      "role": {
+        "beam": "балки",
+        "post": "стойки",
+        "lamella": "ламели",
+        "purlin": "прогоны",
+        "hanger": "подвесы"
+      },
+      "ledStripLength": "LED-лента: {meters} м",
+      "lamellaBreakdownLabel": "Профили ламелей:",
+      "profileCount": "{profile}: {count}",
+      "stockComparisonTitle": "Сравнение длин хлыстов",
+      "stockLengthHeader": "Длина хлыста",
+      "barsHeader": "Хлыстов",
+      "wasteHeader": "Отход"
+    },
+    "drawing": {
+      "openButton": "Чертёж",
+      "title": "План сверху — осевые размеры",
+      "sheetPlan": "План сверху",
+      "sheetLamellaLayout": "Раскладка ламелей",
+      "sheetCellFrame": "Ячейка-рама (цех)",
+      "sheetOrderCutting": "Заказ и порезка",
+      "nonOrthogonalWarning": "Форма неортогональная. Расстановка стоек и деление балок — приблизительные. Проверьте вручную перед изготовлением."
+    }
   }
 }
