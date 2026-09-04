@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
-import { requirePermission } from '@/lib/middleware/auth'
+import { requirePermissionAsync } from '@/lib/middleware/auth'
+import { isValidRole } from '@/lib/permissions'
 import { logResourceEvent } from '@/lib/audit/logger'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
@@ -19,17 +20,21 @@ export async function GET(req: NextRequest) {
   const authCheck = await requireAuthAsync(req)
   if (!authCheck.authorized) return authCheck.error
 
-  const permissionCheck = requirePermission(req, 'users:view' as any)
+  const permissionCheck = await requirePermissionAsync(req, 'users:view')
   if (!permissionCheck.authorized) return permissionCheck.error
 
   if (!supabase) return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
 
   try {
     const { searchParams } = new URL(req.url)
-    const companyId = searchParams.get('company_id')
+    const companyId = searchParams.get('company_id') ?? permissionCheck.companyId
 
     if (!companyId) {
       return NextResponse.json({ error: 'company_id is required' }, { status: 400 })
+    }
+
+    if (permissionCheck.companyId && permissionCheck.companyId !== companyId) {
+      return NextResponse.json({ error: 'Forbidden: wrong company' }, { status: 403 })
     }
 
     // Get company memberships
@@ -95,7 +100,7 @@ export async function PATCH(req: NextRequest) {
   const authCheck = await requireAuthAsync(req)
   if (!authCheck.authorized) return authCheck.error
 
-  const permissionCheck = requirePermission(req, 'users:edit_roles' as any)
+  const permissionCheck = await requirePermissionAsync(req, 'users:edit_roles')
   if (!permissionCheck.authorized) return permissionCheck.error
 
   if (!supabase) return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
@@ -109,8 +114,12 @@ export async function PATCH(req: NextRequest) {
     }
 
     // Validate role
-    if (!['owner', 'admin', 'manager', 'viewer'].includes(role)) {
+    if (!isValidRole(role)) {
       return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
+    }
+
+    if (permissionCheck.companyId && permissionCheck.companyId !== companyId) {
+      return NextResponse.json({ error: 'Forbidden: wrong company' }, { status: 403 })
     }
 
     // Update role
@@ -146,7 +155,7 @@ export async function DELETE(req: NextRequest) {
   const authCheck = await requireAuthAsync(req)
   if (!authCheck.authorized) return authCheck.error
 
-  const permissionCheck = requirePermission(req, 'users:remove' as any)
+  const permissionCheck = await requirePermissionAsync(req, 'users:remove')
   if (!permissionCheck.authorized) return permissionCheck.error
 
   if (!supabase) return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
@@ -158,6 +167,10 @@ export async function DELETE(req: NextRequest) {
 
     if (!userId || !companyId) {
       return NextResponse.json({ error: 'user_id and company_id are required' }, { status: 400 })
+    }
+
+    if (permissionCheck.companyId && permissionCheck.companyId !== companyId) {
+      return NextResponse.json({ error: 'Forbidden: wrong company' }, { status: 403 })
     }
 
     // Don't allow removing the last owner

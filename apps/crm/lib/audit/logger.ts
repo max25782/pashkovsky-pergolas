@@ -5,7 +5,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest } from 'next/server'
-import { getUserContext } from '@/lib/middleware/company-context'
+import { getUserContextAsync } from '@/lib/middleware/company-context'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -37,7 +37,7 @@ export async function logAuditEvent(
   }
 
   try {
-    const userContext = getUserContext(req)
+    const userContext = await getUserContextAsync(req)
     const ipAddress = req.headers.get('x-forwarded-for') || 
                      req.headers.get('x-real-ip') || 
                      'unknown'

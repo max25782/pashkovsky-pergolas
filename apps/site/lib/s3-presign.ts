@@ -2,10 +2,11 @@ import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 
 /**
- * Resolve bucket: CRM-style private var first, then public site gallery var.
+ * Same bucket the rest of the public site uses for images.
+ * Prefer NEXT_PUBLIC_* so catalog does not list a different private bucket.
  */
 export function getBucket(): string | undefined {
-  return process.env.AWS_S3_BUCKET_NAME || process.env.NEXT_PUBLIC_AWS_S3_BUCKET_NAME
+  return process.env.NEXT_PUBLIC_AWS_S3_BUCKET_NAME || process.env.AWS_S3_BUCKET_NAME
 }
 
 function getRegion(): string {

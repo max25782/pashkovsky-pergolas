@@ -32,6 +32,11 @@ export function verifyToken(token: string): JWTPayload | null {
     const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload
     return decoded
   } catch (error) {
+    // Supabase Auth tokens are JWTs but signed with Supabase secret, not JWT_SECRET
+    const peek = jwt.decode(token) as Record<string, unknown> | null
+    if (peek?.sub !== undefined && peek.userId === undefined) {
+      return null
+    }
     console.error('[JWT] Verification failed:', error)
     return null
   }

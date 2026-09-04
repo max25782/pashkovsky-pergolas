@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getCompanyId, getCompanyIdAsync } from '@/lib/middleware/company-context'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
+import { requirePermissionAsync } from '@/lib/middleware/auth'
 
 function env(name: string): string {
   const v = process.env[name]
@@ -17,9 +18,11 @@ const supabase = SUPABASE_URL && SERVICE_KEY
   : undefined
 
 export async function GET(req: NextRequest) {
-  // Check authentication (JWT or admin token)
   const authCheck = await requireAuthAsync(req)
   if (!authCheck.authorized) return authCheck.error
+
+  const permissionCheck = await requirePermissionAsync(req, 'leads:view')
+  if (!permissionCheck.authorized) return permissionCheck.error
   
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
   
@@ -72,9 +75,11 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  // Check authentication (JWT or admin token)
   const authCheck = await requireAuthAsync(req)
   if (!authCheck.authorized) return authCheck.error
+
+  const permissionCheck = await requirePermissionAsync(req, 'leads:edit')
+  if (!permissionCheck.authorized) return permissionCheck.error
   
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
   
@@ -168,9 +173,11 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  // Check authentication (JWT or admin token)
   const authCheck = await requireAuthAsync(req)
   if (!authCheck.authorized) return authCheck.error
+
+  const permissionCheck = await requirePermissionAsync(req, 'leads:delete')
+  if (!permissionCheck.authorized) return permissionCheck.error
   
   if (!supabase) return new Response('Missing Supabase env', { status: 500 })
   

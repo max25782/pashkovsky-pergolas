@@ -3,9 +3,8 @@
 import { useState, useEffect } from 'react'
 import { authFetch } from '@/lib/api/auth-fetch'
 import { useToast } from '@/components/ui/toast'
-import { createClient } from '@/lib/supabase/client'
 
-type InviteRole = 'admin' | 'manager' | 'viewer'
+type InviteRole = 'admin' | 'manager' | 'viewer' | 'salesperson'
 
 interface User {
   id: string
@@ -30,16 +29,19 @@ export default function AdminUsersPage() {
 
   async function initializeAndLoadUsers() {
     try {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      const meRes = await authFetch('/api/companies/me')
+      if (!meRes.ok) {
+        setLoading(false)
+        return
+      }
+      const me = await meRes.json() as { company_id?: string; role?: string }
+      if (!me.company_id) {
+        setLoading(false)
+        return
+      }
 
-      const storedCompanyId = localStorage.getItem('company_id')
-      const activeCompanyId = storedCompanyId ?? (user.user_metadata?.company_id as string | undefined)
-      if (!activeCompanyId) return
-
-      setCompanyId(activeCompanyId)
-      await loadUsers(activeCompanyId)
+      setCompanyId(me.company_id)
+      await loadUsers(me.company_id)
     } catch (error) {
       console.error('[Users] Initialization error:', error)
       setLoading(false)
@@ -135,6 +137,7 @@ export default function AdminUsersPage() {
             onChange={(e) => setInviteRole(e.target.value as InviteRole)}
             className="px-4 py-2 border rounded-lg"
           >
+            <option value="salesperson">Salesperson (leads &amp; offers)</option>
             <option value="viewer">Viewer</option>
             <option value="manager">Manager</option>
             <option value="admin">Admin</option>
@@ -173,6 +176,7 @@ export default function AdminUsersPage() {
                     onChange={(e) => handleRoleChange(user.id, e.target.value)}
                     className="px-3 py-1 border rounded text-sm"
                   >
+                    <option value="salesperson">Salesperson</option>
                     <option value="viewer">Viewer</option>
                     <option value="manager">Manager</option>
                     <option value="admin">Admin</option>

@@ -123,3 +123,36 @@ export async function sendCalendarInvite(appt: AppointmentData): Promise<void> {
   })
 
 }
+
+/** Notify the owner that a client asked for a phone callback (no calendar event). */
+export async function sendCallbackRequest(appt: AppointmentData): Promise<void> {
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.warn('[CalendarInvite] Email not configured — skipping callback request')
+    return
+  }
+
+  const subject = `📞 בקשת חזרה טלפונית${appt.clientName ? ` - ${appt.clientName}` : ''}${appt.clientPhone ? ` | ${appt.clientPhone}` : ''}`
+
+  const html = `
+    <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 500px;">
+      <h2 style="color: #1d4ed8;">📞 לקוח ביקש שיחה</h2>
+      <table style="border-collapse: collapse; width: 100%;">
+        <tr><td style="padding: 8px; font-weight: bold; color: #374151;">לקוח</td><td style="padding: 8px;">${appt.clientName ?? '—'}</td></tr>
+        <tr style="background:#f9fafb"><td style="padding: 8px; font-weight: bold; color: #374151;">טלפון</td><td style="padding: 8px;">${appt.clientPhone ? `<a href="tel:${appt.clientPhone}">${appt.clientPhone}</a>` : '—'}</td></tr>
+        <tr><td style="padding: 8px; font-weight: bold; color: #374151;">עיר</td><td style="padding: 8px;">${appt.city ?? '—'}</td></tr>
+        ${appt.notes ? `<tr style="background:#f9fafb"><td style="padding: 8px; font-weight: bold; color: #374151;">פרטים</td><td style="padding: 8px;">${appt.notes}</td></tr>` : ''}
+      </table>
+      <p style="margin-top: 16px; color: #6b7280; font-size: 13px;">
+        הבקשה הגיעה מ-AI Chat. הלקוח מחכה לחזרה טלפונית — אין אירוע ביומן.
+      </p>
+    </div>
+  `
+
+  await emailClient.sendMail({
+    from: process.env.EMAIL_FROM ?? `"${COMPANY_NAME}" <${OWNER_EMAIL}>`,
+    to: OWNER_EMAIL,
+    subject,
+    html,
+    text: `בקשת חזרה טלפונית\nלקוח: ${appt.clientName}\nטלפון: ${appt.clientPhone}\nעיר: ${appt.city}`,
+  })
+}

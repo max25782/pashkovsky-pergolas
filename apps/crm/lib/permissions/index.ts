@@ -3,7 +3,7 @@
  * Phase 2: Role-based access control
  */
 
-export type Role = 'owner' | 'admin' | 'manager' | 'viewer'
+export type Role = 'owner' | 'admin' | 'manager' | 'viewer' | 'salesperson'
 
 export type Permission =
   // Deals
@@ -16,10 +16,16 @@ export type Permission =
   | 'leads:create'
   | 'leads:edit'
   | 'leads:delete'
+  // Offers
+  | 'offers:view'
+  | 'offers:create'
+  | 'offers:edit'
+  | 'offers:delete'
   // Financial
   | 'finance:view'
   | 'finance:edit'
   // Users
+  | 'users:view'
   | 'users:invite'
   | 'users:remove'
   | 'users:edit_roles'
@@ -49,16 +55,23 @@ export const PERMISSIONS: Record<Permission, Role[]> = {
   'deals:delete': ['owner', 'admin'],
   
   // Leads
-  'leads:view': ['owner', 'admin', 'manager', 'viewer'],
-  'leads:create': ['owner', 'admin', 'manager'],
-  'leads:edit': ['owner', 'admin', 'manager'],
+  'leads:view': ['owner', 'admin', 'manager', 'viewer', 'salesperson'],
+  'leads:create': ['owner', 'admin', 'manager', 'salesperson'],
+  'leads:edit': ['owner', 'admin', 'manager', 'salesperson'],
   'leads:delete': ['owner', 'admin'],
+  
+  // Offers
+  'offers:view': ['owner', 'admin', 'manager', 'viewer', 'salesperson'],
+  'offers:create': ['owner', 'admin', 'manager', 'salesperson'],
+  'offers:edit': ['owner', 'admin', 'manager', 'salesperson'],
+  'offers:delete': ['owner', 'admin'],
   
   // Financial
   'finance:view': ['owner', 'admin'],
   'finance:edit': ['owner', 'admin'],
   
   // Users
+  'users:view': ['owner', 'admin'],
   'users:invite': ['owner', 'admin'],
   'users:remove': ['owner', 'admin'],
   'users:edit_roles': ['owner'],
@@ -121,6 +134,7 @@ export const ROLE_HIERARCHY: Record<Role, number> = {
   admin: 3,
   manager: 2,
   viewer: 1,
+  salesperson: 1,
 }
 
 /**
@@ -134,7 +148,25 @@ export function hasHigherOrEqualRank(roleA: Role, roleB: Role): boolean {
  * Validate role string
  */
 export function isValidRole(role: string): role is Role {
-  return ['owner', 'admin', 'manager', 'viewer'].includes(role)
+  return ['owner', 'admin', 'manager', 'viewer', 'salesperson'].includes(role)
+}
+
+/** Nav paths a role may open (subscription plan gating is applied separately). */
+export function canAccessNavPath(role: Role, path: string): boolean {
+  if (role === 'salesperson') {
+    return (
+      path === '/app/admin' ||
+      path.startsWith('/app/admin/leads') ||
+      path.startsWith('/app/quick-offer')
+    )
+  }
+  if (path.startsWith('/app/admin/users')) {
+    return can(role, 'users:view')
+  }
+  if (path.startsWith('/app/admin/settings')) {
+    return can(role, 'settings:view')
+  }
+  return true
 }
 
 

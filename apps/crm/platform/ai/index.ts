@@ -62,6 +62,7 @@ export {
 // Appointment detection
 export {
   isAppointmentConfirmation,
+  isCallbackConfirmation,
   extractAppointment,
   type AppointmentData,
 } from '@/lib/ai-chat/appointment-detector'
@@ -76,4 +77,4 @@ export {
 export { fetchImagesByContext } from '@/lib/ai-chat/image-fetcher'
 
 // Calendar invite generation
-export { generateICS, sendCalendarInvite } from '@/lib/ai-chat/calendar-invite'
+export { generateICS, sendCalendarInvite, sendCallbackRequest } from '@/lib/ai-chat/calendar-invite'

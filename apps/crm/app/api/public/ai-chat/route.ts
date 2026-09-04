@@ -11,8 +11,8 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { SYSTEM_PROMPT, AI_CONFIG, fewShotExamples } from '@/lib/ai-chat/config'
-import { isAppointmentConfirmation, extractAppointment } from '@/lib/ai-chat/appointment-detector'
-import { sendCalendarInvite } from '@/lib/ai-chat/calendar-invite'
+import { isAppointmentConfirmation, isCallbackConfirmation, extractAppointment } from '@/lib/ai-chat/appointment-detector'
+import { sendCalendarInvite, sendCallbackRequest } from '@/lib/ai-chat/calendar-invite'
 import { fetchImagesByContext } from '@/lib/ai-chat/image-fetcher'
 import { stripThoughtBlock } from '@/lib/ai-chat/response-sanitizer'
 
@@ -364,6 +364,11 @@ export async function POST(req: NextRequest) {
             extractAppointment(allMessages)
               .then((appt) => { if (appt) return sendCalendarInvite(appt) })
               .catch((e) => console.error('[Public AI Chat] Calendar invite failed:', e))
+          } else if (isCallbackConfirmation(fullResponse)) {
+            const allMessages = [...history, { role: 'assistant', content: fullResponse }]
+            extractAppointment(allMessages)
+              .then((appt) => { if (appt?.clientPhone) return sendCallbackRequest(appt) })
+              .catch((e) => console.error('[Public AI Chat] Callback request failed:', e))
           }
 
           controller.enqueue(

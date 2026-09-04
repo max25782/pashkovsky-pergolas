@@ -35,6 +35,17 @@ export function isAppointmentConfirmation(responseText: string): boolean {
   return CONFIRMATION_PHRASES.some((phrase) => lower.includes(phrase.toLowerCase()))
 }
 
+// Only the confirmation AFTER a number is taken — not the "ask for a number" line
+const CALLBACK_PHRASES = [
+  'נציג יחזור אליך טלפונית',
+  'נחזור אליך בטלפון',
+]
+
+/** Returns true when the AI response confirms a phone callback (not a site visit) */
+export function isCallbackConfirmation(responseText: string): boolean {
+  return CALLBACK_PHRASES.some((phrase) => responseText.includes(phrase))
+}
+
 /**
  * Call Gemini to extract structured appointment info from the full conversation.
  * Returns null if extraction fails or data is too incomplete to be useful.

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
-import { requirePermission } from '@/lib/middleware/auth'
+import { requirePermissionAsync } from '@/lib/middleware/auth'
+import { isValidRole } from '@/lib/permissions'
 import { generateToken, hashToken, getExpirationTime } from '@/lib/auth/tokens'
 import { sendEmail } from '@/lib/email'
 import { logResourceEvent } from '@/lib/audit/logger'
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest) {
   const authCheck = await requireAuthAsync(req)
   if (!authCheck.authorized) return authCheck.error
 
-  const permissionCheck = requirePermission(req, 'users:invite' as any)
+  const permissionCheck = await requirePermissionAsync(req, 'users:invite')
   if (!permissionCheck.authorized) return permissionCheck.error
 
   if (!supabase) return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
@@ -35,9 +36,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'email and companyId are required' }, { status: 400 })
     }
 
-    // Validate role
-    if (!['admin', 'manager', 'viewer', 'owner'].includes(role)) {
+    // Validate role (owner cannot be invited via UI)
+    if (!isValidRole(role) || role === 'owner') {
       return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
+    }
+
+    if (permissionCheck.companyId && permissionCheck.companyId !== companyId) {
+      return NextResponse.json({ error: 'Forbidden: wrong company' }, { status: 403 })
     }
 
     // Check if user already exists in auth.users

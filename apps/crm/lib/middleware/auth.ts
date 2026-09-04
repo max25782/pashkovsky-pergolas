@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getUserContext } from '@/lib/middleware/company-context'
+import { getUserContext, getUserContextAsync } from '@/lib/middleware/company-context'
 import { can, Permission, Role } from '@/lib/permissions'
 
 /**
@@ -122,4 +122,37 @@ export function requireAuth(req: NextRequest): { authorized: boolean; error?: Ne
       { status: 401 }
     )
   }
+}
+
+/**
+ * Async permission check — works with Supabase Auth tokens (loads role from company_members).
+ */
+export async function requirePermissionAsync(
+  req: NextRequest,
+  permission: Permission,
+): Promise<{ authorized: boolean; error?: NextResponse; role?: Role; companyId?: string }> {
+  const userContext = await getUserContextAsync(req)
+
+  if (!userContext) {
+    return {
+      authorized: false,
+      error: NextResponse.json(
+        { error: 'Unauthorized: No valid token' },
+        { status: 401 },
+      ),
+    }
+  }
+
+  const role = userContext.role as Role
+  if (!can(role, permission)) {
+    return {
+      authorized: false,
+      error: NextResponse.json(
+        { error: `Forbidden: ${permission} permission required` },
+        { status: 403 },
+      ),
+    }
+  }
+
+  return { authorized: true, role, companyId: userContext.companyId }
 }

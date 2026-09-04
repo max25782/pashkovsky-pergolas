@@ -199,16 +199,19 @@ export async function getUserContextAsync(req: NextRequest): Promise<{ userId: s
         return getUserContext(req) // Fallback to sync version
       }
       
-      // Get company membership
-      const { data: member, error: memberError } = await supabase
+      // Get company membership (prefer owner company, else most recent)
+      const { data: members, error: memberError } = await supabase
         .from('company_members')
-        .select('company_id, role')
+        .select('company_id, role, created_at')
         .eq('user_id', user.id)
-        .single()
-      
-      if (memberError || !member) {
+        .order('created_at', { ascending: false })
+
+      if (memberError || !members || members.length === 0) {
         return null
       }
+
+      const ownerMembership = members.find((m) => m.role === 'owner')
+      const member = ownerMembership ?? members[0]
       
       return {
         userId: user.id,

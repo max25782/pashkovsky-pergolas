@@ -27,6 +27,7 @@ import { useTranslations } from 'next-intl'
 import { useSubscriptionPlan } from '@/components/subscription/subscription-plan-context'
 import { minPlanForFeature } from '@/lib/subscription/plan-access'
 import type { SaasFeature } from '@/lib/subscription/plan-types'
+import { canAccessNavPath, type Role } from '@/lib/permissions'
 
 interface MenuItemConfig {
   href: string
@@ -48,11 +49,15 @@ export default function CRMSidebar() {
   const [isOpen, setIsOpen] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
   const [companyName, setCompanyName] = useState<string>('AluminCRM')
+  const [memberRole, setMemberRole] = useState<Role | null>(null)
 
   useEffect(() => {
     fetch('/api/companies/me')
       .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data?.company_name) setCompanyName(data.company_name) })
+      .then(data => {
+        if (data?.company_name) setCompanyName(data.company_name)
+        if (data?.role) setMemberRole(data.role as Role)
+      })
       .catch(() => {})
   }, [])
 
@@ -67,7 +72,7 @@ export default function CRMSidebar() {
     { href: '/app/admin/ai-director', label: tNav('aiDirector'), icon: Brain, feature: 'ai_director' },
     { href: '/app/admin/leads', label: t.nav.leads, icon: Target, feature: 'leads' },
     { href: '/app/admin/deals', label: t.nav.deals, icon: FileText, feature: 'deals' },
-    { href: '/app/admin/users', label: tNav('users'), icon: Users, feature: 'clients' },
+    { href: '/app/admin/users', label: tNav('users'), icon: Users, feature: 'crm_home' },
     { href: '/app/admin/statistics', label: t.nav.statistic, icon: BarChart3, feature: 'statistics' },
     { href: '/app/admin/workers', label: t.nav.workers, icon: Users, feature: 'workers' },
     { href: '/app/admin/media', label: tNav('aiMedia'), icon: Images, feature: 'ai_media' },
@@ -110,6 +115,8 @@ export default function CRMSidebar() {
       <nav className="flex-1 space-y-1">
         {menuItems.map((item) => {
           const Icon = item.icon
+          const roleAllowed = memberRole ? canAccessNavPath(memberRole, item.href) : true
+          if (!roleAllowed) return null
           const unlocked = can(item.feature)
           const isActive = pathname === item.href || pathname?.startsWith(item.href + '/')
           const isHighlight = item.highlight === true
@@ -173,14 +180,16 @@ export default function CRMSidebar() {
         <div className="px-2 flex justify-center">
           <LanguageSwitcher />
         </div>
-        <Link
-          href="/app/admin/settings"
-          onClick={() => setIsOpen(false)}
-          className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-white/10 hover:text-white transition-all"
-        >
-          <Settings size={20} />
-          <span>{tNav('settings')}</span>
-        </Link>
+        {memberRole !== 'salesperson' ? (
+          <Link
+            href="/app/admin/settings"
+            onClick={() => setIsOpen(false)}
+            className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-white/10 hover:text-white transition-all"
+          >
+            <Settings size={20} />
+            <span>{tNav('settings')}</span>
+          </Link>
+        ) : null}
         <button
           onClick={handleLogout}
           disabled={loggingOut}

@@ -2,8 +2,8 @@ import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import { SYSTEM_PROMPT, AI_CONFIG, COOKIE_NAME, COOKIE_MAX_AGE, fewShotExamples } from '@/lib/ai-chat/config'
-import { isAppointmentConfirmation, extractAppointment } from '@/lib/ai-chat/appointment-detector'
-import { sendCalendarInvite } from '@/lib/ai-chat/calendar-invite'
+import { isAppointmentConfirmation, isCallbackConfirmation, extractAppointment } from '@/lib/ai-chat/appointment-detector'
+import { sendCalendarInvite, sendCallbackRequest } from '@/lib/ai-chat/calendar-invite'
 import { sanitizeInput } from '@/lib/ai-chat/xss-filter'
 import { fetchImagesByContext } from '@/lib/ai-chat/image-fetcher'
 import { stripThoughtBlock } from '@/lib/ai-chat/response-sanitizer'
@@ -523,6 +523,13 @@ export async function POST(req: NextRequest) {
                   if (appt) return sendCalendarInvite(appt)
                 })
                 .catch((e) => console.error('[AI Chat] Calendar invite failed:', e))
+            } else if (isCallbackConfirmation(fullResponse)) {
+              const allMessages = [...history, { role: 'assistant', content: fullResponse }]
+              extractAppointment(allMessages)
+                .then((appt) => {
+                  if (appt?.clientPhone) return sendCallbackRequest(appt)
+                })
+                .catch((e) => console.error('[AI Chat] Callback request failed:', e))
             }
           } else {
             console.warn('[AI Chat] No response received from Gemini')
