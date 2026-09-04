@@ -21,7 +21,7 @@ export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [inviteEmail, setInviteEmail] = useState('')
-  const [inviteRole, setInviteRole] = useState<InviteRole>('viewer')
+  const [inviteRole, setInviteRole] = useState<InviteRole>('salesperson')
   const [inviting, setInviting] = useState(false)
   const [companyId, setCompanyId] = useState<string | null>(null)
 
@@ -68,13 +68,17 @@ export default function AdminUsersPage() {
     try {
       const res = await authFetch('/admin-api/users/invite', {
         method: 'POST',
-        body: JSON.stringify({ email: inviteEmail, companyId, role: inviteRole }),
+        body: JSON.stringify({
+          email: inviteEmail,
+          companyId,
+          role: inviteRole,
+        }),
       })
       if (!res.ok) {
         const data = await res.json() as { error?: string }
         throw new Error(data.error ?? 'Failed to invite user')
       }
-      toast.success('User invited successfully!')
+      toast.success('User approved — they can log in with email only at /login → כניסת עובד')
       setInviteEmail('')
       await loadUsers(companyId)
     } catch (error) {
@@ -122,15 +126,15 @@ export default function AdminUsersPage() {
       <h1 className="text-3xl font-bold mb-8">User Management</h1>
 
       <div className="bg-white rounded-lg shadow p-6 mb-8">
-        <h2 className="text-xl font-semibold mb-4">Invite User</h2>
-        <form onSubmit={handleInvite} className="flex gap-4">
+        <h2 className="text-xl font-semibold mb-4">Approve employee email</h2>
+        <form onSubmit={handleInvite} className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
           <input
             type="email"
             value={inviteEmail}
             onChange={(e) => setInviteEmail(e.target.value)}
             placeholder="Email address"
             required
-            className="flex-1 px-4 py-2 border rounded-lg"
+            className="flex-1 min-w-[200px] px-4 py-2 border rounded-lg"
           />
           <select
             value={inviteRole}
@@ -147,9 +151,12 @@ export default function AdminUsersPage() {
             disabled={inviting}
             className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
           >
-            {inviting ? 'Inviting...' : 'Invite'}
+            {inviting ? 'Saving...' : 'Approve'}
           </button>
         </form>
+        <p className="mt-3 text-sm text-gray-600">
+          Employee logs in at <strong>/login</strong> → כניסת עובד → email only (no password, no email link).
+        </p>
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden">

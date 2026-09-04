@@ -16,6 +16,7 @@ import type { SubscriptionPlan } from '@/lib/subscription/plan-types'
 
 interface SubscriptionPlanContextValue {
   plan: SubscriptionPlan
+  memberRole: string | null
   loading: boolean
   error: string | null
   refresh: () => Promise<void>
@@ -26,6 +27,7 @@ const SubscriptionPlanContext = createContext<SubscriptionPlanContextValue | nul
 
 export function SubscriptionPlanProvider({ children }: { children: ReactNode }) {
   const [plan, setPlan] = useState<SubscriptionPlan>('offer')
+  const [memberRole, setMemberRole] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -33,21 +35,35 @@ export function SubscriptionPlanProvider({ children }: { children: ReactNode }) 
     setLoading(true)
     setError(null)
     try {
-      const res = await authFetch('/api/me/subscription')
-      if (!res.ok) {
-        if (res.status === 401) {
+      const [subRes, meRes] = await Promise.all([
+        authFetch('/api/me/subscription'),
+        authFetch('/api/companies/me'),
+      ])
+
+      if (!subRes.ok) {
+        if (subRes.status === 401) {
           setPlan('offer')
+          setMemberRole(null)
           setError(null)
           return
         }
-        throw new Error(`HTTP ${res.status}`)
+        throw new Error(`HTTP ${subRes.status}`)
       }
-      const data = (await res.json()) as { plan?: string }
-      setPlan(normalizePlan(data.plan))
+
+      const subData = (await subRes.json()) as { plan?: string; role?: string }
+      setPlan(normalizePlan(subData.plan))
+
+      if (meRes.ok) {
+        const meData = (await meRes.json()) as { role?: string }
+        setMemberRole(meData.role ?? subData.role ?? null)
+      } else {
+        setMemberRole(subData.role ?? null)
+      }
     } catch (e) {
       console.error('[SubscriptionPlanProvider]', e)
       setError('failed_to_load_plan')
       setPlan('offer')
+      setMemberRole(null)
     } finally {
       setLoading(false)
     }
@@ -58,13 +74,13 @@ export function SubscriptionPlanProvider({ children }: { children: ReactNode }) 
   }, [refresh])
 
   const can = useCallback(
-    (feature: SaasFeature) => hasAccess({ plan }, feature),
-    [plan],
+    (feature: SaasFeature) => hasAccess({ plan }, feature, memberRole),
+    [plan, memberRole],
   )
 
   const value = useMemo(
-    () => ({ plan, loading, error, refresh, can }),
-    [plan, loading, error, refresh, can],
+    () => ({ plan, memberRole, loading, error, refresh, can }),
+    [plan, memberRole, loading, error, refresh, can],
   )
 
   return (

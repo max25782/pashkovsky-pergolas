@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { getUserSubscriptionPlan } from '@/lib/subscription/load-user-plan'
+import { getUserSubscriptionPlan, getUserCompanyRole } from '@/lib/subscription/load-user-plan'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,7 +17,8 @@ export async function GET() {
     }
 
     const plan = await getUserSubscriptionPlan(user.id)
-    return NextResponse.json({ plan })
+    const role = await getUserCompanyRole(user.id)
+    return NextResponse.json({ plan, role })
   } catch (e) {
     console.error('[me/subscription]', e)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

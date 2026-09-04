@@ -3,13 +3,11 @@ import { createClient } from '@supabase/supabase-js'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { requirePermissionAsync } from '@/lib/middleware/auth'
 import { isValidRole } from '@/lib/permissions'
-import { generateToken, hashToken, getExpirationTime } from '@/lib/auth/tokens'
-import { sendEmail } from '@/lib/email'
 import { logResourceEvent } from '@/lib/audit/logger'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'
 
 const supabase = SUPABASE_URL && SERVICE_KEY
   ? createClient(SUPABASE_URL, SERVICE_KEY, { db: { schema: 'public' } })
@@ -17,7 +15,7 @@ const supabase = SUPABASE_URL && SERVICE_KEY
 
 /**
  * POST /admin-api/users/invite
- * Invite user to company
+ * Approve email for company access — employee logs in with email only (no password).
  */
 export async function POST(req: NextRequest) {
   const authCheck = await requireAuthAsync(req)
@@ -36,7 +34,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'email and companyId are required' }, { status: 400 })
     }
 
-    // Validate role (owner cannot be invited via UI)
     if (!isValidRole(role) || role === 'owner') {
       return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
     }
@@ -45,22 +42,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden: wrong company' }, { status: 403 })
     }
 
-    // Check if user already exists in auth.users
+    const cleanEmail = email.toLowerCase().trim()
+
     const { data: existingAuthUsers } = await supabase.auth.admin.listUsers()
-    const existingUser = existingAuthUsers?.users?.find(u => u.email === email)
-    
+    const existingUser = existingAuthUsers?.users?.find(u => u.email?.toLowerCase() === cleanEmail)
+
     let userId: string
 
     if (existingUser) {
-      // User already exists in auth
       userId = existingUser.id
     } else {
-      // Create user in Supabase Auth
       const { data: newAuthUser, error: authError } = await supabase.auth.admin.createUser({
-        email,
-        email_confirm: true, // Auto-confirm email
+        email: cleanEmail,
+        email_confirm: true,
         user_metadata: {
-          full_name: email.split('@')[0],
+          full_name: cleanEmail.split('@')[0],
         },
       })
 
@@ -72,19 +68,36 @@ export async function POST(req: NextRequest) {
       userId = newAuthUser.user.id
     }
 
-    // Check if user is already a member
-    const { data: existingMember } = await supabase
-      .from('company_members')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('company_id', companyId)
-      .single()
+    const { error: profileError } = await supabase.from('users').upsert(
+      {
+        id: userId,
+        email: cleanEmail,
+        full_name: cleanEmail.split('@')[0],
+      },
+      { onConflict: 'id' },
+    )
 
-    if (existingMember) {
-      return NextResponse.json({ error: 'User is already a member of this company' }, { status: 409 })
+    if (profileError) {
+      console.error('[Invite] User profile error:', profileError)
+      return NextResponse.json({ error: 'Failed to save user profile' }, { status: 500 })
     }
 
-    // Add user to company
+    const { data: existingMember } = await supabase
+      .from('company_members')
+      .select('id, role')
+      .eq('user_id', userId)
+      .eq('company_id', companyId)
+      .maybeSingle()
+
+    if (existingMember) {
+      return NextResponse.json({
+        success: true,
+        message: 'User is already approved for this company',
+        membership: existingMember,
+        loginUrl: `${APP_URL}/login?mode=employee&email=${encodeURIComponent(cleanEmail)}`,
+      })
+    }
+
     const { data: membership, error: memberError } = await supabase
       .from('company_members')
       .insert({
@@ -92,6 +105,7 @@ export async function POST(req: NextRequest) {
         user_id: userId,
         role,
         invited_at: new Date().toISOString(),
+        joined_at: new Date().toISOString(),
       })
       .select()
       .single()
@@ -101,41 +115,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to add user to company' }, { status: 500 })
     }
 
-    // Get company info
-    const { data: company } = await supabase
-      .from('companies')
-      .select('name')
-      .eq('id', companyId)
-      .single()
-
-    // Send invitation email with password reset link
-    try {
-      const inviteUrl = `${APP_URL}/login?email=${encodeURIComponent(email)}`
-      
-      await sendEmail({
-        to: email,
-        subject: `Приглашение в ${company?.name || 'компанию'}`,
-        html: `
-          <h2>Вы приглашены!</h2>
-          <p>Вы были приглашены присоединиться к компании <strong>${company?.name || ''}</strong> с ролью <strong>${role}</strong>.</p>
-          <p>Для входа перейдите по ссылке и используйте функцию "Забыли пароль" для установки пароля:</p>
-          <p><a href="${inviteUrl}">Войти в систему</a></p>
-          <p>Ваш email: <strong>${email}</strong></p>
-        `,
-        text: `Вы приглашены в ${company?.name || 'компанию'}. Перейдите по ссылке для входа: ${inviteUrl}`,
-      })
-    } catch (emailError) {
-      console.error('[Invite] Email sending error:', emailError)
-      // Continue anyway - invitation is created
-    }
-
-    // Log the invitation
-    await logResourceEvent(req, 'create', 'user', userId, { email, role, companyId }, 'success')
+    await logResourceEvent(req, 'create', 'user', userId, { email: cleanEmail, role, companyId }, 'success')
 
     return NextResponse.json({
       success: true,
-      message: 'User invited successfully',
+      message: 'User approved — they can log in with email only',
       membership,
+      loginUrl: `${APP_URL}/login?mode=employee&email=${encodeURIComponent(cleanEmail)}`,
     }, { status: 201 })
 
   } catch (error) {
@@ -143,5 +129,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
-
-

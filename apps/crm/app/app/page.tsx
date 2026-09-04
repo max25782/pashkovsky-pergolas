@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { isSuperAdmin } from '@/lib/auth/isSuperAdmin'
-import { getUserSubscriptionPlan } from '@/lib/subscription/load-user-plan'
+import { getUserSubscriptionPlan, getUserCompanyRole } from '@/lib/subscription/load-user-plan'
 import { hasAccess } from '@/lib/subscription/plan-access'
 
 export const dynamic = 'force-dynamic'
@@ -40,7 +40,13 @@ export default async function AppPage() {
     }
 
     const plan = await getUserSubscriptionPlan(user.id)
-    if (!hasAccess({ plan }, 'crm_home')) {
+    const role = await getUserCompanyRole(user.id)
+
+    if (role === 'salesperson') {
+      redirect('/app/admin/leads')
+    }
+
+    if (!hasAccess({ plan }, 'crm_home', role)) {
       redirect('/app/quick-offer')
     }
 

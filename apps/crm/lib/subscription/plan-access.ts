@@ -41,10 +41,24 @@ export function normalizePlan(value: unknown): SubscriptionPlan {
   return 'offer'
 }
 
-export function hasAccess(user: UserPlanContext, feature: SaasFeature): boolean {
+export function hasAccess(
+  user: UserPlanContext,
+  feature: SaasFeature,
+  memberRole?: string | null,
+): boolean {
+  if (memberRole === 'salesperson') {
+    return SALESPERSON_PLAN_FEATURES.includes(feature)
+  }
   const need = FEATURE_MIN_PLAN[feature]
   return PLAN_ORDER[user.plan] >= PLAN_ORDER[need]
 }
+
+/** Features unlocked for salesperson by role — same company data, no Business plan. */
+export const SALESPERSON_PLAN_FEATURES: readonly SaasFeature[] = [
+  'crm_home',
+  'leads',
+  'quick_offer',
+]
 
 export function minPlanForFeature(feature: SaasFeature): SubscriptionPlan {
   return FEATURE_MIN_PLAN[feature]

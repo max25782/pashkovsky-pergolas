@@ -3,7 +3,7 @@
 import { Lock } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useSubscriptionPlan } from '@/components/subscription/subscription-plan-context'
-import { hasAccess, minPlanForFeature } from '@/lib/subscription/plan-access'
+import { minPlanForFeature } from '@/lib/subscription/plan-access'
 import type { SaasFeature } from '@/lib/subscription/plan-types'
 
 export function PlanBoundary({
@@ -13,7 +13,7 @@ export function PlanBoundary({
   feature: SaasFeature
   children: React.ReactNode
 }) {
-  const { plan, loading } = useSubscriptionPlan()
+  const { plan, loading, can } = useSubscriptionPlan()
   const t = useTranslations('subscription')
 
   if (loading) {
@@ -24,7 +24,7 @@ export function PlanBoundary({
     )
   }
 
-  if (!hasAccess({ plan }, feature)) {
+  if (!can(feature)) {
     const need = minPlanForFeature(feature)
     const planLabel = t(`planNames.${need}`)
     return (
