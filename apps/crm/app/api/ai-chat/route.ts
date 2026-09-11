@@ -1,12 +1,13 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
-import { SYSTEM_PROMPT, AI_CONFIG, COOKIE_NAME, COOKIE_MAX_AGE, fewShotExamples } from '@/lib/ai-chat/config'
+import { AI_CONFIG, COOKIE_NAME, COOKIE_MAX_AGE } from '@/lib/ai-chat/config'
 import { isAppointmentConfirmation, isCallbackConfirmation, extractAppointment } from '@/lib/ai-chat/appointment-detector'
 import { sendCalendarInvite, sendCallbackRequest } from '@/lib/ai-chat/calendar-invite'
 import { sanitizeInput } from '@/lib/ai-chat/xss-filter'
 import { fetchImagesByContext } from '@/lib/ai-chat/image-fetcher'
-import { stripThoughtBlock } from '@/lib/ai-chat/response-sanitizer'
+import { generateSalesReply } from '@/lib/ai-chat/gemini-client'
+import { shouldPersistReply } from '@/lib/ai-chat/response-sanitizer'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -176,120 +177,14 @@ async function* streamGeminiResponse(
 ): AsyncGenerator<string> {
   if (!GEMINI_API_KEY) throw new Error('Gemini API key not configured')
 
-  // Build conversation history for Gemini
-  // Always start with system prompt so the model keeps the correct persona,
-  // even for old sessions that были созданы до обновления промпта.
-  const geminiContents: any[] = [
-    {
-      role: 'user',
-      parts: [{ text: SYSTEM_PROMPT }],
-    },
-    // Few-shot examples teach the model the correct tone and response style
-    // before any real conversation history
-    ...fewShotExamples,
-  ]
-
-  // Full history from Supabase
-  messages.forEach((m) => {
-    geminiContents.push({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }],
-    })
+  // Guarded: SYSTEM_PROMPT is applied as systemInstruction and leaked reasoning
+  // is retried/replaced inside, so fullText is always customer-facing.
+  const { text: fullText } = await generateSalesReply({
+    history: messages,
+    userMessage,
+    imageData,
+    logPrefix: '[AI Chat]',
   })
-
-  // Current user message with optional image
-  const userParts: any[] = []
-  if (userMessage) {
-    userParts.push({ text: userMessage })
-  }
-  if (imageData) {
-    userParts.push({
-      inlineData: {
-        mimeType: imageData.mimeType,
-        data: imageData.data,
-      },
-    })
-  }
-  
-  geminiContents.push({
-    role: 'user',
-    parts: userParts,
-  })
-
-  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${AI_CONFIG.model}:generateContent?key=${GEMINI_API_KEY}`
-
-  const requestBody = {
-    contents: geminiContents,
-    generationConfig: {
-      temperature: AI_CONFIG.temperature,
-      maxOutputTokens: AI_CONFIG.maxTokens,
-    },
-  }
-
-  const response = await fetch(apiUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(requestBody),
-  })
-
-  if (!response.ok) {
-    const errorText = await response.text()
-    console.error('[AI Chat] Gemini API HTTP error:', {
-      status: response.status,
-      statusText: response.statusText,
-      error: errorText.substring(0, 1000),
-      url: apiUrl.replace(GEMINI_API_KEY, '***'),
-      hasApiKey: !!GEMINI_API_KEY,
-      apiKeyLength: GEMINI_API_KEY?.length || 0,
-    })
-
-    let errorMessage = 'Failed to get AI response'
-    let errorDetails: any = {}
-
-    try {
-      const errorJson = JSON.parse(errorText)
-      errorMessage = errorJson.error?.message || errorJson.error?.status || errorMessage
-      errorDetails = {
-        code: errorJson.error?.code,
-        status: errorJson.error?.status,
-        details: errorJson.error?.details,
-      }
-      console.error('[AI Chat] Parsed error:', errorDetails)
-    } catch {
-      errorMessage = errorText.substring(0, 200) || errorMessage
-    }
-
-    const fullError = `Gemini API error (${response.status}): ${errorMessage}${
-      errorDetails.code ? ` [${errorDetails.code}]` : ''
-    }`
-    console.error('[AI Chat] Full error message:', fullError)
-    throw new Error(fullError)
-  }
-
-  const data = await response.json()
-
-  const candidates = data?.candidates || []
-  if (!candidates.length) {
-    console.error('[AI Chat] No candidates in Gemini response:', JSON.stringify(data).slice(0, 500))
-    throw new Error('No chunks received from Gemini API. Check API key and model availability.')
-  }
-
-  // Concatenate all text parts into a single answer, then stream it out in chunks
-  const parts = candidates[0]?.content?.parts || []
-  const rawText = parts
-    .map((p: any) => (typeof p?.text === 'string' ? p.text : ''))
-    .join('')
-    .trim()
-
-  if (!rawText) {
-    console.error('[AI Chat] Empty text in Gemini response:', JSON.stringify(data).slice(0, 500))
-    throw new Error('No chunks received from Gemini API. Check API key and model availability.')
-  }
-
-  // Strip any THOUGHT: chain-of-thought block before the real answer
-  const fullText = stripThoughtBlock(rawText)
 
   // Check if AI wants to send images (format: [IMAGE:url1,url2,url3])
   const imageMatch = fullText.match(/\[IMAGE:([^\]]+)\]/)
@@ -507,12 +402,19 @@ export async function POST(req: NextRequest) {
           }
           
           
-          // Save assistant response
+          // Save assistant response. A leak would return as history on the next
+          // turn and teach the model to repeat the format, so rejected text is
+          // never persisted.
           if (fullResponse) {
-            try {
-              await saveMessage(sessionId, 'assistant', fullResponse)
-            } catch (error) {
-              console.error('[AI Chat] Failed to save assistant message:', error)
+            const outgoing = shouldPersistReply(fullResponse)
+            if (!outgoing.persist) {
+              console.error('[AI Chat] Reply not persisted:', outgoing.reason)
+            } else {
+              try {
+                await saveMessage(sessionId, 'assistant', fullResponse)
+              } catch (error) {
+                console.error('[AI Chat] Failed to save assistant message:', error)
+              }
             }
 
             // Detect appointment confirmation and send calendar invite (fire-and-forget)

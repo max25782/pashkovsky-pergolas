@@ -55,9 +55,29 @@ export {
   SYSTEM_PROMPT,
   fewShotExamples,
   AI_CONFIG,
+  SAFE_FALLBACK_REPLY,
   COOKIE_NAME,
   COOKIE_MAX_AGE,
 } from '@/lib/ai-chat/config'
+
+// Guarded sales-chat completion. Always use this instead of calling Gemini with
+// SYSTEM_PROMPT directly: it applies the prompt as systemInstruction and blocks
+// leaked reasoning from reaching the customer.
+export {
+  generateSalesReply,
+  type SalesReply,
+  type GeminiImageData,
+  type HistoryMessage,
+} from '@/lib/ai-chat/gemini-client'
+
+// Outgoing-reply guards
+export {
+  stripThoughtBlock,
+  inspectResponse,
+  sanitizeAndInspect,
+  shouldPersistReply,
+  type LeakCheckResult,
+} from '@/lib/ai-chat/response-sanitizer'
 
 // Appointment detection
 export {

@@ -10,11 +10,12 @@
 
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { SYSTEM_PROMPT, AI_CONFIG, fewShotExamples } from '@/lib/ai-chat/config'
+import { AI_CONFIG } from '@/lib/ai-chat/config'
 import { isAppointmentConfirmation, isCallbackConfirmation, extractAppointment } from '@/lib/ai-chat/appointment-detector'
 import { sendCalendarInvite, sendCallbackRequest } from '@/lib/ai-chat/calendar-invite'
 import { fetchImagesByContext } from '@/lib/ai-chat/image-fetcher'
-import { stripThoughtBlock } from '@/lib/ai-chat/response-sanitizer'
+import { generateSalesReply } from '@/lib/ai-chat/gemini-client'
+import { shouldPersistReply } from '@/lib/ai-chat/response-sanitizer'
 
 // Environment variables
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -133,50 +134,19 @@ async function* streamGeminiResponse(
 ): AsyncGenerator<string> {
   if (!GEMINI_API_KEY) throw new Error('Gemini API key not configured')
 
-  const geminiContents: any[] = [
-    { role: 'user', parts: [{ text: SYSTEM_PROMPT }] },
-    ...fewShotExamples,
-  ]
-
-  messages.forEach((m) => {
-    geminiContents.push({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }],
-    })
+  // Guarded: leaked reasoning is retried and then replaced upstream, so fullText
+  // here is always customer-facing.
+  const { text: fullText } = await generateSalesReply({
+    history: messages,
+    userMessage,
+    imageData,
+    logPrefix: '[Public AI Chat]',
   })
-
-  const userParts: any[] = []
-  if (userMessage) userParts.push({ text: userMessage })
-  if (imageData) userParts.push({ inlineData: { mimeType: imageData.mimeType, data: imageData.data } })
-  geminiContents.push({ role: 'user', parts: userParts })
-
-  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${AI_CONFIG.model}:generateContent?key=${GEMINI_API_KEY}`
-
-  const response = await fetch(apiUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: geminiContents,
-      generationConfig: { temperature: AI_CONFIG.temperature, maxOutputTokens: AI_CONFIG.maxTokens },
-    }),
-  })
-
-  if (!response.ok) {
-    const errorText = await response.text()
-    console.error('[Public AI Chat] Gemini API error:', errorText)
-    throw new Error(`Gemini API error: ${response.status}`)
-  }
-
-  const data = await response.json()
-  const rawText: string = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || ''
-
-  // Strip any THOUGHT: chain-of-thought block before the real answer
-  const fullText = stripThoughtBlock(rawText)
 
   // Strip [IMAGE:...] tag and fetch real presigned images
   const imageMatch = fullText.match(/\[IMAGE:([^\]]+)\]/)
   let imageUrls: string[] = []
-  let cleanText = fullText.replace(/\[IMAGE:[^\]]+\]/g, '').trim()
+  const cleanText = fullText.replace(/\[IMAGE:[^\]]+\]/g, '').trim()
 
   if (imageMatch) {
     const raw = imageMatch[1].split(',').map((s) => s.trim()).filter((s) => s && !s.startsWith('placeholder'))
@@ -355,8 +325,15 @@ export async function POST(req: NextRequest) {
             }
           }
 
-          // Save assistant message (text only, no image markers)
-          await saveMessage(sessionId, 'assistant', fullResponse)
+          // Save assistant message (text only, no image markers). A leak would
+          // come back as history on the next turn and teach the model to repeat
+          // the format, so anything the guard rejects is never persisted.
+          const outgoing = shouldPersistReply(fullResponse)
+          if (outgoing.persist) {
+            await saveMessage(sessionId, 'assistant', fullResponse)
+          } else if (outgoing.reason !== 'no_text') {
+            console.error('[Public AI Chat] Reply not persisted:', outgoing.reason)
+          }
 
           // Detect appointment confirmation and send calendar invite (fire-and-forget)
           if (isAppointmentConfirmation(fullResponse)) {
