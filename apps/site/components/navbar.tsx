@@ -13,7 +13,6 @@ export default function Navbar({ locale }: { locale: Locale }){
   const tabs = [
     { href: `/${locale}`, label: locale==='he'?'דף הבית': locale==='ru'?'Главная':'Home' },
     { href: `/${locale}/about`, label: locale==='he'?'על החברה': locale==='ru'?'О компании':'About' },
-    { href: `/${locale}/catalog`, label: locale==='he'?'קטלוג': locale==='ru'?'Каталог':'Catalog' },
     { href: `/${locale}#services`, label: locale==='he'?'השירותים שלנו': locale==='ru'?'Наши услуги':'Services' },
     { href: `/${locale}/profiles`, label: locale==='he'?'פרופילים': locale==='ru'?'Профили':'Profiles' },
     { href: `/${locale}/pergola3d`, label: locale==='he'?'קונפיגורטור 3D': locale==='ru'?'Конфигуратор 3D ':'Configurator 3D' },

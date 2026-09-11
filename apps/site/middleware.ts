@@ -67,22 +67,6 @@ export function middleware(request: NextRequest) {
   )
 
   if (pathnameHasLocale) {
-    const isCatalogPdf =
-      /^\/(he|ru|en)\/catalog$/.test(pathname) &&
-      request.nextUrl.searchParams.get('pdf') === '1'
-    if (isCatalogPdf) {
-      const requestHeaders = new Headers(request.headers)
-      requestHeaders.set('x-catalog-pdf-mode', '1')
-      const pdfResponse = NextResponse.next({ request: { headers: requestHeaders } })
-      if (gclid && gclid.trim().length > 0) {
-        pdfResponse.cookies.set(GCLID_COOKIE, gclid.trim(), {
-          maxAge: GCLID_MAX_AGE,
-          sameSite: 'lax',
-          path: '/',
-        })
-      }
-      return pdfResponse
-    }
     return response
   }
 

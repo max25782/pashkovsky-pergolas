@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { authFetch, getAuthHeaders } from '@/lib/api/auth-fetch'
 import type { Deal } from '../deal-types'
 
 interface UseDealActionsParams {
@@ -20,19 +20,14 @@ export function useDealActions({
   async function patch(id: string, updates: Partial<Deal>) {
     setUpdating(true)
     try {
-      
-      const supabase = createClient()
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.access_token) {
+      const authHeaders = await getAuthHeaders()
+      if (!authHeaders.Authorization) {
         throw new Error('User not authenticated')
       }
-      
-      const res = await fetch('/admin-api/deals', {
+
+      const res = await authFetch('/admin-api/deals', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, ...updates }),
       })
       
@@ -66,17 +61,11 @@ export function useDealActions({
     
     setDeleting(true)
     try {
-      
-      const supabase = createClient()
-      const { error } = await supabase
-        .from('deals')
-        .delete()
-        .eq('id', id)
-      
-      if (error) {
-        throw new Error(error.message)
+      const res = await authFetch(`/admin-api/deals?id=${id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { error?: string }
+        throw new Error(body.error ?? `Delete failed: ${res.status}`)
       }
-      
       onDelete?.(id)
       return true
     } catch (e) {
@@ -92,19 +81,14 @@ export function useDealActions({
   async function create(dealData: Partial<Deal>) {
     setCreating(true)
     try {
-
-      const supabase = createClient()
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.access_token) {
+      const authHeaders = await getAuthHeaders()
+      if (!authHeaders.Authorization) {
         throw new Error('User not authenticated')
       }
 
-      const res = await fetch('/admin-api/deals', {
+      const res = await authFetch('/admin-api/deals', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(dealData),
       })
 
