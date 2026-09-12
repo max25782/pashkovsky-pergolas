@@ -1,38 +1,22 @@
--- Migration: Fix company_members to reference auth.users
--- Step 1: Clean up orphaned records
--- Step 2: Change foreign key to auth.users
+-- Migration: Update company_members to reference auth.users instead of public.users
+-- This is required for Supabase Auth + RLS to work correctly
 
 BEGIN;
 
--- Step 1: Show what we have before cleanup
-SELECT 
-  'Before cleanup' as stage,
-  COUNT(*) as member_count
-FROM public.company_members;
-
--- Step 2: Delete ALL company_members (since we're switching to auth.users)
--- Users will need to re-register with Supabase Auth
-DELETE FROM public.company_members;
-
-SELECT 
-  'After cleanup' as stage,
-  COUNT(*) as member_count
-FROM public.company_members;
-
--- Step 3: Drop existing foreign key constraint
+-- Step 1: Drop existing foreign key constraint
 ALTER TABLE public.company_members 
 DROP CONSTRAINT IF EXISTS company_members_user_id_fkey;
 
--- Step 4: Create new foreign key to auth.users
+-- Step 2: Create new foreign key to auth.users
+-- Note: auth.users.id is UUID, which should match your company_members.user_id type
 ALTER TABLE public.company_members
 ADD CONSTRAINT company_members_user_id_fkey 
 FOREIGN KEY (user_id) 
 REFERENCES auth.users(id) 
 ON DELETE CASCADE;
 
--- Step 5: Verify the change
+-- Step 3: Verify the change
 SELECT
-    'After migration' as stage,
     tc.constraint_name, 
     tc.table_name, 
     kcu.column_name, 
@@ -54,7 +38,4 @@ COMMIT;
 
 -- Expected result:
 -- company_members_user_id_fkey | company_members | user_id | auth | users | id
-
--- ⚠️ NOTE: After this migration, you'll need to re-register users via /register
--- The new registration will create users in auth.users (Supabase Auth)
 
