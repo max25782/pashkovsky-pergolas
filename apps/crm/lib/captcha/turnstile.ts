@@ -6,9 +6,13 @@
  * Required env vars:
  *   TURNSTILE_SECRET_KEY   — from Cloudflare dashboard (Widget → Secret Key)
  *
- * Fails open (returns { success: true }) when the secret key is not configured
- * so local development works without a real Turnstile widget.
+ * Outside production a missing secret key fails open so local development works
+ * without a real Turnstile widget. In production a missing key is an operator
+ * error and fails closed: silently accepting every submission would leave the
+ * public forms with no bot protection at all.
  */
+
+import { isProduction } from '@/lib/env/require-env'
 
 interface TurnstileOutcome {
   success: boolean
@@ -21,9 +25,12 @@ export async function verifyTurnstile(
 ): Promise<TurnstileOutcome> {
   const secret = process.env.TURNSTILE_SECRET_KEY
 
-  // Fail open in dev — log so it's visible
   if (!secret) {
-    console.warn('[Turnstile] TURNSTILE_SECRET_KEY not set — skipping verification')
+    if (isProduction) {
+      console.error('[Turnstile] TURNSTILE_SECRET_KEY not set — rejecting submission')
+      return { success: false, errorCodes: ['misconfigured'] }
+    }
+    console.warn('[Turnstile] TURNSTILE_SECRET_KEY not set — skipping verification (dev only)')
     return { success: true }
   }
 
@@ -45,16 +52,18 @@ export async function verifyTurnstile(
     })
 
     if (!res.ok) {
+      // Deliberately fail open: unlike a missing secret this is Cloudflare
+      // being unavailable, and refusing every lead for the duration of a
+      // third-party outage costs more than the bots it would stop.
       console.error('[Turnstile] Siteverify HTTP error:', res.status)
-      // Fail open on Cloudflare-side errors to avoid blocking legit users
       return { success: true }
     }
 
     const data = await res.json() as { success: boolean; 'error-codes'?: string[] }
     return { success: data.success, errorCodes: data['error-codes'] }
   } catch (err) {
+    // Same reasoning as the HTTP-error branch above.
     console.error('[Turnstile] Network error during verification:', err)
-    // Fail open on network errors
     return { success: true }
   }
 }

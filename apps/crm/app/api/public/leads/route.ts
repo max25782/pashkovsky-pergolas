@@ -5,6 +5,7 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { sendWhatsAppTemplate } from '@/lib/whatsapp-send'
 import { uploadLeadConversion } from '@/lib/googleAds/offlineConversion'
 import { verifyTurnstile } from '@/lib/captcha/turnstile'
+import { MissingEnvError } from '@/lib/env/require-env'
 
 function getSupabase(): SupabaseClient | null {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -290,6 +291,14 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const duration = Date.now() - startTime
     const message = error instanceof Error ? error.message : String(error)
+
+    // checkRateLimit throws this in production rather than accepting unlimited
+    // traffic; surface it as a configuration fault, not a generic crash.
+    if (error instanceof MissingEnvError) {
+      console.error('[Public Leads] Misconfigured', { missing: error.names })
+      return jsonResponse({ error: 'Service misconfigured' }, { status: 500 }, request)
+    }
+
     console.error('[Public Leads] Unexpected error', {
       error: message,
       duration: `${duration}ms`,

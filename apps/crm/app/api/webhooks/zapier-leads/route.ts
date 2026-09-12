@@ -13,6 +13,7 @@
  * Map fields: full_name or first_name → name, phone_number or phone → phone, email → email
  */
 
+import { timingSafeEqual } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { normalizePhoneIL } from '@/lib/middleware/integration-access'
@@ -31,7 +32,16 @@ const supabase =
       )
     : null
 
-/** Zapier "Custom Request Headers" must send one of these when ZAPIER_LEADS_SECRET is set. */
+/** Constant-time comparison so the shared secret cannot be recovered byte by byte. */
+function timingSafeEqualStr(provided: string | null, expected: string): boolean {
+  if (!provided) return false
+  const a = Buffer.from(provided, 'utf8')
+  const b = Buffer.from(expected, 'utf8')
+  if (a.length !== b.length) return false
+  return timingSafeEqual(a, b)
+}
+
+/** Zapier "Custom Request Headers" must send one of these. */
 function getProvidedWebhookSecret(req: NextRequest): string | null {
   const fromHeader = req.headers.get('x-zapier-secret')?.trim()
   if (fromHeader) return fromHeader
@@ -58,18 +68,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
   }
 
-  if (SECRET) {
-    const provided = getProvidedWebhookSecret(req)
-    if (provided !== SECRET) {
-      return NextResponse.json(
-        {
-          error: 'Unauthorized',
-          hint:
-            'Send header x-zapier-secret matching ZAPIER_LEADS_SECRET, or Authorization: Bearer <same secret>. No extra spaces.',
-        },
-        { status: 401 },
-      )
-    }
+  // The secret is mandatory. It used to be optional, which meant an unset
+  // ZAPIER_LEADS_SECRET silently turned this endpoint into an open lead writer.
+  if (!SECRET) {
+    console.error('[Zapier Leads] ZAPIER_LEADS_SECRET not configured')
+    return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
+  }
+
+  if (!timingSafeEqualStr(getProvidedWebhookSecret(req), SECRET)) {
+    return NextResponse.json(
+      {
+        error: 'Unauthorized',
+        hint:
+          'Send header x-zapier-secret matching ZAPIER_LEADS_SECRET, or Authorization: Bearer <same secret>. No extra spaces.',
+      },
+      { status: 401 },
+    )
   }
 
   let body: unknown

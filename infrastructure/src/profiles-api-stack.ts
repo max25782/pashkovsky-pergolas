@@ -1,7 +1,9 @@
 import * as cdk from 'aws-cdk-lib'
+import * as acm from 'aws-cdk-lib/aws-certificatemanager'
 import * as ec2 from 'aws-cdk-lib/aws-ec2'
 import * as ecs from 'aws-cdk-lib/aws-ecs'
 import * as ecsPatterns from 'aws-cdk-lib/aws-ecs-patterns'
+import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2'
 import * as ecrAssets from 'aws-cdk-lib/aws-ecr-assets'
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager'
 import { Construct } from 'constructs'
@@ -34,6 +36,23 @@ export interface ProfilesApiStackProps extends cdk.StackProps {
    * Secret must exist in the same region as the stack.
    */
   secretsName?: string
+  /**
+   * Hostname clients use to reach the API, e.g. profiles-api.pashkovsky-group.com.
+   *
+   * When set, the ALB serves HTTPS on 443 and redirects 80 -> 443. The DNS record
+   * itself is NOT created here: the zone lives in Vercel DNS, not Route53, so a
+   * CNAME from this hostname to the ALB must be added there by hand.
+   *
+   * When omitted the ALB stays HTTP-only, which is only appropriate for scratch
+   * environments — CRM forwards caller JWTs upstream, so plaintext exposes them.
+   */
+  domainName?: string
+  /**
+   * Existing ACM certificate for `domainName`. When omitted a certificate is
+   * created with DNS validation, and `cdk deploy` blocks until the validation
+   * CNAME shown in the CloudFormation events is added to Vercel DNS.
+   */
+  certificateArn?: string
 }
 
 export class ProfilesApiStack extends cdk.Stack {
@@ -62,6 +81,19 @@ export class ProfilesApiStack extends cdk.Stack {
       }
     }
 
+    // TLS termination at the ALB. The certificate is built from domainName, but
+    // domainName is deliberately not handed to the L3 construct below: that
+    // pairing requires a Route53 `domainZone`, and this zone is hosted on Vercel.
+    let certificate: acm.ICertificate | undefined
+    if (props?.domainName) {
+      certificate = props.certificateArn
+        ? acm.Certificate.fromCertificateArn(this, 'ApiCertificate', props.certificateArn)
+        : new acm.Certificate(this, 'ApiCertificate', {
+            domainName: props.domainName,
+            validation: acm.CertificateValidation.fromDns(),
+          })
+    }
+
     // Application Load Balancer + Fargate
     const fargateService = new ecsPatterns.ApplicationLoadBalancedFargateService(
       this,
@@ -69,6 +101,14 @@ export class ProfilesApiStack extends cdk.Stack {
       {
         vpc,
         serviceName: 'profiles-api',
+        ...(certificate
+          ? {
+              certificate,
+              protocol: elbv2.ApplicationProtocol.HTTPS,
+              sslPolicy: elbv2.SslPolicy.RECOMMENDED_TLS,
+              redirectHTTP: true,
+            }
+          : {}),
         taskImageOptions: {
           image: ecs.ContainerImage.fromDockerImageAsset(image),
           containerPort: 3002,
@@ -118,13 +158,15 @@ export class ProfilesApiStack extends cdk.Stack {
     // Output: URL
     new cdk.CfnOutput(this, 'LoadBalancerDNS', {
       value: fargateService.loadBalancer.loadBalancerDnsName,
-      description: 'ALB DNS name for Profiles API',
+      description: 'ALB DNS name for Profiles API — CNAME target for the custom domain',
       exportName: 'ProfilesApiAlbDns',
     })
 
     new cdk.CfnOutput(this, 'ServiceURL', {
-      value: `http://${fargateService.loadBalancer.loadBalancerDnsName}`,
-      description: 'Profiles API URL (use HTTPS with ACM certificate for production)',
+      value: props?.domainName
+        ? `https://${props.domainName}`
+        : `http://${fargateService.loadBalancer.loadBalancerDnsName}`,
+      description: 'Value to set as PROFILES_API_URL in the CRM Vercel project',
       exportName: 'ProfilesApiUrl',
     })
   }

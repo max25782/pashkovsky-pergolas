@@ -11,6 +11,9 @@
 
 import { Ratelimit } from '@upstash/ratelimit'
 import { Redis } from '@upstash/redis'
+import { isProduction, MissingEnvError } from '@/lib/env/require-env'
+
+const UPSTASH_VARS = ['UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN']
 
 export interface RateLimitConfig {
   maxRequests: number
@@ -54,7 +57,10 @@ function getLimiter(config: RateLimitConfig): Ratelimit | null {
 
 /**
  * Check if identifier (e.g. `lead:<ip>`) is within the rate limit window.
- * Fails open when Upstash is not configured (dev without Redis).
+ *
+ * Outside production a missing Upstash config fails open so the app runs
+ * without Redis. In production it throws: an unlimited public endpoint is a
+ * worse outcome than a 500, and the silent warning was easy to miss.
  */
 export function checkRateLimit(
   identifier: string,
@@ -63,7 +69,10 @@ export function checkRateLimit(
   const limiter = getLimiter(config)
 
   if (!limiter) {
-    console.warn('[rate-limit] Upstash not configured — rate limit skipped')
+    if (isProduction) {
+      throw new MissingEnvError(UPSTASH_VARS)
+    }
+    console.warn('[rate-limit] Upstash not configured — rate limit skipped (dev only)')
     return { allowed: true, remaining: config.maxRequests, resetAt: Date.now() + config.windowMs }
   }
 

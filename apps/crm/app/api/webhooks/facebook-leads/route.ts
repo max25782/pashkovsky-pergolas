@@ -9,9 +9,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { normalizePhoneIL } from '@/lib/middleware/integration-access'
+import { missingEnv } from '@/lib/env/require-env'
+import { readVerifiedMetaBody } from '@/lib/webhooks/meta-signature'
 
-const VERIFY_TOKEN = process.env.FB_LEADS_VERIFY_TOKEN || 'pashkovsky-leads-verify-2024'
-const APP_SECRET = process.env.FB_APP_SECRET
+/** Every variable this route needs in order to store a lead. */
+const REQUIRED_ENV = [
+  'FB_LEADS_VERIFY_TOKEN',
+  'FB_APP_SECRET',
+  'FB_PAGE_ACCESS_TOKEN',
+  'FB_LEADS_COMPANY_ID',
+  'NEXT_PUBLIC_SUPABASE_URL',
+  'SUPABASE_SERVICE_ROLE_KEY',
+] as const
+
 const PAGE_ACCESS_TOKEN = process.env.FB_PAGE_ACCESS_TOKEN
 const COMPANY_ID = process.env.FB_LEADS_COMPANY_ID
 
@@ -31,7 +41,13 @@ export async function GET(req: NextRequest) {
   const token = searchParams.get('hub.verify_token')
   const challenge = searchParams.get('hub.challenge')
 
-  if (mode === 'subscribe' && token === VERIFY_TOKEN && challenge) {
+  const verifyToken = process.env.FB_LEADS_VERIFY_TOKEN?.trim()
+  if (!verifyToken) {
+    console.error('[FB Leads] FB_LEADS_VERIFY_TOKEN not configured')
+    return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
+  }
+
+  if (mode === 'subscribe' && token === verifyToken && challenge) {
     return new Response(challenge, {
       status: 200,
       headers: { 'Content-Type': 'text/plain' },
@@ -42,8 +58,24 @@ export async function GET(req: NextRequest) {
 
 /** POST - Leadgen events */
 export async function POST(req: NextRequest) {
-  const body = await req.json().catch(() => null)
-  if (!body) return NextResponse.json({ error: 'Bad JSON' }, { status: 400 })
+  // Checked before the signature so an unset secret reads as an operator error
+  // rather than as a rejected request.
+  const missing = missingEnv(...REQUIRED_ENV)
+  if (missing.length || !supabase || !COMPANY_ID || !PAGE_ACCESS_TOKEN) {
+    console.error('[FB Leads] Missing configuration:', missing.join(', ') || 'supabase client')
+    return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
+  }
+
+  const verified = await readVerifiedMetaBody(req, process.env.FB_APP_SECRET!)
+  if (!verified.ok) {
+    console.warn('[FB Leads] Rejected webhook:', verified.reason)
+    return NextResponse.json(
+      { error: verified.status === 401 ? 'Unauthorized' : 'Bad Request' },
+      { status: verified.status },
+    )
+  }
+
+  const body = verified.body as Record<string, any>
 
   // Meta may send hub.mode for verification in POST too
   if (body['hub.mode'] === 'subscribe') {
@@ -68,12 +100,8 @@ export async function POST(req: NextRequest) {
     leadgenIds.push(body.sample.value.leadgen_id)
   }
 
-  if (leadgenIds.length === 0 || !supabase || !COMPANY_ID) {
-    return NextResponse.json({ received: true }, { status: 200 })
-  }
-
-  if (!PAGE_ACCESS_TOKEN) {
-    console.warn('[FB Leads] FB_PAGE_ACCESS_TOKEN not set, skipping lead fetch')
+  // A signed event that carries no leadgen id is a legitimate no-op.
+  if (leadgenIds.length === 0) {
     return NextResponse.json({ received: true }, { status: 200 })
   }
 

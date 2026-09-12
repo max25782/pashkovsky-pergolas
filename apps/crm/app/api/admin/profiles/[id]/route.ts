@@ -5,8 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
-
-const PROFILES_API_URL = process.env.PROFILES_API_URL || 'http://localhost:3002'
+import { getProfilesApiBaseUrl, handleProxyError } from '@/lib/profiles-api/client'
 
 /**
  * PATCH /api/admin/profiles/[id]
@@ -29,7 +28,7 @@ export async function PATCH(
     const authHeader = req.headers.get('authorization')
 
     // Forward request to NestJS API
-    const response = await fetch(`${PROFILES_API_URL}/profiles/${params.id}`, {
+    const response = await fetch(`${getProfilesApiBaseUrl()}/profiles/${params.id}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -50,11 +49,7 @@ export async function PATCH(
     const data = await response.json()
     return NextResponse.json(data)
   } catch (error: unknown) {
-    console.error('[Profiles API] Error:', error)
-    return NextResponse.json(
-      { error: (error instanceof Error ? error.message : String(error)) || 'Internal server error' },
-      { status: 500 }
-    )
+    return handleProxyError(error, 'PATCH')
   }
 }
 
@@ -78,7 +73,7 @@ export async function DELETE(
     const authHeader = req.headers.get('authorization')
 
     // Forward request to NestJS API
-    const response = await fetch(`${PROFILES_API_URL}/profiles/${params.id}`, {
+    const response = await fetch(`${getProfilesApiBaseUrl()}/profiles/${params.id}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
@@ -98,10 +93,6 @@ export async function DELETE(
     const data = await response.json()
     return NextResponse.json(data)
   } catch (error: unknown) {
-    console.error('[Profiles API] Error:', error)
-    return NextResponse.json(
-      { error: (error instanceof Error ? error.message : String(error)) || 'Internal server error' },
-      { status: 500 }
-    )
+    return handleProxyError(error, 'DELETE')
   }
 }

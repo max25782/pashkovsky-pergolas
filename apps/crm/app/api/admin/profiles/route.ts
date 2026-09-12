@@ -5,19 +5,42 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
+import {
+  getProfilesApiBaseUrl,
+  InsecureProfilesApiUrlError,
+} from '@/lib/profiles-api/client'
+import { MissingEnvError } from '@/lib/env/require-env'
 
-const PROFILES_API_URL = process.env.PROFILES_API_URL || 'http://localhost:3002'
 const UPSTREAM_TIMEOUT_MS = 8000
 
 export const maxDuration = 60
 
 function buildProfilesListUrl(companyId: string): string {
-  const base = PROFILES_API_URL.endsWith('/')
-    ? PROFILES_API_URL.slice(0, -1)
-    : PROFILES_API_URL
-  const url = new URL(`${base}/profiles`)
+  const url = new URL(`${getProfilesApiBaseUrl()}/profiles`)
   url.searchParams.set('company_id', companyId)
   return url.toString()
+}
+
+/** Shared error shape for both handlers below. */
+function upstreamErrorResponse(error: unknown): NextResponse {
+  if (error instanceof MissingEnvError || error instanceof InsecureProfilesApiUrlError) {
+    console.error('[Profiles API] Misconfigured:', error.message)
+    return NextResponse.json({ error: 'Profiles API not configured' }, { status: 500 })
+  }
+
+  const msg = (error instanceof Error ? error.message : String(error)) || 'Internal server error'
+  const isConnectionError =
+    /ECONNREFUSED|ENOTFOUND|ETIMEDOUT|fetch failed|aborted|timeout/i.test(msg)
+  console.error('[Profiles API] Error:', msg, { isConnectionError })
+
+  return NextResponse.json(
+    {
+      error: isConnectionError
+        ? 'Profiles API unreachable or timed out. Check PROFILES_API_URL in Vercel env.'
+        : msg,
+    },
+    { status: 500 }
+  )
 }
 
 /**
@@ -73,18 +96,7 @@ export async function GET(req: NextRequest) {
     const data = await response.json()
     return NextResponse.json(data)
   } catch (error: unknown) {
-    const msg = (error instanceof Error ? error.message : String(error)) || 'Internal server error'
-    const isConnectionError =
-      /ECONNREFUSED|ENOTFOUND|ETIMEDOUT|fetch failed|aborted|timeout/i.test(String(msg))
-    console.error('[Profiles API] Error:', msg, { url: PROFILES_API_URL, isConnectionError })
-    return NextResponse.json(
-      {
-        error: isConnectionError
-          ? 'Profiles API unreachable or timed out. Check PROFILES_API_URL in Vercel env.'
-          : msg,
-      },
-      { status: 500 }
-    )
+    return upstreamErrorResponse(error)
   }
 }
 
@@ -106,7 +118,7 @@ export async function POST(req: NextRequest) {
     const authHeader = req.headers.get('authorization')
 
     // Forward request to NestJS API
-    const response = await fetch(`${PROFILES_API_URL}/profiles`, {
+    const response = await fetch(`${getProfilesApiBaseUrl()}/profiles`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -128,17 +140,6 @@ export async function POST(req: NextRequest) {
     const data = await response.json()
     return NextResponse.json(data)
   } catch (error: unknown) {
-    const msg = (error instanceof Error ? error.message : String(error)) || 'Internal server error'
-    const isConnectionError =
-      /ECONNREFUSED|ENOTFOUND|ETIMEDOUT|fetch failed|aborted|timeout/i.test(String(msg))
-    console.error('[Profiles API] Error:', msg, { url: PROFILES_API_URL, isConnectionError })
-    return NextResponse.json(
-      {
-        error: isConnectionError
-          ? 'Profiles API unreachable or timed out. Check PROFILES_API_URL in Vercel env.'
-          : msg,
-      },
-      { status: 500 }
-    )
+    return upstreamErrorResponse(error)
   }
 }
