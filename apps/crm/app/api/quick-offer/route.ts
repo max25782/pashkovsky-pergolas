@@ -144,6 +144,12 @@ export async function POST(req: NextRequest) {
     railingsLineTotal:
       draft.railingsLineTotal != null ? Number(draft.railingsLineTotal) : undefined,
     fenceLineTotal: draft.fenceLineTotal != null ? Number(draft.fenceLineTotal) : undefined,
+    // Per-section totals must be persisted too, otherwise a multi-fence offer
+    // has no stored breakdown and the PDF recomputes each section from
+    // metersTotal x heightCm x pricePerSqm.
+    fenceLineTotals: Array.isArray(draft.fenceLineTotals)
+      ? draft.fenceLineTotals.map(Number).filter((n) => Number.isFinite(n))
+      : undefined,
   })
 
   // ── 2. Build offer row from body ────────────────────────────────────────────

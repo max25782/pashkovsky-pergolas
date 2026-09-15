@@ -379,27 +379,25 @@ function formatSinglePergolaDimensionsHtml(pergola: Offer['pergola'], dict: PdfD
   }
 }
 
-function formatAllPergolasTechnicalHtml(offer: Offer, dict: PdfDict): string {
-  const pk = pdfPrimaryProductKind(offer)
-  const qx = offer.quickOfferExtra
+function railingsTechnicalHtml(
+  qr: NonNullable<NonNullable<Offer['quickOfferExtra']>['quickRailings']>,
+  dict: PdfDict,
+): string {
   const dash = dict.off_color_dash
-
-  if (pk === 'railings' && qx?.quickRailings) {
-    const qr = qx.quickRailings
-    const sqm = quickOfferRailingsFenceAreaSqm(qr.metersTotal, qr.heightCm)
-    const glazingLabels: Record<string, string> = {
-      aluminum_glass: dict.off_gl_al_glass,
-      wet_glazing: dict.off_gl_wet,
-      dry_glazing: dict.off_gl_dry,
-    }
-    const locLabels: Record<string, string> = {
-      balcony: dict.off_loc_balcony,
-      stairs: dict.off_loc_stairs,
-      roof: dict.off_loc_roof,
-      yard: dict.off_loc_yard,
-      other: dict.off_loc_other,
-    }
-    return `
+  const sqm = quickOfferRailingsFenceAreaSqm(qr.metersTotal, qr.heightCm)
+  const glazingLabels: Record<string, string> = {
+    aluminum_glass: dict.off_gl_al_glass,
+    wet_glazing: dict.off_gl_wet,
+    dry_glazing: dict.off_gl_dry,
+  }
+  const locLabels: Record<string, string> = {
+    balcony: dict.off_loc_balcony,
+    stairs: dict.off_loc_stairs,
+    roof: dict.off_loc_roof,
+    yard: dict.off_loc_yard,
+    other: dict.off_loc_other,
+  }
+  return `
     <tr><td colspan="2" class="tech-h">${dict.off_rail_spec_title}</td></tr>
     <tr><td>${dict.off_len}</td><td>${escapeHtml(String(qr.metersTotal))} ${dict.off_dim_m}</td></tr>
     <tr><td>${dict.off_height}</td><td>${qr.heightCm != null ? escapeHtml(String(qr.heightCm)) : dash} ${dict.off_cm}</td></tr>
@@ -410,23 +408,23 @@ function formatAllPergolasTechnicalHtml(offer: Offer, dict: PdfDict): string {
     <tr><td>${dict.off_glazing}</td><td>${escapeHtml(glazingLabels[qr.glazingSystem] ?? qr.glazingSystem)}</td></tr>
     ${qr.glassType ? `<tr><td>${dict.off_glass_detail}</td><td>${escapeHtml(qr.glassType)}</td></tr>` : ''}
     ${qr.notes ? `<tr><td>${dict.off_notes}</td><td>${escapeHtml(qr.notes)}</td></tr>` : ''}`
-  }
+}
 
-  if (pk === 'fence') {
-    const fences =
-      (qx?.quickFences && qx.quickFences.length > 0)
-        ? qx.quickFences
-        : qx?.quickFence ? [qx.quickFence] : []
-    if (fences.length > 0) {
-      const fenceLabels: Record<string, string> = {
-        classic: dict.off_fence_short_classic,
-        hitech: dict.off_fence_short_hitech,
-        hitech_angular: dict.off_fence_short_hitech_ang,
-      }
-      return fences.map((qf, idx) => {
-        const sqm = quickOfferRailingsFenceAreaSqm(qf.metersTotal, qf.heightCm)
-        const titleSuffix = fences.length > 1 ? ` ${idx + 1}` : ''
-        return `
+function fenceTechnicalHtml(
+  fences: NonNullable<NonNullable<Offer['quickOfferExtra']>['quickFences']>,
+  dict: PdfDict,
+): string {
+  const dash = dict.off_color_dash
+  const fenceLabels: Record<string, string> = {
+    classic: dict.off_fence_short_classic,
+    hitech: dict.off_fence_short_hitech,
+    hitech_angular: dict.off_fence_short_hitech_ang,
+  }
+  return fences
+    .map((qf, idx) => {
+      const sqm = quickOfferRailingsFenceAreaSqm(qf.metersTotal, qf.heightCm)
+      const titleSuffix = fences.length > 1 ? ` ${idx + 1}` : ''
+      return `
     <tr><td colspan="2" class="tech-h">${dict.off_fence_spec_title}${titleSuffix}</td></tr>
     <tr><td>${dict.off_len}</td><td>${escapeHtml(String(qf.metersTotal))} ${dict.off_dim_m}</td></tr>
     <tr><td>${dict.off_height}</td><td>${qf.heightCm != null ? escapeHtml(String(qf.heightCm)) : dash} ${dict.off_cm}</td></tr>
@@ -434,15 +432,52 @@ function formatAllPergolasTechnicalHtml(offer: Offer, dict: PdfDict): string {
     <tr><td>${dict.off_fence_type}</td><td>${escapeHtml(fenceLabels[qf.fenceVariant] ?? qf.fenceVariant)}</td></tr>
     <tr><td>${dict.off_color}</td><td>${escapeHtml(qf.color || dash)}</td></tr>
     ${qf.notes ? `<tr><td>${dict.off_notes}</td><td>${escapeHtml(qf.notes)}</td></tr>` : ''}`
-      }).join('\n')
+    })
+    .join('\n')
+}
+
+/**
+ * Technical spec rows for every product line in the offer.
+ *
+ * One block per included line, in the same order as the price table. This used
+ * to switch on the single "primary" product kind, and primaryQuickProduct()
+ * collapses any multi-line offer to 'pergola' — so a pergola + fence offer
+ * listed the fence in the price table but dropped its spec block entirely.
+ */
+function formatAllPergolasTechnicalHtml(offer: Offer, dict: PdfDict): string {
+  const inc = pdfQuickOfferIncludes(offer)
+  const qx = offer.quickOfferExtra
+  const blocks: string[] = []
+
+  if (inc.pergola) {
+    const pergolas = offer.pergolas || (offer.pergola ? [offer.pergola] : [])
+    if (pergolas.length > 0) {
+      blocks.push(
+        pergolas
+          .map((p, i) =>
+            formatSinglePergolaDimensionsHtml(p, dict, pergolas.length > 1 ? i : undefined),
+          )
+          .join(''),
+      )
     }
   }
 
-  const pergolas = offer.pergolas || (offer.pergola ? [offer.pergola] : [])
-  if (pergolas.length === 0) return `<tr><td colspan="2">${dict.off_no_pergola_row}</td></tr>`
-  return pergolas
-    .map((p, i) => formatSinglePergolaDimensionsHtml(p, dict, pergolas.length > 1 ? i : undefined))
-    .join('')
+  if (inc.railings && qx?.quickRailings) {
+    blocks.push(railingsTechnicalHtml(qx.quickRailings, dict))
+  }
+
+  if (inc.fence) {
+    const fences =
+      qx?.quickFences && qx.quickFences.length > 0
+        ? qx.quickFences
+        : qx?.quickFence
+          ? [qx.quickFence]
+          : []
+    if (fences.length > 0) blocks.push(fenceTechnicalHtml(fences, dict))
+  }
+
+  if (blocks.length === 0) return `<tr><td colspan="2">${dict.off_no_pergola_row}</td></tr>`
+  return blocks.join('\n')
 }
 
 function customer3dViewerHref(meta: Offer['configuratorMeta']): string | null {
