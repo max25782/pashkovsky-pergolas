@@ -13,7 +13,7 @@ export const runtime = 'nodejs'
 // Increase timeout for PDF generation (Vercel default is 10s for Hobby, 60s for Pro)
 export const maxDuration = 60 // seconds
 
-const SUPABASE_URL = process.env.SUPABASE_URL
+const SUPABASE_URL = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 const supabase = SUPABASE_URL && SERVICE_KEY
@@ -174,7 +174,14 @@ export async function POST(
     const pdfLocale = mergeUiPdfLocale(localeParam, companyLocale)
     const storedLocale = (offer.pdf?.locale as PdfLocale | undefined) ?? 'he'
 
-    if (offer.pdf?.url && !force && storedLocale === pdfLocale) {
+    const pdfCreatedAt = offer.pdf?.createdAt
+    const offerUpdatedAt = offer.updatedAt
+    const pdfIsStale =
+      pdfCreatedAt != null &&
+      offerUpdatedAt != null &&
+      new Date(offerUpdatedAt).getTime() > new Date(pdfCreatedAt).getTime()
+
+    if (offer.pdf?.url && !force && !pdfIsStale && storedLocale === pdfLocale) {
       return NextResponse.json({
         pdfUrl: offer.pdf.url,
         cached: true,

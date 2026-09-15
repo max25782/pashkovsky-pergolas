@@ -10,17 +10,19 @@ import { createClient } from '@supabase/supabase-js'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { getCompanyIdAsync } from '@/lib/middleware/company-context'
 import type { OfferDraft, Pergola, PergolaShape } from '@/types/offer'
+import { calculateOffer } from '@/lib/offer-calculator'
 import {
   buildQuickOfferExtra,
   hasAnyQuickOfferProduct,
   primaryQuickProduct,
+  resolveQuickFencesFromDraft,
   resolveQuickOfferIncludes,
 } from '@/lib/quick-offer-includes'
 import { validateQuickFence, validateQuickRailings } from '@/lib/quick-offer-product-validation'
 
 export const runtime = 'nodejs'
 
-const SUPABASE_URL = process.env.SUPABASE_URL
+const SUPABASE_URL = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 const supabase =
@@ -122,34 +124,40 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  if (includes.fence && draft.quickFence) {
-    const qf = draft.quickFence
-    const { error: fenceError } = await supabase.from('deal_fence_details').insert({
-      deal_id: dealId,
-      company_id: companyId,
-      meters_total: Number(qf.metersTotal),
-      height_cm: qf.heightCm != null ? Number(qf.heightCm) : null,
-      fence_variant: String(qf.fenceVariant).trim() as 'classic' | 'hitech' | 'hitech_angular',
-      color: String(qf.color).trim(),
-      notes: qf.notes != null && String(qf.notes).trim() !== '' ? String(qf.notes).trim() : null,
-    })
-    if (fenceError) {
-      console.error('[quick-offer] fence insert error:', fenceError)
-      await rollbackDeal()
-      return NextResponse.json({ error: 'Failed to create fence details' }, { status: 500 })
+  if (includes.fence) {
+    const fences = resolveQuickFencesFromDraft(draft)
+    if (fences.length > 0) {
+      const qf = fences[0]
+      const { error: fenceError } = await supabase.from('deal_fence_details').insert({
+        deal_id: dealId,
+        company_id: companyId,
+        meters_total: Number(qf.metersTotal),
+        height_cm: qf.heightCm != null ? Number(qf.heightCm) : null,
+        fence_variant: String(qf.fenceVariant).trim() as 'classic' | 'hitech' | 'hitech_angular',
+        color: String(qf.color).trim(),
+        notes: qf.notes != null && String(qf.notes).trim() !== '' ? String(qf.notes).trim() : null,
+      })
+      if (fenceError) {
+        console.error('[quick-offer] fence insert error:', fenceError)
+        await rollbackDeal()
+        return NextResponse.json({ error: 'Failed to create fence details' }, { status: 500 })
+      }
     }
   }
 
-  const quickOfferExtra = buildQuickOfferExtra(draft, {
-    railingsLineTotal:
-      draft.railingsLineTotal != null ? Number(draft.railingsLineTotal) : undefined,
-    fenceLineTotal: draft.fenceLineTotal != null ? Number(draft.fenceLineTotal) : undefined,
-    // Per-section totals must be persisted too, otherwise a multi-fence offer
-    // has no stored breakdown and the PDF recomputes each section from
-    // metersTotal x heightCm x pricePerSqm.
-    fenceLineTotals: Array.isArray(draft.fenceLineTotals)
-      ? draft.fenceLineTotals.map(Number).filter((n) => Number.isFinite(n))
-      : undefined,
+  const calcDraft = {
+    ...(draft as OfferDraft),
+    includePergola: includes.pergola,
+    includeRailings: includes.railings,
+    includeFence: includes.fence,
+    quickFences: includes.fence ? resolveQuickFencesFromDraft(draft) : undefined,
+  }
+  const serverCalc = calculateOffer(calcDraft)
+
+  const quickOfferExtra = buildQuickOfferExtra(calcDraft, {
+    railingsLineTotal: serverCalc.railingsLineTotal,
+    fenceLineTotal: serverCalc.fenceLineTotal,
+    fenceLineTotals: serverCalc.fenceLineTotals,
   })
 
   // ── 2. Build offer row from body ────────────────────────────────────────────
@@ -231,28 +239,28 @@ export async function POST(req: NextRequest) {
       winter_closure_items: (winterClosure?.items as unknown[]) ?? [],
       winter_closure_glass_type: winterClosure?.glassType ?? null,
 
-      // Calculated totals (sent from client)
-      area: Number(draft.area) || 0,
+      // Totals — recomputed server-side so fence/railings lines cannot be dropped
+      area: serverCalc.area,
       pergola_total:
-        draft.pergolaTotal != null
-          ? Number(draft.pergolaTotal)
-          : !includes.pergola && draft.railingsLineTotal != null
-            ? Number(draft.railingsLineTotal)
-            : !includes.pergola && draft.fenceLineTotal != null
-              ? Number(draft.fenceLineTotal)
+        serverCalc.pergolaTotal != null
+          ? serverCalc.pergolaTotal
+          : !includes.pergola && serverCalc.railingsLineTotal != null
+            ? serverCalc.railingsLineTotal
+            : !includes.pergola && serverCalc.fenceLineTotal != null
+              ? serverCalc.fenceLineTotal
               : 0,
       quick_offer_extra: quickOfferExtra,
-      santaf_total: Number(draft.santafTotal) || 0,
-      zip_screen_total: Number(draft.zipScreenTotal) || 0,
-      lighting_total: Number(draft.lightingTotal) || 0,
-      drainage_total: Number(draft.drainageTotal) || 0,
-      winter_closure_total: Number(draft.winterClosureTotal) || 0,
-      total_before_vat: Number(draft.totalBeforeVat) || 0,
-      vat_percent: Number(draft.vatPercent) || 18,
-      vat_amount: Number(draft.vatAmount) || 0,
-      price_with_vat: Number(draft.priceWithVat) || 0,
-      discount_amount: Number(draft.discountAmount) || 0,
-      final_price: Number(draft.finalPrice) || 0,
+      santaf_total: serverCalc.santafTotal,
+      zip_screen_total: serverCalc.zipScreenTotal,
+      lighting_total: serverCalc.lightingTotal,
+      drainage_total: serverCalc.drainageTotal,
+      winter_closure_total: serverCalc.winterClosureTotal,
+      total_before_vat: serverCalc.totalBeforeVat,
+      vat_percent: serverCalc.vatPercent,
+      vat_amount: serverCalc.vatAmount,
+      price_with_vat: serverCalc.priceWithVat,
+      discount_amount: serverCalc.discountAmount,
+      final_price: serverCalc.finalPrice,
     })
     .select('id')
     .single()

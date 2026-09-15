@@ -1,9 +1,6 @@
 import type { Offer } from '@/types/offer'
 import { quickOfferRailingsFenceAreaSqm } from '@/lib/offer-calculator'
-import {
-  resolveQuickOfferIncludes,
-  resolveQuickOfferIncludesFromExtra,
-} from '@/lib/quick-offer-includes'
+import { resolvePdfQuickOfferIncludes, resolveQuickFencesFromDraft } from '@/lib/quick-offer-includes'
 import { rectanglePlanSvgFragment } from '@/lib/pdf/plan-view-svg'
 import { getHebrewFontsCss, getLogoDataUri } from './font-loader'
 import { pdfT, resolvePdfLocale, pdfHtmlDir, pdfBcp47Locale, pdfCurrencySymbol, type PdfDict } from '@/lib/pdf/offer-pdf-i18n'
@@ -103,9 +100,7 @@ function buildPergolaLineName(offer: Offer, pergolaType: string | null | undefin
 }
 
 function pdfQuickOfferIncludes(offer: Offer) {
-  const fromExtra = resolveQuickOfferIncludesFromExtra(offer.quickOfferExtra)
-  if (fromExtra) return fromExtra
-  return resolveQuickOfferIncludes(offer)
+  return resolvePdfQuickOfferIncludes(offer)
 }
 
 function collectLineRows(offer: Offer, dict: PdfDict): LineRow[] {
@@ -186,7 +181,7 @@ function collectLineRows(offer: Offer, dict: PdfDict): LineRow[] {
         ? qExtra.quickFences
         : (qExtra?.quickFence ?? offer.quickFence)
           ? [qExtra?.quickFence ?? offer.quickFence!]
-          : []
+          : resolveQuickFencesFromDraft(offer)
     const fenceLabels: Record<string, string> = {
       classic: dict.off_fence_classic,
       hitech: dict.off_fence_hitech,
@@ -207,13 +202,14 @@ function collectLineRows(offer: Offer, dict: PdfDict): LineRow[] {
         (fences.length === 1
           ? (offer.fenceLineTotal ?? qExtra?.fenceLineTotal ?? (!inc.pergola && !inc.railings ? offer.pergolaTotal : undefined) ?? (sqm > 0 && up > 0 ? sqm * up : 0))
           : (sqm > 0 && up > 0 ? sqm * up : 0))
-      if (lineTotal > 0 && sqm > 0 && up > 0) {
+      if (lineTotal > 0 && sqm > 0) {
+        const unitPrice = up > 0 ? up : lineTotal / sqm
         const label = fences.length > 1 ? ` ${idx + 1}` : ''
         rows.push({
           description: `${dict.off_fence_prefix}${label} ${fenceLabels[qf.fenceVariant] ?? qf.fenceVariant} · ${dict.off_color_prefix} ${escapeHtml(qf.color)}`,
           unitLabel: dict.off_unit_sqm,
           quantity: Math.round(sqm * 1000) / 1000,
-          unitPrice: Math.round(up * 100) / 100,
+          unitPrice: Math.round(unitPrice * 100) / 100,
           lineTotal,
         })
       }

@@ -69,10 +69,7 @@ export function buildQuickOfferExtra(
   }
   if (inc.railings && draft.quickRailings) extra.quickRailings = draft.quickRailings
   if (inc.fence) {
-    // Prefer the new array format; fall back to legacy single fence for backward compat
-    const fences = draft.quickFences && draft.quickFences.length > 0
-      ? draft.quickFences
-      : draft.quickFence ? [draft.quickFence] : []
+    const fences = resolveQuickFencesFromDraft(draft)
     if (fences.length > 0) {
       extra.quickFences = fences
       // Keep legacy field for old PDF templates that still read quickFence
@@ -91,10 +88,36 @@ export function buildQuickOfferExtra(
   return extra
 }
 
+function quickFencesFromExtra(ex: QuickOfferExtraPersisted): QuickOfferExtraPersisted['quickFences'] {
+  if (ex.quickFences && ex.quickFences.length > 0) return ex.quickFences
+  if (ex.quickFence) return [ex.quickFence]
+  return []
+}
+
+function hasFenceDataInExtra(ex: QuickOfferExtraPersisted): boolean {
+  return quickFencesFromExtra(ex).length > 0 || (ex.fenceLineTotal ?? 0) > 0
+}
+
+function hasRailingsDataInExtra(ex: QuickOfferExtraPersisted): boolean {
+  return !!ex.quickRailings || (ex.railingsLineTotal ?? 0) > 0
+}
+
+export function resolveQuickFencesFromDraft(
+  draft: Partial<OfferDraft>,
+): NonNullable<QuickOfferExtraPersisted['quickFences']> {
+  if (draft.quickFences && draft.quickFences.length > 0) return draft.quickFences
+  if (draft.quickFence) return [draft.quickFence]
+  return []
+}
+
 export function resolveQuickOfferIncludesFromExtra(
   ex: QuickOfferExtraPersisted | null | undefined,
 ): QuickOfferIncludes | null {
   if (!ex) return null
+
+  const hasFenceData = hasFenceDataInExtra(ex)
+  const hasRailingsData = hasRailingsDataInExtra(ex)
+
   if (
     ex.includePergola !== undefined ||
     ex.includeRailings !== undefined ||
@@ -102,9 +125,69 @@ export function resolveQuickOfferIncludesFromExtra(
   ) {
     return {
       pergola: ex.includePergola ?? false,
-      railings: ex.includeRailings ?? false,
-      fence: ex.includeFence ?? false,
+      railings: (ex.includeRailings ?? false) || hasRailingsData,
+      fence: (ex.includeFence ?? false) || hasFenceData,
     }
   }
+
+  if (ex.quickProduct) {
+    return {
+      pergola: ex.quickProduct === 'pergola' || hasFenceData || hasRailingsData,
+      railings: ex.quickProduct === 'railings' || hasRailingsData,
+      fence: ex.quickProduct === 'fence' || hasFenceData,
+    }
+  }
+
+  if (hasFenceData || hasRailingsData) {
+    return {
+      pergola: false,
+      railings: hasRailingsData,
+      fence: hasFenceData,
+    }
+  }
+
   return null
+}
+
+/** PDF / round-trip: never drop a persisted fence line because flags were missing. */
+export function resolvePdfQuickOfferIncludes(
+  offer: Pick<OfferDraft, 'includePergola' | 'includeRailings' | 'includeFence' | 'quickProduct'> & {
+    quickOfferExtra?: QuickOfferExtraPersisted | null
+    quickFence?: OfferDraft['quickFence']
+    quickFences?: OfferDraft['quickFences']
+    quickRailings?: OfferDraft['quickRailings']
+    fenceLineTotal?: number
+    railingsLineTotal?: number
+    pergola?: OfferDraft['pergola']
+    pergolas?: OfferDraft['pergolas']
+  },
+): QuickOfferIncludes {
+  const fromExtra = resolveQuickOfferIncludesFromExtra(offer.quickOfferExtra)
+  const base = fromExtra ?? resolveQuickOfferIncludes(offer)
+  const qx = offer.quickOfferExtra
+
+  const fences =
+    (qx?.quickFences && qx.quickFences.length > 0
+      ? qx.quickFences
+      : qx?.quickFence
+        ? [qx.quickFence]
+        : undefined) ??
+    (offer.quickFences && offer.quickFences.length > 0
+      ? offer.quickFences
+      : offer.quickFence
+        ? [offer.quickFence]
+        : [])
+
+  const hasFenceData =
+    fences.length > 0 || (qx?.fenceLineTotal ?? offer.fenceLineTotal ?? 0) > 0
+  const hasRailingsData =
+    !!(qx?.quickRailings ?? offer.quickRailings) ||
+    (qx?.railingsLineTotal ?? offer.railingsLineTotal ?? 0) > 0
+  const hasPergolaData = !!(offer.pergolas?.length || offer.pergola?.shape)
+
+  return {
+    pergola: base.pergola || hasPergolaData,
+    railings: base.railings || hasRailingsData,
+    fence: base.fence || hasFenceData,
+  }
 }

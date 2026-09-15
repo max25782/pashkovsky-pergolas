@@ -16,7 +16,7 @@ import { pergolaFieldsFromOfferRow } from '@/lib/pdf/map-offer-db-row-for-pdf'
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
-const SUPABASE_URL = process.env.SUPABASE_URL
+const SUPABASE_URL = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 const supabase =
