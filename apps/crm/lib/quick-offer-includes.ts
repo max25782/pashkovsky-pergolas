@@ -88,7 +88,9 @@ export function buildQuickOfferExtra(
   return extra
 }
 
-function quickFencesFromExtra(ex: QuickOfferExtraPersisted): QuickOfferExtraPersisted['quickFences'] {
+function quickFencesFromExtra(
+  ex: QuickOfferExtraPersisted,
+): NonNullable<QuickOfferExtraPersisted['quickFences']> {
   if (ex.quickFences && ex.quickFences.length > 0) return ex.quickFences
   if (ex.quickFence) return [ex.quickFence]
   return []
