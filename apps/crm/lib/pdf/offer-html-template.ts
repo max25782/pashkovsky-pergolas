@@ -1,5 +1,6 @@
 import type { Offer } from '@/types/offer'
 import { quickOfferRailingsFenceAreaSqm } from '@/lib/offer-calculator'
+import { reconcileQuickOfferTotals } from '@/lib/pdf/map-offer-db-row-for-pdf'
 import { resolvePdfQuickOfferIncludes, resolveQuickFencesFromDraft } from '@/lib/quick-offer-includes'
 import { rectanglePlanSvgFragment } from '@/lib/pdf/plan-view-svg'
 import { getHebrewFontsCss, getLogoDataUri } from './font-loader'
@@ -695,6 +696,7 @@ export function renderOfferHtml(
   omitSignatureSection = false,
   locale?: string,
 ): string {
+  offer = reconcileQuickOfferTotals(offer)
   const resolved = resolvePdfLocale(locale)
   const dict = pdfT[resolved]
   const dir = pdfHtmlDir(resolved)
