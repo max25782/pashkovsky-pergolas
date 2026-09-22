@@ -133,7 +133,7 @@ export default async function HomePage({
       />
       <ScrollAnimationInit />
       <Nav />
-      <main>
+      <main id="main-content">
         <Hero />
         <Features />
         <ScreenshotShowcase />

@@ -1,11 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { PlanCanvas, type PlanCanvasLabels } from './view-svg/PlanCanvas'
 import { EdgeEditor, type EdgeEditorLabels } from './view-html/EdgeEditor'
 import { AdjustPanel, type AdjustPanelLabels } from './view-html/AdjustPanel'
 import { SizesPanel, type SizesPanelLabels } from './view-html/SizesPanel'
 import type { Point } from './geometry/types'
+import { toPolygon, wallEdgeIndicesFromChain } from './geometry/chain'
+import { isSimplePolygon } from './geometry/selfIntersection'
+import { createPlanEditorStore, PlanEditorStoreContext, useBoundPlanEditorStore } from './model/store'
 
 export interface PlanEditorLabels {
   canvas: PlanCanvasLabels
@@ -16,6 +19,8 @@ export interface PlanEditorLabels {
 
 interface PlanEditorProps {
   labels: PlanEditorLabels
+  /** Closed contour to show on mount (draft restore). Ignored after the store is created. */
+  initialContour?: { polygon: Point[]; wallIndices: number[] }
   /**
    * Подъём в 3D (промпт шага 3D). Пакет plan-editor не тянет зависимость на
    * three.js/pergola-core — хост (apps/crm) получает только полигон вершин
@@ -24,6 +29,15 @@ interface PlanEditorProps {
    * Второй аргумент — индексы пристенных сторон, см. AdjustPanel.onTo3D.
    */
   onTo3D?: (polygonMm: Point[], wallEdgeIndices: number[]) => void
+  /** Fired when the contour or its closed/simple state changes. Host owns persistence. */
+  onContourChange?: (contour: PlanContourSnapshot) => void
+}
+
+export interface PlanContourSnapshot {
+  polygon: Point[]
+  wallIndices: number[]
+  isClosed: boolean
+  isSimple: boolean
 }
 
 /**
@@ -39,7 +53,42 @@ interface PlanEditorProps {
  * labels приходят снаружи целиком — сам пакет не тянет зависимость на
  * конкретный механизм i18n CRM, только на форму объекта строк/функций.
  */
-export function PlanEditor({ labels, onTo3D }: PlanEditorProps) {
+function ContourReporter({ onContourChange }: { onContourChange?: (contour: PlanContourSnapshot) => void }) {
+  const fixedEdges = useBoundPlanEditorStore((s) => s.fixedEdges)
+  const isClosed = useBoundPlanEditorStore((s) => s.isClosed)
+
+  useEffect(() => {
+    if (!onContourChange) return
+    const polygon = toPolygon(fixedEdges)
+    onContourChange({
+      polygon,
+      wallIndices: wallEdgeIndicesFromChain(fixedEdges),
+      isClosed,
+      isSimple: polygon.length >= 3 && isSimplePolygon(polygon),
+    })
+  }, [fixedEdges, isClosed, onContourChange])
+
+  return null
+}
+
+export function PlanEditor({ labels, onTo3D, onContourChange, initialContour }: PlanEditorProps) {
+  const [store] = useState(() => {
+    const created = createPlanEditorStore()
+    if (initialContour && initialContour.polygon.length >= 3) {
+      created.getState().hydrateContour(initialContour.polygon, initialContour.wallIndices)
+    }
+    return created
+  })
+
+  return (
+    <PlanEditorStoreContext.Provider value={store}>
+      <ContourReporter onContourChange={onContourChange} />
+      <PlanEditorBody labels={labels} onTo3D={onTo3D} />
+    </PlanEditorStoreContext.Provider>
+  )
+}
+
+function PlanEditorBody({ labels, onTo3D }: Pick<PlanEditorProps, 'labels' | 'onTo3D'>) {
   // Открыта ли панель «Изменить размеры» — локальный UI-тумблер, не в сторе:
   // это состояние видимости конкретного HTML-оверлея, а не часть модели плана
   // (в отличие от editingEdgeId, который влияет на canDraw и на то, что рисует

@@ -24,7 +24,7 @@ import type { Locale } from '@/lib/locales'
 import { authFetch } from '@/lib/api/auth-fetch'
 import { useLanguage } from '@/lib/language-context'
 import { useToast } from '@/components/ui/toast'
-import { OfferConfiguratorEmbed } from '@/components/offers/OfferConfiguratorEmbed'
+import { OfferPlanConfiguratorEmbed } from '@/components/offers/OfferPlanConfiguratorEmbed'
 import { useSubscriptionPlan } from '@/components/subscription/subscription-plan-context'
 import { minPlanForFeature } from '@/lib/subscription/plan-access'
 import { ModuleEmptyState } from '@/components/onboarding'
@@ -614,11 +614,10 @@ export function OffersList({
           </div>
 
           {embedFor?.offer.id === offer.id ? (
-            <div className="mt-3 flex min-h-[420px] flex-col rounded-lg border border-teal-500/30 bg-black/30 p-2 sm:p-3">
-              <OfferConfiguratorEmbed
+            <div className="mt-3 flex min-h-[700px] flex-col rounded-lg border border-teal-500/30 bg-black/30 p-2 sm:p-3">
+              <OfferPlanConfiguratorEmbed
                 offerId={offer.id}
                 locale={locale}
-                editUrl={embedFor.editUrl}
                 offer={embedFor.offer}
                 onSaved={() => void fetchOffers({ silent: true })}
               />

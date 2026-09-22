@@ -141,3 +141,20 @@ html.js-ready .animate-on-scroll:not(.in-view) {
 .btn-shimmer:hover::after {
   left: 150%;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .animate-on-scroll,
+  html.js-ready .animate-on-scroll:not(.in-view) {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  .btn-shimmer::after {
+    display: none;
+  }
+}

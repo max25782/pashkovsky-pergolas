@@ -4,7 +4,9 @@
     "pricing": "Pricing",
     "testimonials": "Testimonials",
     "login": "Log In",
-    "trial": "Start Free Trial"
+    "trial": "Start Free Trial",
+    "toggleMenu": "Toggle menu",
+    "mainNav": "Main navigation"
   },
   "hero": {
     "badge": "AI-Powered CRM for Construction",
@@ -163,6 +165,36 @@
     "legal": "Legal",
     "privacy": "Privacy Policy",
     "terms": "Terms of Service",
+    "accessibility": "Accessibility Statement",
     "copyright": "© 2026 AluminCRM. All rights reserved."
+  },
+  "accessibility": {
+    "skipToContent": "Skip to main content",
+    "title": "Accessibility Statement",
+    "section1Title": "1. Commitment to Accessibility",
+    "section1Body": "AluminCRM is committed to making this website accessible to everyone, including people with disabilities, in accordance with Israeli accessibility regulations and Standard 5568 (WCAG 2.0 Level AA).",
+    "section2Title": "2. Compliance Level",
+    "section2Body": "Partial compliance — we are working toward full Israeli Standard 5568 (WCAG 2.0 Level AA).",
+    "section3Title": "3. Accessibility Coordinator",
+    "coordinatorName": "Name",
+    "coordinatorRole": "Role",
+    "coordinatorPhone": "Phone",
+    "coordinatorEmail": "Email",
+    "section4Title": "4. Report Accessibility Issues",
+    "section4Body": "If you encounter an accessibility barrier, please contact us by phone or email. We will address reports as soon as possible.",
+    "section5Title": "5. Implemented Measures",
+    "measure1": "Accessibility statement and coordinator contact",
+    "measure2": "Skip to main content link",
+    "measure3": "Multilingual support with correct lang and dir",
+    "measure4": "Form labels and button labels",
+    "measure5": "Keyboard navigation and visible focus indicators",
+    "measure6": "Reduced motion support via prefers-reduced-motion",
+    "section6Title": "6. Known Limitations",
+    "limitation1": "Third-party content (CAPTCHA, external services): subject to external provider accessibility.",
+    "limitation2": "Scroll animations: some dynamic effects may be reduced for users with prefers-reduced-motion.",
+    "limitation3": "External CRM links: CRM system accessibility is evaluated separately.",
+    "section7Title": "7. Remediation Timeline",
+    "section7Body": "We continue to improve site accessibility on an ongoing basis. Our target is full 5568 / WCAG 2.0 AA compliance by end of 2026.",
+    "lastUpdated": "Last updated: {date}"
   }
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { usePlanEditorStore } from '../model/store'
+import { useBoundPlanEditorStore } from '../model/store'
 import { usePlanEditorInput } from '../input/usePlanEditorInput'
 import { currentAnchor } from '../geometry/chain'
 import { closureGap } from '../geometry/closure'
@@ -32,17 +32,17 @@ export function PlanCanvas({ labels }: PlanCanvasProps) {
   const svgRef = useRef<SVGSVGElement>(null)
   const [canvasPx, setCanvasPx] = useState({ widthPx: 0, heightPx: 0 })
 
-  const viewport = usePlanEditorStore((s) => s.viewport)
-  const startPoint = usePlanEditorStore((s) => s.startPoint)
-  const draftEdge = usePlanEditorStore((s) => s.draftEdge)
-  const fixedEdges = usePlanEditorStore((s) => s.fixedEdges)
-  const isClosed = usePlanEditorStore((s) => s.isClosed)
-  const editingEdgeId = usePlanEditorStore((s) => s.editingEdgeId)
-  const inputUnit = usePlanEditorStore((s) => s.inputUnit)
-  const openEditor = usePlanEditorStore((s) => s.openEditor)
-  const initViewport = usePlanEditorStore((s) => s.initViewport)
-  const hoveredEdgeId = usePlanEditorStore((s) => s.hoveredEdgeId)
-  const setHoveredEdgeId = usePlanEditorStore((s) => s.setHoveredEdgeId)
+  const viewport = useBoundPlanEditorStore((s) => s.viewport)
+  const startPoint = useBoundPlanEditorStore((s) => s.startPoint)
+  const draftEdge = useBoundPlanEditorStore((s) => s.draftEdge)
+  const fixedEdges = useBoundPlanEditorStore((s) => s.fixedEdges)
+  const isClosed = useBoundPlanEditorStore((s) => s.isClosed)
+  const editingEdgeId = useBoundPlanEditorStore((s) => s.editingEdgeId)
+  const inputUnit = useBoundPlanEditorStore((s) => s.inputUnit)
+  const openEditor = useBoundPlanEditorStore((s) => s.openEditor)
+  const initViewport = useBoundPlanEditorStore((s) => s.initViewport)
+  const hoveredEdgeId = useBoundPlanEditorStore((s) => s.hoveredEdgeId)
+  const setHoveredEdgeId = useBoundPlanEditorStore((s) => s.setHoveredEdgeId)
 
   // Магнит замыкания имеет смысл только когда есть что замыкать (минимум две
   // стороны — треугольник) и контур ещё не закрыт. Правило живёт в одном месте:
@@ -109,7 +109,7 @@ export function PlanCanvas({ labels }: PlanCanvasProps) {
     canDraw,
   })
 
-  const lastAdjustResult = usePlanEditorStore((s) => s.lastAdjustResult)
+  const lastAdjustResult = useBoundPlanEditorStore((s) => s.lastAdjustResult)
   const worstEdgeIndex = lastAdjustResult?.worstEdgeIndex ?? null
   const ambiguousCandidates = lastAdjustResult?.ambiguousCandidates ?? []
   const worstEdgeId = worstEdgeIndex != null ? fixedEdges[worstEdgeIndex]?.id ?? null : null

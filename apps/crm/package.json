@@ -20,7 +20,6 @@
     "@aws-sdk/s3-request-presigner": "^3.1000.0",
     "@fontsource/heebo": "^5.2.8",
     "@pashkovsky/pergola-3d-preview": "*",
-    "@pashkovsky/pergola-configurator": "*",
     "@pashkovsky/pergola-core": "*",
     "@pashkovsky/pergola-drawing": "*",
     "@pashkovsky/plan-editor": "*",
@@ -58,7 +57,8 @@
     "recharts": "^3.5.1",
     "resend": "^3.5.0",
     "sharp": "^0.34.4",
-    "swr": "^2.3.7"
+    "swr": "^2.3.7",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",

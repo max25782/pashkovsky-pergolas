@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { DEFAULT_OFFER_VALUES, PergolaShape, type OfferDraft } from '@/types/offer'
 import { calculatePergolaArea, validatePergolaShape } from '@/lib/calculations/pergola-area'
+import { normalizePergola } from '@/lib/pergolas/normalize-pergola'
+import { pergolaAreaSqm } from '@/lib/pergolas/pergola-area-sqm'
 import { getCompanyIdAsync } from '@/lib/middleware/company-context'
 import {
   buildQuickOfferExtra,
@@ -96,7 +98,9 @@ export async function POST(req: NextRequest) {
 
     // Support multiple pergolas when pergola line is included
     const pergolasRaw = body.pergolas || (body.pergola ? [body.pergola] : [])
-    const pergolas = includes.pergola ? pergolasRaw : []
+    const pergolas = includes.pergola
+      ? (Array.isArray(pergolasRaw) ? pergolasRaw.map((p) => normalizePergola(p)) : [])
+      : []
 
     if (includes.pergola) {
       for (const perg of pergolas) {
@@ -136,9 +140,7 @@ export async function POST(req: NextRequest) {
     // Calculate total area from all pergolas
     let calculatedArea = 0
     for (const perg of pergolas) {
-      if (perg?.shape) {
-        calculatedArea += calculatePergolaArea(perg.shape)
-      }
+      calculatedArea += pergolaAreaSqm(perg)
     }
 
     // Calculate Santaf area if pergola is not included

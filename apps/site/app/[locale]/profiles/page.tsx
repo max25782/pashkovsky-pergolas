@@ -140,7 +140,8 @@ export default async function ProfilesPage({ params }: ProfilesPageProps) {
   }
 
   return (
-    <main 
+    <main
+      id="main-content"
       className="min-h-screen text-white py-20"
       style={{
         background: 'linear-gradient(180deg, rgba(10, 10, 10, 1) 21%, rgba(23, 23, 23, 0.5) 100%)',

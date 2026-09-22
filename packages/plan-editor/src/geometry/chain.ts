@@ -66,3 +66,32 @@ export function wallEdgeIndicesFromChain(edges: FixedEdge[]): number[] {
   })
   return indices
 }
+
+/**
+ * Closed contour (vertices, last point is not repeated) → fixed edges.
+ * Edge i runs from vertex i to vertex (i+1) % n, so wall indices match
+ * wallEdgeIndicesFromChain / toPolygon.
+ */
+export function fixedEdgesFromPolygon(
+  polygon: Point[],
+  wallIndices: number[],
+  nextId: () => string,
+): FixedEdge[] {
+  if (polygon.length < 3) return []
+  const walls = new Set(wallIndices)
+  return polygon.map((from, i) => {
+    const to = polygon[(i + 1) % polygon.length]
+    const dx = to.x - from.x
+    const dy = to.y - from.y
+    const angle = (Math.atan2(dy, dx) * 180) / Math.PI
+    return {
+      id: nextId(),
+      from,
+      to,
+      angleDeg: (angle + 360) % 360,
+      lengthMm: Math.hypot(dx, dy),
+      closedByMagnet: i === polygon.length - 1,
+      attachedToWall: walls.has(i) ? true : undefined,
+    }
+  })
+}

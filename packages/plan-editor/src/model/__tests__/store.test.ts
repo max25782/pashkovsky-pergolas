@@ -839,3 +839,25 @@ describe('acceptance test — реальный замер L-образной п�
     result!.residuals.forEach((r) => expect(r.wasUnmeasured).toBe(false))
   })
 })
+
+describe('hydrateContour', () => {
+  it('restores a closed polygon and wall flags', () => {
+    const store = freshStore()
+    store.getState().hydrateContour(
+      [
+        { x: 0, y: 0 },
+        { x: 4000, y: 0 },
+        { x: 4000, y: 6000 },
+        { x: 0, y: 6000 },
+      ],
+      [0],
+    )
+    const s = store.getState()
+    expect(s.isClosed).toBe(true)
+    expect(s.fixedEdges).toHaveLength(4)
+    expect(s.fixedEdges[0].from).toEqual({ x: 0, y: 0 })
+    expect(s.fixedEdges[0].attachedToWall).toBe(true)
+    expect(s.fixedEdges[1].attachedToWall).toBeUndefined()
+    expect(s.fixedEdges[3].to).toEqual({ x: 0, y: 0 })
+  })
+})

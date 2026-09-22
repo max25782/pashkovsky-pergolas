@@ -9,7 +9,7 @@ import WhyChooseUs from '@/components/home/WhyChooseUs'
 
 export default function Page({ params: { locale } } : { params: { locale: Locale }}){
   return (
-    <main>
+    <main id="main-content">
       <HeroSection locale={locale} />
       <WhyChooseUs locale={locale} />
       <ServicesSection locale={locale} />

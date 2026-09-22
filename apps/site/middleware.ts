@@ -7,37 +7,8 @@ const defaultLocale = 'he'
 const GCLID_COOKIE = 'gclid'
 const GCLID_MAX_AGE = 30 * 24 * 60 * 60 // 30 days in seconds
 
-/** Origins allowed to load profiles + configurator prefill from the CRM embed (comma-separated). */
-function configuratorCorsAllowlist(): string[] {
-  const raw = process.env.CONFIGURATOR_CORS_ORIGINS ?? 'http://localhost:3001'
-  return raw.split(',').map((s) => s.trim()).filter(Boolean)
-}
-
-function applyConfiguratorCors(request: NextRequest, response: NextResponse): NextResponse {
-  const origin = request.headers.get('origin')
-  const allowed = configuratorCorsAllowlist()
-  if (origin !== null && origin !== '' && allowed.includes(origin)) {
-    response.headers.set('Access-Control-Allow-Origin', origin)
-    response.headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS')
-    response.headers.set('Access-Control-Allow-Headers', 'Content-Type')
-    response.headers.set('Vary', 'Origin')
-  }
-  return response
-}
-
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
-
-  const isConfiguratorCorsPath =
-    pathname === '/data/profiles.json' || pathname.startsWith('/api/configurator/')
-  if (isConfiguratorCorsPath) {
-    if (request.method === 'OPTIONS') {
-      const res = new NextResponse(null, { status: 204 })
-      return applyConfiguratorCors(request, res)
-    }
-    const res = NextResponse.next()
-    return applyConfiguratorCors(request, res)
-  }
 
   // Skip middleware for static files, API routes, and Next.js internals
   if (
@@ -67,6 +38,14 @@ export function middleware(request: NextRequest) {
   )
 
   if (pathnameHasLocale) {
+    const locale = pathname.split('/')[1]
+    if (locales.includes(locale)) {
+      response.cookies.set('site_locale', locale, {
+        maxAge: 365 * 24 * 60 * 60,
+        sameSite: 'lax',
+        path: '/',
+      })
+    }
     return response
   }
 
@@ -75,6 +54,11 @@ export function middleware(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = `/${defaultLocale}`
     const redirectRes = NextResponse.redirect(url)
+    redirectRes.cookies.set('site_locale', defaultLocale, {
+      maxAge: 365 * 24 * 60 * 60,
+      sameSite: 'lax',
+      path: '/',
+    })
     if (gclid && gclid.trim().length > 0) {
       redirectRes.cookies.set(GCLID_COOKIE, gclid.trim(), {
         maxAge: GCLID_MAX_AGE,
@@ -89,6 +73,11 @@ export function middleware(request: NextRequest) {
   const url = request.nextUrl.clone()
   url.pathname = `/${defaultLocale}${pathname}`
   const redirectRes = NextResponse.redirect(url)
+  redirectRes.cookies.set('site_locale', defaultLocale, {
+    maxAge: 365 * 24 * 60 * 60,
+    sameSite: 'lax',
+    path: '/',
+  })
   if (gclid && gclid.trim().length > 0) {
     redirectRes.cookies.set(GCLID_COOKIE, gclid.trim(), {
       maxAge: GCLID_MAX_AGE,
@@ -101,8 +90,6 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/data/profiles.json',
-    '/api/configurator/:path*',
     /*
      * Match all request paths except:
      * - _next/static (static files)
@@ -113,4 +100,3 @@ export const config = {
     '/((?!_next/static|_next/image|favicon.ico|.*\\..*|api).*)',
   ],
 }
-

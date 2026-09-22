@@ -57,13 +57,8 @@ export {
   type WinterClosureType,
 } from '@/lib/offers/winter-closure-pricing'
 
-// PDF generation
-export {
-  generateOfferPdf,
-  generateOfferPdfFilename,
-} from '@/lib/pdf/generate-offer-pdf'
-
-export { renderOfferHtml } from '@/lib/pdf/offer-html-template'
+// PDF generation - NOT exported here to avoid bundling react-dom/server for client
+// Import directly from '@/lib/pdf/generate-offer-pdf' in server-side code only
 
 // UI Components
 export { CreateOfferModal } from '@/components/offers/CreateOfferModal'

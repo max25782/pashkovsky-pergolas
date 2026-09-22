@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import type { Locale } from '@/lib/locales'
 import { createTranslator } from '@/lib/locales'
@@ -10,6 +10,7 @@ const STORAGE_KEY = 'pashkovsky_cookie_consent_v1'
 export function CookieConsentBanner({ locale }: { locale: Locale }) {
   const [mounted, setMounted] = useState(false)
   const [visible, setVisible] = useState(false)
+  const acceptButtonRef = useRef<HTMLButtonElement>(null)
   const t = createTranslator(locale)
 
   useEffect(() => {
@@ -25,6 +26,11 @@ export function CookieConsentBanner({ locale }: { locale: Locale }) {
     }
     setVisible(true)
   }, [mounted])
+
+  useEffect(() => {
+    if (!visible) return
+    acceptButtonRef.current?.focus()
+  }, [visible])
 
   function accept() {
     try {
@@ -49,6 +55,7 @@ export function CookieConsentBanner({ locale }: { locale: Locale }) {
   return (
     <div
       role="dialog"
+      aria-modal="true"
       aria-live="polite"
       aria-label={ariaLabel}
       dir={locale === 'he' ? 'rtl' : 'ltr'}
@@ -59,15 +66,16 @@ export function CookieConsentBanner({ locale }: { locale: Locale }) {
           {message}{' '}
           <Link
             href={`/${locale}/legal/privacy`}
-            className="font-medium text-amber-300 underline-offset-2 hover:underline"
+            className="font-medium text-amber-300 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
           >
             {learnMore}
           </Link>
         </p>
         <button
+          ref={acceptButtonRef}
           type="button"
           onClick={accept}
-          className="shrink-0 rounded-lg bg-amber-500 px-5 py-2.5 text-sm font-semibold text-neutral-900 transition hover:bg-amber-400"
+          className="shrink-0 rounded-lg bg-amber-500 px-5 py-2.5 text-sm font-semibold text-neutral-900 transition hover:bg-amber-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
         >
           {acceptLabel}
         </button>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import {
@@ -39,15 +39,25 @@ import {
   resolveQuickOfferIncludes,
 } from '@/lib/quick-offer-includes'
 import { usePriceFormatter } from '@/lib/use-price-formatter'
-import { calculatePergolaArea } from '@/lib/calculations/pergola-area'
-import { PergolaShapeSelector } from '@/components/offers/PergolaShapeSelector'
+import { polygonAreaM2 } from '@pashkovsky/pergola-core'
+import { pergolaAreaSqm } from '@/lib/pergolas/pergola-area-sqm'
+import { applyPlanGeometry, type PlanGeometryInput } from '@/lib/pergolas/apply-plan-geometry'
 import { authFetch } from '@/lib/api/auth-fetch'
 import { formatPhoneForWhatsApp } from '@/lib/offer-sharing'
-import { OfferConfiguratorEmbed, type OfferConfiguratorEmbedHandle } from '@/components/offers/OfferConfiguratorEmbed'
+import {
+  OfferPlanConfiguratorEmbed,
+  type PlanGeometryChange,
+} from '@/components/offers/OfferPlanConfiguratorEmbed'
+import { PergolaPlanPreview } from '@/components/offers/PergolaPlanPreview'
+import {
+  parseQuickOfferDraft,
+  quickOfferDraftKey,
+  quickOfferSubmitTarget,
+  serializeQuickOfferDraft,
+} from '@/lib/quick-offer/draft-storage'
 import { useSubscriptionPlan } from '@/components/subscription/subscription-plan-context'
 import { minPlanForFeature } from '@/lib/subscription/plan-access'
 import { useLanguage, type Language } from '@/lib/language-context'
-import type { Locale } from '@/lib/locales'
 import type { OfferAiOutputLanguage } from '@/lib/ai/offer-text-output-languages'
 
 function uiLanguageToAiDefault(lang: Language): OfferAiOutputLanguage {
@@ -497,11 +507,6 @@ function ResultScreen({
   const [savedDealId, setSavedDealId] = useState<string | null>(null)
   const [offerSigned, setOfferSigned] = useState(false)
 
-  const [configuratorEditUrl, setConfiguratorEditUrl] = useState<string | null>(null)
-  const [configuratorLoading, setConfiguratorLoading] = useState(false)
-  const [show3D, setShow3D] = useState(true)
-  const configuratorRef = useRef<OfferConfiguratorEmbedHandle>(null)
-
   const resultIncludes = resolveQuickOfferIncludes(draft)
 
   useEffect(() => {
@@ -533,39 +538,9 @@ function ResultScreen({
     }
   }, [result.offerId, savedDealId])
 
-  useEffect(() => {
-    if (!resultIncludes.pergola || !show3D || configuratorEditUrl) return
-    setConfiguratorLoading(true)
-    authFetch(`/api/offers/${result.offerId}/configurator-link`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ locale: language }),
-    })
-      .then((r) => r.json())
-      .then((data: { url?: string }) => {
-        if (data.url) setConfiguratorEditUrl(data.url)
-      })
-      .catch(() => {})
-      .finally(() => setConfiguratorLoading(false))
-  }, [resultIncludes.pergola, show3D, result.offerId, configuratorEditUrl, language])
-
   async function handleDownloadPdf() {
     setDownloadingPdf(true)
     try {
-      // Auto-capture 3D screenshot and save it to the offer before generating PDF
-      const screenshot = configuratorRef.current?.captureScreenshot()
-      if (screenshot && screenshot.startsWith('data:image/')) {
-        try {
-          await authFetch(`/api/offers/${result.offerId}/screenshot`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ screenshot }),
-          })
-        } catch {
-          // Non-fatal: proceed with PDF even if screenshot save fails
-        }
-      }
-
       const res = await authFetch(
         `/api/quick-offer/${result.offerId}/pdf?locale=${encodeURIComponent(language)}`,
         { method: 'POST' },
@@ -596,8 +571,7 @@ function ResultScreen({
   const pergolaRows: Array<{ label: string; value: number }> =
     resultIncludes.pergola && resultPergolas.length > 0
       ? resultPergolas.flatMap((p, i) => {
-          if (!p?.shape) return []
-          const area = calculatePergolaArea(p.shape)
+          const area = pergolaAreaSqm(p)
           const price = area * p.pricePerSqm
           if (price <= 0) return []
           const label =
@@ -631,22 +605,7 @@ function ResultScreen({
     calculation.winterClosureTotal > 0 && { label: t('labelWinterClosure'), value: calculation.winterClosureTotal },
   ].filter(Boolean) as Array<{ label: string; value: number }>
 
-  const offerSeed = useMemo(
-    () => ({
-      ...draft,
-      ...calculation,
-      id: result.offerId,
-      pricing: calculation as never,
-      paymentTerms: {} as never,
-      warranty: {} as never,
-      approval: {} as never,
-      pdf: {} as never,
-      createdAt: '',
-      updatedAt: '',
-    }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [result.offerId],
-  )
+  const plannedPergolas = resultPergolas.filter((p) => p.plan && p.plan.polygon.length >= 3)
 
   return (
     <div className="space-y-4">
@@ -665,37 +624,20 @@ function ResultScreen({
               <Box className="w-5 h-5 text-blue-400" />
               <span className="font-semibold text-white">{t('section3D')}</span>
             </div>
-            {resultIncludes.pergola && (
-              <button
-                type="button"
-                onClick={() => setShow3D((v) => !v)}
-                className="p-1 rounded hover:bg-white/10 transition-colors"
-              >
-                {configuratorLoading
-                  ? <Loader2 className="w-4 h-4 animate-spin text-white/50" />
-                  : show3D
-                    ? <ChevronUp className="w-4 h-4 text-white/50" />
-                    : <ChevronDown className="w-4 h-4 text-white/50" />
-                }
-              </button>
-            )}
           </div>
-          {resultIncludes.pergola && show3D && (
-            <div className="relative h-[580px] rounded-b-xl overflow-hidden">
-              {configuratorLoading ? (
-                <div className="h-full flex items-center justify-center text-white/40">
-                  <Loader2 className="w-6 h-6 animate-spin mr-2" />
-                  {t('loading3D')}
-                </div>
-              ) : (
-                <OfferConfiguratorEmbed
-                  ref={configuratorRef}
-                  offerId={result.offerId}
-                  locale={language as Locale}
-                  editUrl={configuratorEditUrl}
-                  offer={offerSeed}
+          {resultIncludes.pergola && plannedPergolas.length > 0 && (
+            <div className="rounded-b-xl overflow-hidden">
+              {plannedPergolas.map((pergola, index) => (
+                <PergolaPlanPreview
+                  key={index}
+                  plan={pergola.plan!}
+                  title={
+                    plannedPergolas.length > 1
+                      ? `${t('sectionPergola')} #${index + 1}`
+                      : t('sectionPergola')
+                  }
                 />
-              )}
+              ))}
             </div>
           )}
           {!resultIncludes.pergola && (
@@ -808,7 +750,7 @@ function ResultScreen({
             className="flex items-center gap-2 text-white/50 hover:text-white transition-colors text-sm"
           >
             <ArrowLeft className="w-4 h-4" />
-            {t('btnNewOffer')}
+            {t('backToEdit')}
           </button>
         </div>
       </div>
@@ -882,6 +824,11 @@ export default function QuickOfferPage() {
   const [step, setStep] = useState<Step>('form')
   const [draft, setDraft] = useState<OfferDraft>(buildDefaultDraft)
   const [result, setResult] = useState<QuickOfferResult | null>(null)
+  const [editingOfferId, setEditingOfferId] = useState<string | null>(null)
+  const [companyId, setCompanyId] = useState<string | null>(null)
+  const [draftHydrated, setDraftHydrated] = useState(false)
+  const [draftRestored, setDraftRestored] = useState(false)
+  const [formEpoch, setFormEpoch] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [generatingAi, setGeneratingAi] = useState(false)
@@ -889,6 +836,50 @@ export default function QuickOfferPage() {
   const [aiOutputLang, setAiOutputLang] = useState<OfferAiOutputLanguage>(() =>
     uiLanguageToAiDefault(uiLanguage),
   )
+
+  useEffect(() => {
+    let cancelled = false
+    async function restore() {
+      try {
+        const res = await authFetch('/api/companies/me')
+        const data = res.ok ? ((await res.json()) as { company_id?: unknown }) : null
+        const id = typeof data?.company_id === 'string' ? data.company_id : null
+        if (cancelled) return
+        setCompanyId(id)
+        if (id) {
+          const stored = parseQuickOfferDraft(localStorage.getItem(quickOfferDraftKey(id)))
+          if (stored) {
+            setDraft(stored.draft)
+            setEditingOfferId(stored.offerId)
+            setDraftRestored(true)
+          }
+        }
+      } catch {
+        // Broken storage or a missing company leaves the empty form.
+      } finally {
+        if (!cancelled) setDraftHydrated(true)
+      }
+    }
+    void restore()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!draftHydrated || !companyId || step !== 'form') return
+    const handle = window.setTimeout(() => {
+      try {
+        localStorage.setItem(
+          quickOfferDraftKey(companyId),
+          serializeQuickOfferDraft(draft, editingOfferId),
+        )
+      } catch {
+        // Private mode or quota — the in-memory form still works.
+      }
+    }, 500)
+    return () => window.clearTimeout(handle)
+  }, [draftHydrated, companyId, step, draft, editingOfferId])
 
   useEffect(() => {
     setAiOutputLang(uiLanguageToAiDefault(uiLanguage))
@@ -921,8 +912,7 @@ export default function QuickOfferPage() {
   const pergolaRows: Array<{ label: string; value: number }> = useMemo(() => {
     if (!includes.pergola || pergolas.length === 0) return []
     return pergolas.flatMap((p, i) => {
-      if (!p?.shape) return []
-      const area = calculatePergolaArea(p.shape)
+      const area = pergolaAreaSqm(p)
       const price = area * p.pricePerSqm
       if (price <= 0) return []
       const label =
@@ -932,6 +922,29 @@ export default function QuickOfferPage() {
       return [{ label, value: price }]
     })
   }, [includes.pergola, pergolas])
+
+  function handlePlanGeometry(index: number, geometry: PlanGeometryChange) {
+    const input: PlanGeometryInput = geometry
+    setDraft((d) => {
+      const current = d.pergolas?.length ? d.pergolas : [{ ...DEFAULT_OFFER_VALUES.pergola }]
+      const next = applyPlanGeometry(current[index], input)
+      if (next === current[index]) return d
+      const updated = [...current]
+      updated[index] = next
+      return { ...d, pergolas: updated }
+    })
+  }
+
+  function confirmPergolaPlan(index: number) {
+    setDraft((d) => {
+      const current = d.pergolas?.length ? d.pergolas : [{ ...DEFAULT_OFFER_VALUES.pergola }]
+      const pergola = current[index]
+      if (!pergola?.plan || pergola.plan.polygon.length < 3) return d
+      const updated = [...current]
+      updated[index] = { ...pergola, plan: { ...pergola.plan, confirmed: true } }
+      return { ...d, pergolas: updated }
+    })
+  }
 
   function updatePergola(index: number, patch: Partial<Pergola>) {
     setDraft((d) => {
@@ -1014,9 +1027,17 @@ export default function QuickOfferPage() {
         const multi = (draft.pergolas?.length ?? 0) > 1
         if (multi) lines.push(`פרגולה ${i + 1}:`)
         lines.push(`סוג: ${typeName}`)
-        const area = calculatePergolaArea(p.shape)
-        if (p.shape.type === 'rectangle') {
-          // shape stores dimensions in meters (form shows ×100 for display as cm)
+        const area = pergolaAreaSqm(p)
+        const polygon = p.plan?.polygon
+        if (polygon && polygon.length >= 3) {
+          const edges = polygon
+            .map((point, edgeIndex) => {
+              const next = polygon[(edgeIndex + 1) % polygon.length]
+              return (Math.hypot(next.x - point.x, next.y - point.y) / 1000).toFixed(2)
+            })
+            .join(', ')
+          lines.push(`שרטוט: ${area.toFixed(2)} מ"ר | צלעות: ${edges} מ'`)
+        } else if (p.shape.type === 'rectangle') {
           lines.push(`מידות: ${p.shape.width} × ${p.shape.length} מ' (${area.toFixed(2)} מ"ר)`)
         } else {
           lines.push(`צורה: ${p.shape.type} | שטח: ${area.toFixed(2)} מ"ר`)
@@ -1248,8 +1269,9 @@ export default function QuickOfferPage() {
         quickFences: inc.fence ? fences : undefined,
         quickFence: undefined,
       }
-      const res = await authFetch('/api/quick-offer', {
-        method: 'POST',
+      const target = quickOfferSubmitTarget(editingOfferId)
+      const res = await authFetch(target.url, {
+        method: target.method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
@@ -1258,6 +1280,15 @@ export default function QuickOfferPage() {
         throw new Error(d.error ?? t('errorCreating'))
       }
       const data = (await res.json()) as QuickOfferResult
+      if (companyId) {
+        try {
+          localStorage.removeItem(quickOfferDraftKey(companyId))
+        } catch {
+          // ignore
+        }
+      }
+      setDraftRestored(false)
+      setEditingOfferId(data.offerId)
       setResult(data)
       setStep('result')
     } catch (e) {
@@ -1265,13 +1296,43 @@ export default function QuickOfferPage() {
     } finally {
       setSubmitting(false)
     }
-  }, [draft, calculation, t])
+  }, [draft, calculation, t, editingOfferId, companyId])
+
+  function clearDraftStorage() {
+    if (!companyId) return
+    try {
+      localStorage.removeItem(quickOfferDraftKey(companyId))
+    } catch {
+      // ignore
+    }
+  }
 
   function handleBack() {
     setStep('form')
     setResult(null)
-    setDraft(buildDefaultDraft())
     setError(null)
+    setFormEpoch((n) => n + 1)
+    if (companyId) {
+      try {
+        localStorage.setItem(
+          quickOfferDraftKey(companyId),
+          serializeQuickOfferDraft(draft, editingOfferId),
+        )
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  function handleStartNewOffer() {
+    clearDraftStorage()
+    setDraft(buildDefaultDraft())
+    setEditingOfferId(null)
+    setDraftRestored(false)
+    setResult(null)
+    setStep('form')
+    setError(null)
+    setFormEpoch((n) => n + 1)
   }
 
   const colorOptions = [
@@ -1288,7 +1349,7 @@ export default function QuickOfferPage() {
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-950 text-white" dir="rtl">
-      <div className={`mx-auto px-4 py-8 space-y-6 ${step === 'result' ? 'max-w-6xl' : 'max-w-2xl'}`}>
+      <div className={`mx-auto px-4 py-8 space-y-6 ${step === 'result' ? 'max-w-6xl' : 'max-w-5xl'}`}>
         <div className="flex items-center gap-4">
           <Link
             href="/app/admin"
@@ -1304,8 +1365,24 @@ export default function QuickOfferPage() {
 
         {step === 'result' && result ? (
           <ResultScreen result={result} calculation={calculation} draft={draft} onBack={handleBack} />
+        ) : !draftHydrated ? (
+          <div className="flex items-center gap-2 text-sm text-white/50">
+            <Loader2 className="w-4 h-4 animate-spin" />
+          </div>
         ) : (
           <div className="space-y-4">
+            {draftRestored && (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/40 bg-amber-500/10 px-4 py-3">
+                <p className="text-sm font-medium text-amber-100">{t('draftRestored')}</p>
+                <button
+                  type="button"
+                  onClick={handleStartNewOffer}
+                  className="rounded-lg bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/20"
+                >
+                  {t('startNewOffer')}
+                </button>
+              </div>
+            )}
             <SectionCard title={t('sectionProductType')} defaultOpen>
               <Field label={t('fieldProductKind')}>
                 <div className="flex flex-wrap gap-4">
@@ -1356,12 +1433,53 @@ export default function QuickOfferPage() {
                       </div>
                     )}
 
+                    <Field label={t('sectionDrawing')}>
+                      <div className="h-[480px]">
+                        <OfferPlanConfiguratorEmbed
+                          key={`${formEpoch}-${index}`}
+                          locale={uiLanguage}
+                          canvasClassName="relative h-full w-full overflow-hidden rounded-lg border border-white/15 bg-white"
+                          initialPlan={pergola.plan}
+                          onPlanGeometry={(geometry) => handlePlanGeometry(index, geometry)}
+                        />
+                      </div>
+                      {(() => {
+                        const polygon = pergola.plan?.polygon
+                        const areaM2 = polygon && polygon.length >= 3 ? polygonAreaM2(polygon) : 0
+                        const edges =
+                          polygon && polygon.length >= 3
+                            ? polygon
+                                .map((point, edgeIndex) => {
+                                  const next = polygon[(edgeIndex + 1) % polygon.length]
+                                  return (Math.hypot(next.x - point.x, next.y - point.y) / 1000).toFixed(2)
+                                })
+                                .join(' · ')
+                            : ''
+                        return (
+                          <div className="mt-2 space-y-1 text-sm text-white/80">
+                            <p>{t('planAreaReadonly', { area: areaM2.toFixed(2) })}</p>
+                            {edges ? <p>{t('planEdgesReadonly', { edges })}</p> : null}
+                          </div>
+                        )
+                      })()}
+                      <button
+                        type="button"
+                        disabled={!pergola.plan || pergola.plan.polygon.length < 3 || pergola.plan.confirmed}
+                        onClick={() => confirmPergolaPlan(index)}
+                        className="mt-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-40"
+                      >
+                        {pergola.plan?.confirmed ? t('drawingConfirmed') : t('btnConfirmDrawing')}
+                      </button>
+                    </Field>
+
+                    <div className={pergola.plan?.confirmed ? '' : 'pointer-events-none opacity-45'}>
                     <Field label={t('fieldPergolaType')}>
                       <div className="flex flex-wrap gap-2">
                         {(Object.keys(PERGOLA_TYPE_NAMES) as PergolaProductType[]).map((pt) => (
                           <button
                             key={pt}
                             type="button"
+                            disabled={pergola.plan?.confirmed !== true}
                             onClick={() =>
                               updatePergola(index, { pergolaType: pt, pricePerSqm: PERGOLA_TYPE_DEFAULT_PRICES[pt] })
                             }
@@ -1373,17 +1491,11 @@ export default function QuickOfferPage() {
                       </div>
                     </Field>
 
-                    <Field label={t('fieldShapeDimensions')}>
-                      <PergolaShapeSelector
-                        value={pergola.shape}
-                        onChange={(shape) => updatePergola(index, { shape })}
-                      />
-                    </Field>
-
                     <Field label={t('fieldPricePerSqm')}>
                       <input
                         type="number"
                         className={inputCls}
+                        disabled={pergola.plan?.confirmed !== true}
                         value={pergola.pricePerSqm}
                         onChange={(e) => updatePergola(index, { pricePerSqm: Number(e.target.value) || 0 })}
                       />
@@ -1392,11 +1504,16 @@ export default function QuickOfferPage() {
                     <Field label={t('fieldLocation')}>
                       <input
                         className={inputCls}
+                        disabled={pergola.plan?.confirmed !== true}
                         placeholder={t('fieldLocationPlaceholder')}
                         value={pergola.location ?? ''}
                         onChange={(e) => updatePergola(index, { location: e.target.value })}
                       />
                     </Field>
+                    </div>
+                    {pergola.plan?.confirmed !== true && (
+                      <p className="text-sm text-amber-300">{t('drawingFirstHint')}</p>
+                    )}
                   </SectionCard>
                 ))}
 
@@ -1405,7 +1522,7 @@ export default function QuickOfferPage() {
                   onClick={addPergola}
                   className="w-full py-2 border border-dashed border-white/30 hover:border-blue-400 text-white/60 hover:text-blue-400 rounded-xl text-sm transition"
                 >
-                  + הוסף פרגולה נוספת
+                  + {t('addAnotherPergola')}
                 </button>
               </div>
             )}
@@ -2294,9 +2411,22 @@ export default function QuickOfferPage() {
               </div>
             )}
 
+            {includes.pergola && pergolas.some((pergola) => pergola.plan?.confirmed !== true) && (
+              <div className="space-y-1 text-sm text-amber-300">
+                {pergolas.map((pergola, index) =>
+                  pergola.plan?.confirmed === true ? null : (
+                    <p key={index}>{t('pergolaNotReady', { n: index + 1 })}</p>
+                  ),
+                )}
+              </div>
+            )}
+
             <button
               onClick={handleSubmit}
-              disabled={submitting}
+              disabled={
+                submitting ||
+                (includes.pergola && pergolas.some((pergola) => pergola.plan?.confirmed !== true))
+              }
               className="w-full flex items-center justify-center gap-2 py-4 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white font-bold text-lg transition-colors"
             >
               {submitting ? (

@@ -14,6 +14,8 @@ import { getOgImageUrl } from '@/lib/image-url'
 import { OG_IMAGE_PATH, SITE_URL } from '@/lib/site-url'
 import { StructuredData } from '@/components/seo/structured-data'
 import { CookieConsentBanner } from '@/components/cookie-consent-banner'
+import { SkipToMain } from '@/components/SkipToMain'
+import { LocaleHtmlAttributes } from '@/components/LocaleHtmlAttributes'
 
 const ChatWidget = dynamic(() => import('@/components/ai-chat/ChatWidget'), {
   ssr: false,
@@ -79,7 +81,8 @@ export default function PublicLayout({
 
   return (
     <>
-      {/* Outside client Providers so JSON-LD scripts never compete with next-themes' inline script (hydration). */}
+      <LocaleHtmlAttributes locale={locale} />
+      <SkipToMain locale={locale} />
       <StructuredData locale={locale} />
       <Providers>
         <Suspense fallback={null}>
@@ -91,7 +94,7 @@ export default function PublicLayout({
         {children}
 
         {!isCatalogPdf ? <ChatWidget /> : null}
-        {!isCatalogPdf ? <FloatingWhatsApp /> : null}
+        {!isCatalogPdf ? <FloatingWhatsApp locale={locale} /> : null}
         {!isCatalogPdf ? <CookieConsentBanner locale={locale} /> : null}
 
         {!isCatalogPdf && process.env.NODE_ENV === 'production' ? (

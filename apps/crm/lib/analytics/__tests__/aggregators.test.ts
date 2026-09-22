@@ -8,8 +8,19 @@
 import type { AnalyticsPeriod } from '@/lib/ai/analyticsTypes'
 import { DEFAULT_TIMEZONE } from '@/lib/ai/analyticsTypes'
 
-// Mock Supabase client
-const mockSupabase = {
+type MockChain = {
+  from: jest.Mock
+  select: jest.Mock
+  eq: jest.Mock
+  gte: jest.Mock
+  lte: jest.Mock
+  in: jest.Mock
+  not: jest.Mock
+  data?: unknown
+  error?: unknown
+}
+
+const mockSupabase: MockChain = {
   from: jest.fn(() => mockSupabase),
   select: jest.fn(() => mockSupabase),
   eq: jest.fn(() => mockSupabase),
@@ -143,7 +154,7 @@ describe('Analytics Aggregators - Calculations', () => {
       }
       mockSupabase.lte.mockResolvedValue(mockQuery)
 
-      const result = await getDealsSummary(period)
+      const result = await getDealsSummary(period, 'test-company')
       
       expect(result.wonDeals).toBe(2)
       expect(result.totalDeals).toBe(4)
@@ -163,7 +174,7 @@ describe('Analytics Aggregators - Calculations', () => {
       }
       mockSupabase.lte.mockResolvedValue(mockQuery)
 
-      const result = await getDealsSummary(period)
+      const result = await getDealsSummary(period, 'test-company')
       
       expect(result.winRate).toBe(0)
       expect(result.totalDeals).toBe(0)
@@ -186,7 +197,7 @@ describe('Analytics Aggregators - Calculations', () => {
       }
       mockSupabase.lte.mockResolvedValue(mockQuery)
 
-      const result = await getDealsSummary(period)
+      const result = await getDealsSummary(period, 'test-company')
       
       expect(result.avgDealValue).toBe(40000) // (50000 + 30000 + 40000) / 3
     })
@@ -203,7 +214,7 @@ describe('Analytics Aggregators - Calculations', () => {
       const { getDealsSummary } = await import('../aggregators')
       const period = createTestPeriod('2024-01-15', '2024-01-20')
       
-      const result = await getDealsSummary(period)
+      const result = await getDealsSummary(period, 'test-company')
       
       expect(result.avgDealValue).toBe(0)
     })
@@ -368,7 +379,7 @@ describe('Analytics Aggregators - Calculations', () => {
         error: null,
       })
 
-      const result = await getLeadsSummary(period)
+      const result = await getLeadsSummary(period, 'test-company')
       
       // 2 leads with same phone = 1 duplicate group
       expect(result.duplicateLeads).toBe(1)
@@ -395,7 +406,7 @@ describe('Analytics Aggregators - Calculations', () => {
       const { getLeadsSummary } = await import('../aggregators')
       const period = createTestPeriod('2024-01-15', '2024-01-20')
       
-      const result = await getLeadsSummary(period)
+      const result = await getLeadsSummary(period, 'test-company')
       
       expect(result.duplicateLeads).toBe(0)
     })
@@ -456,8 +467,8 @@ describe('Analytics Aggregators - Calculations', () => {
       const { getDealsSummary, getLeadsSummary, getFinanceSummary } = await import('../aggregators')
       const period = createTestPeriod('2024-01-15', '2024-01-20')
       
-      const dealsResult = await getDealsSummary(period)
-      const leadsResult = await getLeadsSummary(period)
+      const dealsResult = await getDealsSummary(period, 'test-company')
+      const leadsResult = await getLeadsSummary(period, 'test-company')
       const financeResult = await getFinanceSummary(period)
       
       expect(dealsResult.totalDeals).toBe(0)
@@ -486,7 +497,7 @@ describe('Analytics Aggregators - Calculations', () => {
       const { getDealsSummary } = await import('../aggregators')
       const period = createTestPeriod('2024-01-15', '2024-01-20')
       
-      const result = await getDealsSummary(period)
+      const result = await getDealsSummary(period, 'test-company')
       
       // Null stage should be counted as 'new'
       expect(result.stageBreakdown.new).toBe(1)

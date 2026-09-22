@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
-import { usePlanEditorStore, MIN_EDGE_LENGTH_MM } from '../model/store'
+import { useBoundPlanEditorStore, MIN_EDGE_LENGTH_MM } from '../model/store'
 import { worldToScreen } from '../geometry/coords'
 import { mmToLengthUnit, lengthUnitToMm } from '../input/dynamicInputBuffer'
 
@@ -36,13 +36,13 @@ interface EdgeEditorProps {
  *      компонент ни во что здесь не вмешивается.
  */
 export function EdgeEditor({ labels }: EdgeEditorProps) {
-  const editingEdgeId = usePlanEditorStore((s) => s.editingEdgeId)
-  const fixedEdges = usePlanEditorStore((s) => s.fixedEdges)
-  const viewport = usePlanEditorStore((s) => s.viewport)
-  const inputUnit = usePlanEditorStore((s) => s.inputUnit)
-  const updateEdgeLength = usePlanEditorStore((s) => s.updateEdgeLength)
-  const updateEdgeAngle = usePlanEditorStore((s) => s.updateEdgeAngle)
-  const closeEditor = usePlanEditorStore((s) => s.closeEditor)
+  const editingEdgeId = useBoundPlanEditorStore((s) => s.editingEdgeId)
+  const fixedEdges = useBoundPlanEditorStore((s) => s.fixedEdges)
+  const viewport = useBoundPlanEditorStore((s) => s.viewport)
+  const inputUnit = useBoundPlanEditorStore((s) => s.inputUnit)
+  const updateEdgeLength = useBoundPlanEditorStore((s) => s.updateEdgeLength)
+  const updateEdgeAngle = useBoundPlanEditorStore((s) => s.updateEdgeAngle)
+  const closeEditor = useBoundPlanEditorStore((s) => s.closeEditor)
 
   const edge = editingEdgeId ? fixedEdges.find((e) => e.id === editingEdgeId) ?? null : null
 

@@ -7,8 +7,16 @@
  * Ensures calculations are correct before data reaches AI
  */
 
+import type { AnalyticsPeriod } from '@/lib/ai/analyticsTypes'
+
 // Test data
-const testDeals = [
+const testDeals: Array<{
+  id: string
+  stage: string
+  price: string | null
+  created_at: string
+  updated_at: string
+}> = [
   { id: '1', stage: 'done', price: '50000', created_at: '2024-01-15T10:00:00Z', updated_at: '2024-01-20T10:00:00Z' },
   { id: '2', stage: 'done', price: '30000', created_at: '2024-01-16T10:00:00Z', updated_at: '2024-01-25T10:00:00Z' },
   { id: '3', stage: 'production', price: '40000', created_at: '2024-01-17T10:00:00Z', updated_at: '2024-01-18T10:00:00Z' },
@@ -45,7 +53,7 @@ function testWinRate() {
 function testAvgDealValue() {
   
   const dealValues = testDeals
-    .map(d => parseFloat(d.price) || 0)
+    .map(d => parseFloat(d.price ?? '') || 0)
     .filter(v => v > 0)
   
   const avgDealValue = dealValues.length > 0
@@ -65,7 +73,7 @@ function testProfitAndMargin() {
   // Revenue from done deals only
   const revenue = testDeals
     .filter(d => d.stage === 'done')
-    .reduce((sum, d) => sum + (parseFloat(d.price) || 0), 0)
+    .reduce((sum, d) => sum + (parseFloat(d.price ?? '') || 0), 0)
   
   // Labor cost from shifts
   const laborCost = testShifts.reduce((sum, s) => sum + parseFloat(s.daily_rate_snapshot), 0)
@@ -114,7 +122,7 @@ async function testTimezoneConversion() {
   const { getDateRange } = await import('../aggregators')
   const { DEFAULT_TIMEZONE } = await import('@/lib/ai/analyticsTypes')
   
-  const period = { from: '2024-01-15', to: '2024-01-20', tz: DEFAULT_TIMEZONE }
+  const period: AnalyticsPeriod = { from: '2024-01-15', to: '2024-01-20', tz: 'Asia/Jerusalem' }
   const { from, to } = getDateRange(period)
   
   
@@ -150,7 +158,7 @@ function testEdgeCases() {
     { price: '10000' },
   ]
   const values = dealsWithNulls
-    .map(d => parseFloat(d.price) || 0)
+    .map(d => parseFloat(d.price ?? '') || 0)
     .filter(v => v > 0)
   const avg = values.length > 0 ? Math.round(values.reduce((s, v) => s + v, 0) / values.length) : 0
   
@@ -180,8 +188,9 @@ async function runTests() {
     await testTimezoneConversion()
     testEdgeCases()
     
-  } catch (error) {
-    console.error('\n❌ Test failed:', error.message)
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
+    console.error('\n❌ Test failed:', message)
     process.exit(1)
   }
 }

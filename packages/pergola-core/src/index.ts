@@ -86,3 +86,13 @@ export {
 } from './rectangleDecomposition'
 
 export { sanitizeContour, SANITIZE_EPS_MM } from './contourSanitize'
+
+export type { PlanPointMm } from './simplePolygon'
+export { isSimplePolygon } from './simplePolygon'
+export { polygonAreaM2 } from './polygonArea'
+
+export type { PlanConstructionParams } from './planDefaults'
+export {
+  PERGOLA_PLAN_SCHEMA_VERSION,
+  DEFAULT_PLAN_CONSTRUCTION_PARAMS,
+} from './planDefaults'

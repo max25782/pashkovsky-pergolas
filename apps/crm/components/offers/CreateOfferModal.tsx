@@ -26,11 +26,12 @@ import {
 import { usePriceFormatter } from '@/lib/use-price-formatter'
 import { PergolaShapeSelector } from './PergolaShapeSelector'
 import { calculatePergolaArea, validatePergolaShape } from '@/lib/calculations/pergola-area'
+import { pergolaAreaSqm } from '@/lib/pergolas/pergola-area-sqm'
 import { authFetch } from '@/lib/api/auth-fetch'
 import type { Locale } from '@/lib/locales'
 import { useLanguage } from '@/lib/language-context'
 import { useToast } from '@/components/ui/toast'
-import { OfferConfiguratorEmbed } from '@/components/offers/OfferConfiguratorEmbed'
+import { OfferPlanConfiguratorEmbed } from '@/components/offers/OfferPlanConfiguratorEmbed'
 
 interface CreateOfferModalProps {
   dealId: string
@@ -451,10 +452,13 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
         const prefix = draft.pergolas!.length > 1 ? `פרגולה ${i + 1}: ` : ''
         lines.push(`${prefix}${typeName}`)
 
-        if (p.shape.type === 'rectangle') {
-          lines.push(`מידות: ${p.shape.width} × ${p.shape.length} מ' (${calculatePergolaArea(p.shape).toFixed(1)} מ"ר)`)
+        const area = pergolaAreaSqm(p)
+        if (p.plan?.polygon && p.plan.polygon.length >= 3) {
+          lines.push(`שרטוט: ${area.toFixed(1)} מ"ר`)
+        } else if (p.shape.type === 'rectangle') {
+          lines.push(`מידות: ${p.shape.width} × ${p.shape.length} מ' (${area.toFixed(1)} מ"ר)`)
         } else {
-          lines.push(`צורה: ${p.shape.type === 'L' ? 'L' : p.shape.type === 'U' ? 'U' : 'X'} | שטח: ${calculatePergolaArea(p.shape).toFixed(1)} מ"ר`)
+          lines.push(`צורה: ${p.shape.type === 'L' ? 'L' : p.shape.type === 'U' ? 'U' : 'X'} | שטח: ${area.toFixed(1)} מ"ר`)
         }
 
         if (p.height) lines.push(`גובה: ${p.height} ס"מ`)
@@ -1891,11 +1895,10 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
               </div>
             ) : null}
             {configuratorUrls?.edit && createdOffer ? (
-              <div className="flex min-h-[400px] flex-1 basis-0 flex-col overflow-hidden rounded-xl border border-white/15 bg-black/40 p-2 sm:p-3">
-                <OfferConfiguratorEmbed
+              <div className="flex min-h-[700px] flex-1 basis-0 flex-col overflow-hidden rounded-xl border border-white/15 bg-black/40 p-2 sm:p-3">
+                <OfferPlanConfiguratorEmbed
                   offerId={createdOffer.id}
                   locale={locale}
-                  editUrl={configuratorUrls.edit}
                   offer={createdOffer}
                   onSaved={() => {
                     toast.success('נשמר מהקונפיגורטור — מידות והצעה עודכנו')

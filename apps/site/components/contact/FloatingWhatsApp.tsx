@@ -1,18 +1,21 @@
 'use client'
 import ContactCtaButton from '@/components/contact/ContactCtaButton'
 import type { Locale } from '@/lib/locales'
+import { createTranslator } from '@/lib/locales'
 import { FaWhatsapp } from 'react-icons/fa'
 
 export default function FloatingWhatsApp({ locale = 'he' as Locale }) {
+  const t = createTranslator(locale)
+  const ariaLabel = t('פתיחת טופס יצירת קשר בוואטסאפ', 'Открыть форму связи через WhatsApp', 'Open WhatsApp contact form')
+
   return (
     <div className="no-print fixed right-4 bottom-4 z-50">
       <ContactCtaButton
         locale={locale}
+        ariaLabel={ariaLabel}
         className="rounded-full w-16 h-16 !px-0 !py-0 !gap-0 flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow"
-        buttonText={<FaWhatsapp color="#ffffff" size={28} />}
+        buttonText={<FaWhatsapp color="#ffffff" size={28} aria-hidden="true" />}
       />
     </div>
   )
 }
-
-

@@ -46,7 +46,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-neutral-950 to-neutral-900 text-white">
+    <main id="main-content" className="min-h-screen bg-gradient-to-b from-neutral-950 to-neutral-900 text-white">
       <div className="max-w-4xl mx-auto px-6 py-20">
         {/* Back button */}
         <Link 

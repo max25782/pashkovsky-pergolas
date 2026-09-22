@@ -11,6 +11,7 @@ import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { getCompanyIdAsync } from '@/lib/middleware/company-context'
 import type { OfferDraft, Pergola, PergolaShape } from '@/types/offer'
 import { calculateOffer } from '@/lib/offer-calculator'
+import { prepareQuickOfferPergolas } from '@/lib/pergolas/prepare-quick-offer-pergolas'
 import {
   buildQuickOfferExtra,
   hasAnyQuickOfferProduct,
@@ -61,6 +62,15 @@ export async function POST(req: NextRequest) {
   if (includes.fence) {
     const err = validateQuickFence(draft)
     if (err) return NextResponse.json({ error: err }, { status: 400 })
+  }
+
+  let normalizedPergolas: Pergola[] = []
+  if (includes.pergola) {
+    const prepared = prepareQuickOfferPergolas(draft)
+    if (!prepared.ok) {
+      return NextResponse.json({ error: prepared.error }, { status: 400 })
+    }
+    normalizedPergolas = prepared.pergolas
   }
 
   const productCount = [includes.pergola, includes.railings, includes.fence].filter(Boolean).length
@@ -147,6 +157,7 @@ export async function POST(req: NextRequest) {
 
   const calcDraft = {
     ...(draft as OfferDraft),
+    pergolas: normalizedPergolas,
     includePergola: includes.pergola,
     includeRailings: includes.railings,
     includeFence: includes.fence,
@@ -161,10 +172,9 @@ export async function POST(req: NextRequest) {
   })
 
   // ── 2. Build offer row from body ────────────────────────────────────────────
-  const pergolas = (draft.pergolas as Pergola[] | undefined) ?? []
-  const firstPergola = pergolas[0]
+  const firstPergola = normalizedPergolas[0]
 
-  const pergolasData = includes.pergola && pergolas.length > 0 ? pergolas : null
+  const pergolasData = includes.pergola && normalizedPergolas.length > 0 ? normalizedPergolas : null
   const pergolaShapeData =
     includes.pergola && firstPergola?.shape ? firstPergola.shape : (null as PergolaShape | null)
   const pergolaWidth =

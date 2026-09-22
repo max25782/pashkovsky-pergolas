@@ -1,4 +1,6 @@
-import type { Offer, Pergola, PergolaShape, QuickOfferExtraPersisted } from '@/types/offer'
+import type { Offer, QuickOfferExtraPersisted } from '@/types/offer'
+import { resolvePdfQuickOfferIncludes } from '@/lib/quick-offer-includes'
+import { legacyPergolaFromOfferColumns, normalizePergolas } from '@/lib/pergolas/normalize-pergola'
 
 /** Railings/fence-only quick offers must not reuse default pergola geometry for PDF / plans. */
 export function isQuickOfferRailingsOrFenceRow(row: { quick_offer_extra?: unknown }): boolean {
@@ -37,27 +39,14 @@ export function pergolaFieldsFromOfferRow(row: {
     }
   }
 
-  const pergolasFromDb = row.pergolas_data as Pergola[] | null | undefined
+  const pergolasFromDb = normalizePergolas(row.pergolas_data)
   const pergolaSingle: Offer['pergola'] =
     pergolasFromDb && pergolasFromDb.length > 0
       ? pergolasFromDb[0]
-      : {
-          shape: row.pergola_shape_data
-            ? (row.pergola_shape_data as PergolaShape)
-            : {
-                type: 'rectangle' as const,
-                width: row.pergola_width || 0,
-                length: row.pergola_length || 0,
-              },
-          height: row.pergola_height ?? undefined,
-          location: row.pergola_location ?? undefined,
-          pricePerSqm: row.pergola_price_per_sqm ?? 750,
-          width: row.pergola_width ?? undefined,
-          length: row.pergola_length ?? undefined,
-        }
+      : legacyPergolaFromOfferColumns(row)
 
   return {
-    pergolas: pergolasFromDb && pergolasFromDb.length > 0 ? pergolasFromDb : undefined,
+    pergolas: pergolasFromDb,
     pergola: pergolaSingle,
     quickProduct: quickExtra?.quickProduct,
     quickRailings: quickExtra?.quickRailings,
@@ -199,14 +188,24 @@ export function transformOfferFromDbRow(data: Record<string, unknown>): Offer {
 }
 
 /**
- * Older quick offers persisted fence/railings in quick_offer_extra but omitted them
- * from total_before_vat. Reconcile so PDF / approve page match WhatsApp totals.
+ * Older pergola + fence/railings offers persisted line data in quick_offer_extra but
+ * omitted those lines from total_before_vat. Reconcile so PDF / approve match WhatsApp.
+ *
+ * Railings-only / fence-only offers store the main line in pergola_total — do not add
+ * railingsLineTotal again (that would double the summary, e.g. 7,500 → 15,000).
  */
 export function reconcileQuickOfferTotals(offer: Offer): Offer {
+  const inc = resolvePdfQuickOfferIncludes(offer)
+  if (!inc.pergola) return offer
+
   const qx = offer.quickOfferExtra
-  const fenceLine = qx?.fenceLineTotal ?? offer.fenceLineTotal ?? 0
-  const railLine = qx?.railingsLineTotal ?? offer.railingsLineTotal ?? 0
-  const missingProductLines = fenceLine + railLine
+  let missingProductLines = 0
+  if (inc.railings) {
+    missingProductLines += qx?.railingsLineTotal ?? offer.railingsLineTotal ?? 0
+  }
+  if (inc.fence) {
+    missingProductLines += qx?.fenceLineTotal ?? offer.fenceLineTotal ?? 0
+  }
   if (missingProductLines <= 0) return offer
 
   const storedBeforeVat = Number(offer.totalBeforeVat) || 0
@@ -231,8 +230,6 @@ export function reconcileQuickOfferTotals(offer: Offer): Offer {
 
   return {
     ...offer,
-    fenceLineTotal: fenceLine || offer.fenceLineTotal,
-    railingsLineTotal: railLine || offer.railingsLineTotal,
     totalBeforeVat,
     vatAmount,
     priceWithVat,

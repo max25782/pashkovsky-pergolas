@@ -1,6 +1,7 @@
-import { create } from 'zustand'
+import { createContext, useContext } from 'react'
+import { create, useStore, type StoreApi } from 'zustand'
 import { computeFitToScreenViewport, distance, mmToPx } from '../geometry/coords'
-import { rebuildChain, currentAnchor as computeCurrentAnchor, toPolygon } from '../geometry/chain'
+import { rebuildChain, currentAnchor as computeCurrentAnchor, toPolygon, fixedEdgesFromPolygon } from '../geometry/chain'
 import { adjustContour } from '../geometry/adjust'
 import { finalizeDraftEdge } from '../geometry/draftEdge'
 import { normalizeAngle } from '../geometry/snap'
@@ -30,6 +31,23 @@ function initialWorldBounds(): WorldBounds {
     maxX: START_POINT.x + INITIAL_WORLD_HALF_SIZE_MM,
     maxY: START_POINT.y + INITIAL_WORLD_HALF_SIZE_MM,
   }
+}
+
+function boundsFromEdges(edges: { from: { x: number; y: number }; to: { x: number; y: number } }[]): WorldBounds {
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+  for (const edge of edges) {
+    for (const point of [edge.from, edge.to]) {
+      if (point.x < minX) minX = point.x
+      if (point.y < minY) minY = point.y
+      if (point.x > maxX) maxX = point.x
+      if (point.y > maxY) maxY = point.y
+    }
+  }
+  if (!Number.isFinite(minX)) return initialWorldBounds()
+  return { minX, minY, maxX, maxY }
 }
 
 /** Заглушка viewport до первого вызова initViewport (реального canvasSize ещё нет). */
@@ -167,8 +185,25 @@ export function createPlanEditorStore() {
     hoveredEdgeId: null,
 
     initViewport: (canvasSize: CanvasSize) => {
-      const viewport = computeFitToScreenViewport(initialWorldBounds(), canvasSize)
+      const edges = get().fixedEdges
+      const bounds = edges.length > 0 ? boundsFromEdges(edges) : initialWorldBounds()
+      const viewport = computeFitToScreenViewport(bounds, canvasSize)
       set({ viewport })
+    },
+
+    hydrateContour: (polygon, wallIndices) => {
+      const edges = fixedEdgesFromPolygon(polygon, wallIndices, () => String(++nextEdgeId))
+      if (edges.length < 3) return
+      set({
+        startPoint: polygon[0],
+        fixedEdges: edges,
+        isClosed: true,
+        draftEdge: null,
+        editingEdgeId: null,
+        closeContourError: null,
+        lastAdjustResult: null,
+        preAdjustSnapshot: null,
+      })
     },
 
     setViewport: (patch) => set((s) => ({ viewport: { ...s.viewport, ...patch } })),
@@ -381,3 +416,11 @@ export function createPlanEditorStore() {
 }
 
 export const usePlanEditorStore = createPlanEditorStore()
+
+/** Per-editor store so two plan canvases on one page do not share a contour. */
+export const PlanEditorStoreContext = createContext<StoreApi<PlanEditorState> | null>(null)
+
+export function useBoundPlanEditorStore<T>(selector: (state: PlanEditorState) => T): T {
+  const contextual = useContext(PlanEditorStoreContext)
+  return useStore(contextual ?? usePlanEditorStore, selector)
+}

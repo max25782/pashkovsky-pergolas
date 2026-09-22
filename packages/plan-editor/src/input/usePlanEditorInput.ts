@@ -4,7 +4,7 @@ import { screenToWorld } from '../geometry/coords'
 import { buildDraftEdge } from '../geometry/draftEdge'
 import { applyStartMagnet, DEFAULT_MAGNET_THRESHOLD_PX } from '../geometry/closure'
 import type { DraftEdge, Point, Modifiers, SnapConfig, Viewport } from '../geometry/types'
-import { usePlanEditorStore } from '../model/store'
+import { useBoundPlanEditorStore } from '../model/store'
 import {
   EMPTY_DYNAMIC_INPUT_BUFFER,
   appendDigit,
@@ -92,11 +92,11 @@ export function usePlanEditorInput({
   canDraw,
   magnetThresholdPx = DEFAULT_MAGNET_THRESHOLD_PX,
 }: UsePlanEditorInputOptions): UsePlanEditorInputResult {
-  const setDraftEdge = usePlanEditorStore((s) => s.setDraftEdge)
-  const commitDraft = usePlanEditorStore((s) => s.commitDraft)
-  const closeContour = usePlanEditorStore((s) => s.closeContour)
-  const commitDraftTyped = usePlanEditorStore((s) => s.commitDraftTyped)
-  const inputUnit = usePlanEditorStore((s) => s.inputUnit)
+  const setDraftEdge = useBoundPlanEditorStore((s) => s.setDraftEdge)
+  const commitDraft = useBoundPlanEditorStore((s) => s.commitDraft)
+  const closeContour = useBoundPlanEditorStore((s) => s.closeContour)
+  const commitDraftTyped = useBoundPlanEditorStore((s) => s.commitDraftTyped)
+  const inputUnit = useBoundPlanEditorStore((s) => s.inputUnit)
 
   const lastCursorWorldRef = useRef<Point | null>(null)
   const modsRef = useRef<Modifiers>({ lockOrtho: false, freeform: false })

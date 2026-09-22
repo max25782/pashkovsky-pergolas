@@ -24,7 +24,7 @@ export {
 
 export { resolveDirection, angularDistance, normalizeAngle } from './geometry/snap'
 export { buildDraftEdge, finalizeDraftEdge } from './geometry/draftEdge'
-export { rebuildChain, currentAnchor, toPolygon, wallEdgeIndicesFromChain } from './geometry/chain'
+export { rebuildChain, currentAnchor, toPolygon, wallEdgeIndicesFromChain, fixedEdgesFromPolygon } from './geometry/chain'
 export type { ClosureGap } from './geometry/closure'
 export { closureGap, applyStartMagnet, DEFAULT_MAGNET_THRESHOLD_PX } from './geometry/closure'
 export { isSimplePolygon } from './geometry/selfIntersection'
@@ -33,7 +33,12 @@ export type { EdgeResidual, AdjustContourResult, AdjustWeightsConfig } from './g
 export { adjustContour, DEFAULT_ADJUST_WEIGHTS } from './geometry/adjust'
 
 export type { PlanEditorState } from './model/types'
-export { usePlanEditorStore, createPlanEditorStore } from './model/store'
+export {
+  usePlanEditorStore,
+  createPlanEditorStore,
+  PlanEditorStoreContext,
+  useBoundPlanEditorStore,
+} from './model/store'
 
 export { usePlanEditorInput } from './input/usePlanEditorInput'
 export type {
@@ -66,4 +71,4 @@ export { SizesPanel } from './view-html/SizesPanel'
 export type { SizesPanelLabels } from './view-html/SizesPanel'
 
 export { PlanEditor } from './PlanEditor'
-export type { PlanEditorLabels } from './PlanEditor'
+export type { PlanEditorLabels, PlanContourSnapshot } from './PlanEditor'

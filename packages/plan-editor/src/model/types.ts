@@ -82,6 +82,12 @@ export interface PlanEditorState {
   /** Пересчитывает viewport через fit-to-screen под текущий размер холста. */
   initViewport: (canvasSize: CanvasSize) => void
 
+  /**
+   * Replace the empty chain with a closed contour (draft restore).
+   * Vertices are not repeated; the last edge closes back to the first.
+   */
+  hydrateContour: (polygon: Point[], wallIndices: number[]) => void
+
   setViewport: (patch: Partial<Viewport>) => void
 
   setInputUnit: (unit: LengthUnit) => void

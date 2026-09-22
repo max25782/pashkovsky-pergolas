@@ -12,6 +12,7 @@ interface ContactCtaButtonProps {
   locale?: Locale
   className?: string
   buttonText?: React.ReactNode
+  ariaLabel?: string
 }
 
 function getCopy(locale: Locale) {
@@ -20,9 +21,13 @@ function getCopy(locale: Locale) {
       buttonCta: 'Связаться с нами',
       modalTitle: 'Оставьте данные и мы свяжемся с вами',
       modalSubtitle: 'Не обязательно WhatsApp — можем позвонить 🙂',
+      nameLabel: 'Полное имя',
+      phoneLabel: 'Телефон',
+      cityLabel: 'Город',
       namePlaceholder: 'Полное имя',
       phonePlaceholder: 'Телефон',
       cityPlaceholder: 'Город',
+      closeLabel: 'Закрыть',
       submitButton: 'Отправить',
       sending: 'Отправка...',
       step2Title: 'Как вам удобнее продолжить?',
@@ -37,9 +42,13 @@ function getCopy(locale: Locale) {
       buttonCta: 'Contact Us',
       modalTitle: "Leave your details and we'll get back to you",
       modalSubtitle: 'WhatsApp is optional — we can call too 🙂',
+      nameLabel: 'Full Name',
+      phoneLabel: 'Phone',
+      cityLabel: 'City',
       namePlaceholder: 'Full Name',
       phonePlaceholder: 'Phone',
       cityPlaceholder: 'City',
+      closeLabel: 'Close',
       submitButton: 'Submit',
       sending: 'Sending...',
       step2Title: 'How would you like to continue?',
@@ -53,9 +62,13 @@ function getCopy(locale: Locale) {
     buttonCta: 'דברו איתנו',
     modalTitle: 'השאירו פרטים ונחזור אליכם',
     modalSubtitle: 'לא חייבים וואטסאפ – אפשר גם שיחה רגילה 🙂',
+    nameLabel: 'שם מלא',
+    phoneLabel: 'טלפון',
+    cityLabel: 'עיר',
     namePlaceholder: 'שם מלא',
     phonePlaceholder: 'טלפון',
     cityPlaceholder: 'עיר',
+    closeLabel: 'סגור',
     submitButton: 'שלח',
     sending: 'שולח...',
     step2Title: 'איך נוח לך להמשיך?',
@@ -66,7 +79,7 @@ function getCopy(locale: Locale) {
   }
 }
 
-export default function ContactCtaButton({ locale = 'he', className, buttonText }: ContactCtaButtonProps) {
+export default function ContactCtaButton({ locale = 'he', className, buttonText, ariaLabel }: ContactCtaButtonProps) {
   const toast = useToast()
   const copy = getCopy(locale)
   const [isOpen, setIsOpen] = useState(false)
@@ -143,8 +156,10 @@ export default function ContactCtaButton({ locale = 'he', className, buttonText 
   return (
     <>
       <button
+        type="button"
         onClick={() => { setIsOpen(true); trackClick('cta_button_open') }}
-        className={`inline-flex items-center justify-center gap-3 px-12 py-4 rounded-full text-lg font-semibold text-white bg-gradient-to-r from-green-700 to-green-600 hover:from-green-600 hover:to-green-500 shadow-lg shadow-green-600/20 transition-all duration-300 ${className || ''}`}
+        aria-label={ariaLabel ?? copy.buttonCta}
+        className={`inline-flex items-center justify-center gap-3 px-12 py-4 rounded-full text-lg font-semibold text-white bg-gradient-to-r from-green-700 to-green-600 hover:from-green-600 hover:to-green-500 shadow-lg shadow-green-600/20 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${className || ''}`}
       >
         {buttonText ? buttonText : (
           <>
@@ -162,6 +177,7 @@ export default function ContactCtaButton({ locale = 'he', className, buttonText 
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setIsOpen(false)}
+            role="presentation"
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
@@ -169,48 +185,65 @@ export default function ContactCtaButton({ locale = 'he', className, buttonText 
               exit={{ scale: 0.9, opacity: 0 }}
               transition={{ duration: 0.3 }}
               dir={locale === 'he' ? 'rtl' : 'ltr'}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="cta-modal-title"
               className="bg-white text-gray-900 rounded-3xl p-8 w-full max-w-md shadow-2xl relative"
               onClick={(e) => e.stopPropagation()}
             >
               <button
+                type="button"
                 onClick={() => { setIsOpen(false); setStep(1) }}
-                className={`absolute top-4 text-gray-400 hover:text-gray-700 transition ${locale === 'he' ? 'left-4' : 'right-4'}`}
+                aria-label={copy.closeLabel}
+                className={`absolute top-4 text-gray-400 hover:text-gray-700 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 ${locale === 'he' ? 'left-4' : 'right-4'}`}
               >
-                ✕
+                <span aria-hidden="true">✕</span>
               </button>
 
               {step === 1 && (
                 <>
-                  <h2 className="text-2xl font-bold text-gray-800 mb-2">{copy.modalTitle}</h2>
-                  <p className="text-sm text-gray-500 mb-6">{copy.modalSubtitle}</p>
+                  <h2 id="cta-modal-title" className="text-2xl font-bold text-gray-800 mb-2">{copy.modalTitle}</h2>
+                  <p className="text-sm text-gray-600 mb-6">{copy.modalSubtitle}</p>
                   <form onSubmit={handleSubmit} className="space-y-4">
-                    <input
-                      type="text"
-                      name="name"
-                      placeholder={copy.namePlaceholder}
-                      value={form.name}
-                      onChange={handleChange}
-                      required
-                      className="w-full border border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500"
-                    />
-                    <input
-                      type="tel"
-                      name="phone"
-                      placeholder={copy.phonePlaceholder}
-                      value={form.phone}
-                      onChange={handleChange}
-                      required
-                      className="w-full border border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500"
-                    />
-                    <input
-                      type="text"
-                      name="city"
-                      placeholder={copy.cityPlaceholder}
-                      value={form.city}
-                      onChange={handleChange}
-                      required
-                      className="w-full border border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500"
-                    />
+                    <div>
+                      <label htmlFor="cta-name" className="block text-sm font-medium text-gray-700 mb-1">{copy.nameLabel}</label>
+                      <input
+                        id="cta-name"
+                        type="text"
+                        name="name"
+                        placeholder={copy.namePlaceholder}
+                        value={form.name}
+                        onChange={handleChange}
+                        required
+                        className="w-full border border-gray-200 rounded-lg px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="cta-phone" className="block text-sm font-medium text-gray-700 mb-1">{copy.phoneLabel}</label>
+                      <input
+                        id="cta-phone"
+                        type="tel"
+                        name="phone"
+                        placeholder={copy.phonePlaceholder}
+                        value={form.phone}
+                        onChange={handleChange}
+                        required
+                        className="w-full border border-gray-200 rounded-lg px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="cta-city" className="block text-sm font-medium text-gray-700 mb-1">{copy.cityLabel}</label>
+                      <input
+                        id="cta-city"
+                        type="text"
+                        name="city"
+                        placeholder={copy.cityPlaceholder}
+                        value={form.city}
+                        onChange={handleChange}
+                        required
+                        className="w-full border border-gray-200 rounded-lg px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
+                      />
+                    </div>
                     <TurnstileWidget
                       onVerify={setTurnstileToken}
                       onExpire={() => setTurnstileToken(null)}
@@ -229,7 +262,7 @@ export default function ContactCtaButton({ locale = 'he', className, buttonText 
 
               {step === 2 && (
                 <>
-                  <h2 className="text-2xl font-bold text-gray-800 mb-6">{copy.step2Title}</h2>
+                  <h2 id="cta-modal-title" className="text-2xl font-bold text-gray-800 mb-6">{copy.step2Title}</h2>
                   <div className="space-y-3">
                     <button
                       onClick={handleWhatsApp}

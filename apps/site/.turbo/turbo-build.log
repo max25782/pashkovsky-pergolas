@@ -7,37 +7,70 @@
   - Environments: .env.local
 
  [37m[1m [22m[39m Creating an optimized production build ...
-Browserslist: browsers data (caniuse-lite) is 8 months old. Please run:
-  npx update-browserslist-db@latest
-  Why you should do it regularly: https://github.com/browserslist/update-db#readme
-Browserslist: caniuse-lite is outdated. Please run:
-  npx update-browserslist-db@latest
-  Why you should do it regularly: https://github.com/browserslist/update-db#readme
  [32m[1m✓[22m[39m Compiled successfully
-[?25l [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G[?25h [37m[1m [22m[39m Linting and checking validity of types     [32m[1m✓[22m[39m Linting and checking validity of types 
-[?25l [37m[1m [22m[39m Collecting page data  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m..[39m[2K[1G[?25h [37m[1m [22m[39m Collecting page data     [32m[1m✓[22m[39m Collecting page data 
-[?25l [37m[1m [22m[39m Generating static pages (0/99)  [36m[    ][39m[2K[1G [37m[1m [22m[39m Generating static pages (0/99)  [36m[=   ][39m[2K[1G [37m[1m [22m[39m Generating static pages (17/99)  [36m[==  ][39m[2K[1G [37m[1m [22m[39m Generating static pages (43/99)  [36m[=== ][39m[2K[1G [37m[1m [22m[39m Generating static pages (57/99)  [36m[ ===][39m[2K[1G[?25h [32m[1m✓[22m[39m Generating static pages (99/99)
+[?25l [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G[?25h
+./components/ai-chat/ChatWidget.tsx
+53:6  Warning: React Hook useEffect has a missing dependency: 'loadHistory'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+357:21  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+368:25  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+424:17  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./components/carousel.tsx
+8:7  Warning: Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element.  jsx-a11y/no-static-element-interactions
+
+./components/dgamim/dgamim-carousel.tsx
+68:7  Warning: Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element.  jsx-a11y/no-static-element-interactions
+
+./components/dgamim/model-lightbox.tsx
+33:6  Warning: React Hook useEffect has missing dependencies: 'next', 'onClose', and 'prev'. Either include them or remove the dependency array. If 'onClose' changes too often, find the parent component that defines it and wrap that definition in useCallback.  react-hooks/exhaustive-deps
+
+./components/dgamim/rotating-image.tsx
+30:5  Warning: Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element.  jsx-a11y/no-static-element-interactions
+
+./components/fences/FencesGallery.tsx
+234:7  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./components/ga.tsx
+33:6  Warning: React Hook useEffect has a missing dependency: 'gaId'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/generic/MediaGallery.tsx
+122:5  Warning: Visible, non-interactive elements with click handlers must have at least one keyboard listener.  jsx-a11y/click-events-have-key-events
+153:7  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./components/pergulas/ProjectsGallery.tsx
+28:9  Warning: The 'rawApi' logical expression could make the dependencies of useMemo Hook (at line 57) change on every render. Move it inside the useMemo callback. Alternatively, wrap the initialization of 'rawApi' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+61:6  Warning: React Hook useMemo has an unnecessary dependency: 'uiStore.projects.projectId'. Either exclude it or remove the dependency array. Outer scope values like 'uiStore.projects.projectId' aren't valid dependencies because mutating them doesn't re-render the component.  react-hooks/exhaustive-deps
+108:6  Warning: React Hook useEffect has an unnecessary dependency: 'uiStore.projects.open'. Either exclude it or remove the dependency array. Outer scope values like 'uiStore.projects.open' aren't valid dependencies because mutating them doesn't re-render the component.  react-hooks/exhaustive-deps
+217:15  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./components/video/VideoGallery.tsx
+32:17  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/basic-features/eslint#disabling-rules
+[?25l [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m...[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m.[39m[2K[1G [37m[1m [22m[39m Linting and checking validity of types  [36m..[39m[2K[1G[?25h [37m[1m [22m[39m Linting and checking validity of types     [32m[1m✓[22m[39m Linting and checking validity of types 
+[?25l [37m[1m [22m[39m Collecting page data  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting page data  [36m...[39m[2K[1G[?25h [37m[1m [22m[39m Collecting page data     [32m[1m✓[22m[39m Collecting page data 
+[?25l [37m[1m [22m[39m Generating static pages (0/97)  [36m[    ][39m[2K[1G [37m[1m [22m[39m Generating static pages (1/97)  [36m[=   ][39m[2K[1G [37m[1m [22m[39m Generating static pages (18/97)  [36m[==  ][39m[2K[1G [37m[1m [22m[39m Generating static pages (71/97)  [36m[=== ][39m[2K[1G[?25h [32m[1m✓[22m[39m Generating static pages (97/97)
 [?25l [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[?25l [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m.[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m.[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m..[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m..[39m[2K[1G [37m[1m [22m[39m Finalizing page optimization  [36m...[39m[2K[1G [37m[1m [22m[39m Collecting build traces  [36m...[39m[2K[1G[?25h [37m[1m [22m[39m Collecting build traces     [32m[1m✓[22m[39m Collecting build traces 
 [2K[1G[?25h [37m[1m [22m[39m Finalizing page optimization     [32m[1m✓[22m[39m Finalizing page optimization 
 
 [4mRoute (app)[24m                              [4mSize[24m     [4mFirst Load JS[24m
-┌ ○ /_not-found                          161 B          [37m[1m87.5 kB[22m[39m
-├ ƒ /[locale]                            6.02 kB         [37m[1m153 kB[22m[39m
-├ ƒ /[locale]/about                      161 B          [37m[1m87.5 kB[22m[39m
-├ ƒ /[locale]/blog                       161 B          [37m[1m87.5 kB[22m[39m
+┌ ƒ /_not-found                          164 B          [37m[1m87.5 kB[22m[39m
+├ ƒ /[locale]                            6.29 kB         [37m[1m153 kB[22m[39m
+├ ƒ /[locale]/about                      164 B          [37m[1m87.5 kB[22m[39m
+├ ƒ /[locale]/blog                       164 B          [37m[1m87.5 kB[22m[39m
 ├ ● /[locale]/blog/[slug]                294 B          [37m[1m96.3 kB[22m[39m
 ├   ├ /he/blog/pergolas-aluminum
 ├   ├ /he/blog/glass-railings
 ├   ├ /he/blog/fences-gates
 ├   └ [+9 more paths]
-├ ƒ /[locale]/contact                    8.81 kB         [37m[1m116 kB[22m[39m
+├ ƒ /[locale]/contact                    8.89 kB         [37m[1m116 kB[22m[39m
 ├ ƒ /[locale]/fences                     4.7 kB          [37m[1m172 kB[22m[39m
 ├ ƒ /[locale]/fromShetah                 826 B           [37m[1m109 kB[22m[39m
-├ ƒ /[locale]/legal/privacy              161 B          [37m[1m87.5 kB[22m[39m
-├ ƒ /[locale]/legal/terms                160 B          [37m[1m87.5 kB[22m[39m
+├ ƒ /[locale]/legal/accessibility        164 B          [37m[1m87.5 kB[22m[39m
+├ ƒ /[locale]/legal/privacy              164 B          [37m[1m87.5 kB[22m[39m
+├ ƒ /[locale]/legal/terms                163 B          [37m[1m87.5 kB[22m[39m
 ├ ƒ /[locale]/mistora                    195 B           [37m[1m154 kB[22m[39m
-├ ƒ /[locale]/models                     161 B          [37m[1m87.5 kB[22m[39m
-├ ƒ /[locale]/pergola3d                  228 kB          [37m[1m316 kB[22m[39m
+├ ƒ /[locale]/models                     163 B          [37m[1m87.5 kB[22m[39m
 ├ ƒ /[locale]/pergulas                   16.8 kB         [37m[1m184 kB[22m[39m
 ├ ● /[locale]/pergulas/[id]              175 B          [37m[1m92.7 kB[22m[39m
 ├   ├ /he/pergulas/ashdod
@@ -46,24 +79,22 @@ Browserslist: caniuse-lite is outdated. Please run:
 ├   └ [+75 more paths]
 ├ ƒ /[locale]/profiles                   193 B           [37m[1m138 kB[22m[39m
 ├ ƒ /[locale]/railings                   795 B           [37m[1m154 kB[22m[39m
-├ ƒ /[locale]/services                   161 B          [37m[1m87.5 kB[22m[39m
+├ ƒ /[locale]/services                   164 B          [37m[1m87.5 kB[22m[39m
 ├ ƒ /[locale]/windows                    1.4 kB          [37m[1m109 kB[22m[39m
-├ ƒ /api/configurator/prefill            0 B                [37m[1m0 B[22m[39m
 ├ ƒ /api/gallery/[category]              0 B                [37m[1m0 B[22m[39m
 ├ ƒ /api/gallery/from-shetah             0 B                [37m[1m0 B[22m[39m
 ├ ƒ /api/gallery/models                  0 B                [37m[1m0 B[22m[39m
 ├ ○ /api/pergola-projects                0 B                [37m[1m0 B[22m[39m
-├ ƒ /api/sendPergolaConfig               0 B                [37m[1m0 B[22m[39m
 ├ ○ /icon.svg                            0 B                [37m[1m0 B[22m[39m
 ├ ○ /robots.txt                          0 B                [37m[1m0 B[22m[39m
 └ ○ /sitemap.xml                         0 B                [37m[1m0 B[22m[39m
 + First Load JS shared by all            [37m[1m87.3 kB[22m[39m
-  ├ chunks/117-068fedc59d67e386.js       31.7 kB
-  ├ chunks/fd9d1056-44f6c963ef673d17.js  53.6 kB
+  ├ chunks/117-05d7f7a5fd206bb8.js       31.7 kB
+  ├ chunks/fd9d1056-de175dace367179a.js  53.6 kB
   └ other shared chunks (total)          1.96 kB
 
 
-ƒ Middleware                             [37m[1m25.9 kB[22m[39m
+ƒ Middleware                             [37m[1m25.8 kB[22m[39m
 
 ○  (Static)   prerendered as static content
 ●  (SSG)      prerendered as static HTML (uses [36mgetStaticProps[39m)

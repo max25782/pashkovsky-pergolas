@@ -1,9 +1,15 @@
 import fs from 'fs'
 import path from 'path'
 import type { Offer } from '@/types/offer'
-import { hangerPipeLengthCm } from '@pashkovsky/pergola-configurator'
 import { chooseStockLength, STOCK_LENGTHS_CM, type ProfileCategory } from './stock-lengths'
 import { calculateSuntufSheets } from '@/lib/calculations/suntuf-sheets'
+
+/** Diagonal hanger pipe length (cm) from front beam to wall mount point. */
+function hangerPipeLengthCm(depthCm: number): number {
+  const d = Math.max(0, Number(depthCm) || 0)
+  const rise = d / 3
+  return Math.round(Math.sqrt(d * d + rise * rise) * 10) / 10
+}
 
 interface ProfileEntry {
   id: string

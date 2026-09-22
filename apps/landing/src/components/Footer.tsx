@@ -1,4 +1,5 @@
 import { useTranslations } from 'next-intl';
+import { Link } from '@/i18n/routing';
 
 export default function Footer() {
   const t = useTranslations('footer');
@@ -25,6 +26,7 @@ export default function Footer() {
       links: [
         { label: t('privacy'), href: '#' },
         { label: t('terms'), href: '#' },
+        { label: t('accessibility'), href: '/legal/accessibility' },
       ],
     },
   ];
@@ -35,7 +37,7 @@ export default function Footer() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10">
           {/* Brand */}
           <div className="space-y-4">
-            <a href="#" className="flex items-center gap-2">
+            <Link href="/" className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-purple-500 flex items-center justify-center shadow-lg shadow-violet-500/20 shrink-0">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                   <rect x="2" y="2" width="5" height="5" rx="1" fill="white" />
@@ -47,7 +49,7 @@ export default function Footer() {
               <span className="font-syne font-700 text-lg text-white">
                 Alumin<span className="gradient-text">CRM</span>
               </span>
-            </a>
+            </Link>
             <p className="text-sm text-text-2 leading-relaxed max-w-xs">{t('tagline')}</p>
 
             {/* Social */}
@@ -70,14 +72,14 @@ export default function Footer() {
                   ),
                 },
               ].map(({ label, icon }) => (
-                <a
+                <span
                   key={label}
-                  href="#"
+                  role="img"
                   aria-label={label}
-                  className="w-8 h-8 rounded-lg bg-white/5 hover:bg-violet-600/20 border border-white/5 hover:border-violet-500/30 flex items-center justify-center text-text-2 hover:text-violet-300 transition-all"
+                  className="w-8 h-8 rounded-lg bg-white/5 border border-white/5 flex items-center justify-center text-text-2"
                 >
                   {icon}
-                </a>
+                </span>
               ))}
             </div>
           </div>
@@ -91,12 +93,21 @@ export default function Footer() {
               <ul className="space-y-2.5">
                 {links.map(({ label, href }) => (
                   <li key={label}>
-                    <a
-                      href={href}
-                      className="text-sm text-text-2 hover:text-white transition-colors hover:translate-x-0.5 inline-block"
-                    >
-                      {label}
-                    </a>
+                    {href.startsWith('/legal/') ? (
+                      <Link
+                        href={href}
+                        className="text-sm text-text-2 hover:text-white transition-colors hover:translate-x-0.5 inline-block"
+                      >
+                        {label}
+                      </Link>
+                    ) : (
+                      <a
+                        href={href}
+                        className="text-sm text-text-2 hover:text-white transition-colors hover:translate-x-0.5 inline-block"
+                      >
+                        {label}
+                      </a>
+                    )}
                   </li>
                 ))}
               </ul>

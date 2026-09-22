@@ -31,21 +31,24 @@ export default function Footer({ locale = 'he' }: { locale?: Locale }) {
           <a href={`/${locale}/blog`} className="hover:text-white transition">{t('בלוג','Блог','Blog')}</a>
           <a href={`/${locale}/about`} className="hover:text-white transition">{t('אודות','О нас','About')}</a>
           <a href={`/${locale}/contact`} className="hover:text-white transition">{t('צור קשר','Контакты','Contact')}</a>
+          <a href={`/${locale}/legal/privacy`} className="hover:text-white transition">{t('מדיניות פרטיות','Политика конфиденциальности','Privacy Policy')}</a>
+          <a href={`/${locale}/legal/terms`} className="hover:text-white transition">{t('תנאי שימוש','Условия использования','Terms of Service')}</a>
+          <a href={`/${locale}/legal/accessibility`} className="hover:text-white transition">{t('הצהרת נגישות','Заявление о доступности','Accessibility Statement')}</a>
         </div>
 
         {/* Contact info */}
         <div>
           <h4 className="text-lg font-semibold mb-2">{t('צור קשר','Связаться','Contact')}</h4>
-          <p className="text-sm">📍 {t('אזור תעשיה עמנואל','Промзона Эммануэль','Emmanuel Industrial Zone')}</p>
-          <p className="text-sm">📞 +972524494848</p>
-          <p className="text-sm">✉️ office@pashkovsky-group.com</p>
-          <p className="text-sm mt-1">🕒 {t('א׳–ה׳ 08:00–18:00, ו׳ 08:00–13:00','Вс–Чт 08:00–18:00, Пт 08:00–13:00','Sun–Thu 08:00–18:00, Fri 08:00–13:00')}</p>
+          <p className="text-sm"><span aria-hidden="true">📍 </span>{t('אזור תעשיה עמנואל','Промзона Эммануэль','Emmanuel Industrial Zone')}</p>
+          <p className="text-sm"><span aria-hidden="true">📞 </span>+972524494848</p>
+          <p className="text-sm"><span aria-hidden="true">✉️ </span>office@pashkovsky-group.com</p>
+          <p className="text-sm mt-1"><span aria-hidden="true">🕒 </span>{t('א׳–ה׳ 08:00–18:00, ו׳ 08:00–13:00','Вс–Чт 08:00–18:00, Пт 08:00–13:00','Sun–Thu 08:00–18:00, Fri 08:00–13:00')}</p>
           <div className="flex gap-3 mt-3">
             <a
               href="https://wa.me/972524494848"
               target="_blank"
               rel="noreferrer"
-              aria-label="WhatsApp"
+              aria-label={t('WhatsApp','WhatsApp','WhatsApp')}
               className="p-2 rounded-full bg-neutral-800 hover:bg-neutral-700 text-neutral-200 hover:text-white transition"
             >
               <FaWhatsapp size={18} />
@@ -54,7 +57,7 @@ export default function Footer({ locale = 'he' }: { locale?: Locale }) {
               href="https://www.instagram.com/pashkovsky_maakot/"
               target="_blank"
               rel="noreferrer"
-              aria-label="Instagram"
+              aria-label={t('אינסטגרם','Instagram','Instagram')}
               className="p-2 rounded-full bg-neutral-800 hover:bg-neutral-700 text-neutral-200 hover:text-white transition"
             >
               <FaInstagram size={18} />
@@ -63,7 +66,7 @@ export default function Footer({ locale = 'he' }: { locale?: Locale }) {
               href="https://www.facebook.com/pashcovskimaakot"
               target="_blank"
               rel="noreferrer"
-              aria-label="Facebook"
+              aria-label={t('פייסבוק','Facebook','Facebook')}
               className="p-2 rounded-full bg-neutral-800 hover:bg-neutral-700 text-neutral-200 hover:text-white transition"
             >
               <FaFacebook size={18} />
@@ -72,7 +75,7 @@ export default function Footer({ locale = 'he' }: { locale?: Locale }) {
               href="https://www.tiktok.com/@pashkovsky.group"
               target="_blank"
               rel="noreferrer"
-              aria-label="TikTok"
+              aria-label={t('טיקטוק','TikTok','TikTok')}
               className="p-2 rounded-full bg-neutral-800 hover:bg-neutral-700 text-neutral-200 hover:text-white transition"
             >
               <SiTiktok size={18} />

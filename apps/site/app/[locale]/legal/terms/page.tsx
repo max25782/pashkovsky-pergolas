@@ -5,7 +5,7 @@ export default function TermsPage({ params }: { params: { locale: Locale } }) {
   const isRussian = params.locale === 'ru'
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black text-white">
+    <main id="main-content" className="min-h-screen bg-gradient-to-b from-gray-900 to-black text-white">
       <div className="container max-w-4xl mx-auto px-4 py-16">
         <h1 className="text-4xl font-bold mb-8">
           {isHebrew ? 'תנאי שימוש' : isRussian ? 'Условия использования' : 'Terms of Service'}
@@ -158,7 +158,7 @@ export default function TermsPage({ params }: { params: { locale: Locale } }) {
           </div>
         </div>
       </div>
-    </div>
+    </main>
   )
 }
 

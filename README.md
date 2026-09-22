@@ -15,8 +15,11 @@ pashkovsky-monorepo/
 │   ├── profiles-api/      NestJS REST API for aluminum profiles catalog
 │   └── profiles-store/    E-commerce storefront for aluminum profiles
 ├── packages/
-│   ├── pergola-configurator/  Shared 3D pergola editor (Three.js / R3F)
-│   └── shared-types/          Shared TypeScript interfaces (API contracts)
+│   ├── plan-editor/          2D polygon drawing interface for pergola design
+│   ├── pergola-core/         Structural computation engine (frame, lamellas, purlins)
+│   ├── pergola-3d-preview/   3D visualization from cut pieces
+│   ├── pergola-drawing/      Technical drawings (top plan, lamella layout, cell frame)
+│   └── shared-types/         Shared TypeScript interfaces (API contracts)
 ├── infrastructure/        AWS CDK stack (profiles-api on ECS/Fargate)
 ├── supabase/              PostgreSQL migrations (Supabase)
 ├── scripts/               Gallery generation, i18n, video poster utilities
@@ -36,7 +39,7 @@ The customer-facing website for Pashkovsky Group. Built with Next.js 14 App Rout
 
 **Pages and features:**
 - Portfolio of completed projects (pergolas, railings, fences, cladding)
-- Interactive 3D pergola configurator (shared `@pashkovsky/pergola-configurator` package)
+- 2D plan editor with structural computation and 3D preview
 - S3-backed image catalog with PDF export (Puppeteer)
 - Multi-locale support: Hebrew (default), Russian, English
 - Contact and lead capture forms — submitted to the CRM via the public leads API

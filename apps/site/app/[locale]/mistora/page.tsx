@@ -75,7 +75,7 @@ export default async function Page({ params: { locale } }: { params: { locale: L
   
   
   return (
-    <main className="container py-16">
+    <main id="main-content" className="container py-16">
       {/* ArticleModal articleSlug="laundry-screens" lang={locale} - нет статьи для mistora */}
       <h1 className="text-3xl font-extrabold">{t('מסתורי כביסה', 'Маскировка для прачечной', 'Laundry Screens')}</h1>
       <ContactSection locale={locale} pageName="mistora" />

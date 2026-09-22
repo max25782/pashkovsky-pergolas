@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
-import { usePlanEditorStore, MIN_EDGE_LENGTH_MM } from '../model/store'
+import { useBoundPlanEditorStore, MIN_EDGE_LENGTH_MM } from '../model/store'
 import { mmToLengthUnit, lengthUnitToMm } from '../input/dynamicInputBuffer'
 import type { FixedEdge, LengthUnit } from '../geometry/types'
 
@@ -49,8 +49,8 @@ function vertexLetter(index: number): string {
  * наведение здесь подсвечивает сторону там, и наоборот (см. model/types.ts).
  */
 export function SizesPanel({ isOpen, onClose, labels }: SizesPanelProps) {
-  const fixedEdges = usePlanEditorStore((s) => s.fixedEdges)
-  const inputUnit = usePlanEditorStore((s) => s.inputUnit)
+  const fixedEdges = useBoundPlanEditorStore((s) => s.fixedEdges)
+  const inputUnit = useBoundPlanEditorStore((s) => s.inputUnit)
 
   if (!isOpen) return null
 
@@ -104,11 +104,11 @@ interface EdgeSizeRowProps {
 }
 
 function EdgeSizeRow({ edge, designation, inputUnit, wallCheckboxTitle }: EdgeSizeRowProps) {
-  const updateEdgeLength = usePlanEditorStore((s) => s.updateEdgeLength)
-  const updateEdgeAngle = usePlanEditorStore((s) => s.updateEdgeAngle)
-  const setEdgeAttachedToWall = usePlanEditorStore((s) => s.setEdgeAttachedToWall)
-  const hoveredEdgeId = usePlanEditorStore((s) => s.hoveredEdgeId)
-  const setHoveredEdgeId = usePlanEditorStore((s) => s.setHoveredEdgeId)
+  const updateEdgeLength = useBoundPlanEditorStore((s) => s.updateEdgeLength)
+  const updateEdgeAngle = useBoundPlanEditorStore((s) => s.updateEdgeAngle)
+  const setEdgeAttachedToWall = useBoundPlanEditorStore((s) => s.setEdgeAttachedToWall)
+  const hoveredEdgeId = useBoundPlanEditorStore((s) => s.hoveredEdgeId)
+  const setHoveredEdgeId = useBoundPlanEditorStore((s) => s.setHoveredEdgeId)
 
   // Не переформатируем текст поля, пока в нём печатают — иначе собственный
   // commit (blur/Enter) сразу перезатирал бы то, что пользователь только

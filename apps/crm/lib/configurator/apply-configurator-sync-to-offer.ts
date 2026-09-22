@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { OfferDraft, Pergola, PergolaShape, RectangleShape } from '@/types/offer'
+import type { OfferDraft, PergolaShape, RectangleShape } from '@/types/offer'
 import { calculateOffer } from '@/lib/offer-calculator'
+import { legacyPergolaFromOfferColumns, normalizePergolas } from '@/lib/pergolas/normalize-pergola'
 
 export interface PergolaParamsPayload {
   shapeType?: 'rectangle' | 'L' | 'U'
@@ -48,33 +49,26 @@ export function pairConfiguratorMetaUrls(
 }
 
 function rowToDraft(data: Record<string, unknown>): OfferDraft {
-  const pergolasData = data.pergolas_data as Pergola[] | null | undefined
+  function columnSlice(row: Record<string, unknown>) {
+    return {
+      pergola_shape_data: row.pergola_shape_data,
+      pergola_width: row.pergola_width as number | null,
+      pergola_length: row.pergola_length as number | null,
+      pergola_height: row.pergola_height as number | null,
+      pergola_location: row.pergola_location as string | null,
+      pergola_price_per_sqm: row.pergola_price_per_sqm as number | null,
+    }
+  }
+
+  const pergolasFromDb = normalizePergolas(data.pergolas_data)
   const pergolaShape = data.pergola_shape_data as PergolaShape | undefined
-  const pergolas: Pergola[] | undefined =
-    pergolasData && Array.isArray(pergolasData) && pergolasData.length > 0
-      ? pergolasData
+  const pergolas =
+    pergolasFromDb && pergolasFromDb.length > 0
+      ? pergolasFromDb
       : pergolaShape
-        ? [
-            {
-              shape: pergolaShape,
-              height: data.pergola_height != null ? Number(data.pergola_height) : undefined,
-              location: (data.pergola_location as string) || undefined,
-              pricePerSqm: Number(data.pergola_price_per_sqm) || 750,
-            },
-          ]
+        ? [legacyPergolaFromOfferColumns({ ...columnSlice(data), pergola_shape_data: pergolaShape })]
         : data.pergola_width != null && data.pergola_length != null
-          ? [
-              {
-                shape: {
-                  type: 'rectangle' as const,
-                  width: Number(data.pergola_width),
-                  length: Number(data.pergola_length),
-                },
-                height: data.pergola_height != null ? Number(data.pergola_height) : undefined,
-                location: (data.pergola_location as string) || undefined,
-                pricePerSqm: Number(data.pergola_price_per_sqm) || 750,
-              },
-            ]
+          ? [legacyPergolaFromOfferColumns(columnSlice(data))]
           : undefined
 
   return {
@@ -156,6 +150,7 @@ function mergeRectangleFromConfigurator(
         ...draft,
         pergolas: [
           {
+            plan: null,
             shape: { type: 'rectangle', width: w, length: len },
             height: h,
             pricePerSqm: 750,

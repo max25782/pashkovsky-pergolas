@@ -1,6 +1,6 @@
 'use client'
 
-import { usePlanEditorStore } from '../model/store'
+import { useBoundPlanEditorStore } from '../model/store'
 import type { AdjustContourResult } from '../geometry/adjust'
 import { toPolygon, wallEdgeIndicesFromChain } from '../geometry/chain'
 import type { Point } from '../geometry/types'
@@ -105,15 +105,15 @@ const UNDER_DETERMINED_MIN_COUNT = 2
  * реальной прокладки через существующий механизм переводов.
  */
 export function AdjustPanel({ labels, onOpenSizes, onTo3D }: AdjustPanelProps) {
-  const fixedEdges = usePlanEditorStore((s) => s.fixedEdges)
-  const isClosed = usePlanEditorStore((s) => s.isClosed)
-  const closeContourError = usePlanEditorStore((s) => s.closeContourError)
-  const closeContourExplicit = usePlanEditorStore((s) => s.closeContourExplicit)
-  const lastAdjustResult = usePlanEditorStore((s) => s.lastAdjustResult)
-  const preAdjustSnapshot = usePlanEditorStore((s) => s.preAdjustSnapshot)
-  const adjustAndClose = usePlanEditorStore((s) => s.adjustAndClose)
-  const acceptAdjust = usePlanEditorStore((s) => s.acceptAdjust)
-  const cancelAdjust = usePlanEditorStore((s) => s.cancelAdjust)
+  const fixedEdges = useBoundPlanEditorStore((s) => s.fixedEdges)
+  const isClosed = useBoundPlanEditorStore((s) => s.isClosed)
+  const closeContourError = useBoundPlanEditorStore((s) => s.closeContourError)
+  const closeContourExplicit = useBoundPlanEditorStore((s) => s.closeContourExplicit)
+  const lastAdjustResult = useBoundPlanEditorStore((s) => s.lastAdjustResult)
+  const preAdjustSnapshot = useBoundPlanEditorStore((s) => s.preAdjustSnapshot)
+  const adjustAndClose = useBoundPlanEditorStore((s) => s.adjustAndClose)
+  const acceptAdjust = useBoundPlanEditorStore((s) => s.acceptAdjust)
+  const cancelAdjust = useBoundPlanEditorStore((s) => s.cancelAdjust)
 
   const canCloseContour = fixedEdges.length >= 3 && !isClosed
   const closeContourReason = !isClosed && fixedEdges.length < 3 ? labels.closeContourNeedMoreSides : null

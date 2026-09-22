@@ -67,12 +67,12 @@ export default function ContactPageClient({ locale }: Props){
   )
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-[#0f172a] to-[#1e293b] text-white">
+    <main id="main-content" className="min-h-screen bg-gradient-to-b from-[#0f172a] to-[#1e293b] text-white">
       {/* Hero */}
       <section className="py-20">
         <div className="container mx-auto px-4">
           <h1 className="text-4xl md:text-5xl font-extrabold mb-4">{t('צור קשר','Связаться','Contact')}</h1>
-          <p className="text-white/80 max-w-2xl">
+          <p className="text-white/90 max-w-2xl">
             {t(
               'נשמח לייעץ, למדוד ולהציע את הפתרון המדויק עבורך. אפשר לפנות אלינו בטלפון, בווטסאפ או דרך הטופס.',
               'Мы с радостью проконсультируем, приедем на замер и предложим точное решение. Свяжитесь по телефону, WhatsApp или через форму.',
@@ -133,22 +133,22 @@ export default function ContactPageClient({ locale }: Props){
             <h2 className="text-2xl font-bold mb-6">{t('השאירו פרטים ונחזור אליכם','Оставьте контакты — мы перезвоним','Leave your details and we will call you')}</h2>
             <form className="grid grid-cols-1 gap-4" onSubmit={handleSubmit}>
               <div>
-                <label className="block text-sm text-white/70 mb-1">{t('שם מלא','Полное имя','Full name')}</label>
-                <input name="name" required placeholder={t('שם ושם משפחה','Имя и фамилия','First and last name')} className="w-full rounded-xl bg-white/10 border border-white/20 px-4 py-3 outline-none focus:border-white/40" />
+                <label htmlFor="contact-name" className="block text-sm text-white/80 mb-1">{t('שם מלא','Полное имя','Full name')}</label>
+                <input id="contact-name" name="name" required placeholder={t('שם ושם משפחה','Имя и фамилия','First and last name')} className="w-full rounded-xl bg-white/10 border border-white/20 px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus:border-white/40" />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-white/70 mb-1">{t('טלפון','Телефон','Phone')}</label>
-                  <input name="phone" required placeholder={t('05X-XXXXXXX','05X-XXXXXXX','05X-XXXXXXX')} className="w-full rounded-xl bg-white/10 border border-white/20 px-4 py-3 outline-none focus:border-white/40" />
+                  <label htmlFor="contact-phone" className="block text-sm text-white/80 mb-1">{t('טלפון','Телефон','Phone')}</label>
+                  <input id="contact-phone" name="phone" type="tel" required placeholder={t('05X-XXXXXXX','05X-XXXXXXX','05X-XXXXXXX')} className="w-full rounded-xl bg-white/10 border border-white/20 px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus:border-white/40" />
                 </div>
                 <div>
-                  <label className="block text-sm text-white/70 mb-1">{t('עיר','Город','City')}</label>
-                  <input name="city" placeholder={t('עיר/אזור','Город/регион','City/region')} className="w-full rounded-xl bg-white/10 border border-white/20 px-4 py-3 outline-none focus:border-white/40" />
+                  <label htmlFor="contact-city" className="block text-sm text-white/80 mb-1">{t('עיר','Город','City')}</label>
+                  <input id="contact-city" name="city" placeholder={t('עיר/אזור','Город/регион','City/region')} className="w-full rounded-xl bg-white/10 border border-white/20 px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus:border-white/40" />
                 </div>
               </div>
               <div>
-                <label className="block text-sm text-white/70 mb-1">{t('הודעה','Сообщение','Message')}</label>
-                <textarea name="message" rows={5} placeholder={t('ספרו לנו בקצרה מה תרצו (מידות/סוג פרגולה/מרפסת וכו׳)','Коротко опишите, что вы хотите (размеры/тип перголы/балкон и т.д.)','Briefly tell us what you need (sizes/type of pergola/balcony, etc.)')} className="w-full rounded-xl bg-white/10 border border-white/20 px-4 py-3 outline-none focus:border-white/40" />
+                <label htmlFor="contact-message" className="block text-sm text-white/80 mb-1">{t('הודעה','Сообщение','Message')}</label>
+                <textarea id="contact-message" name="message" rows={5} placeholder={t('ספרו לנו בקצרה מה תרצו (מידות/סוג פרגולה/מרפסת וכו׳)','Коротко опишите, что вы хотите (размеры/тип перголы/балкон и т.д.)','Briefly tell us what you need (sizes/type of pergola/balcony, etc.)')} className="w-full rounded-xl bg-white/10 border border-white/20 px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus:border-white/40" />
               </div>
               <TurnstileWidget
                 onVerify={setTurnstileToken}

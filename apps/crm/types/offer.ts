@@ -1,5 +1,11 @@
 // Offer Types - Updated Structure for הצעת מחיר
 
+import type { PlanConstructionParams } from '@pashkovsky/pergola-core'
+import {
+  DEFAULT_PLAN_CONSTRUCTION_PARAMS,
+  PERGOLA_PLAN_SCHEMA_VERSION,
+} from '@pashkovsky/pergola-core'
+
 // Pergola Product Types
 export type PergolaProductType = 'fixed' | 'electricPvc' | 'electricBioclimatic'
 
@@ -50,17 +56,51 @@ export interface UShape {
 
 export type PergolaShape = RectangleShape | LShape | XShape | UShape
 
+/** Vertex in the plan editor, millimeters. */
+export interface PergolaPlanPointMm {
+  x: number
+  y: number
+}
+
+/** Construction / profile params saved with each pergola plan (plan editor). */
+export type PergolaPlanConstructionParams = PlanConstructionParams
+
+/**
+ * 2D plan drawing for one pergola. Stored on `Pergola.plan` and in `offers.pergolas_data`.
+ * Area and pricing for new offers are derived from `polygon` (not from `shape`).
+ */
+export interface PergolaPlan {
+  schemaVersion: typeof PERGOLA_PLAN_SCHEMA_VERSION
+  polygon: PergolaPlanPointMm[]
+  wallIndices: number[]
+  params: PergolaPlanConstructionParams
+  /** User confirmed the drawing (אשר שרטוט) — unlocks pergola fields and offer submit. */
+  confirmed: boolean
+}
+
+export { PERGOLA_PLAN_SCHEMA_VERSION }
+export const DEFAULT_PERGOLA_PLAN_CONSTRUCTION_PARAMS = DEFAULT_PLAN_CONSTRUCTION_PARAMS
+
 export interface Pergola {
-  shape: PergolaShape // Новая структура с поддержкой сложных форм
+  /**
+   * Plan-editor drawing for this pergola. `null` until the user starts a new drawing.
+   * New quick-offers: required with `confirmed: true` before submit.
+   */
+  plan: PergolaPlan | null
+  /**
+   * Legacy L/X/U/rectangle form input. Still used for old offers and PDF fallback when `plan` is absent.
+   * @deprecated New offers: use `plan` only; do not rely on `shape` for area or pricing.
+   */
+  shape: PergolaShape
   pergolaType?: PergolaProductType // סוג פרגולה: קבועה / חשמלית PVC / ביוקלמטיק
   height?: number
   location?: string // מקום בבית
   pricePerSqm: number // Editable, default 750
-  
+
   // Legacy fields для обратной совместимости (deprecated)
-  /** @deprecated Use shape instead */
+  /** @deprecated Use plan polygon for dimensions */
   width?: number
-  /** @deprecated Use shape instead */
+  /** @deprecated Use plan polygon for dimensions */
   length?: number
 }
 
@@ -254,6 +294,14 @@ export interface ConfiguratorMeta {
   skippedNonRectangle?: boolean
   /** Full technical params from the last 3D configurator submission */
   params?: ConfiguratorParams | null
+  /**
+   * Legacy single-plan snapshot on the offer row (pre per-pergola `Pergola.plan`).
+   * Do not write for new offers. PDF/drawing code may read as fallback for old data.
+   */
+  planPolygon?: PergolaPlanPointMm[] | null
+  planWallIndices?: number[] | null
+  planParams?: PergolaPlanConstructionParams | null
+  submissionId?: string | null
 }
 
 export interface OfferDraft {
@@ -340,6 +388,7 @@ export interface Offer extends OfferDraft, OfferCalculation {
 
 export const DEFAULT_OFFER_VALUES = {
   pergola: {
+    plan: null,
     shape: {
       type: 'rectangle' as const,
       width: 4,

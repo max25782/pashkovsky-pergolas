@@ -84,7 +84,7 @@ export default async function Page({ params: { locale } }: { params: { locale: L
   const descEn = 'Manufacture and installation of made‑to‑measure aluminum windows and storefronts — premium quality, excellent insulation, and a modern look that lasts.'
 
   return (
-    <main className="container py-16">
+    <main id="main-content" className="container py-16">
       <ArticleModal articleSlug="windows-installation" lang={locale} />
       <h1 className="text-3xl font-extrabold">{t(titleHe, titleRu, titleEn)}</h1>
       <p className="mt-3 text-white/70">{t(descHe, descRu, descEn)}</p>

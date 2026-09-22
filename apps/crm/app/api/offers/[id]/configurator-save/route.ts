@@ -20,34 +20,39 @@ const supabase =
     : undefined
 
 function parseParams(body: Record<string, unknown>): PergolaParamsPayload | null {
-  if (typeof body.widthCm !== 'number' || typeof body.depthCm !== 'number') return null
-  const shapeRaw = body.shapeType
-  const shapeType: 'rectangle' | 'L' | 'U' =
-    shapeRaw === 'L' ? 'L' : shapeRaw === 'U' ? 'U' : 'rectangle'
-  return {
-    shapeType,
-    widthCm: Number(body.widthCm),
-    depthCm: Number(body.depthCm),
-    heightCm: Number(body.heightCm) || 260,
-    arm1WidthCm: typeof body.arm1WidthCm === 'number' ? Number(body.arm1WidthCm) : 200,
-    arm1DepthCm: typeof body.arm1DepthCm === 'number' ? Number(body.arm1DepthCm) : 200,
-    color: String(body.color ?? '#9aa0a6'),
-    lamellaAngleDeg: Number(body.lamellaAngleDeg) || 0,
-    attachedToWall: Boolean(body.attachedToWall),
-    hangingPergola: Boolean(body.hangingPergola),
-    hangerCount:
-      typeof body.hangerCount === 'number'
-        ? Math.min(8, Math.max(1, Math.round(Number(body.hangerCount))))
-        : 2,
-    lamellaGapCm: Number(body.lamellaGapCm) || 2,
-    beamLed: Boolean(body.beamLed),
-    lamellaStanding: Boolean(body.lamellaStanding),
-    lamellaAlongWidth: Boolean(body.lamellaAlongWidth),
-    postProfileId: typeof body.postProfileId === 'string' ? body.postProfileId : null,
-    beamProfileId: typeof body.beamProfileId === 'string' ? body.beamProfileId : null,
-    dividerProfileId: typeof body.dividerProfileId === 'string' ? body.dividerProfileId : null,
-    lamellaProfileId: typeof body.lamellaProfileId === 'string' ? body.lamellaProfileId : null,
+  // Old rectangular format
+  if (typeof body.widthCm === 'number' && typeof body.depthCm === 'number') {
+    const shapeRaw = body.shapeType
+    const shapeType: 'rectangle' | 'L' | 'U' =
+      shapeRaw === 'L' ? 'L' : shapeRaw === 'U' ? 'U' : 'rectangle'
+    return {
+      shapeType,
+      widthCm: Number(body.widthCm),
+      depthCm: Number(body.depthCm),
+      heightCm: Number(body.heightCm) || 260,
+      arm1WidthCm: typeof body.arm1WidthCm === 'number' ? Number(body.arm1WidthCm) : 200,
+      arm1DepthCm: typeof body.arm1DepthCm === 'number' ? Number(body.arm1DepthCm) : 200,
+      color: String(body.color ?? '#9aa0a6'),
+      lamellaAngleDeg: Number(body.lamellaAngleDeg) || 0,
+      attachedToWall: Boolean(body.attachedToWall),
+      hangingPergola: Boolean(body.hangingPergola),
+      hangerCount:
+        typeof body.hangerCount === 'number'
+          ? Math.min(8, Math.max(1, Math.round(Number(body.hangerCount))))
+          : 2,
+      lamellaGapCm: Number(body.lamellaGapCm) || 2,
+      beamLed: Boolean(body.beamLed),
+      lamellaStanding: Boolean(body.lamellaStanding),
+      lamellaAlongWidth: Boolean(body.lamellaAlongWidth),
+      postProfileId: typeof body.postProfileId === 'string' ? body.postProfileId : null,
+      beamProfileId: typeof body.beamProfileId === 'string' ? body.beamProfileId : null,
+      dividerProfileId: typeof body.dividerProfileId === 'string' ? body.dividerProfileId : null,
+      lamellaProfileId: typeof body.lamellaProfileId === 'string' ? body.lamellaProfileId : null,
+    }
   }
+  
+  // New plan editor format - just return null, will be handled separately
+  return null
 }
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
@@ -58,7 +63,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
 
   const offerId = params.id
-  const { data: row, error: fe } = await supabase.from('offers').select('company_id').eq('id', offerId).single()
+  const { data: row, error: fe } = await supabase
+    .from('offers')
+    .select('company_id, configurator_meta')
+    .eq('id', offerId)
+    .single()
   if (fe || !row) {
     return NextResponse.json({ error: 'Offer not found' }, { status: 404 })
   }
@@ -68,6 +77,68 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   let locale = 'he'
   try {
     const body = await req.json()
+    
+    // Check if this is new plan editor format
+    const isPlanFormat = Array.isArray(body.planPolygon)
+    
+    if (isPlanFormat) {
+      // New plan editor format
+      if (typeof body.locale === 'string' && body.locale.length <= 5) locale = body.locale
+      
+      const screenshot = typeof body.screenshot === 'string' ? body.screenshot : ''
+      const configForRow = { ...body } as Record<string, unknown>
+      delete configForRow.screenshot
+      delete configForRow.locale
+      
+      const { data: inserted, error: insErr } = await supabase
+        .from('pergola_config_submissions')
+        .insert({
+          config: configForRow as Record<string, unknown>,
+          screenshot: screenshot && screenshot.length < 50000 ? screenshot : null,
+          offer_id: offerId,
+        })
+        .select('id')
+        .single()
+
+      if (insErr) {
+        console.error('[configurator-save] insert', insErr)
+        return NextResponse.json({ error: 'Failed to save submission' }, { status: 500 })
+      }
+
+      const submissionId = inserted?.id as string
+
+      let previewUrl: string | null = null
+      if (screenshot.startsWith('data:image/')) {
+        previewUrl = await uploadConfiguratorScreenshot(supabase, offerId, screenshot)
+      }
+
+      const prevMeta =
+        row.configurator_meta !== null && typeof row.configurator_meta === 'object'
+          ? (row.configurator_meta as Record<string, unknown>)
+          : {}
+
+      // Update offer configurator_meta with plan data (merge — keep edit/view URLs)
+      await supabase
+        .from('offers')
+        .update({
+          configurator_meta: {
+            ...prevMeta,
+            planPolygon: body.planPolygon,
+            planWallIndices: body.planWallIndices,
+            planParams: body.planParams,
+            previewImageUrl: previewUrl ?? prevMeta.previewImageUrl,
+            submissionId,
+          },
+        })
+        .eq('id', offerId)
+
+      return NextResponse.json({
+        success: true,
+        submissionId,
+      })
+    }
+    
+    // Old rectangular format
     const pergolaParams = parseParams(body as Record<string, unknown>)
     if (!pergolaParams) {
       return NextResponse.json({ error: 'Invalid params' }, { status: 400 })

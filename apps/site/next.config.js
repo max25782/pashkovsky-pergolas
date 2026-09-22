@@ -2,7 +2,7 @@
 const path = require('path')
 
 const nextConfig = {
-  transpilePackages: ['framer-motion', '@pashkovsky/pergola-configurator'],
+  transpilePackages: ['framer-motion'],
   async redirects() {
     return [
       { source: '/he/privacy', destination: '/he/legal/privacy', permanent: true },

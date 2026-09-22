@@ -43,7 +43,7 @@ export async function generateOfferPdf(offer: Offer, locale?: string): Promise<B
     const previewImageDataUrl = await resolvePreviewImageDataUrl(offer)
 
     // Render HTML template with inlined image
-    const html = renderOfferHtml(offer, previewImageDataUrl, false, locale)
+    const html = await renderOfferHtml(offer, previewImageDataUrl, false, locale)
     
     // Convert HTML to PDF
     const pdfBuffer = await renderHtmlToPdfBuffer(html)

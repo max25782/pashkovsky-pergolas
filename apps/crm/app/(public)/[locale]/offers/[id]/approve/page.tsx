@@ -30,7 +30,7 @@ export default async function OfferApprovePage({
 
   // Render the PDF HTML server-side (needs filesystem access for fonts/logo)
   // Omit the static signature section — the client component renders an interactive pad instead.
-  const offerHtml = renderOfferHtml(offer, null, true, pdfLocale)
+  const offerHtml = await renderOfferHtml(offer, null, true, pdfLocale)
 
   return (
     <ApproveClient

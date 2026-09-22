@@ -1,5 +1,5 @@
 import type { OfferDraft, OfferCalculation } from '@/types/offer'
-import { calculatePergolaArea } from '@/lib/calculations/pergola-area'
+import { pergolaAreaSqm } from '@/lib/pergolas/pergola-area-sqm'
 import { calculateSuntufSheets, calculateSuntufPriceByArea } from '@/lib/calculations/suntuf-sheets'
 import { resolveQuickOfferIncludes } from '@/lib/quick-offer-includes'
 
@@ -86,11 +86,11 @@ export function calculateOffer(draft: OfferDraft): OfferCalculation {
 
   if (inc.pergola) {
     for (const pergola of pergolas) {
-      if (pergola?.shape) {
-        const singleArea = calculatePergolaArea(pergola.shape)
-        pergolaArea += singleArea
-        pergolaTotal += singleArea * pergola.pricePerSqm
-      }
+      if (!pergola) continue
+      const singleArea = pergolaAreaSqm(pergola)
+      if (singleArea <= 0) continue
+      pergolaArea += singleArea
+      pergolaTotal += singleArea * pergola.pricePerSqm
     }
   }
   
@@ -130,25 +130,17 @@ export function calculateOffer(draft: OfferDraft): OfferCalculation {
     let totalSuntufMaterialArea = 0
 
     if (pergolas.length > 0) {
-      // Calculate suntuf sheets for EACH pergola independently and sum material areas.
-      // Sheets cannot span multiple pergolas — each structure needs its own count.
+      // Sheet layout only for a legacy rectangle with no plan.
+      // A plan (and legacy L/X/U) is billed from pergolaAreaSqm — no √area square.
       for (const pergola of pergolas) {
-        if (!pergola?.shape) continue
-        let w = 0
-        let l = 0
-        if (pergola.shape.type === 'rectangle') {
-          w = pergola.shape.width
-          l = pergola.shape.length
-        } else {
-          // For L/X/U shapes approximate as a square with the same area
-          const singleArea = calculatePergolaArea(pergola.shape)
-          const side = Math.sqrt(singleArea)
-          w = side
-          l = side
-        }
-        if (w > 0 && l > 0) {
-          const suntufCalc = calculateSuntufSheets(w, l, overlapType)
+        if (!pergola) continue
+        const covered = pergolaAreaSqm(pergola)
+        if (covered <= 0) continue
+        if (!pergola.plan && pergola.shape?.type === 'rectangle') {
+          const suntufCalc = calculateSuntufSheets(pergola.shape.width, pergola.shape.length, overlapType)
           totalSuntufMaterialArea += suntufCalc.suntufMaterialArea
+        } else {
+          totalSuntufMaterialArea += covered
         }
       }
     } else if (draft.santaf.width && draft.santaf.length) {
@@ -173,8 +165,12 @@ export function calculateOffer(draft: OfferDraft): OfferCalculation {
       : draft.zipScreen.pricePerSqmManual
 
     const railFenceSqm = railFenceSqmForZip(draft, inc)
+    const pergolaAreaForZip = pergolas.reduce(
+      (sum, pergola) => sum + (pergola ? pergolaAreaSqm(pergola) : 0),
+      0,
+    )
     // Use running meters if set; else m² (pergola roof and/or railings/fence face) × ZIP ₪/m²
-    const zipQty = draft.zipScreen.runningMeters || railFenceSqm || area
+    const zipQty = draft.zipScreen.runningMeters || railFenceSqm || pergolaAreaForZip || area
     zipScreenTotal = zipQty * zipPrice
   }
   

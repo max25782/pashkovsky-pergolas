@@ -1,12 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ['framer-motion', '@pashkovsky/pergola-configurator', '@pashkovsky/plan-editor'],
+  transpilePackages: ['framer-motion', '@pashkovsky/plan-editor'],
   experimental: {
     serverActions: {
       bodySizeLimit: '25mb', // Gallery upload allows up to 10MB per file; 25MB for multiple files
     },
     // Native module: avoid bundling Sharp incorrectly on Vercel/serverless (fixes runtime 500 on gallery upload)
-    serverComponentsExternalPackages: ['sharp'],
+    // react-dom/server: needed for server-side SVG rendering in PDF generation
+    serverComponentsExternalPackages: ['sharp', 'react-dom'],
   },
   images: {
     formats: ['image/webp', 'image/avif'],

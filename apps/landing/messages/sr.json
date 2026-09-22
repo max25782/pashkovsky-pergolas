@@ -4,7 +4,9 @@
     "pricing": "Cijene",
     "testimonials": "Svjedočanstva",
     "login": "Prijava",
-    "trial": "Besplatno probaj"
+    "trial": "Besplatno probaj",
+    "toggleMenu": "Otvori meni",
+    "mainNav": "Glavna navigacija"
   },
   "hero": {
     "badge": "CRM sa AI za građevinske kompanije",
@@ -163,6 +165,36 @@
     "legal": "Pravni dokumenti",
     "privacy": "Politika privatnosti",
     "terms": "Uslovi korištenja",
+    "accessibility": "Izjava o pristupačnosti",
     "copyright": "© 2026 AluminCRM. Sva prava zadržana."
+  },
+  "accessibility": {
+    "skipToContent": "Preskoči na glavni sadržaj",
+    "title": "Izjava o pristupačnosti",
+    "section1Title": "1. Posvećenost pristupačnosti",
+    "section1Body": "AluminCRM je posvećen pristupačnosti sajta za sve, uključujući osobe sa invaliditetom, u skladu sa izraelskim standardom 5568 (WCAG 2.0 AA).",
+    "section2Title": "2. Nivo usklađenosti",
+    "section2Body": "Delimična usklađenost — radimo na punoj usklađenosti sa standardom 5568 (WCAG 2.0 AA).",
+    "section3Title": "3. Koordinator za pristupačnost",
+    "coordinatorName": "Ime",
+    "coordinatorRole": "Uloga",
+    "coordinatorPhone": "Telefon",
+    "coordinatorEmail": "Email",
+    "section4Title": "4. Prijavite problem",
+    "section4Body": "Ako naiđete na prepreku u pristupačnosti, kontaktirajte nas telefonom ili emailom. Odgovorimo u najkraćem roku.",
+    "section5Title": "5. Implementirane mere",
+    "measure1": "Izjava o pristupačnosti i kontakt koordinatora",
+    "measure2": "Link „Preskoči na glavni sadržaj“",
+    "measure3": "Višejezična podrška sa ispravnim lang i dir",
+    "measure4": "Oznake za forme i dugmad",
+    "measure5": "Navigacija tastaturom i vidljiv fokus",
+    "measure6": "Smanjene animacije za prefers-reduced-motion",
+    "section6Title": "6. Poznata ograničenja",
+    "limitation1": "Sadržaj trećih strana (CAPTCHA, eksterni servisi): zavisi od pristupačnosti provajdera.",
+    "limitation2": "Animacije pri skrolovanju: neki dinamički efekti mogu biti smanjeni za prefers-reduced-motion.",
+    "limitation3": "Eksterni CRM linkovi: pristupačnost CRM sistema se procenjuje odvojeno.",
+    "section7Title": "7. Plan poboljšanja",
+    "section7Body": "Nastavljamo da poboljšavamo pristupačnost sajta. Cilj je puna usklađenost sa 5568 / WCAG 2.0 AA do kraja 2026.",
+    "lastUpdated": "Poslednje ažuriranje: {date}"
   }
 }

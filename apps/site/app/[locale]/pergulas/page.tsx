@@ -26,7 +26,7 @@ export default async function Page({ params: { locale } }: { params: { locale: L
   const apiProjects = await fetchApiProjects()
 
   return (
-    <main className="container py-16">
+    <main id="main-content" className="container py-16">
       <ArticleModal articleSlug="pergolas-aluminum" lang={locale} />
       <Suspense fallback={<div className="mt-12 h-[60vh] w-full rounded-2xl bg-white/5 border border-white/10" />}> 
         <section className="mt-8 mb-12">

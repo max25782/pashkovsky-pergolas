@@ -8,7 +8,7 @@ import { scoreLeadRules, mergeScores, getScoreCategory } from '../scoring'
 import type { Lead } from '@/components/admin/lead-types'
 
 // Test data
-const testLeadHot: Lead = {
+const testLeadHot = {
   id: '1',
   name: 'John Doe',
   phone: '0501234567',
@@ -18,9 +18,9 @@ const testLeadHot: Lead = {
   status: 'qualified',
   notes: 'Хочу перголу 4x6 метров с сантефом. Готов к покупке в ближайшее время.',
   created_at: new Date().toISOString(),
-}
+} as unknown as Lead
 
-const testLeadWarm: Lead = {
+const testLeadWarm = {
   id: '2',
   name: 'Jane Smith',
   phone: '0507654321',
@@ -29,9 +29,9 @@ const testLeadWarm: Lead = {
   status: 'contacted',
   notes: 'Интересуюсь перголой',
   created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
-}
+} as unknown as Lead
 
-const testLeadCold: Lead = {
+const testLeadCold = {
   id: '3',
   name: 'Bob',
   phone: '050',
@@ -39,7 +39,7 @@ const testLeadCold: Lead = {
   status: 'pending',
   notes: '',
   created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days ago
-}
+} as unknown as Lead
 
 function testScoreRules() {
 
@@ -141,8 +141,9 @@ try {
   testMergeScores()
   testScoreCategory()
   
-} catch (error) {
-  console.error('\n❌ Test failed:', error.message)
+} catch (error: unknown) {
+  const message = error instanceof Error ? error.message : String(error)
+  console.error('\n❌ Test failed:', message)
   process.exit(1)
 }
 

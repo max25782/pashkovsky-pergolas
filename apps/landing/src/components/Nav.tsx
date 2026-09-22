@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { usePathname, useRouter } from '@/i18n/routing';
 import { routing, type Locale } from '@/i18n/routing';
 import { LINKS } from '@/lib/config';
+import { Link } from '@/i18n/routing';
 
 const FLAG: Record<Locale, string> = {
   en: '🇬🇧',
@@ -53,9 +54,9 @@ export default function Nav() {
           : 'bg-transparent'
       }`}
     >
-      <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between" aria-label={t('mainNav')}>
         {/* Logo */}
-        <a href="/" className="flex items-center gap-2 group">
+        <Link href="/" className="flex items-center gap-2 group">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-purple-500 flex items-center justify-center shadow-lg shadow-violet-500/20">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <rect x="2" y="2" width="5" height="5" rx="1" fill="white" />
@@ -67,7 +68,7 @@ export default function Nav() {
           <span className="font-syne font-700 text-lg text-white tracking-tight">
             Alumin<span className="gradient-text">CRM</span>
           </span>
-        </a>
+        </Link>
 
         {/* Desktop links */}
         <div className="hidden md:flex items-center gap-8">
@@ -125,9 +126,12 @@ export default function Nav() {
 
         {/* Mobile hamburger */}
         <button
-          className="md:hidden p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+          type="button"
+          className="md:hidden p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
           onClick={() => setIsOpen(!isOpen)}
-          aria-label="Toggle menu"
+          aria-label={t('toggleMenu')}
+          aria-expanded={isOpen}
+          aria-controls="landing-mobile-menu"
         >
           <div className="w-5 h-4 flex flex-col justify-between">
             <span className={`block h-0.5 bg-white transition-all duration-300 ${isOpen ? 'rotate-45 translate-y-1.5' : ''}`} />
@@ -139,7 +143,7 @@ export default function Nav() {
 
       {/* Mobile menu */}
       {isOpen && (
-        <div className="md:hidden bg-[#13131f]/95 backdrop-blur-xl border-t border-white/5 px-4 py-4 space-y-3">
+        <div id="landing-mobile-menu" className="md:hidden bg-[#13131f]/95 backdrop-blur-xl border-t border-white/5 px-4 py-4 space-y-3">
           {navLinks.map(({ key, href }) => (
             <a
               key={key}

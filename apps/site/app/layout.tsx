@@ -1,7 +1,10 @@
 import './globals.css'
 import type { Metadata } from 'next'
 import Script from 'next/script'
+import { cookies } from 'next/headers'
 import { SITE_URL } from '@/lib/site-url'
+
+const LOCALES = ['he', 'ru', 'en'] as const
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -16,8 +19,14 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  const localeCookie = cookies().get('site_locale')?.value
+  const locale = LOCALES.includes(localeCookie as (typeof LOCALES)[number])
+    ? (localeCookie as (typeof LOCALES)[number])
+    : 'he'
+  const isRtl = locale === 'he'
+
   return (
-    <html lang="he" dir="rtl" suppressHydrationWarning>
+    <html lang={locale} dir={isRtl ? 'rtl' : 'ltr'} suppressHydrationWarning>
       <head>
         <meta name="facebook-domain-verification" content="84pmzynj4vxn26yjc163h1obz80f" />
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />
@@ -41,4 +50,3 @@ export default function RootLayout({
     </html>
   )
 }
-

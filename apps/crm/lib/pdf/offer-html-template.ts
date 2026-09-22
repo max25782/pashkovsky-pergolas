@@ -3,6 +3,9 @@ import { quickOfferRailingsFenceAreaSqm } from '@/lib/offer-calculator'
 import { reconcileQuickOfferTotals } from '@/lib/pdf/map-offer-db-row-for-pdf'
 import { resolvePdfQuickOfferIncludes, resolveQuickFencesFromDraft } from '@/lib/quick-offer-includes'
 import { rectanglePlanSvgFragment } from '@/lib/pdf/plan-view-svg'
+import { generateDrawingsFromPlan, generateOfferDrawings } from '@/lib/pdf/polygon-plan-drawing.server'
+import { pergolaAreaSqm } from '@/lib/pergolas/pergola-area-sqm'
+import { planPolygonAreaSqm, planPolygonEdgeLengthsMm } from '@/lib/pdf/plan-polygon-metrics'
 import { getHebrewFontsCss, getLogoDataUri } from './font-loader'
 import { pdfT, resolvePdfLocale, pdfHtmlDir, pdfBcp47Locale, pdfCurrencySymbol, type PdfDict } from '@/lib/pdf/offer-pdf-i18n'
 import { OFFER_TERMS_BODIES } from '@/lib/pdf/offer-terms-bodies'
@@ -113,10 +116,9 @@ function collectLineRows(offer: Offer, dict: PdfDict): LineRow[] {
   const pergolas = offer.pergolas || (offer.pergola ? [offer.pergola] : [])
   if (inc.pergola) {
     if (pergolas.length > 0) {
-      const { calculatePergolaArea } = require('@/lib/calculations/pergola-area') as typeof import('@/lib/calculations/pergola-area')
       for (const pg of pergolas) {
-        if (!pg?.shape) continue
-        const pgArea = calculatePergolaArea(pg.shape)
+        if (!pg) continue
+        const pgArea = pergolaAreaSqm(pg)
         if (pgArea <= 0 || pg.pricePerSqm <= 0) continue
         rows.push({
           description: buildPergolaLineName(offer, pg.pergolaType, dict),
@@ -305,6 +307,45 @@ function collectLineRows(offer: Offer, dict: PdfDict): LineRow[] {
   return rows
 }
 
+function formatPolygonSpecHtml(
+  polygon: Array<{ x: number; y: number }>,
+  dict: PdfDict,
+  index?: number,
+  location?: string,
+): string {
+  if (polygon.length < 3) return ''
+  const headingText =
+    index !== undefined ? fillTpl(dict.off_pergola_n, { n: index + 1 }) : dict.off_pergola_default
+  const prefix = `<tr><td colspan="2" class="tech-h">${escapeHtml(headingText)}</td></tr>`
+  const edges = planPolygonEdgeLengthsMm(polygon)
+  const areaSqm = planPolygonAreaSqm(polygon)
+  const edgeRows = edges
+    .map(
+      (lenMm, i) =>
+        `<tr><td>${escapeHtml(fillTpl(dict.off_plan_edge_n, { n: i + 1 }))}</td><td>${Math.round(lenMm)} mm</td></tr>`,
+    )
+    .join('\n')
+  const locationRow = location?.trim()
+    ? `<tr><td>${dict.off_location}</td><td>${escapeHtml(location.trim())}</td></tr>`
+    : ''
+
+  return (
+    prefix +
+    `<tr><td>${dict.off_shape}</td><td>${dict.off_shape_from_drawing}</td></tr>
+     <tr><td>${dict.off_plan_area_drawing}</td><td>${areaSqm.toFixed(2)} ${dict.off_unit_sqm_dot}</td></tr>
+     ${edgeRows}${locationRow}`
+  )
+}
+
+function formatPlanDrawingDimensionsHtml(offer: Offer, dict: PdfDict, index?: number): string {
+  const meta = offer.configuratorMeta as {
+    planPolygon?: Array<{ x: number; y: number }>
+  } | null
+  const polygon = meta?.planPolygon
+  if (!polygon || polygon.length < 3) return ''
+  return formatPolygonSpecHtml(polygon, dict, index)
+}
+
 function formatSinglePergolaDimensionsHtml(pergola: Offer['pergola'], dict: PdfDict, index?: number): string {
   if (!pergola) return ''
   const typeLabel =
@@ -448,14 +489,34 @@ function formatAllPergolasTechnicalHtml(offer: Offer, dict: PdfDict): string {
 
   if (inc.pergola) {
     const pergolas = offer.pergolas || (offer.pergola ? [offer.pergola] : [])
-    if (pergolas.length > 0) {
+    const anyPlan = pergolas.some((p) => (p.plan?.polygon?.length ?? 0) >= 3)
+    if (anyPlan) {
       blocks.push(
         pergolas
-          .map((p, i) =>
-            formatSinglePergolaDimensionsHtml(p, dict, pergolas.length > 1 ? i : undefined),
-          )
+          .map((p, i) => {
+            const idx = pergolas.length > 1 ? i : undefined
+            const polygon = p.plan?.polygon
+            if (polygon && polygon.length >= 3) {
+              return formatPolygonSpecHtml(polygon, dict, idx, p.location)
+            }
+            return formatSinglePergolaDimensionsHtml(p, dict, idx)
+          })
           .join(''),
       )
+    } else {
+      const meta = offer.configuratorMeta as { planPolygon?: unknown } | null
+      const hasLegacyDrawing = Array.isArray(meta?.planPolygon) && meta.planPolygon.length >= 3
+      if (hasLegacyDrawing) {
+        blocks.push(formatPlanDrawingDimensionsHtml(offer, dict))
+      } else if (pergolas.length > 0) {
+        blocks.push(
+          pergolas
+            .map((p, i) =>
+              formatSinglePergolaDimensionsHtml(p, dict, pergolas.length > 1 ? i : undefined),
+            )
+            .join(''),
+        )
+      }
     }
   }
 
@@ -587,7 +648,11 @@ function configuratorParamsTechHtml(offer: Offer, dict: PdfDict): string {
  * @param previewImageDataUrl - Optional pre-fetched base64 data URL for the 3D preview image.
  *   Pass this to avoid Puppeteer being unable to load external URLs during PDF generation.
  */
-function configuratorTechnicalAppendixHtml(offer: Offer, dict: PdfDict, previewImageDataUrl?: string | null): string {
+async function configuratorTechnicalAppendixHtml(
+  offer: Offer,
+  dict: PdfDict,
+  previewImageDataUrl?: string | null,
+): Promise<string> {
   const pk = pdfPrimaryProductKind(offer)
   const meta = offer.configuratorMeta
   let img: string | null = null
@@ -598,7 +663,35 @@ function configuratorTechnicalAppendixHtml(offer: Offer, dict: PdfDict, previewI
     else if (offer.images?.[0]?.startsWith('http')) img = offer.images[0]
   }
   const link = pk === 'pergola' ? customer3dViewerHref(meta) : null
-  const planSvg = rectanglePlanSvgFragment(offer)
+
+  const pergolaPlans = (offer.pergolas ?? []).filter((p) => (p.plan?.polygon?.length ?? 0) >= 3)
+  const pergolaSvgs: string[] = []
+  if (pergolaPlans.length > 0) {
+    for (const pergola of pergolaPlans) {
+      const drawings = pergola.plan ? await generateDrawingsFromPlan(pergola.plan) : null
+      if (drawings?.topPlan) {
+        pergolaSvgs.push(`<div class="viz-plan-svg-wrap" data-pergola-plan="1">${drawings.topPlan}</div>`)
+      }
+      if (drawings?.lamellaLayout) {
+        pergolaSvgs.push(`<div class="viz-plan-svg-wrap">${drawings.lamellaLayout}</div>`)
+      }
+    }
+  }
+
+  const legacyMetaPolygon = (meta as { planPolygon?: unknown })?.planPolygon != null
+  const polygonDrawings =
+    pergolaPlans.length === 0 && legacyMetaPolygon ? await generateOfferDrawings(offer) : null
+
+  // A stored plan never falls back to the rectangle shape drawing.
+  let planSvg = ''
+  if (pergolaPlans.length > 0) {
+    planSvg = pergolaSvgs.join('')
+  } else if (polygonDrawings?.topPlan) {
+    planSvg = polygonDrawings.topPlan
+  } else if (!legacyMetaPolygon) {
+    planSvg = rectanglePlanSvgFragment(offer)
+  }
+  
   const hasViz = img !== null || link !== null
   const hasPlan = planSvg !== ''
   if (!hasViz && !hasPlan) return ''
@@ -622,8 +715,18 @@ function configuratorTechnicalAppendixHtml(offer: Offer, dict: PdfDict, previewI
 
   let schematicInner = ''
   if (hasPlan) {
-    schematicInner += `<div class="viz-plan-svg-wrap">${planSvg}</div>`
-    schematicInner += `<p class="viz-schematic-note">${dict.off_plan_note}</p>`
+    if (pergolaSvgs.length > 0) {
+      schematicInner += planSvg
+    } else {
+      schematicInner += `<div class="viz-plan-svg-wrap">${planSvg}</div>`
+      if (polygonDrawings?.lamellaLayout) {
+        schematicInner += `<div class="viz-plan-svg-wrap">${polygonDrawings.lamellaLayout}</div>`
+      }
+    }
+
+    const planNote =
+      pergolaPlans.length > 0 || legacyMetaPolygon ? dict.off_plan_note_drawing : dict.off_plan_note
+    schematicInner += `<p class="viz-schematic-note">${planNote}</p>`
   }
   if (img !== null) {
     schematicInner += `<p class="viz-schematic-note">${dict.off_viz_from_3d}</p>`
@@ -690,12 +793,12 @@ function winterClosureTechRows(offer: Offer, dict: PdfDict): string {
  * @param omitSignatureSection - when true the signature block is omitted (public approve page).
  * @param locale - raw company/tenant locale; resolved via `resolvePdfLocale`, default Hebrew.
  */
-export function renderOfferHtml(
+export async function renderOfferHtml(
   offer: Offer,
   previewImageDataUrl?: string | null,
   omitSignatureSection = false,
   locale?: string,
-): string {
+): Promise<string> {
   offer = reconcileQuickOfferTotals(offer)
   const resolved = resolvePdfLocale(locale)
   const dict = pdfT[resolved]
@@ -759,6 +862,7 @@ export function renderOfferHtml(
   const warrantyCovers = (offer.warranty?.covers ?? []).join(', ')
   const termsTail = `${fillTpl(dict.off_valid_30, { y: String(offer.warranty?.years ?? 7) })}${warrantyCovers ? `: ${warrantyCovers}` : ''}`
   const termsBody = OFFER_TERMS_BODIES[resolved]
+  const technicalAppendixHtml = await configuratorTechnicalAppendixHtml(offer, dict, previewImageDataUrl)
 
   return `
 <!DOCTYPE html>
@@ -1081,7 +1185,7 @@ export function renderOfferHtml(
 
   ${pdfPk === 'pergola' ? configuratorParamsTechHtml(offer, dict) : ''}
 
-  ${configuratorTechnicalAppendixHtml(offer, dict, previewImageDataUrl)}
+  ${technicalAppendixHtml}
 
   <div class="terms">
     <div class="terms-body">${escapeHtml(termsBody)}</div>

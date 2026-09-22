@@ -6,6 +6,12 @@ export default function ScrollAnimationInit() {
   useEffect(() => {
     const vh = window.innerHeight;
     const elements = document.querySelectorAll<HTMLElement>('.animate-on-scroll');
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (reducedMotion) {
+      elements.forEach((el) => el.classList.add('in-view'));
+      return;
+    }
 
     // Mark viewport elements as in-view FIRST, before adding js-ready,
     // so there is no frame where they're hidden
