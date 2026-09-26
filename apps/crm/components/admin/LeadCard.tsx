@@ -3,6 +3,8 @@ import { LEAD_STATUSES, pickLabel } from './lead-types'
 import { formatDate } from './deal-utils'
 import { PhoneActions } from './PhoneActions'
 import { useLanguage } from '@/lib/language-context'
+import { useCRMTranslations } from './useCRMTranslations'
+import { followUpTiming, formatFollowUpDate } from './follow-up'
 
 interface LeadCardProps {
   lead: Lead
@@ -13,7 +15,9 @@ interface LeadCardProps {
 
 export function LeadCard({ lead, onClick, onDragStart }: LeadCardProps) {
   const { language } = useLanguage()
+  const t = useCRMTranslations()
   const status = LEAD_STATUSES.find(s => s.id === lead.status) || LEAD_STATUSES[0]
+  const followUp = followUpTiming(lead.follow_up_at)
   const isDraggable = onDragStart != null
 
   return (
@@ -56,6 +60,22 @@ export function LeadCard({ lead, onClick, onDragStart }: LeadCardProps) {
           </div>
         )}
         
+        {lead.follow_up_at && followUp !== 'none' && (
+          <div
+            className={`text-xs font-medium ${
+              followUp === 'overdue'
+                ? 'text-red-300'
+                : followUp === 'today'
+                  ? 'text-amber-300'
+                  : 'text-white/70'
+            }`}
+          >
+            {t.leads.followUp}: {formatFollowUpDate(lead.follow_up_at)}
+            {followUp === 'today' ? ` · ${t.leads.followUpToday}` : ''}
+            {followUp === 'overdue' ? ` · ${t.leads.followUpOverdue}` : ''}
+          </div>
+        )}
+
         {lead.notes && (
           <div className="text-xs text-white/50 pt-2 border-t border-white/10 line-clamp-2">
             {lead.notes}

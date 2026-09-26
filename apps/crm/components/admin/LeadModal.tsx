@@ -7,6 +7,11 @@ import { formatDate } from './deal-utils'
 import { useCRMTranslations } from './useCRMTranslations'
 import { LeadScore } from './LeadScore'
 import { PhoneActions } from './PhoneActions'
+import {
+  followUpFromDateInput,
+  followUpInDays,
+  followUpToDateInput,
+} from './follow-up'
 
 interface LeadModalProps {
   lead: Lead
@@ -44,6 +49,7 @@ export function LeadModal({
         source: localLead.source ?? null,
         status: localLead.status ?? null,
         notes: localLead.notes ?? null,
+        follow_up_at: localLead.follow_up_at ?? null,
       }
       await onUpdate(updates)
       onClose()
@@ -56,6 +62,14 @@ export function LeadModal({
 
   function updateField<K extends keyof Lead>(field: K, value: Lead[K]) {
     setLocalLead(prev => ({ ...prev, [field]: value }))
+  }
+
+  function setFollowUp(iso: string | null) {
+    setLocalLead(prev => {
+      const status =
+        iso && (prev.status == null || prev.status === 'waiting') ? 'thinking' : prev.status
+      return { ...prev, follow_up_at: iso, status }
+    })
   }
 
   return (
@@ -143,6 +157,48 @@ export function LeadModal({
                   <option key={s.id} value={s.id}>{pickLabel(s, language)}</option>
                 ))}
               </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-white/70 mb-2">{t.leads.followUp}</label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setFollowUp(followUpInDays(1))}
+                className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm"
+              >
+                {t.leads.followUpTomorrow}
+              </button>
+              <button
+                type="button"
+                onClick={() => setFollowUp(followUpInDays(2))}
+                className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm"
+              >
+                {t.leads.followUpIn2Days}
+              </button>
+              <button
+                type="button"
+                onClick={() => setFollowUp(followUpInDays(3))}
+                className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-sm"
+              >
+                {t.leads.followUpIn3Days}
+              </button>
+              <input
+                type="date"
+                value={followUpToDateInput(localLead.follow_up_at)}
+                onChange={(e) => setFollowUp(followUpFromDateInput(e.target.value))}
+                className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/20 text-sm text-white [color-scheme:dark]"
+              />
+              {localLead.follow_up_at && (
+                <button
+                  type="button"
+                  onClick={() => setFollowUp(null)}
+                  className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-sm text-white/70"
+                >
+                  {t.leads.followUpClear}
+                </button>
+              )}
             </div>
           </div>
 

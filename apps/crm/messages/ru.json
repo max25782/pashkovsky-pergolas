@@ -530,7 +530,16 @@
     "whatsappGreeting": "Здравствуйте, {name}! Я из компании {company}. Чем могу помочь?",
     "whatsappGreetingNoName": "Здравствуйте! Я из компании {company}. Чем могу помочь?",
     "groupByStatus": "По статусу",
-    "groupBySource": "По источнику"
+    "groupBySource": "По источнику",
+    "followUp": "Перезвон",
+    "followUpTomorrow": "Завтра",
+    "followUpIn2Days": "Через 2 дня",
+    "followUpIn3Days": "Через 3 дня",
+    "followUpClear": "Снять",
+    "followUpToCall": "Позвонить",
+    "followUpDone": "Готово",
+    "followUpToday": "Сегодня",
+    "followUpOverdue": "Просрочено"
   },
   "aiChats": {
     "title": "AI Чаты",

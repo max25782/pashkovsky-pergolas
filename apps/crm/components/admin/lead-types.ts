@@ -7,6 +7,7 @@ export interface Lead {
   source?: string | null
   status?: 'waiting' | 'busy' | 'no_answer' | 'thinking' | 'meeting_set' | 'visited' | 'not_relevant' | 'not_interested' | 'lost_contact' | null
   notes?: string | null
+  follow_up_at?: string | null
   last_message?: string | null
   last_message_at?: string | null
   created_at?: string | null

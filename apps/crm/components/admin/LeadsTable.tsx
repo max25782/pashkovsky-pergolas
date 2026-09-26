@@ -12,6 +12,7 @@ import { useLeads } from './hooks/useLeads'
 import { useLeadActions } from './hooks/useLeadActions'
 import { useLeadDragDrop } from './hooks/useLeadDragDrop'
 import { ModuleEmptyState } from '@/components/onboarding'
+import { FollowUpStrip } from './FollowUpStrip'
 
 type ViewMode = 'kanban' | 'table'
 
@@ -85,6 +86,14 @@ export function LeadsTable() {
       />
       
       <DealsStatus loading={loading} error={error} />
+
+      {!loading && !error && (
+        <FollowUpStrip
+          leads={leads}
+          onOpen={setSelectedLead}
+          onDone={(lead) => patch(lead.id, { follow_up_at: null })}
+        />
+      )}
 
       {!loading && !error && leads.length === 0 && (
         <div className="mb-8">

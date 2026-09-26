@@ -530,7 +530,16 @@
     "whatsappGreeting": "שלום {name}! שמי מקסים מחברת פשקובסקי גרופ (פרגולות). השארת לנו פרטים בפייסבוק. איך אני יכול לעזור לך? https://www.pashkovsky-group.com/he",
     "whatsappGreetingNoName": "שלום! שמי מקסים מחברת פשקובסקי גרופ (פרגולות). השארת לנו פרטים בפייסבוק. איך אני יכול לעזור לך? https://www.pashkovsky-group.com/he",
     "groupByStatus": "לפי סטטוס",
-    "groupBySource": "לפי מקור"
+    "groupBySource": "לפי מקור",
+    "followUp": "מעקב",
+    "followUpTomorrow": "מחר",
+    "followUpIn2Days": "בעוד יומיים",
+    "followUpIn3Days": "בעוד 3 ימים",
+    "followUpClear": "נקה",
+    "followUpToCall": "להתקשר",
+    "followUpDone": "בוצע",
+    "followUpToday": "היום",
+    "followUpOverdue": "באיחור"
   },
   "aiChats": {
     "title": "צ'אטים AI",

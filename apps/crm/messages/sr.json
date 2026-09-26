@@ -530,7 +530,16 @@
     "whatsappGreeting": "Zdravo {name}! Ja sam iz {company}. Kako mogu da pomognem?",
     "whatsappGreetingNoName": "Zdravo! Ja sam iz {company}. Kako mogu da pomognem?",
     "groupByStatus": "Po statusu",
-    "groupBySource": "Po izvoru"
+    "groupBySource": "Po izvoru",
+    "followUp": "Ponovni poziv",
+    "followUpTomorrow": "Sutra",
+    "followUpIn2Days": "Za 2 dana",
+    "followUpIn3Days": "Za 3 dana",
+    "followUpClear": "Obriši",
+    "followUpToCall": "Pozvati",
+    "followUpDone": "Gotovo",
+    "followUpToday": "Danas",
+    "followUpOverdue": "Kasni"
   },
   "aiChats": {
     "title": "AI Razgovori",
