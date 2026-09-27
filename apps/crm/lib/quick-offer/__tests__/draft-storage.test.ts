@@ -105,6 +105,36 @@ describe('quick offer draft storage', () => {
     })
   })
 
+  it('back-to-edit flow keeps offerId and updated price maps to a new DB row total', () => {
+    const offerId = '816f7130-aaaa-bbbb-cccc-ddddeeeeffff'
+    const draft = draftWith([pergola(RECT)])
+    const stored = serializeQuickOfferDraft(draft, offerId)
+    const restored = parseQuickOfferDraft(stored)
+    expect(restored?.offerId).toBe(offerId)
+    expect(quickOfferSubmitTarget(restored!.offerId).method).toBe('PATCH')
+
+    const edited = {
+      ...restored!.draft,
+      pergolas: [{ ...restored!.draft.pergolas![0], pricePerSqm: 900 }],
+    }
+    const calcBefore = calculateOffer(restored!.draft)
+    const calcAfter = calculateOffer(edited)
+    expect(calcAfter.pergolaTotal).toBeGreaterThan(calcBefore.pergolaTotal ?? 0)
+
+    const row = buildQuickOfferInsertRow({
+      dealId: 'deal-1',
+      companyId: 'co-1',
+      draft: edited,
+      includes: { pergola: true, railings: false, fence: false },
+      normalizedPergolas: edited.pergolas ?? [],
+      serverCalc: calcAfter,
+      quickOfferExtra: null,
+    })
+    expect(row.pergola_price_per_sqm).toBe(900)
+    expect(row.pergola_total).toBe(calcAfter.pergolaTotal)
+    expect(row.area).toBe(calcAfter.area)
+  })
+
   it('does not write configurator_meta.planPolygon on a new quick offer row', () => {
     const draft = draftWith([pergola(RECT)])
     const calc = calculateOffer(draft)

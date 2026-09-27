@@ -16,6 +16,16 @@ import {
 import { validateQuickFence, validateQuickRailings } from '@/lib/quick-offer-product-validation'
 import { prepareQuickOfferPergolas } from '@/lib/pergolas/prepare-quick-offer-pergolas'
 import { buildQuickOfferInsertRow } from '@/lib/quick-offer/build-quick-offer-row'
+import {
+  CUSTOMER_NAME_REQUIRED_ERROR,
+  isCustomerNameValid,
+  normalizeCustomerNameInput,
+} from '@/lib/quick-offer/validate-customer-name'
+import { logAuditEvent } from '@/lib/audit/logger'
+import {
+  buildOfferPriceChangeAuditChanges,
+  shouldLogOfferPriceChange,
+} from '@/lib/quick-offer/offer-price-change-audit'
 
 export const runtime = 'nodejs'
 
@@ -47,7 +57,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const { data: existing, error: fetchErr } = await supabase
     .from('offers')
-    .select('id, deal_id, company_id, customer_name')
+    .select('id, deal_id, company_id, customer_name, final_price, offer_number')
     .eq('id', offerId)
     .eq('company_id', companyId)
     .maybeSingle()
@@ -96,6 +106,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     fenceLineTotals: serverCalc.fenceLineTotals,
   })
 
+  const customerName = normalizeCustomerNameInput(draft.customerName)
+  if (!isCustomerNameValid(customerName)) {
+    return NextResponse.json({ error: CUSTOMER_NAME_REQUIRED_ERROR }, { status: 400 })
+  }
+
   const updateRow = buildQuickOfferInsertRow({
     dealId: String(existing.deal_id),
     companyId,
@@ -104,8 +119,17 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     normalizedPergolas,
     serverCalc,
     quickOfferExtra,
-    customerName: String(existing.customer_name ?? 'הצעה מהירה'),
+    customerName,
   })
+
+  await supabase
+    .from('deals')
+    .update({ customer_name: customerName })
+    .eq('id', existing.deal_id)
+    .eq('company_id', companyId)
+
+  const previousFinalPrice = Number(existing.final_price)
+  const nextFinalPrice = serverCalc.finalPrice
 
   const { error: updateErr } = await supabase.from('offers').update(updateRow).eq('id', offerId)
 
@@ -114,5 +138,18 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ error: 'Failed to update offer' }, { status: 500 })
   }
 
-  return NextResponse.json({ offerId, area: serverCalc.area })
+  if (shouldLogOfferPriceChange(previousFinalPrice, nextFinalPrice)) {
+    await logAuditEvent(req, {
+      action: 'offer.quick_offer_price_updated',
+      resourceType: 'offer',
+      resourceId: offerId,
+      changes: buildOfferPriceChangeAuditChanges({
+        fromFinalPrice: previousFinalPrice,
+        toFinalPrice: nextFinalPrice,
+      }),
+      metadata: { source: 'quick-offer-patch' },
+    })
+  }
+
+  return NextResponse.json({ offerId, area: serverCalc.area, finalPrice: nextFinalPrice })
 }

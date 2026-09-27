@@ -1,5 +1,5 @@
 import type { OfferDraft, OfferCalculation } from '@/types/offer'
-import { pergolaAreaSqm } from '@/lib/pergolas/pergola-area-sqm'
+import { lineAmountFromBillableArea, pergolaAreaSqm } from '@/lib/pergolas/pergola-area-sqm'
 import { calculateSuntufSheets, calculateSuntufPriceByArea } from '@/lib/calculations/suntuf-sheets'
 import { resolveQuickOfferIncludes } from '@/lib/quick-offer-includes'
 
@@ -88,9 +88,9 @@ export function calculateOffer(draft: OfferDraft): OfferCalculation {
     for (const pergola of pergolas) {
       if (!pergola) continue
       const singleArea = pergolaAreaSqm(pergola)
-      if (singleArea <= 0) continue
+      if (singleArea === null || singleArea <= 0) continue
       pergolaArea += singleArea
-      pergolaTotal += singleArea * pergola.pricePerSqm
+      pergolaTotal += lineAmountFromBillableArea(singleArea, pergola.pricePerSqm)
     }
   }
   
@@ -135,7 +135,7 @@ export function calculateOffer(draft: OfferDraft): OfferCalculation {
       for (const pergola of pergolas) {
         if (!pergola) continue
         const covered = pergolaAreaSqm(pergola)
-        if (covered <= 0) continue
+        if (covered === null || covered <= 0) continue
         if (!pergola.plan && pergola.shape?.type === 'rectangle') {
           const suntufCalc = calculateSuntufSheets(pergola.shape.width, pergola.shape.length, overlapType)
           totalSuntufMaterialArea += suntufCalc.suntufMaterialArea
@@ -166,7 +166,7 @@ export function calculateOffer(draft: OfferDraft): OfferCalculation {
 
     const railFenceSqm = railFenceSqmForZip(draft, inc)
     const pergolaAreaForZip = pergolas.reduce(
-      (sum, pergola) => sum + (pergola ? pergolaAreaSqm(pergola) : 0),
+      (sum, pergola) => sum + (pergola ? pergolaAreaSqm(pergola) ?? 0 : 0),
       0,
     )
     // Use running meters if set; else m² (pergola roof and/or railings/fence face) × ZIP ₪/m²
@@ -255,7 +255,7 @@ export function formatPrice(price: number, currencyCode = 'ILS', locale = 'he-IL
   return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency: currencyCode,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(price)
 }

@@ -1,7 +1,10 @@
 import { DEFAULT_PLAN_CONSTRUCTION_PARAMS, PERGOLA_PLAN_SCHEMA_VERSION, polygonAreaM2 } from '@pashkovsky/pergola-core'
 import { DEFAULT_OFFER_VALUES, type Offer, type OfferDraft, type Pergola } from '@/types/offer'
 import { calculateOffer } from '@/lib/offer-calculator'
+import { STANDARD_INSTALLATION_PAYMENT_TERMS } from '@/lib/commercial/standard-installation-terms'
 import { renderOfferHtml } from '@/lib/pdf/offer-html-template'
+import { pdfT } from '@/lib/pdf/offer-pdf-i18n'
+import { buildCurrentOfferTermsSnapshot } from '@/lib/offers/offer-terms-snapshot'
 import { generateDrawingsFromPlan, generateOfferDrawings } from '@/lib/pdf/polygon-plan-drawing.server'
 
 jest.mock('@/lib/pdf/polygon-plan-drawing.server', () => ({
@@ -73,8 +76,9 @@ function asOffer(pergolas: Pergola[], shapeOnly = false): Offer {
       discountAmount: calc.discountAmount,
       finalPrice: calc.finalPrice,
     },
-    paymentTerms: { advancePercent: 10, remainingPercent: 90, method: 'bankTransfer', text: '' },
+    paymentTerms: STANDARD_INSTALLATION_PAYMENT_TERMS,
     warranty: { years: 7, covers: [] },
+    termsSnapshot: buildCurrentOfferTermsSnapshot(),
     approval: { approved: false },
     pdf: {},
     createdAt: '2026-01-15T00:00:00.000Z',
@@ -94,6 +98,12 @@ const SMALL = [
   { x: 5000, y: 2000 },
   { x: 0, y: 2000 },
 ]
+const TRAPEZOID = [
+  { x: 0, y: 0 },
+  { x: 4000, y: 0 },
+  { x: 3500, y: 3000 },
+  { x: 500, y: 3000 },
+]
 
 describe('offer PDF plans', () => {
   beforeEach(() => {
@@ -109,7 +119,21 @@ describe('offer PDF plans', () => {
     expect(drawings).toHaveLength(2)
     expect(html).toContain(polygonAreaM2(RECT).toFixed(2))
     expect(html).toContain(polygonAreaM2(SMALL).toFixed(2))
+    expect(html).toContain('פרגולה 1')
+    expect(html).toContain('פרגולה 2')
+    expect(html).not.toContain('צלע 1')
     expect(html).not.toContain('planPolygon')
+  })
+
+  it('prints non-orthogonal schematic note under the plan drawing', async () => {
+    const html = await renderOfferHtml(
+      { ...asOffer([planPergola(TRAPEZOID)]), customerName: 'בדיקה טרפז' },
+      null,
+      true,
+      'he',
+    )
+    expect(html).toContain(pdfT.he.off_non_orthogonal_pdf_note)
+    expect(html).toContain('viz-non-orthogonal')
   })
 
   it('keeps the shape spec for an old offer without plans', async () => {
@@ -129,14 +153,109 @@ describe('offer PDF plans', () => {
   })
 })
 
+function segmentHitsAabb(
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+  minX: number,
+  minY: number,
+  maxX: number,
+  maxY: number,
+): boolean {
+  let t0 = 0
+  let t1 = 1
+  const dx = bx - ax
+  const dy = by - ay
+  const p = [-dx, dx, -dy, dy]
+  const q = [ax - minX, maxX - ax, ay - minY, maxY - ay]
+  for (let index = 0; index < 4; index += 1) {
+    if (p[index] === 0) {
+      if (q[index] < 0) return false
+      continue
+    }
+    const ratio = q[index] / p[index]
+    if (p[index] < 0) {
+      if (ratio > t1) return false
+      if (ratio > t0) t0 = ratio
+    } else {
+      if (ratio < t0) return false
+      if (ratio < t1) t1 = ratio
+    }
+  }
+  return t0 <= t1
+}
+
+function labelsStayOffContour(
+  polygon: Array<{ x: number; y: number }>,
+  labels: Array<{ x: number; y: number; halfWidth: number; halfHeight: number }>,
+): boolean {
+  return labels.every((label) => {
+    const minX = label.x - label.halfWidth
+    const maxX = label.x + label.halfWidth
+    const minY = label.y - label.halfHeight
+    const maxY = label.y + label.halfHeight
+    return polygon.every((point, index) => {
+      const next = polygon[(index + 1) % polygon.length]
+      return !segmentHitsAabb(point.x, point.y, next.x, next.y, minX, minY, maxX, maxY)
+    })
+  })
+}
+
 describe('planContourSvg', () => {
-  it('draws the confirmed contour and its edge lengths', () => {
-    const { planContourSvg } = jest.requireActual<typeof import('@/lib/pdf/polygon-plan-drawing.server')>(
+  function drawing() {
+    return jest.requireActual<typeof import('@/lib/pdf/polygon-plan-drawing.server')>(
       '@/lib/pdf/polygon-plan-drawing.server',
     )
-    const svg = planContourSvg(RECT, [0])
+  }
+
+  it('draws the confirmed contour and its edge lengths', () => {
+    const svg = drawing().planContourSvg(RECT, [0])
     expect(svg).toContain('data-plan-contour="1"')
     expect(svg).toContain('>4000<')
     expect(svg).toContain('>6000<')
+  })
+
+  it('places rectangle labels outside the contour, horizontal above and below, vertical beside', () => {
+    const labels = drawing().placeContourDimensionLabels(RECT)
+    expect(labelsStayOffContour(RECT, labels)).toBe(true)
+    const bottom = labels.find((label) => label.text === '4000' && label.y < 0)
+    const top = labels.find((label) => label.text === '4000' && label.y > 6000)
+    const right = labels.find((label) => label.text === '6000' && label.x > 4000)
+    const left = labels.find((label) => label.text === '6000' && label.x < 0)
+    expect(bottom?.x).toBe(2000)
+    expect(top?.x).toBe(2000)
+    expect(right?.y).toBe(3000)
+    expect(left?.y).toBe(3000)
+  })
+
+  it('keeps L-shape and trapezoid labels off the contour lines', () => {
+    const lShape = [
+      { x: 0, y: 0 },
+      { x: 4000, y: 0 },
+      { x: 4000, y: 2000 },
+      { x: 2000, y: 2000 },
+      { x: 2000, y: 4000 },
+      { x: 0, y: 4000 },
+    ]
+    const height = 3000
+    const leftRun = Math.sqrt(3849 ** 2 - height ** 2)
+    const rightRun = Math.sqrt(3190 ** 2 - height ** 2)
+    const trapezoid = [
+      { x: 0, y: 0 },
+      { x: 7030, y: 0 },
+      { x: 7030 - rightRun, y: height },
+      { x: leftRun, y: height },
+    ]
+    const { placeContourDimensionLabels, planContourSvg } = drawing()
+    expect(labelsStayOffContour(lShape, placeContourDimensionLabels(lShape))).toBe(true)
+    const trapLabels = placeContourDimensionLabels(trapezoid)
+    expect(labelsStayOffContour(trapezoid, trapLabels)).toBe(true)
+    const svg = planContourSvg(trapezoid)
+    expect(svg).toContain('>7030<')
+    expect(svg).toContain('>3849<')
+    expect(svg).toContain('>3190<')
+    expect(svg).not.toContain('#1d4ed8')
+    expect(svg.match(/fill="#111827"/g)?.length).toBe(trapLabels.length)
   })
 })

@@ -22,13 +22,21 @@ export async function createBrowser(): Promise<Browser> {
   }
 
 
-  // Local development: use full puppeteer (bundles its own Chromium)
-  if (process.env.NODE_ENV === 'development' && !process.env.VERCEL) {
+  // Local / scripts: bundled Chromium via puppeteer (avoid Sparticuz ENOEXEC on macOS).
+  if (!process.env.VERCEL) {
     const puppeteer = await import('puppeteer')
-    browserInstance = await puppeteer.default.launch({
+    const launchArgs = {
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-    })
+    }
+    try {
+      browserInstance = await puppeteer.default.launch(launchArgs)
+    } catch {
+      browserInstance = await puppeteer.default.launch({
+        ...launchArgs,
+        channel: 'chrome',
+      })
+    }
     return browserInstance
   }
 

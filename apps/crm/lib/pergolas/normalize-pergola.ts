@@ -78,11 +78,11 @@ export function parsePergolaPlan(raw: unknown): PergolaPlan | null {
   }
 }
 
-function normalizeShape(raw: unknown): PergolaShape {
+function normalizeShape(raw: unknown): PergolaShape | null {
   if (raw && typeof raw === 'object' && 'type' in raw) {
     return raw as PergolaShape
   }
-  return { type: 'rectangle', width: 4, length: 6 }
+  return null
 }
 
 /**

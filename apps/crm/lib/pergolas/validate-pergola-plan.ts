@@ -34,7 +34,9 @@ export const pergolaPlanBodySchema = z
     polygon: z.array(planPointSchema).min(3).max(200),
     wallIndices: z.array(z.number().int().nonnegative()),
     params: planParamsSchema.optional(),
-    confirmed: z.boolean(),
+    confirmed: z.literal(true, {
+      errorMap: () => ({ message: 'Pergola drawing must be confirmed before submit' }),
+    }),
   })
   .superRefine((data, ctx) => {
     const area = polygonAreaM2(data.polygon)

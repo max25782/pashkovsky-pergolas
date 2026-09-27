@@ -25,24 +25,7 @@ async function fetchOffer(id: string): Promise<Offer | null> {
   const { data, error } = await supabase.from('offers').select('*').eq('id', id).single()
   if (error || !data) return null
 
-  const offer = transformOfferFromDbRow(data as Record<string, unknown>)
-  return {
-    ...offer,
-    configuratorMeta: data.configurator_meta ?? offer.configuratorMeta,
-    paymentTerms: data.payment_terms,
-    warranty: data.warranty,
-    images: data.images,
-    approval: {
-      approved: data.approved,
-      approvedAt: data.approved_at,
-      signatureImage: data.signature_image,
-      customerName: data.approval_customer_name,
-      customerPhone: data.approval_customer_phone,
-    },
-    pdf: { url: data.pdf_url, createdAt: data.pdf_created_at },
-    createdAt: data.created_at,
-    updatedAt: data.updated_at,
-  }
+  return transformOfferFromDbRow(data as Record<string, unknown>)
 }
 
 export async function GET(

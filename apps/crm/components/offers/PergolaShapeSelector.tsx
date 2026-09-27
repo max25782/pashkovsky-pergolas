@@ -8,7 +8,7 @@ import { XShapeInput } from './shapes/XShapeInput'
 import { UShapeInput } from './shapes/UShapeInput'
 
 interface PergolaShapeSelectorProps {
-  value: PergolaShape
+  value: PergolaShape | null
   onChange: (shape: PergolaShape) => void
 }
 
@@ -62,26 +62,29 @@ export function PergolaShapeSelector({ value, onChange }: PergolaShapeSelectorPr
       <div>
         <label className="block text-sm text-white/80 mb-2">{t('shapeTypeLabel')}</label>
         <div className="grid grid-cols-4 gap-2">
-          <button type="button" onClick={() => handleShapeTypeChange('rectangle')} className={btnCls(value.type === 'rectangle')}>
+          <button type="button" onClick={() => handleShapeTypeChange('rectangle')} className={btnCls(value?.type === 'rectangle')}>
             {t('rectangle')}
           </button>
-          <button type="button" onClick={() => handleShapeTypeChange('L')} className={btnCls(value.type === 'L')}>
+          <button type="button" onClick={() => handleShapeTypeChange('L')} className={btnCls(value?.type === 'L')}>
             {t('lShape')}
           </button>
-          <button type="button" onClick={() => handleShapeTypeChange('X')} className={btnCls(value.type === 'X')}>
+          <button type="button" onClick={() => handleShapeTypeChange('X')} className={btnCls(value?.type === 'X')}>
             {t('xShape')}
           </button>
-          <button type="button" onClick={() => handleShapeTypeChange('U')} className={btnCls(value.type === 'U')}>
+          <button type="button" onClick={() => handleShapeTypeChange('U')} className={btnCls(value?.type === 'U')}>
             {t('uShape')}
           </button>
         </div>
       </div>
 
       <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-        {value.type === 'rectangle' && <RectangleShapeInput value={value} onChange={onChange} />}
-        {value.type === 'L' && <LShapeInput value={value} onChange={onChange} />}
-        {value.type === 'X' && <XShapeInput value={value} onChange={onChange} />}
-        {value.type === 'U' && <UShapeInput value={value} onChange={onChange} />}
+        {!value ? (
+          <p className="text-sm text-white/60">{t('shapeTypeLabel')}</p>
+        ) : null}
+        {value?.type === 'rectangle' && <RectangleShapeInput value={value} onChange={onChange} />}
+        {value?.type === 'L' && <LShapeInput value={value} onChange={onChange} />}
+        {value?.type === 'X' && <XShapeInput value={value} onChange={onChange} />}
+        {value?.type === 'U' && <UShapeInput value={value} onChange={onChange} />}
       </div>
     </div>
   )

@@ -17,7 +17,7 @@ export interface QuickOfferDraftEnvelope {
 function buildDefaultDraft(): OfferDraft {
   return {
     dealId: '',
-    customerName: 'הצעה מהירה',
+    customerName: '',
     quickProduct: DEFAULT_OFFER_VALUES.quickProduct,
     includePergola: true,
     includeRailings: false,

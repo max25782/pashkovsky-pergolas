@@ -71,6 +71,8 @@ export function transformOfferFromDbRow(data: Record<string, unknown>): Offer {
 
   return {
     id: data.id as string,
+    offerNumber: (data.offer_number as string | null | undefined) ?? null,
+    termsSnapshot: (data.terms_snapshot as Offer['termsSnapshot']) ?? null,
     dealId: (data.deal_id as string | undefined) ?? '',
     customerName: data.customer_name as string,
     customerPhone: data.customer_phone as string | undefined,
@@ -185,6 +187,17 @@ export function transformOfferFromDbRow(data: Record<string, unknown>): Offer {
     createdAt: data.created_at as string,
     updatedAt: data.updated_at as string,
   } as Offer
+}
+
+/** CRM JSON API: same as PDF mapper plus list-only fields (e.g. quickFences). */
+export function transformOfferFromDbRowForApi(data: Record<string, unknown>): Offer {
+  const offer = transformOfferFromDbRow(data)
+  const quickExtra = offer.quickOfferExtra
+  return {
+    ...offer,
+    quickFences:
+      quickExtra?.quickFences ?? (offer.quickFence !== undefined ? [offer.quickFence] : undefined),
+  }
 }
 
 /**

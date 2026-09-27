@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl'
 import { usePriceFormatter } from '@/lib/use-price-formatter'
 import type { Offer } from '@/types/offer'
 import { PERGOLA_TYPE_NAMES } from '@/types/offer'
+import { formatOfferDisplayNumber } from '@/lib/offers/format-offer-display-number'
 import {
   FileText,
   Check,
@@ -375,6 +376,12 @@ export function OffersList({
                   })()}
                 </div>
                 <div className="text-sm text-white/60">
+                  {formatOfferDisplayNumber({
+                    id: offer.id,
+                    createdAt: offer.createdAt,
+                    offerNumber: offer.offerNumber,
+                  })}
+                  {' · '}
                   {new Date(offer.createdAt).toLocaleDateString('he-IL', {
                     year: 'numeric',
                     month: 'long',

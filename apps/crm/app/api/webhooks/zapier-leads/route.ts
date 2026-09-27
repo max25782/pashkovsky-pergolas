@@ -17,6 +17,7 @@ import { timingSafeEqual } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { normalizePhoneIL } from '@/lib/middleware/integration-access'
+import { newLeadDefaults } from '@/lib/leads/new-lead-defaults'
 import { sendWhatsAppTemplate } from '@/lib/whatsapp-send'
 
 const SECRET_RAW = process.env.ZAPIER_LEADS_SECRET
@@ -155,6 +156,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, duplicate: true }, { status: 200 })
   }
 
+  const defaults = await newLeadDefaults(supabase, COMPANY_ID)
   const { error } = await supabase
     .from('leads')
     .insert({
@@ -168,6 +170,7 @@ export async function POST(req: NextRequest) {
       status: 'waiting',
       google_conv_sent: false,
       metadata: { zapier: true },
+      ...defaults,
     })
 
   if (error) {

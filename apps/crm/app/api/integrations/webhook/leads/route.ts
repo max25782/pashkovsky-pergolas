@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 import { verifySignature, normalizePhoneIL } from '@/lib/middleware/integration-access'
+import { newLeadDefaults } from '@/lib/leads/new-lead-defaults'
 import type { WebhookLeadPayload } from '@/types/integration'
 
 // Force nodejs runtime for crypto
@@ -146,6 +147,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 7. Insert lead
+    const defaults = await newLeadDefaults(supabase, company_id)
     const { data: lead, error: insertError } = await supabase
       .from('leads')
       .insert({
@@ -164,6 +166,7 @@ export async function POST(request: NextRequest) {
           utm: leadData.utm,
           extra: leadData.extra,
         },
+        ...defaults,
       })
       .select('id')
       .single()

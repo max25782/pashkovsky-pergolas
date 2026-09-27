@@ -1,6 +1,15 @@
 'use client'
 
-import { useCallback, useState, useMemo, useEffect, useImperativeHandle, forwardRef, type ReactNode } from 'react'
+import {
+  useCallback,
+  useState,
+  useMemo,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  forwardRef,
+  type ReactNode,
+} from 'react'
 import { useTranslations } from 'next-intl'
 import { PlanEditor, type PlanContourSnapshot, type PlanEditorLabels, type Point } from '@pashkovsky/plan-editor'
 import {
@@ -141,6 +150,8 @@ export interface OfferPlanConfiguratorEmbedHandle {
 
 export interface PlanGeometryChange extends PlanContourSnapshot {
   params: PergolaPlanConstructionParams
+  /** False when post/beam layout is approximate (non-axis-aligned contour). */
+  isOrthogonal: boolean
 }
 
 interface OfferPlanConfiguratorEmbedProps {
@@ -258,11 +269,35 @@ export const OfferPlanConfiguratorEmbed = forwardRef<
     [params, savePlanToServer, offerId],
   )
 
+  const measureOrthogonal = useCallback(
+    (polygonMm: Point[], wallEdgeIndices: number[]): boolean => {
+      if (polygonMm.length < 3) return true
+      try {
+        const contour: Point2D[] = polygonMm.map((p): Point2D => [p.x, p.y])
+        return buildPieces(contour, wallEdgeIndices, params).isOrthogonal
+      } catch {
+        return true
+      }
+    },
+    [params],
+  )
+
+  const onPlanGeometryRef = useRef(onPlanGeometry)
+  onPlanGeometryRef.current = onPlanGeometry
+
   const handleContourChange = useCallback(
     (contour: PlanContourSnapshot) => {
-      onPlanGeometry?.({ ...contour, params })
+      if (contour.isClosed && contour.polygon.length >= 3) {
+        setLastPolygonMm(contour.polygon)
+        setLastWallEdgeIndices(contour.wallIndices)
+      }
+      const isOrthogonal =
+        contour.isClosed && contour.polygon.length >= 3
+          ? measureOrthogonal(contour.polygon, contour.wallIndices)
+          : true
+      onPlanGeometryRef.current?.({ ...contour, params, isOrthogonal })
     },
-    [onPlanGeometry, params],
+    [params, measureOrthogonal],
   )
 
   const buildResult = useMemo(() => {

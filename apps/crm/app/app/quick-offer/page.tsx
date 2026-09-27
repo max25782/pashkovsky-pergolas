@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import {
@@ -40,6 +40,7 @@ import {
 } from '@/lib/quick-offer-includes'
 import { usePriceFormatter } from '@/lib/use-price-formatter'
 import { polygonAreaM2 } from '@pashkovsky/pergola-core'
+import { lineAmountFromBillableArea, roundBillableAreaSqm } from '@/lib/pergolas/pergola-area-sqm'
 import { pergolaAreaSqm } from '@/lib/pergolas/pergola-area-sqm'
 import { applyPlanGeometry, type PlanGeometryInput } from '@/lib/pergolas/apply-plan-geometry'
 import { authFetch } from '@/lib/api/auth-fetch'
@@ -49,12 +50,20 @@ import {
   type PlanGeometryChange,
 } from '@/components/offers/OfferPlanConfiguratorEmbed'
 import { PergolaPlanPreview } from '@/components/offers/PergolaPlanPreview'
+import { PergolaDrawingSummary } from '@/components/offers/PergolaDrawingSummary'
 import {
   parseQuickOfferDraft,
   quickOfferDraftKey,
   quickOfferSubmitTarget,
   serializeQuickOfferDraft,
 } from '@/lib/quick-offer/draft-storage'
+import { formatOfferDisplayNumber } from '@/lib/offers/format-offer-display-number'
+import { createQuickOfferSubmitGate } from '@/lib/quick-offer/quick-offer-submit-gate'
+import {
+  isQuickOfferFormBlocked,
+  shouldWarnQuickOfferCustomerRename,
+} from '@/lib/quick-offer/quick-offer-edit-session'
+import { isCustomerNameValid } from '@/lib/quick-offer/validate-customer-name'
 import { useSubscriptionPlan } from '@/components/subscription/subscription-plan-context'
 import { minPlanForFeature } from '@/lib/subscription/plan-access'
 import { useLanguage, type Language } from '@/lib/language-context'
@@ -488,11 +497,13 @@ function ResultScreen({
   calculation,
   draft,
   onBack,
+  onStartNewOffer,
 }: {
   result: QuickOfferResult
   calculation: ReturnType<typeof calculateOffer>
   draft: OfferDraft
   onBack: () => void
+  onStartNewOffer: () => void
 }) {
   const t = useTranslations('quickOffer')
   const tDeals = useTranslations('deals')
@@ -506,6 +517,7 @@ function ResultScreen({
   const [showEmail, setShowEmail] = useState(false)
   const [savedDealId, setSavedDealId] = useState<string | null>(null)
   const [offerSigned, setOfferSigned] = useState(false)
+  const [resultOfferNumber, setResultOfferNumber] = useState<string | null>(null)
 
   const resultIncludes = resolveQuickOfferIncludes(draft)
 
@@ -521,6 +533,13 @@ function ResultScreen({
         const res = await authFetch(`/api/offers/${result.offerId}`)
         if (!res.ok || cancelled) return
         const data = (await res.json()) as Offer
+        setResultOfferNumber(
+          formatOfferDisplayNumber({
+            id: data.id,
+            createdAt: data.createdAt,
+            offerNumber: data.offerNumber,
+          }),
+        )
         if (data.approval?.approved === true) {
           setOfferSigned(true)
           clearInterval(intervalId)
@@ -572,7 +591,8 @@ function ResultScreen({
     resultIncludes.pergola && resultPergolas.length > 0
       ? resultPergolas.flatMap((p, i) => {
           const area = pergolaAreaSqm(p)
-          const price = area * p.pricePerSqm
+          if (area === null) return []
+          const price = lineAmountFromBillableArea(area, p.pricePerSqm)
           if (price <= 0) return []
           const label =
             resultPergolas.length > 1
@@ -613,7 +633,13 @@ function ResultScreen({
         <CheckCircle className="w-6 h-6 text-green-400 shrink-0" />
         <div>
           <p className="font-semibold text-green-300">{t('successTitle')}</p>
-          <p className="text-sm text-green-400/70">{t('successId', { id: result.offerId.slice(0, 8) })}...</p>
+          <p className="text-sm text-green-400/70">
+            {t('successOfferNumber', {
+              number:
+                resultOfferNumber ??
+                formatOfferDisplayNumber({ id: result.offerId }),
+            })}
+          </p>
         </div>
       </div>
 
@@ -746,6 +772,14 @@ function ResultScreen({
           )}
 
           <button
+            type="button"
+            onClick={onStartNewOffer}
+            className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border border-white/20 bg-white/5 hover:bg-white/10 text-white text-sm font-medium transition-colors"
+          >
+            {t('newOfferFromResult')}
+          </button>
+
+          <button
             onClick={onBack}
             className="flex items-center gap-2 text-white/50 hover:text-white transition-colors text-sm"
           >
@@ -789,7 +823,7 @@ function ResultScreen({
 function buildDefaultDraft(): OfferDraft {
   return {
     dealId: '',
-    customerName: 'הצעה מהירה',
+    customerName: '',
     quickProduct: DEFAULT_OFFER_VALUES.quickProduct,
     includePergola: true,
     includeRailings: false,
@@ -829,7 +863,13 @@ export default function QuickOfferPage() {
   const [draftHydrated, setDraftHydrated] = useState(false)
   const [draftRestored, setDraftRestored] = useState(false)
   const [formEpoch, setFormEpoch] = useState(0)
+  const [planEditorOpen, setPlanEditorOpen] = useState<Record<number, boolean>>({})
+  const [planOrthogonal, setPlanOrthogonal] = useState<Record<number, boolean>>({})
+  const [editSessionAcknowledged, setEditSessionAcknowledged] = useState(false)
+  const [boundCustomerName, setBoundCustomerName] = useState<string | null>(null)
+  const [editingOfferDisplayNumber, setEditingOfferDisplayNumber] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const submitGateRef = useRef(createQuickOfferSubmitGate())
   const [error, setError] = useState<string | null>(null)
   const [generatingAi, setGeneratingAi] = useState(false)
   const [improvingAi, setImprovingAi] = useState(false)
@@ -852,6 +892,13 @@ export default function QuickOfferPage() {
             setDraft(stored.draft)
             setEditingOfferId(stored.offerId)
             setDraftRestored(true)
+            if (stored.offerId) {
+              setEditSessionAcknowledged(false)
+              setBoundCustomerName(stored.draft.customerName?.trim() || '')
+            } else {
+              setEditSessionAcknowledged(true)
+              setBoundCustomerName(null)
+            }
           }
         }
       } catch {
@@ -865,6 +912,44 @@ export default function QuickOfferPage() {
       cancelled = true
     }
   }, [])
+
+  useEffect(() => {
+    if (!editingOfferId) {
+      setEditingOfferDisplayNumber(null)
+      return
+    }
+    let cancelled = false
+    void (async () => {
+      try {
+        const res = await authFetch(`/api/offers/${editingOfferId}`)
+        if (!res.ok || cancelled) return
+        const data = (await res.json()) as {
+          id?: string
+          createdAt?: string
+          customerName?: string
+          offerNumber?: string | null
+        }
+        const id = typeof data.id === 'string' ? data.id : editingOfferId
+        setEditingOfferDisplayNumber(
+          formatOfferDisplayNumber({
+            id,
+            createdAt: data.createdAt,
+            offerNumber: data.offerNumber,
+          }),
+        )
+        if (typeof data.customerName === 'string' && data.customerName.trim()) {
+          setBoundCustomerName(data.customerName.trim())
+        }
+      } catch {
+        if (!cancelled) {
+          setEditingOfferDisplayNumber(formatOfferDisplayNumber({ id: editingOfferId }))
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [editingOfferId])
 
   useEffect(() => {
     if (!draftHydrated || !companyId || step !== 'form') return
@@ -913,7 +998,11 @@ export default function QuickOfferPage() {
     if (!includes.pergola || pergolas.length === 0) return []
     return pergolas.flatMap((p, i) => {
       const area = pergolaAreaSqm(p)
-      const price = area * p.pricePerSqm
+      const prefix = pergolas.length > 1 ? `פרגולה #${i + 1}` : 'פרגולה'
+      if (area === null) {
+        return [{ label: `${prefix} — ${t('noDrawing')}`, value: 0 }]
+      }
+      const price = lineAmountFromBillableArea(area, p.pricePerSqm)
       if (price <= 0) return []
       const label =
         pergolas.length > 1
@@ -921,9 +1010,13 @@ export default function QuickOfferPage() {
           : `פרגולה (${area.toFixed(2)} מ״ר)`
       return [{ label, value: price }]
     })
-  }, [includes.pergola, pergolas])
+  }, [includes.pergola, pergolas, t])
 
-  function handlePlanGeometry(index: number, geometry: PlanGeometryChange) {
+  const handlePlanGeometry = useCallback((index: number, geometry: PlanGeometryChange) => {
+    setPlanOrthogonal((prev) => {
+      if (prev[index] === geometry.isOrthogonal) return prev
+      return { ...prev, [index]: geometry.isOrthogonal }
+    })
     const input: PlanGeometryInput = geometry
     setDraft((d) => {
       const current = d.pergolas?.length ? d.pergolas : [{ ...DEFAULT_OFFER_VALUES.pergola }]
@@ -933,7 +1026,7 @@ export default function QuickOfferPage() {
       updated[index] = next
       return { ...d, pergolas: updated }
     })
-  }
+  }, [])
 
   function confirmPergolaPlan(index: number) {
     setDraft((d) => {
@@ -942,6 +1035,19 @@ export default function QuickOfferPage() {
       if (!pergola?.plan || pergola.plan.polygon.length < 3) return d
       const updated = [...current]
       updated[index] = { ...pergola, plan: { ...pergola.plan, confirmed: true } }
+      setPlanEditorOpen((prev) => ({ ...prev, [index]: false }))
+      return { ...d, pergolas: updated }
+    })
+  }
+
+  function reopenPergolaDrawing(index: number) {
+    setPlanEditorOpen((prev) => ({ ...prev, [index]: true }))
+    setDraft((d) => {
+      const current = d.pergolas?.length ? d.pergolas : [{ ...DEFAULT_OFFER_VALUES.pergola }]
+      const pergola = current[index]
+      if (!pergola?.plan) return d
+      const updated = [...current]
+      updated[index] = { ...pergola, plan: { ...pergola.plan, confirmed: false } }
       return { ...d, pergolas: updated }
     })
   }
@@ -1029,7 +1135,7 @@ export default function QuickOfferPage() {
         lines.push(`סוג: ${typeName}`)
         const area = pergolaAreaSqm(p)
         const polygon = p.plan?.polygon
-        if (polygon && polygon.length >= 3) {
+        if (polygon && polygon.length >= 3 && area !== null) {
           const edges = polygon
             .map((point, edgeIndex) => {
               const next = polygon[(edgeIndex + 1) % polygon.length]
@@ -1037,14 +1143,16 @@ export default function QuickOfferPage() {
             })
             .join(', ')
           lines.push(`שרטוט: ${area.toFixed(2)} מ"ר | צלעות: ${edges} מ'`)
-        } else if (p.shape.type === 'rectangle') {
+        } else if (p.shape?.type === 'rectangle' && area !== null) {
           lines.push(`מידות: ${p.shape.width} × ${p.shape.length} מ' (${area.toFixed(2)} מ"ר)`)
-        } else {
+        } else if (p.shape && area !== null) {
           lines.push(`צורה: ${p.shape.type} | שטח: ${area.toFixed(2)} מ"ר`)
+        } else {
+          lines.push('שרטוט: אין שרטוט')
         }
         if (p.height) lines.push(`גובה: ${p.height} מ'`)
         if (p.pricePerSqm) lines.push(`מחיר לְמ"ר: ${fmt(p.pricePerSqm)}`)
-        const lineTotal = area * p.pricePerSqm
+        const lineTotal = area !== null ? area * p.pricePerSqm : 0
         if (lineTotal > 0) lines.push(`סה"כ פרגולה${multi ? ` ${i + 1}` : ''}: ${fmt(lineTotal)}`)
         if (p.location) lines.push(`מיקום: ${p.location}`)
       })
@@ -1206,6 +1314,11 @@ export default function QuickOfferPage() {
 
   const handleSubmit = useCallback(async () => {
     const inc = resolveQuickOfferIncludes(draft)
+    const trimmedCustomerName = (draft.customerName ?? '').trim()
+    if (!isCustomerNameValid(trimmedCustomerName)) {
+      setError(t('errorCustomerNameRequired'))
+      return
+    }
     if (!hasAnyQuickOfferProduct(inc)) {
       setError(t('errorNoProduct'))
       return
@@ -1255,6 +1368,8 @@ export default function QuickOfferPage() {
       }
     }
 
+    if (!submitGateRef.current.tryAcquire()) return
+
     setSubmitting(true)
     setError(null)
     try {
@@ -1282,18 +1397,24 @@ export default function QuickOfferPage() {
       const data = (await res.json()) as QuickOfferResult
       if (companyId) {
         try {
-          localStorage.removeItem(quickOfferDraftKey(companyId))
+          localStorage.setItem(
+            quickOfferDraftKey(companyId),
+            serializeQuickOfferDraft(draft, data.offerId),
+          )
         } catch {
           // ignore
         }
       }
-      setDraftRestored(false)
+      setDraftRestored(true)
       setEditingOfferId(data.offerId)
+      setBoundCustomerName(draft.customerName?.trim() || '')
+      setEditSessionAcknowledged(true)
       setResult(data)
       setStep('result')
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
+      submitGateRef.current.release()
       setSubmitting(false)
     }
   }, [draft, calculation, t, editingOfferId, companyId])
@@ -1311,6 +1432,10 @@ export default function QuickOfferPage() {
     setStep('form')
     setResult(null)
     setError(null)
+    setEditSessionAcknowledged(true)
+    if (editingOfferId) {
+      setBoundCustomerName(draft.customerName?.trim() || '')
+    }
     setFormEpoch((n) => n + 1)
     if (companyId) {
       try {
@@ -1329,11 +1454,28 @@ export default function QuickOfferPage() {
     setDraft(buildDefaultDraft())
     setEditingOfferId(null)
     setDraftRestored(false)
+    setEditSessionAcknowledged(true)
+    setBoundCustomerName(null)
     setResult(null)
     setStep('form')
     setError(null)
     setFormEpoch((n) => n + 1)
   }
+
+  function updateCustomerName(next: string) {
+    const bound = (boundCustomerName ?? draft.customerName ?? '').trim()
+    if (shouldWarnQuickOfferCustomerRename(editingOfferId, bound, next)) {
+      if (typeof window === 'undefined' || !window.confirm(t('existingOfferCustomerChangeWarning'))) {
+        return
+      }
+      handleStartNewOffer()
+      setDraft((d) => ({ ...d, customerName: next }))
+      return
+    }
+    setDraft((d) => ({ ...d, customerName: next }))
+  }
+
+  const formBlockedByEditSession = isQuickOfferFormBlocked(editingOfferId, editSessionAcknowledged)
 
   const colorOptions = [
     { v: 'white' as const, l: t('colorWhite') },
@@ -1364,25 +1506,81 @@ export default function QuickOfferPage() {
         </div>
 
         {step === 'result' && result ? (
-          <ResultScreen result={result} calculation={calculation} draft={draft} onBack={handleBack} />
+          <ResultScreen
+            result={result}
+            calculation={calculation}
+            draft={draft}
+            onBack={handleBack}
+            onStartNewOffer={handleStartNewOffer}
+          />
         ) : !draftHydrated ? (
           <div className="flex items-center gap-2 text-sm text-white/50">
             <Loader2 className="w-4 h-4 animate-spin" />
           </div>
         ) : (
           <div className="space-y-4">
-            {draftRestored && (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/40 bg-amber-500/10 px-4 py-3">
-                <p className="text-sm font-medium text-amber-100">{t('draftRestored')}</p>
-                <button
-                  type="button"
-                  onClick={handleStartNewOffer}
-                  className="rounded-lg bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/20"
-                >
-                  {t('startNewOffer')}
-                </button>
+            {editingOfferId ? (
+              <div className="flex flex-col gap-3 rounded-xl border border-sky-400/40 bg-sky-500/10 px-4 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-sm font-medium text-sky-100">
+                    {t('editingExistingOffer', {
+                      number:
+                        editingOfferDisplayNumber ??
+                        formatOfferDisplayNumber({ id: editingOfferId }),
+                      name: (boundCustomerName ?? draft.customerName ?? '').trim(),
+                    })}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleStartNewOffer}
+                    className="rounded-lg bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/20"
+                  >
+                    {t('startNewOffer')}
+                  </button>
+                </div>
+                {formBlockedByEditSession && (
+                  <button
+                    type="button"
+                    onClick={() => setEditSessionAcknowledged(true)}
+                    className="self-start rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500"
+                  >
+                    {t('continueEditingOffer')}
+                  </button>
+                )}
               </div>
+            ) : (
+              draftRestored && (
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/40 bg-amber-500/10 px-4 py-3">
+                  <p className="text-sm font-medium text-amber-100">{t('draftRestored')}</p>
+                  <button
+                    type="button"
+                    onClick={handleStartNewOffer}
+                    className="rounded-lg bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/20"
+                  >
+                    {t('startNewOffer')}
+                  </button>
+                </div>
+              )
             )}
+
+            <div
+              className={`space-y-4 ${formBlockedByEditSession ? 'pointer-events-none opacity-45 select-none' : ''}`}
+            >
+            <SectionCard title={t('fieldCustomerName')} defaultOpen>
+              <Field label={t('fieldCustomerName')}>
+                <input
+                  type="text"
+                  className={inputCls}
+                  value={draft.customerName ?? ''}
+                  placeholder={t('fieldCustomerNamePlaceholder')}
+                  onChange={(e) => updateCustomerName(e.target.value)}
+                />
+                {!isCustomerNameValid((draft.customerName ?? '').trim()) && (
+                  <p className="mt-2 text-sm text-amber-200">יש להזין שם לקוח</p>
+                )}
+              </Field>
+            </SectionCard>
+
             <SectionCard title={t('sectionProductType')} defaultOpen>
               <Field label={t('fieldProductKind')}>
                 <div className="flex flex-wrap gap-4">
@@ -1434,42 +1632,76 @@ export default function QuickOfferPage() {
                     )}
 
                     <Field label={t('sectionDrawing')}>
-                      <div className="h-[480px]">
-                        <OfferPlanConfiguratorEmbed
-                          key={`${formEpoch}-${index}`}
-                          locale={uiLanguage}
-                          canvasClassName="relative h-full w-full overflow-hidden rounded-lg border border-white/15 bg-white"
-                          initialPlan={pergola.plan}
-                          onPlanGeometry={(geometry) => handlePlanGeometry(index, geometry)}
-                        />
-                      </div>
-                      {(() => {
-                        const polygon = pergola.plan?.polygon
-                        const areaM2 = polygon && polygon.length >= 3 ? polygonAreaM2(polygon) : 0
-                        const edges =
-                          polygon && polygon.length >= 3
-                            ? polygon
-                                .map((point, edgeIndex) => {
-                                  const next = polygon[(edgeIndex + 1) % polygon.length]
-                                  return (Math.hypot(next.x - point.x, next.y - point.y) / 1000).toFixed(2)
-                                })
-                                .join(' · ')
-                            : ''
-                        return (
-                          <div className="mt-2 space-y-1 text-sm text-white/80">
-                            <p>{t('planAreaReadonly', { area: areaM2.toFixed(2) })}</p>
-                            {edges ? <p>{t('planEdgesReadonly', { edges })}</p> : null}
+                      {pergola.plan?.confirmed === true && planEditorOpen[index] !== true ? (
+                        <div className="space-y-2">
+                          {pergola.plan && (
+                            <PergolaDrawingSummary
+                              plan={pergola.plan}
+                              noDrawingLabel={t('noDrawing')}
+                              areaLabel={(area) => t('planAreaReadonly', { area })}
+                              edgesLabel={(edges) => t('planEdgesReadonly', { edges })}
+                            />
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => reopenPergolaDrawing(index)}
+                            className="rounded-lg bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/20"
+                          >
+                            {t('btnEditDrawing')}
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="h-[480px]">
+                            <OfferPlanConfiguratorEmbed
+                              key={`${formEpoch}-${index}`}
+                              locale={uiLanguage}
+                              canvasClassName="relative h-full w-full overflow-hidden rounded-lg border border-white/15 bg-white"
+                              initialPlan={pergola.plan}
+                              onPlanGeometry={(geometry) => handlePlanGeometry(index, geometry)}
+                            />
                           </div>
-                        )
-                      })()}
-                      <button
-                        type="button"
-                        disabled={!pergola.plan || pergola.plan.polygon.length < 3 || pergola.plan.confirmed}
-                        onClick={() => confirmPergolaPlan(index)}
-                        className="mt-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-40"
-                      >
-                        {pergola.plan?.confirmed ? t('drawingConfirmed') : t('btnConfirmDrawing')}
-                      </button>
+                          {planOrthogonal[index] === false && (
+                            <p className="mt-2 rounded-lg border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
+                              {t('nonOrthogonalWarning')}
+                            </p>
+                          )}
+                          {(() => {
+                            const polygon = pergola.plan?.polygon
+                            const areaM2 =
+                              polygon && polygon.length >= 3
+                                ? roundBillableAreaSqm(polygonAreaM2(polygon))
+                                : null
+                            const edges =
+                              polygon && polygon.length >= 3
+                                ? polygon
+                                    .map((point, edgeIndex) => {
+                                      const next = polygon[(edgeIndex + 1) % polygon.length]
+                                      return (Math.hypot(next.x - point.x, next.y - point.y) / 1000).toFixed(2)
+                                    })
+                                    .join(' · ')
+                                : ''
+                            return (
+                              <div className="mt-2 space-y-1 text-sm text-white/80">
+                                {areaM2 !== null ? (
+                                  <p>{t('planAreaReadonly', { area: areaM2.toFixed(2) })}</p>
+                                ) : (
+                                  <p className="text-white/50">{t('noDrawing')}</p>
+                                )}
+                                {edges ? <p>{t('planEdgesReadonly', { edges })}</p> : null}
+                              </div>
+                            )
+                          })()}
+                          <button
+                            type="button"
+                            disabled={!pergola.plan || pergola.plan.polygon.length < 3 || pergola.plan.confirmed}
+                            onClick={() => confirmPergolaPlan(index)}
+                            className="mt-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-40"
+                          >
+                            {pergola.plan?.confirmed ? t('drawingConfirmed') : t('btnConfirmDrawing')}
+                          </button>
+                        </>
+                      )}
                     </Field>
 
                     <div className={pergola.plan?.confirmed ? '' : 'pointer-events-none opacity-45'}>
@@ -2425,6 +2657,8 @@ export default function QuickOfferPage() {
               onClick={handleSubmit}
               disabled={
                 submitting ||
+                formBlockedByEditSession ||
+                !isCustomerNameValid((draft.customerName ?? '').trim()) ||
                 (includes.pergola && pergolas.some((pergola) => pergola.plan?.confirmed !== true))
               }
               className="w-full flex items-center justify-center gap-2 py-4 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white font-bold text-lg transition-colors"
@@ -2438,6 +2672,7 @@ export default function QuickOfferPage() {
                 t('btnCreateOffer')
               )}
             </button>
+            </div>
           </div>
         )}
       </div>

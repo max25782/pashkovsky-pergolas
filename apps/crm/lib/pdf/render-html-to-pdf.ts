@@ -1,11 +1,20 @@
 import { createBrowser } from './create-browser'
 
+export interface RenderHtmlToPdfOptions {
+  /** Puppeteer footer: עמ׳ X מתוך Y on every page */
+  numberedFooter?: boolean
+  footerPageLabel?: string
+}
+
 /**
  * Render HTML to PDF Buffer using Puppeteer + Chromium
  * @param html - Self-contained HTML string with embedded base64 fonts
  * @returns PDF as Buffer
  */
-export async function renderHtmlToPdfBuffer(html: string): Promise<Buffer> {
+export async function renderHtmlToPdfBuffer(
+  html: string,
+  options?: RenderHtmlToPdfOptions,
+): Promise<Buffer> {
   let browser = null
   let page = null
 
@@ -51,16 +60,29 @@ export async function renderHtmlToPdfBuffer(html: string): Promise<Buffer> {
     
 
     // Generate PDF
+    const pageLabel = options?.footerPageLabel ?? 'עמ׳'
+    const numberedFooter = options?.numberedFooter === true
+    const emptyHeaderTemplate =
+      '<div style="width:100%;height:0;margin:0;padding:0;font-size:0;line-height:0;"></div>'
+    const footerTemplate = numberedFooter
+      ? `<div style="width:100%;font-size:9px;color:#555;text-align:center;font-family:'Noto Sans Hebrew',Arial,sans-serif;padding:0 12mm;">
+          ${pageLabel} <span class="pageNumber"></span> מתוך <span class="totalPages"></span>
+        </div>`
+      : undefined
+
     const pdfBuffer = await page.pdf({
       format: 'A4',
       printBackground: true,
       margin: {
         top: '20mm',
         right: '15mm',
-        bottom: '20mm',
+        bottom: numberedFooter ? '22mm' : '20mm',
         left: '15mm',
       },
       preferCSSPageSize: false,
+      displayHeaderFooter: numberedFooter,
+      headerTemplate: numberedFooter ? emptyHeaderTemplate : undefined,
+      footerTemplate: numberedFooter ? footerTemplate : undefined,
     })
 
 

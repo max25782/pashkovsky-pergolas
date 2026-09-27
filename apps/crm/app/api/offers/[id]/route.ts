@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
-import { pergolaFieldsFromOfferRow } from '@/lib/pdf/map-offer-db-row-for-pdf'
+import { transformOfferFromDbRowForApi } from '@/lib/pdf/map-offer-db-row-for-pdf'
 import { requireCompanyAccess } from '@/lib/auth'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
@@ -101,7 +101,7 @@ export async function GET(
     if (!access.authorized) return access.error
 
     // Transform to camelCase
-    const offer = transformOfferFromDB(data)
+    const offer = transformOfferFromDbRowForApi(data as Record<string, unknown>)
 
     return NextResponse.json(offer)
   } catch (error: unknown) {
@@ -181,147 +181,5 @@ export async function DELETE(
       { error: 'Internal server error' },
       { status: 500 }
     )
-  }
-}
-
-// Helper function to transform DB row to Offer object
-function transformOfferFromDB(data: Record<string, unknown>) {
-  const pf = pergolaFieldsFromOfferRow({
-    pergolas_data: data.pergolas_data,
-    pergola_shape_data: data.pergola_shape_data,
-    pergola_width: data.pergola_width as number | null,
-    pergola_length: data.pergola_length as number | null,
-    pergola_height: data.pergola_height as number | null,
-    pergola_location: data.pergola_location as string | null,
-    pergola_price_per_sqm: data.pergola_price_per_sqm as number | null,
-    quick_offer_extra: data.quick_offer_extra,
-  })
-  const quickExtra = pf.quickOfferExtra
-
-  return {
-    id: data.id,
-    dealId: data.deal_id,
-    customerName: data.customer_name,
-    customerPhone: data.customer_phone,
-    customerCity: data.customer_city,
-    quickProduct: pf.quickProduct,
-    quickRailings: pf.quickRailings,
-    quickFence: pf.quickFence,
-    quickOfferExtra: quickExtra,
-    includePergola: quickExtra?.includePergola,
-    includeRailings: quickExtra?.includeRailings,
-    includeFence: quickExtra?.includeFence,
-    pergolas: pf.pergolas,
-    pergola: pf.pergola,
-    
-    color: {
-      type: data.color_type,
-      ralCode: data.color_ral_code,
-      woodName: data.color_wood_name,
-    },
-    
-    roof: {
-      type: data.roof_type,
-      santafColor: data.roof_santaf_color,
-    },
-    
-    shadingRatio: data.shading_ratio,
-    finishType: data.finish_type,
-    finishValue: data.finish_value,
-    
-    santaf: {
-      enabled: data.santaf_enabled,
-      withStructure: data.santaf_with_structure,
-      pricePerSqmBasic: data.santaf_price_per_sqm_basic,
-      pricePerSqmWithStructure: data.santaf_price_per_sqm_with_structure,
-      // Restore Santaf dimensions from pergola_width/length if pergola is not included
-      width: (!data.pergola_shape_data && data.santaf_enabled && data.pergola_width) ? Number(data.pergola_width) : undefined,
-      length: (!data.pergola_shape_data && data.santaf_enabled && data.pergola_length) ? Number(data.pergola_length) : undefined,
-    },
-    
-    zipScreen: {
-      enabled: data.zip_screen_enabled,
-      type: data.zip_screen_type,
-      pricePerSqmManual: data.zip_screen_price_per_sqm_manual,
-      pricePerSqmElectric: data.zip_screen_price_per_sqm_electric,
-      runningMeters: data.zip_screen_running_meters,
-    },
-    
-    lighting: {
-      enabled: data.lighting_enabled,
-      pricePerMeter: data.lighting_price_per_meter,
-      runningMeters: data.lighting_running_meters,
-    },
-    
-    drainage: {
-      enabled: data.drainage_enabled,
-      pricePerMeter: data.drainage_price_per_meter,
-      runningMeters: data.drainage_running_meters,
-    },
-    
-    winterClosure: {
-      enabled: data.winter_closure_enabled,
-      items: data.winter_closure_items || [],
-      glassType: data.winter_closure_glass_type,
-    },
-    
-    options: {
-      notes: data.options_notes,
-    },
-    
-    area: data.area,
-    pergolaTotal: data.pergola_total,
-    railingsLineTotal: quickExtra?.railingsLineTotal,
-    fenceLineTotal: quickExtra?.fenceLineTotal,
-    santafTotal: data.santaf_total,
-    zipScreenTotal: data.zip_screen_total,
-    lightingTotal: data.lighting_total,
-    drainageTotal: data.drainage_total,
-    winterClosureTotal: data.winter_closure_total || 0,
-    totalBeforeVat: data.total_before_vat,
-    vatPercent: data.vat_percent || 18,
-    vatAmount: data.vat_amount,
-    priceWithVat: data.price_with_vat,
-    discountPercent: data.discount_percent || 0,
-    discountAmount: data.discount_amount,
-    finalPrice: data.final_price,
-    
-    pricing: {
-      pergolaTotal: data.pergola_total,
-      santafTotal: data.santaf_total,
-      zipScreenTotal: data.zip_screen_total,
-      lightingTotal: data.lighting_total,
-      drainageTotal: data.drainage_total,
-      winterClosureTotal: data.winter_closure_total || 0,
-      totalBeforeVat: data.total_before_vat,
-      vatPercent: data.vat_percent || 18,
-      vatAmount: data.vat_amount,
-      priceWithVat: data.price_with_vat,
-      discountPercent: data.discount_percent,
-      discountAmount: data.discount_amount,
-      finalPrice: data.final_price,
-    },
-    
-    paymentTerms: data.payment_terms,
-    warranty: data.warranty,
-    images: data.images,
-
-    configuratorMeta: data.configurator_meta ?? undefined,
-
-    approval: {
-      approved: data.approved,
-      approvedAt: data.approved_at,
-      signatureImage: data.signature_image,
-      customerName: data.approval_customer_name,
-      customerPhone: data.approval_customer_phone,
-    },
-    
-    pdf: {
-      url: data.pdf_url,
-      createdAt: data.pdf_created_at,
-    },
-    
-    createdAt: data.created_at,
-    updatedAt: data.updated_at,
   }
 }

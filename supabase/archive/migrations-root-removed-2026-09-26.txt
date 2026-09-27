@@ -1,0 +1,37 @@
+Removed duplicate folder supabase/migrations/ on 2026-09-26.
+Canonical migrations: apps/crm/supabase/migrations/
+
+Full SQL copies: supabase/archive/migrations-root-removed-2026-09-26/*.sql (28 files)
+
+SQL files that existed ONLY under the removed root folder (not same filename in apps/crm):
+017_add_email_to_leads.sql
+017b_add_missing_leads_columns.sql
+018_add_owner_role.sql
+019_enable_rls_with_policies.sql
+019b_migrate_company_data.sql
+020_enable_rls_simple.sql
+021_fix_company_members_fkey.sql
+022_create_articles_table.sql
+023_company_members_rls_policies.sql
+024_subscription_management.sql
+025_fix_warranty_hebrew.sql
+025b_sync_auth_users.sql
+026_company_profile_schema.sql
+026b_remove_password_hash_optional.sql
+027_create_platform_settings.sql
+027b_add_worker_shift_type.sql
+028_create_platform_audit_logs.sql
+028b_ai_director_sessions.sql
+029_add_ai_director_to_pro_plans.sql
+030_create_company_integrations.sql
+032_trial_invite_flow.sql
+034_pergola_config_submissions.sql
+035_add_city_to_leads.sql
+036_add_media_assets_category.sql
+043_update_lead_statuses.sql
+044_company_source_tracking.sql
+045_fix_pergola_configurator_security.sql
+add_railings_images.sql
+
+These were an older/platform migration line; CRM deploy uses apps/crm/supabase/migrations only.
+050_offers_offer_number.sql and 051_offers_terms_snapshot.sql exist in both trees (CRM copy is authoritative).

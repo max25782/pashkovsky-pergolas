@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { normalizePhoneIL } from '@/lib/middleware/integration-access'
+import { newLeadDefaults } from '@/lib/leads/new-lead-defaults'
 import { missingEnv } from '@/lib/env/require-env'
 import { readVerifiedMetaBody } from '@/lib/webhooks/meta-signature'
 
@@ -138,6 +139,7 @@ export async function POST(req: NextRequest) {
       const message =
         customFields.map((f) => `${f.name}: ${f.values?.join(', ')}`).join('; ') || null
 
+      const defaults = await newLeadDefaults(supabase, COMPANY_ID)
       await supabase.from('leads').insert({
         company_id: COMPANY_ID,
         name,
@@ -147,6 +149,7 @@ export async function POST(req: NextRequest) {
         source: 'facebook',
         status: 'waiting',
         metadata: { fb_leadgen_id: leadgenId, fb_created_time: data.created_time },
+        ...defaults,
       })
     } catch (e) {
       console.error('[FB Leads] Error processing lead:', e)

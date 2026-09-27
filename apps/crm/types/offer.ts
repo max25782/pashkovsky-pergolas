@@ -1,6 +1,8 @@
 // Offer Types - Updated Structure for הצעת מחיר
 
 import type { PlanConstructionParams } from '@pashkovsky/pergola-core'
+import { STANDARD_INSTALLATION_PAYMENT_TERMS } from '@/lib/commercial/standard-installation-terms'
+import type { OfferTermsSnapshot } from '@/lib/offers/offer-terms-snapshot'
 import {
   DEFAULT_PLAN_CONSTRUCTION_PARAMS,
   PERGOLA_PLAN_SCHEMA_VERSION,
@@ -89,9 +91,10 @@ export interface Pergola {
   plan: PergolaPlan | null
   /**
    * Legacy L/X/U/rectangle form input. Still used for old offers and PDF fallback when `plan` is absent.
+   * New quick-offer pergolas start with `shape: null`.
    * @deprecated New offers: use `plan` only; do not rely on `shape` for area or pricing.
    */
-  shape: PergolaShape
+  shape: PergolaShape | null
   pergolaType?: PergolaProductType // סוג פרגולה: קבועה / חשמלית PVC / ביוקלמטיק
   height?: number
   location?: string // מקום בבית
@@ -374,6 +377,10 @@ export interface OfferCalculation {
 
 export interface Offer extends OfferDraft, OfferCalculation {
   id: string
+  /** Per-company sequential number (e.g. 2026-0001). Null for legacy rows. */
+  offerNumber?: string | null
+  /** Frozen commercial terms for PDF; set on POST only. */
+  termsSnapshot?: OfferTermsSnapshot | null
   area: number
   /** Loaded from offers.quick_offer_extra when present. */
   quickOfferExtra?: QuickOfferExtraPersisted | null
@@ -389,11 +396,7 @@ export interface Offer extends OfferDraft, OfferCalculation {
 export const DEFAULT_OFFER_VALUES = {
   pergola: {
     plan: null,
-    shape: {
-      type: 'rectangle' as const,
-      width: 4,
-      length: 6,
-    },
+    shape: null,
     pergolaType: 'fixed' as PergolaProductType,
     height: undefined,
     location: undefined,
@@ -467,12 +470,7 @@ export const DEFAULT_OFFER_VALUES = {
   },
   discountPercent: 0,
   vatPercent: 18, // Changed from 17% to 18%
-  paymentTerms: {
-    advancePercent: 10,
-    remainingPercent: 90,
-    method: 'bankTransfer' as const,
-    text: '10% מקדמה וכל השאר בסיום התקנה בהעברה בנקאית'
-  },
+  paymentTerms: STANDARD_INSTALLATION_PAYMENT_TERMS,
   warranty: {
     years: 7,
     covers: ['צבע', 'קונסטרוקציה', 'סנטף']

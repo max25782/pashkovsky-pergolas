@@ -26,6 +26,12 @@ export default function AdminLeadsPage(){
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <h1 className="text-xl sm:text-2xl font-bold">Admin • {t.leads.title}</h1>
         <div className="flex gap-2 flex-wrap">
+          <Link
+            href="/app/admin/leads/today"
+            className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 font-semibold"
+          >
+            {t.leads.todayQueue}
+          </Link>
           <Link 
             href="/app/admin/deals"
             className="px-4 py-2 rounded bg-green-600 hover:bg-green-700 font-semibold"

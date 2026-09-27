@@ -262,7 +262,7 @@ npm run test:coverage
 
 ## Database Migrations
 
-Migrations are in `/supabase/migrations/` and applied via the Supabase CLI.
+Database migrations for the CRM are in `apps/crm/supabase/migrations/` and applied via the Supabase CLI (or SQL Editor) from that directory.
 
 ```bash
 supabase db push          # Apply all pending migrations

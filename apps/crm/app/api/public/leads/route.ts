@@ -6,6 +6,7 @@ import { sendWhatsAppTemplate } from '@/lib/whatsapp-send'
 import { uploadLeadConversion } from '@/lib/googleAds/offlineConversion'
 import { verifyTurnstile } from '@/lib/captcha/turnstile'
 import { MissingEnvError } from '@/lib/env/require-env'
+import { newLeadDefaults } from '@/lib/leads/new-lead-defaults'
 
 function getSupabase(): SupabaseClient | null {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -213,6 +214,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 8. Save to database
+    const defaults = await newLeadDefaults(supabase, defaultCompanyId)
     const { data: lead, error: dbError } = await supabase
       .from('leads')
       .insert({
@@ -229,6 +231,7 @@ export async function POST(request: NextRequest) {
         metadata: leadData.metadata || null,
         gclid: leadData.gclid || null,
         google_conv_sent: false,
+        ...defaults,
       })
       .select('id, gclid, google_conv_sent')
       .single()

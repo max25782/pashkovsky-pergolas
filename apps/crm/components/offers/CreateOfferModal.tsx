@@ -25,13 +25,18 @@ import {
 } from '@/lib/quick-offer-includes'
 import { usePriceFormatter } from '@/lib/use-price-formatter'
 import { PergolaShapeSelector } from './PergolaShapeSelector'
-import { calculatePergolaArea, validatePergolaShape } from '@/lib/calculations/pergola-area'
+import { calculatePergolaArea } from '@/lib/calculations/pergola-area'
+import {
+  getCreateOfferPergolaSaveBlock,
+  isCreateOfferPergolaSaveDisabled,
+} from '@/lib/offers/create-offer-pergola-save-gate'
 import { pergolaAreaSqm } from '@/lib/pergolas/pergola-area-sqm'
 import { authFetch } from '@/lib/api/auth-fetch'
 import type { Locale } from '@/lib/locales'
 import { useLanguage } from '@/lib/language-context'
 import { useToast } from '@/components/ui/toast'
 import { OfferPlanConfiguratorEmbed } from '@/components/offers/OfferPlanConfiguratorEmbed'
+import { isCustomerNameValid, normalizeCustomerNameInput } from '@/lib/quick-offer/validate-customer-name'
 
 interface CreateOfferModalProps {
   dealId: string
@@ -160,7 +165,13 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
     })
   }
 
+  const customerNameMissing = !isCustomerNameValid(normalizeCustomerNameInput(customerName))
+
   const handleSubmit = useCallback(async () => {
+    if (!isCustomerNameValid(normalizeCustomerNameInput(customerName))) {
+      setError('יש להזין שם לקוח')
+      return
+    }
     setIsSubmitting(true)
     setError(null)
 
@@ -215,6 +226,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
       const requestBody = {
         ...draft,
         ...calculation,
+        customerName: normalizeCustomerNameInput(customerName),
         pergolas: inc.pergola ? draft.pergolas : [],
         includePergola: inc.pergola,
         includeRailings: inc.railings,
@@ -270,7 +282,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
     } finally {
       setIsSubmitting(false)
     }
-  }, [draft, calculation, onCreated, onClose, tQuick, toast])
+  }, [draft, calculation, customerName, onCreated, onClose, tQuick, toast])
 
   useEffect(() => {
     if (!isOpen) {
@@ -453,11 +465,11 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
         lines.push(`${prefix}${typeName}`)
 
         const area = pergolaAreaSqm(p)
-        if (p.plan?.polygon && p.plan.polygon.length >= 3) {
+        if (p.plan?.polygon && p.plan.polygon.length >= 3 && area !== null) {
           lines.push(`שרטוט: ${area.toFixed(1)} מ"ר`)
-        } else if (p.shape.type === 'rectangle') {
+        } else if (p.shape?.type === 'rectangle' && area !== null) {
           lines.push(`מידות: ${p.shape.width} × ${p.shape.length} מ' (${area.toFixed(1)} מ"ר)`)
-        } else {
+        } else if (p.shape && area !== null) {
           lines.push(`צורה: ${p.shape.type === 'L' ? 'L' : p.shape.type === 'U' ? 'U' : 'X'} | שטח: ${area.toFixed(1)} מ"ר`)
         }
 
@@ -635,13 +647,19 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
   }, [aiSuggestion, updateOptions])
 
   const saveDisabled = useMemo(() => {
+    if (customerNameMissing) return true
     if (!hasAnyQuickOfferProduct(includes)) return true
     if (!includes.pergola) return false
     const pergolas = draft.pergolas || (draft.pergola ? [draft.pergola] : [])
-    return pergolas.some(
-      (p) => !validatePergolaShape(p.shape).valid || calculatePergolaArea(p.shape) <= 0,
-    )
-  }, [includes, draft.pergolas, draft.pergola])
+    return isCreateOfferPergolaSaveDisabled(pergolas)
+  }, [customerNameMissing, includes, draft.pergolas, draft.pergola])
+
+  const pergolaSaveBlockReason = useMemo(() => {
+    if (!includes.pergola) return null
+    const pergolas = draft.pergolas || (draft.pergola ? [draft.pergola] : [])
+    if (pergolas.length === 0) return null
+    return getCreateOfferPergolaSaveBlock(pergolas)
+  }, [includes.pergola, draft.pergolas, draft.pergola])
 
   return (
     <Dialog
@@ -692,7 +710,10 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
           <div className="bg-white/5 rounded-lg p-4 border border-white/10">
             <h3 className="text-lg font-semibold mb-3">פרטי לקוח</h3>
             <div className="grid grid-cols-2 gap-3 text-sm">
-              <div><span className="text-white/60">שם:</span> <span className="mr-2 font-medium">{customerName}</span></div>
+              <div><span className="text-white/60">שם:</span> <span className="mr-2 font-medium">{customerName.trim() || '—'}</span></div>
+              {customerNameMissing && (
+                <p className="col-span-2 text-sm text-amber-200">יש להזין שם לקוח</p>
+              )}
               {customerPhone && <div><span className="text-white/60">טלפון:</span> <span className="mr-2 font-medium">{customerPhone}</span></div>}
               {customerCity && <div className="col-span-2"><span className="text-white/60">עיר:</span> <span className="mr-2 font-medium">{customerCity}</span></div>}
             </div>
@@ -859,7 +880,13 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
 
                 <div className="mt-4 flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <p className="min-w-0 flex-1 text-xs text-white/55">
-                    שומר את ההצעה ופותח קונפיגורטור 3D מקושר (מידות מההצעה יסתנכרנו אחרי שמירה ב־3D).
+                    {saveDisabled && pergolaSaveBlockReason
+                      ? tDeals(
+                          pergolaSaveBlockReason === 'missing_shape'
+                            ? 'pergolaShapeRequiredBeforeSave'
+                            : 'pergolaShapeInvalidBeforeSave',
+                        )
+                      : 'שומר את ההצעה ופותח קונפיגורטור 3D מקושר (מידות מההצעה יסתנכרנו אחרי שמירה ב־3D).'}
                   </p>
                   <Button
                     type="button"
@@ -1805,7 +1832,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 text-sm">
               <div className="font-semibold mb-1">תנאי תשלום:</div>
-              <div className="text-white/80">10% מקדמה וכל השאר בסיום התקנה בהעברה בנקאית</div>
+              <div className="text-white/80">{DEFAULT_OFFER_VALUES.paymentTerms.text}</div>
             </div>
             <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 text-sm">
               <div className="font-semibold mb-1">אחריות:</div>
@@ -1816,6 +1843,14 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
           {/* Error */}
           {error && (
             <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-3 text-red-200">{error}</div>
+          )}
+
+          {saveDisabled && pergolaSaveBlockReason && (
+            <p className="text-sm text-amber-200/90 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2">
+              {pergolaSaveBlockReason === 'missing_shape'
+                ? tDeals('pergolaShapeRequiredBeforeSave')
+                : tDeals('pergolaShapeInvalidBeforeSave')}
+            </p>
           )}
 
           {/* Action Buttons */}

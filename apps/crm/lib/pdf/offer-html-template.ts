@@ -1,14 +1,21 @@
 import type { Offer } from '@/types/offer'
 import { quickOfferRailingsFenceAreaSqm } from '@/lib/offer-calculator'
-import { reconcileQuickOfferTotals } from '@/lib/pdf/map-offer-db-row-for-pdf'
 import { resolvePdfQuickOfferIncludes, resolveQuickFencesFromDraft } from '@/lib/quick-offer-includes'
 import { rectanglePlanSvgFragment } from '@/lib/pdf/plan-view-svg'
 import { generateDrawingsFromPlan, generateOfferDrawings } from '@/lib/pdf/polygon-plan-drawing.server'
-import { pergolaAreaSqm } from '@/lib/pergolas/pergola-area-sqm'
-import { planPolygonAreaSqm, planPolygonEdgeLengthsMm } from '@/lib/pdf/plan-polygon-metrics'
+import { isPlanContourOrthogonal } from '@/lib/pergolas/plan-contour-orthogonal'
+import { lineAmountFromBillableArea, pergolaAreaSqm, roundBillableAreaSqm } from '@/lib/pergolas/pergola-area-sqm'
+import { planPolygonAreaSqm } from '@/lib/pdf/plan-polygon-metrics'
 import { getHebrewFontsCss, getLogoDataUri } from './font-loader'
 import { pdfT, resolvePdfLocale, pdfHtmlDir, pdfBcp47Locale, pdfCurrencySymbol, type PdfDict } from '@/lib/pdf/offer-pdf-i18n'
-import { OFFER_TERMS_BODIES } from '@/lib/pdf/offer-terms-bodies'
+import { renderOfferTermsHtml } from '@/lib/pdf/offer-terms-html'
+import { resolveOfferTermsSnapshot } from '@/lib/offers/offer-terms-snapshot'
+import { formatOfferDisplayNumber } from '@/lib/offers/format-offer-display-number'
+import {
+  assertPdfSubtotalMatchesStored,
+  pdfTotalsFromLineSubtotal,
+  sumPdfLineTotals,
+} from '@/lib/pdf/offer-pdf-totals'
 
 function fillTpl(s: string, vars: Record<string, string | number>): string {
   let out = s
@@ -40,6 +47,23 @@ function escapeAttr(value: string): string {
   return value.replaceAll('&', '&amp;').replaceAll('"', '&quot;')
 }
 
+function stripTrailingBullet(s: string): string {
+  return s.replace(/\s*·\s*$/, '').trim()
+}
+
+function joinDescriptionParts(...parts: Array<string | null | undefined | false>): string {
+  return parts
+    .map((p) => (typeof p === 'string' ? p.trim() : ''))
+    .filter((p) => p.length > 0)
+    .join(' · ')
+}
+
+function lineColorPart(dict: PdfDict, raw: string | null | undefined): string {
+  const c = raw?.trim()
+  if (!c) return ''
+  return `${dict.off_color_prefix} ${c}`
+}
+
 function pdfPrimaryProductKind(offer: Offer): 'pergola' | 'railings' | 'fence' {
   return offer.quickProduct ?? offer.quickOfferExtra?.quickProduct ?? 'pergola'
 }
@@ -47,7 +71,8 @@ function pdfPrimaryProductKind(offer: Offer): 'pergola' | 'railings' | 'fence' {
 function makePriceFormatter(symbol: string) {
   return function formatPricePdf(n: number): string {
     const abs = Math.abs(n)
-    const formatted = abs.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+    const [whole, frac] = abs.toFixed(2).split('.')
+    const formatted = `${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}.${frac}`
     return n < 0 ? `${symbol} -${formatted}` : `${symbol} ${formatted}`
   }
 }
@@ -55,14 +80,6 @@ function makePriceFormatter(symbol: string) {
 function formatDateDdMmYyyy(dateStr: string): string {
   const date = new Date(dateStr)
   return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`
-}
-
-function formatOfferNumber(offer: Offer): string {
-  const digits = offer.id.replace(/\D/g, '')
-  if (digits.length >= 8) return digits.slice(-8)
-  if (digits.length >= 6) return digits.padStart(8, '0').slice(-8)
-  const ts = new Date(offer.createdAt).getTime()
-  return String(ts % 100000000).padStart(8, '0')
 }
 
 function addDaysIso(iso: string, days: number): string {
@@ -96,18 +113,44 @@ function colorDescription(offer: Offer, dict: PdfDict): string {
 
 function buildPergolaLineName(offer: Offer, pergolaType: string | null | undefined, dict: PdfDict): string {
   const typeName = pergolaProductTypeLabel(pergolaType, dict)
-  const parts: string[] = [typeName]
-  if (offer.shadingRatio) parts.push(`${dict.off_shading} ${offer.shadingRatio}`)
-  if (offer.santaf?.enabled) parts.push(dict.off_roof_santaf)
-  parts.push(`${dict.off_color_prefix} ${colorDescription(offer, dict)}`)
-  return parts.join(' · ')
+  const colorText = colorDescription(offer, dict)
+  return joinDescriptionParts(
+    typeName,
+    offer.shadingRatio ? `${dict.off_shading} ${offer.shadingRatio}` : null,
+    offer.santaf?.enabled ? dict.off_roof_santaf : null,
+    colorText && colorText !== dict.off_color_dash
+      ? `${dict.off_color_prefix} ${colorText}`
+      : null,
+  )
 }
 
 function pdfQuickOfferIncludes(offer: Offer) {
   return resolvePdfQuickOfferIncludes(offer)
 }
 
-function collectLineRows(offer: Offer, dict: PdfDict): LineRow[] {
+function pergolaPriceLineLabel(
+  dict: PdfDict,
+  offer: Offer,
+  pg: NonNullable<Offer['pergola']>,
+  index: number,
+  total: number,
+): string {
+  const typePart = buildPergolaLineName(offer, pg.pergolaType, dict)
+  if (total <= 1) return `${fillTpl(dict.off_pergola_n, { n: 1 })} · ${typePart}`
+  return `${fillTpl(dict.off_pergola_n, { n: index + 1 })} · ${typePart}`
+}
+
+function polygonBBoxMeters(polygon: Array<{ x: number; y: number }>): { width: number; length: number } | null {
+  if (polygon.length < 3) return null
+  const xs = polygon.map((p) => p.x)
+  const ys = polygon.map((p) => p.y)
+  const wMm = Math.max(...xs) - Math.min(...xs)
+  const hMm = Math.max(...ys) - Math.min(...ys)
+  if (wMm <= 0 || hMm <= 0) return null
+  return { width: Math.round((wMm / 1000) * 100) / 100, length: Math.round((hMm / 1000) * 100) / 100 }
+}
+
+export function collectOfferPdfLineRows(offer: Offer, dict: PdfDict): LineRow[] {
   const rows: LineRow[] = []
   const area = offer.area > 0 ? offer.area : 1
   const inc = pdfQuickOfferIncludes(offer)
@@ -116,16 +159,17 @@ function collectLineRows(offer: Offer, dict: PdfDict): LineRow[] {
   const pergolas = offer.pergolas || (offer.pergola ? [offer.pergola] : [])
   if (inc.pergola) {
     if (pergolas.length > 0) {
-      for (const pg of pergolas) {
+      for (let i = 0; i < pergolas.length; i++) {
+        const pg = pergolas[i]
         if (!pg) continue
         const pgArea = pergolaAreaSqm(pg)
-        if (pgArea <= 0 || pg.pricePerSqm <= 0) continue
+        if (pgArea === null || pgArea <= 0 || pg.pricePerSqm <= 0) continue
         rows.push({
-          description: buildPergolaLineName(offer, pg.pergolaType, dict),
+          description: pergolaPriceLineLabel(dict, offer, pg, i, pergolas.length),
           unitLabel: dict.off_unit_sqm,
-          quantity: Math.round(pgArea * 100) / 100,
+          quantity: pgArea,
           unitPrice: pg.pricePerSqm,
-          lineTotal: Math.round(pgArea * pg.pricePerSqm * 100) / 100,
+          lineTotal: lineAmountFromBillableArea(pgArea, pg.pricePerSqm),
         })
       }
     } else if (offer.pergolaTotal != null && offer.pergolaTotal > 0) {
@@ -168,8 +212,15 @@ function collectLineRows(offer: Offer, dict: PdfDict): LineRow[] {
         yard: dict.off_loc_yard,
         other: dict.off_loc_other,
       }
+      const railColor = lineColorPart(dict, qr.color)
       rows.push({
-        description: `${dict.off_rail_prefix} ${escapeHtml(qr.profileType)} · ${glazingLabels[qr.glazingSystem] ?? qr.glazingSystem} · ${dict.off_rail_loc}: ${locLabels[qr.locationType] ?? qr.locationType} · ${dict.off_color_prefix} ${escapeHtml(qr.color)}`,
+        description: joinDescriptionParts(
+          stripTrailingBullet(dict.off_rail_prefix),
+          escapeHtml(qr.profileType),
+          glazingLabels[qr.glazingSystem] ?? qr.glazingSystem,
+          `${dict.off_rail_loc}: ${locLabels[qr.locationType] ?? qr.locationType}`,
+          railColor ? escapeHtml(railColor) : null,
+        ),
         unitLabel: dict.off_unit_sqm,
         quantity: Math.round(sqm * 1000) / 1000,
         unitPrice: Math.round(up * 100) / 100,
@@ -208,8 +259,13 @@ function collectLineRows(offer: Offer, dict: PdfDict): LineRow[] {
       if (lineTotal > 0 && sqm > 0) {
         const unitPrice = up > 0 ? up : lineTotal / sqm
         const label = fences.length > 1 ? ` ${idx + 1}` : ''
+        const fenceColor = lineColorPart(dict, qf.color)
         rows.push({
-          description: `${dict.off_fence_prefix}${label} ${fenceLabels[qf.fenceVariant] ?? qf.fenceVariant} · ${dict.off_color_prefix} ${escapeHtml(qf.color)}`,
+          description: joinDescriptionParts(
+            `${stripTrailingBullet(dict.off_fence_prefix)}${label}`,
+            fenceLabels[qf.fenceVariant] ?? qf.fenceVariant,
+            fenceColor ? escapeHtml(fenceColor) : null,
+          ),
           unitLabel: dict.off_unit_sqm,
           quantity: Math.round(sqm * 1000) / 1000,
           unitPrice: Math.round(unitPrice * 100) / 100,
@@ -312,29 +368,38 @@ function formatPolygonSpecHtml(
   dict: PdfDict,
   index?: number,
   location?: string,
+  includeTotalAreaRow = true,
 ): string {
   if (polygon.length < 3) return ''
   const headingText =
     index !== undefined ? fillTpl(dict.off_pergola_n, { n: index + 1 }) : dict.off_pergola_default
   const prefix = `<tr><td colspan="2" class="tech-h">${escapeHtml(headingText)}</td></tr>`
-  const edges = planPolygonEdgeLengthsMm(polygon)
-  const areaSqm = planPolygonAreaSqm(polygon)
-  const edgeRows = edges
-    .map(
-      (lenMm, i) =>
-        `<tr><td>${escapeHtml(fillTpl(dict.off_plan_edge_n, { n: i + 1 }))}</td><td>${Math.round(lenMm)} mm</td></tr>`,
-    )
-    .join('\n')
+  const areaSqm = roundBillableAreaSqm(planPolygonAreaSqm(polygon))
+  const bbox = polygonBBoxMeters(polygon)
+  const m = dict.off_dim_m
+  const dimsRow = bbox
+    ? `<tr><td>${dict.off_dim_w_l}</td><td>${bbox.width} × ${bbox.length} ${m}</td></tr>`
+    : ''
   const locationRow = location?.trim()
     ? `<tr><td>${dict.off_location}</td><td>${escapeHtml(location.trim())}</td></tr>`
     : ''
 
+  const areaRow = includeTotalAreaRow
+    ? `<tr><td>${dict.off_area_total}</td><td>${areaSqm.toFixed(2)} ${dict.off_unit_sqm_dot}</td></tr>`
+    : ''
   return (
     prefix +
     `<tr><td>${dict.off_shape}</td><td>${dict.off_shape_from_drawing}</td></tr>
-     <tr><td>${dict.off_plan_area_drawing}</td><td>${areaSqm.toFixed(2)} ${dict.off_unit_sqm_dot}</td></tr>
-     ${edgeRows}${locationRow}`
+     ${dimsRow}
+     ${areaRow}
+     ${locationRow}`
   )
+}
+
+function techDataRow(label: string, value: string, dash: string): string {
+  const v = value.trim()
+  if (!v || v === dash || v === '—') return ''
+  return `<tr><td>${label}</td><td>${escapeHtml(v)}</td></tr>`
 }
 
 function formatPlanDrawingDimensionsHtml(offer: Offer, dict: PdfDict, index?: number): string {
@@ -491,13 +556,20 @@ function formatAllPergolasTechnicalHtml(offer: Offer, dict: PdfDict): string {
     const pergolas = offer.pergolas || (offer.pergola ? [offer.pergola] : [])
     const anyPlan = pergolas.some((p) => (p.plan?.polygon?.length ?? 0) >= 3)
     if (anyPlan) {
+      const includePerPergolaTotalArea = pergolas.length > 1
       blocks.push(
         pergolas
           .map((p, i) => {
             const idx = pergolas.length > 1 ? i : undefined
             const polygon = p.plan?.polygon
             if (polygon && polygon.length >= 3) {
-              return formatPolygonSpecHtml(polygon, dict, idx, p.location)
+              return formatPolygonSpecHtml(
+                polygon,
+                dict,
+                idx,
+                p.location,
+                includePerPergolaTotalArea,
+              )
             }
             return formatSinglePergolaDimensionsHtml(p, dict, idx)
           })
@@ -665,15 +737,33 @@ async function configuratorTechnicalAppendixHtml(
   const link = pk === 'pergola' ? customer3dViewerHref(meta) : null
 
   const pergolaPlans = (offer.pergolas ?? []).filter((p) => (p.plan?.polygon?.length ?? 0) >= 3)
-  const pergolaSvgs: string[] = []
+  const pergolaDrawingBlocks: string[] = []
   if (pergolaPlans.length > 0) {
-    for (const pergola of pergolaPlans) {
+    for (let i = 0; i < pergolaPlans.length; i++) {
+      const pergola = pergolaPlans[i]
       const drawings = pergola.plan ? await generateDrawingsFromPlan(pergola.plan) : null
+      const label = fillTpl(dict.off_pergola_n, { n: i + 1 })
+      const areaSqm = pergolaAreaSqm(pergola)
+      const areaLine =
+        areaSqm !== null
+          ? `<p class="viz-schematic-note viz-pergola-area">${escapeHtml(label)} — ${areaSqm.toFixed(2)} ${dict.off_unit_sqm_dot}</p>`
+          : ''
+      const polygon = pergola.plan?.polygon ?? []
+      const nonOrthogonalNote =
+        polygon.length >= 3 && !isPlanContourOrthogonal(polygon)
+          ? `<p class="viz-schematic-note viz-non-orthogonal">${escapeHtml(dict.off_non_orthogonal_pdf_note)}</p>`
+          : ''
+      let inner = ''
       if (drawings?.topPlan) {
-        pergolaSvgs.push(`<div class="viz-plan-svg-wrap" data-pergola-plan="1">${drawings.topPlan}</div>`)
+        inner += `<div class="viz-plan-svg-wrap" data-pergola-plan="1">${drawings.topPlan}</div>`
       }
       if (drawings?.lamellaLayout) {
-        pergolaSvgs.push(`<div class="viz-plan-svg-wrap">${drawings.lamellaLayout}</div>`)
+        inner += `<div class="viz-plan-svg-wrap">${drawings.lamellaLayout}</div>`
+      }
+      if (inner) {
+        pergolaDrawingBlocks.push(
+          `<div class="viz-pergola-block"><p class="viz-pergola-line">${escapeHtml(label)}</p>${inner}${areaLine}${nonOrthogonalNote}</div>`,
+        )
       }
     }
   }
@@ -685,7 +775,7 @@ async function configuratorTechnicalAppendixHtml(
   // A stored plan never falls back to the rectangle shape drawing.
   let planSvg = ''
   if (pergolaPlans.length > 0) {
-    planSvg = pergolaSvgs.join('')
+    planSvg = pergolaDrawingBlocks.join('')
   } else if (polygonDrawings?.topPlan) {
     planSvg = polygonDrawings.topPlan
   } else if (!legacyMetaPolygon) {
@@ -715,7 +805,7 @@ async function configuratorTechnicalAppendixHtml(
 
   let schematicInner = ''
   if (hasPlan) {
-    if (pergolaSvgs.length > 0) {
+    if (pergolaDrawingBlocks.length > 0) {
       schematicInner += planSvg
     } else {
       schematicInner += `<div class="viz-plan-svg-wrap">${planSvg}</div>`
@@ -799,7 +889,6 @@ export async function renderOfferHtml(
   omitSignatureSection = false,
   locale?: string,
 ): Promise<string> {
-  offer = reconcileQuickOfferTotals(offer)
   const resolved = resolvePdfLocale(locale)
   const dict = pdfT[resolved]
   const dir = pdfHtmlDir(resolved)
@@ -812,13 +901,29 @@ export async function renderOfferHtml(
   const notesText = offer.options?.notes?.trim() || ''
   const safeNotes = notesText ? escapeHtml(notesText) : ''
 
-  const offerNo = formatOfferNumber(offer)
+  const offerNo = formatOfferDisplayNumber({
+    id: offer.id,
+    createdAt: offer.createdAt,
+    offerNumber: offer.offerNumber,
+  })
   const docDate = formatDateDdMmYyyy(offer.createdAt)
   const validUntil = formatDateDdMmYyyy(addDaysIso(offer.createdAt, 30))
-  const lineRows = collectLineRows(offer, dict)
+  const lineRows = collectOfferPdfLineRows(offer, dict)
+  const linesSubtotal = sumPdfLineTotals(lineRows.map((r) => r.lineTotal))
+  assertPdfSubtotalMatchesStored(linesSubtotal, offer)
+  const vatPct = offer.vatPercent ?? 18
+  const pdfTotals = pdfTotalsFromLineSubtotal(linesSubtotal, vatPct)
   const pdfPk = pdfPrimaryProductKind(offer)
   const areaRowLabel =
-    pdfPk === 'railings' || pdfPk === 'fence' ? dict.off_area_rail_fence : dict.off_area_pergola_calc
+    pdfPk === 'railings' || pdfPk === 'fence' ? dict.off_area_rail_fence : dict.off_area_total
+  const pergolaList =
+    offer.pergolas && offer.pergolas.length > 0
+      ? offer.pergolas
+      : offer.pergola
+        ? [offer.pergola]
+        : []
+  const showAggregatePergolaAreaRow =
+    pdfPk === 'pergola' && pergolaList.length > 1
 
   const linesHtml =
     lineRows.length > 0
@@ -851,18 +956,22 @@ export async function renderOfferHtml(
     </tr>`
       : ''
 
-  const vatPct = offer.vatPercent ?? 18
   const vatLineLabel = fillTpl(dict.off_vat_line, { p: String(vatPct) })
-  const roofCell =
+  const termsSnapshot = resolveOfferTermsSnapshot(offer.termsSnapshot, offer.createdAt)
+  const termsHtml = renderOfferTermsHtml(resolved, dict, termsSnapshot)
+  const technicalAppendixHtml = await configuratorTechnicalAppendixHtml(offer, dict, previewImageDataUrl)
+  const roofCellValue =
     offer.santaf?.enabled
       ? dict.off_roof_cell_santaf
       : offer.roof?.type === 'triplexGlass'
         ? dict.off_roof_triplex
         : dash
-  const warrantyCovers = (offer.warranty?.covers ?? []).join(', ')
-  const termsTail = `${fillTpl(dict.off_valid_30, { y: String(offer.warranty?.years ?? 7) })}${warrantyCovers ? `: ${warrantyCovers}` : ''}`
-  const termsBody = OFFER_TERMS_BODIES[resolved]
-  const technicalAppendixHtml = await configuratorTechnicalAppendixHtml(offer, dict, previewImageDataUrl)
+  const finishTypeCell = offer.finishType ? escapeHtml(offer.finishType) : ''
+  const finishValuePart =
+    offer.finishValue && offer.finishValue.trim() !== '' ? ` · ${escapeHtml(offer.finishValue)}` : ''
+  const finishCell =
+    finishTypeCell || finishValuePart ? `${finishTypeCell}${finishValuePart}` : dash
+  const shadeCell = offer.shadingRatio ? escapeHtml(offer.shadingRatio) : dash
 
   return `
 <!DOCTYPE html>
@@ -1022,15 +1131,15 @@ export async function renderOfferHtml(
       background: #f5f5f5;
     }
     .tech-h { font-weight: 700; background: #eee !important; }
-    .terms { font-size: 9px; color: #333; margin-top: 10px; }
-    .terms strong { display: block; margin-bottom: 4px; }
-    .terms-body {
-      white-space: pre-wrap;
-      font-size: 8.5px;
-      line-height: 1.38;
-      margin-top: 4px;
-    }
+    .terms { font-size: 9px; color: #333; margin-top: 14px; }
+    .terms strong { display: block; margin-bottom: 8px; font-size: 11px; }
+    .terms-intro, .terms-p { font-size: 8.5px; line-height: 1.45; margin: 6px 0; }
+    .terms-h3 { font-size: 10px; margin: 12px 0 6px; font-weight: 700; }
+    table.terms-table { margin: 8px 0 12px; }
+    .terms-table-block { break-inside: avoid; page-break-inside: avoid; }
     .terms-tail { margin-top: 10px; font-size: 8.5px; }
+    .viz-pergola-block { margin-bottom: 14px; }
+    .viz-pergola-area { font-weight: 600; margin-top: 6px; }
     .viz-section {
       margin: 14px 0 0;
       border: 1px solid #222;
@@ -1150,9 +1259,9 @@ export async function renderOfferHtml(
   </table>
 
   <table class="summary">
-    <tr><td>${dict.off_vat_before}</td><td>${formatPricePdf(offer.totalBeforeVat)}</td></tr>
-    <tr><td>${escapeHtml(vatLineLabel)}</td><td>${formatPricePdf(offer.vatAmount)}</td></tr>
-    <tr><td>${dict.off_vat_incl}</td><td>${formatPricePdf(offer.priceWithVat)}</td></tr>
+    <tr><td>${dict.off_vat_before}</td><td>${formatPricePdf(pdfTotals.subtotalBeforeVat)}</td></tr>
+    <tr><td>${escapeHtml(vatLineLabel)}</td><td>${formatPricePdf(pdfTotals.vatAmount)}</td></tr>
+    <tr><td>${dict.off_vat_incl}</td><td>${formatPricePdf(pdfTotals.priceWithVat)}</td></tr>
     ${
       offer.discountAmount > 0
         ? `<tr><td>${dict.off_after_discount}</td><td>${formatPricePdf(offer.finalPrice)}</td></tr>`
@@ -1162,20 +1271,21 @@ export async function renderOfferHtml(
 
   ${omitSignatureSection ? '' : customerSignatureSectionHtml(offer, offerNo, docDate, dict)}
 
-  <div class="page-foot">
-    <span>${dict.off_foot_web}</span>
-    <span>${dict.off_page_1_of_2}</span>
-  </div>
-
   <div class="page-break"></div>
 
   <h2 class="tech-title">${dict.off_tech_title}</h2>
   <table class="tech">
     <tr><td>${dict.off_finish_color}</td><td>${escapeHtml(colorDescription(offer, dict))}</td></tr>
-    <tr><td>${dict.off_roof}</td><td>${escapeHtml(roofCell)}</td></tr>
-    <tr><td>${dict.off_shade_ratio}</td><td>${offer.shadingRatio ? escapeHtml(offer.shadingRatio) : dash}</td></tr>
-    <tr><td>${dict.off_finish_type}</td><td>${offer.finishType ? escapeHtml(offer.finishType) : dash} ${offer.finishValue ? `· ${escapeHtml(offer.finishValue)}` : ''}</td></tr>
-    <tr><td>${escapeHtml(areaRowLabel)}</td><td>${offer.area.toFixed(2)} ${dict.off_unit_sqm_dot}</td></tr>
+    ${techDataRow(dict.off_roof, roofCellValue, dash)}
+    ${techDataRow(dict.off_shade_ratio, shadeCell, dash)}
+    ${techDataRow(dict.off_finish_type, finishCell, dash)}
+    ${
+      showAggregatePergolaAreaRow
+        ? `<tr><td>${escapeHtml(areaRowLabel)}</td><td>${offer.area.toFixed(2)} ${dict.off_unit_sqm_dot}</td></tr>`
+        : pdfPk !== 'pergola'
+          ? `<tr><td>${escapeHtml(areaRowLabel)}</td><td>${offer.area.toFixed(2)} ${dict.off_unit_sqm_dot}</td></tr>`
+          : ''
+    }
     ${winterClosureTechRows(offer, dict)}
   </table>
 
@@ -1187,15 +1297,7 @@ export async function renderOfferHtml(
 
   ${technicalAppendixHtml}
 
-  <div class="terms">
-    <div class="terms-body">${escapeHtml(termsBody)}</div>
-    <div class="terms-tail">${escapeHtml(termsTail)}</div>
-  </div>
-
-  <div class="page-foot">
-    <span>${escapeHtml(fillTpl(dict.off_quote_big, { no: offerNo }))}</span>
-    <span>${dict.off_page_2_of_2}</span>
-  </div>
+  ${termsHtml}
 </body>
 </html>
 `.trim()

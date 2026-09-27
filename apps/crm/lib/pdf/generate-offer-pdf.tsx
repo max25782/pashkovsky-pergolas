@@ -46,7 +46,7 @@ export async function generateOfferPdf(offer: Offer, locale?: string): Promise<B
     const html = await renderOfferHtml(offer, previewImageDataUrl, false, locale)
     
     // Convert HTML to PDF
-    const pdfBuffer = await renderHtmlToPdfBuffer(html)
+    const pdfBuffer = await renderHtmlToPdfBuffer(html, { numberedFooter: true })
     
     return pdfBuffer
   } catch (error: unknown) {

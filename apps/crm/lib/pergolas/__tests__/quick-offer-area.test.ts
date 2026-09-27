@@ -1,8 +1,10 @@
 import { calculateOffer } from '@/lib/offer-calculator'
 import { validatePergolaPlanForApi } from '@/lib/pergolas/validate-pergola-plan'
 import { applyPlanGeometry } from '@/lib/pergolas/apply-plan-geometry'
+import { pergolaAreaSqm } from '@/lib/pergolas/pergola-area-sqm'
+import { buildQuickOfferInsertRow } from '@/lib/quick-offer/build-quick-offer-row'
+import { DEFAULT_OFFER_VALUES, type OfferDraft, type Pergola } from '@/types/offer'
 import { DEFAULT_PLAN_CONSTRUCTION_PARAMS, PERGOLA_PLAN_SCHEMA_VERSION } from '@pashkovsky/pergola-core'
-import type { OfferDraft, Pergola } from '@/types/offer'
 
 function rectanglePlan(widthMm: number, heightMm: number, confirmed = true) {
   return {
@@ -37,6 +39,51 @@ function pergolaWithPlan(plan: ReturnType<typeof rectanglePlan>): Pergola {
 }
 
 describe('quick-offer area from plan', () => {
+  it('treats a fresh pergola without a drawing as null area (not default 24 m²)', () => {
+    const pergola = { ...DEFAULT_OFFER_VALUES.pergola }
+    expect(pergolaAreaSqm(pergola)).toBeNull()
+    const draft: OfferDraft = {
+      dealId: 'test-deal',
+      customerName: 'Test',
+      includePergola: true,
+      pergolas: [pergola],
+      color: { type: 'white' },
+      roof: { type: null },
+      shadingRatio: null,
+      finishType: null,
+      finishValue: '',
+      santaf: {
+        enabled: false,
+        withStructure: false,
+        pricePerSqmBasic: 220,
+        pricePerSqmWithStructure: 450,
+        overlapType: 'double',
+      },
+      zipScreen: { enabled: false, pricePerSqmManual: 650, pricePerSqmElectric: 800 },
+      lighting: { enabled: false, pricePerMeter: 200 },
+      drainage: { enabled: false, pricePerMeter: 500 },
+      winterClosure: { enabled: false, items: [] },
+      options: {},
+      discountPercent: 0,
+      vatPercent: 18,
+    }
+    const calc = calculateOffer(draft)
+    expect(calc.area).toBe(0)
+    expect(calc.pergolaTotal).toBeUndefined()
+    const row = buildQuickOfferInsertRow({
+      dealId: 'd',
+      companyId: 'c',
+      draft,
+      includes: { pergola: true, railings: false, fence: false },
+      normalizedPergolas: [pergola],
+      serverCalc: calc,
+      quickOfferExtra: null,
+    })
+    expect(row.pergola_width).toBeNull()
+    expect(row.pergola_length).toBeNull()
+    expect(row.area).toBe(0)
+  })
+
   it('uses polygon area (4000×6000 mm → 24 m²), not spoofed shape', () => {
     const draft: OfferDraft = {
       dealId: 'test-deal',
@@ -163,6 +210,12 @@ describe('quick-offer area from plan', () => {
     expect(next.pricePerSqm).toBe(750)
     expect(next.location).toBe('גינה')
     expect(next.pergolaType).toBe('fixed')
+  })
+
+  it('rejects unconfirmed plan on API validation', () => {
+    const unconfirmed = { ...rectanglePlan(4000, 6000), confirmed: false }
+    const result = validatePergolaPlanForApi(unconfirmed)
+    expect(result.ok).toBe(false)
   })
 
   it('rejects self-intersecting polygon with 400-class validation helper', () => {

@@ -186,10 +186,18 @@ export function resolvePdfQuickOfferIncludes(
     !!(qx?.quickRailings ?? offer.quickRailings) ||
     (qx?.railingsLineTotal ?? offer.railingsLineTotal ?? 0) > 0
   const hasPergolaData = !!(offer.pergolas?.length || offer.pergola?.shape)
+  const extraIncludesRailings = fromExtra?.railings === true
+  const extraIncludesFence = fromExtra?.fence === true
 
   return {
     pergola: base.pergola || hasPergolaData,
-    railings: base.railings || hasRailingsData,
-    fence: base.fence || hasFenceData,
+    railings:
+      offer.includeRailings === false && !extraIncludesRailings
+        ? false
+        : base.railings || hasRailingsData,
+    fence:
+      offer.includeFence === false && !extraIncludesFence
+        ? false
+        : base.fence || hasFenceData,
   }
 }

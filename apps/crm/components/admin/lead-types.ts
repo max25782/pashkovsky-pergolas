@@ -1,3 +1,33 @@
+export const TOUCH_RESULTS = [
+  'דיברנו',
+  'לא ענה',
+  'תפוס',
+  'דחה',
+  'לא רלוונטי',
+] as const
+export type TouchResult = (typeof TOUCH_RESULTS)[number]
+
+export const TOUCH_RESULT_LABELS: Record<TouchResult, { ru: string; en: string }> = {
+  'דיברנו':     { ru: 'Поговорили',      en: 'Talked'         },
+  'לא ענה':    { ru: 'Не ответил',      en: 'No Answer'      },
+  'תפוס':       { ru: 'Занято',          en: 'Busy'           },
+  'דחה':        { ru: 'Отказал',         en: 'Declined'       },
+  'לא רלוונטי': { ru: 'Не актуально',   en: 'Not Relevant'   },
+}
+
+export type TouchType = 'call' | 'message' | 'visit' | 'note'
+
+export interface LeadTouch {
+  id: string
+  lead_id: string
+  touched_at: string
+  touch_type: TouchType
+  result?: TouchResult | null
+  author_id?: string | null
+  note?: string | null
+  next_action_at?: string | null
+}
+
 export interface Lead {
   id: string
   name: string
@@ -20,6 +50,12 @@ export interface Lead {
     aiReasons?: string[]
     suggestedNextAction?: string
   } | null
+  // migration 052 fields
+  lead_owner_id?: string | null
+  next_action_at?: string | null
+  attempt_count?: number | null
+  last_touch_result?: TouchResult | null
+  lost_reason?: string | null
 }
 
 export const LEAD_STATUSES = [

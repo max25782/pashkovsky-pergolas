@@ -1,6 +1,26 @@
+import { STANDARD_INSTALLATION_PAYMENT_TERMS } from '@/lib/commercial/standard-installation-terms'
 import type { OfferDraft, Pergola, PergolaShape } from '@/types/offer'
 import type { OfferCalculation } from '@/types/offer'
 import type { QuickOfferExtraPersisted } from '@/types/offer'
+import { pergolaPlanBboxMeters } from '@/lib/pergolas/pergola-plan-bbox'
+
+export function pergolaLegacyDbColumns(firstPergola: Pergola | undefined) {
+  if (!firstPergola) {
+    return {
+      pergola_shape_data: null as PergolaShape | null,
+      pergola_width: null as number | null,
+      pergola_length: null as number | null,
+    }
+  }
+  const bbox = pergolaPlanBboxMeters(firstPergola)
+  const pergola_shape_data =
+    firstPergola.plan == null && firstPergola.shape ? firstPergola.shape : null
+  return {
+    pergola_shape_data,
+    pergola_width: bbox?.width ?? null,
+    pergola_length: bbox?.length ?? null,
+  }
+}
 
 export function buildQuickOfferInsertRow(params: {
   dealId: string
@@ -10,7 +30,7 @@ export function buildQuickOfferInsertRow(params: {
   normalizedPergolas: Pergola[]
   serverCalc: OfferCalculation
   quickOfferExtra: QuickOfferExtraPersisted | null
-  customerName?: string
+  customerName: string
 }): Record<string, unknown> {
   const {
     dealId,
@@ -20,17 +40,12 @@ export function buildQuickOfferInsertRow(params: {
     normalizedPergolas,
     serverCalc,
     quickOfferExtra,
-    customerName = 'הצעה מהירה',
+    customerName,
   } = params
 
   const firstPergola = normalizedPergolas[0]
   const pergolasData = includes.pergola && normalizedPergolas.length > 0 ? normalizedPergolas : null
-  const pergolaShapeData =
-    includes.pergola && firstPergola?.shape ? firstPergola.shape : (null as PergolaShape | null)
-  const pergolaWidth =
-    includes.pergola && firstPergola?.shape?.type === 'rectangle' ? firstPergola.shape.width : null
-  const pergolaLength =
-    includes.pergola && firstPergola?.shape?.type === 'rectangle' ? firstPergola.shape.length : null
+  const legacyCols = includes.pergola ? pergolaLegacyDbColumns(firstPergola) : pergolaLegacyDbColumns(undefined)
 
   const color = draft.color as { type?: string; ralCode?: string; woodName?: string } | undefined
   const roof = draft.roof as { type?: string; santafColor?: string } | undefined
@@ -47,9 +62,9 @@ export function buildQuickOfferInsertRow(params: {
     customer_name: customerName,
 
     pergolas_data: pergolasData,
-    pergola_shape_data: pergolaShapeData,
-    pergola_width: pergolaWidth,
-    pergola_length: pergolaLength,
+    pergola_shape_data: legacyCols.pergola_shape_data,
+    pergola_width: legacyCols.pergola_width,
+    pergola_length: legacyCols.pergola_length,
     pergola_height: includes.pergola ? firstPergola?.height ?? null : null,
     pergola_location: includes.pergola ? firstPergola?.location ?? null : null,
     pergola_price_per_sqm: firstPergola?.pricePerSqm ?? 750,
@@ -110,5 +125,6 @@ export function buildQuickOfferInsertRow(params: {
     price_with_vat: serverCalc.priceWithVat,
     discount_amount: serverCalc.discountAmount,
     final_price: serverCalc.finalPrice,
+    payment_terms: STANDARD_INSTALLATION_PAYMENT_TERMS,
   }
 }

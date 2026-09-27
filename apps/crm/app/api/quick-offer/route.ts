@@ -9,9 +9,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { getCompanyIdAsync } from '@/lib/middleware/company-context'
-import type { OfferDraft, Pergola, PergolaShape } from '@/types/offer'
+import type { OfferDraft, Pergola } from '@/types/offer'
 import { calculateOffer } from '@/lib/offer-calculator'
 import { prepareQuickOfferPergolas } from '@/lib/pergolas/prepare-quick-offer-pergolas'
+import { buildQuickOfferInsertRow } from '@/lib/quick-offer/build-quick-offer-row'
 import {
   buildQuickOfferExtra,
   hasAnyQuickOfferProduct,
@@ -20,6 +21,13 @@ import {
   resolveQuickOfferIncludes,
 } from '@/lib/quick-offer-includes'
 import { validateQuickFence, validateQuickRailings } from '@/lib/quick-offer-product-validation'
+import { allocateOfferNumber } from '@/lib/offers/allocate-offer-number'
+import { buildCurrentOfferTermsSnapshot } from '@/lib/offers/offer-terms-snapshot'
+import {
+  CUSTOMER_NAME_REQUIRED_ERROR,
+  isCustomerNameValid,
+  normalizeCustomerNameInput,
+} from '@/lib/quick-offer/validate-customer-name'
 
 export const runtime = 'nodejs'
 
@@ -54,6 +62,10 @@ export async function POST(req: NextRequest) {
   }
 
   const quickProduct = primaryQuickProduct(includes)
+  const customerName = normalizeCustomerNameInput(draft.customerName)
+  if (!isCustomerNameValid(customerName)) {
+    return NextResponse.json({ error: CUSTOMER_NAME_REQUIRED_ERROR }, { status: 400 })
+  }
 
   if (includes.railings) {
     const err = validateQuickRailings(draft)
@@ -90,7 +102,7 @@ export async function POST(req: NextRequest) {
     .from('deals')
     .insert({
       company_id: companyId,
-      customer_name: 'הצעה מהירה',
+      customer_name: customerName,
       customer_phone: '',
       deal_status: 'in_progress',
       work_type: workType,
@@ -171,107 +183,33 @@ export async function POST(req: NextRequest) {
     fenceLineTotals: serverCalc.fenceLineTotals,
   })
 
-  // ── 2. Build offer row from body ────────────────────────────────────────────
-  const firstPergola = normalizedPergolas[0]
+  let offerNumber: string
+  try {
+    offerNumber = await allocateOfferNumber(supabase, companyId)
+  } catch (e) {
+    console.error('[quick-offer] offer number allocation error:', e)
+    await rollbackDeal()
+    return NextResponse.json({ error: 'Failed to allocate offer number' }, { status: 500 })
+  }
 
-  const pergolasData = includes.pergola && normalizedPergolas.length > 0 ? normalizedPergolas : null
-  const pergolaShapeData =
-    includes.pergola && firstPergola?.shape ? firstPergola.shape : (null as PergolaShape | null)
-  const pergolaWidth =
-    includes.pergola && firstPergola?.shape?.type === 'rectangle' ? firstPergola.shape.width : null
-  const pergolaLength =
-    includes.pergola && firstPergola?.shape?.type === 'rectangle' ? firstPergola.shape.length : null
-
-  const color = draft.color as { type?: string; ralCode?: string; woodName?: string } | undefined
-  const roof = draft.roof as { type?: string; santafColor?: string } | undefined
-  const santaf = draft.santaf as Record<string, unknown> | undefined
-  const zipScreen = draft.zipScreen as Record<string, unknown> | undefined
-  const lighting = draft.lighting as Record<string, unknown> | undefined
-  const drainage = draft.drainage as Record<string, unknown> | undefined
-  const winterClosure = draft.winterClosure as Record<string, unknown> | undefined
-  const options = draft.options as { notes?: string } | undefined
+  const insertRow = {
+    ...buildQuickOfferInsertRow({
+      dealId,
+      companyId,
+      draft,
+      includes,
+      normalizedPergolas,
+      serverCalc,
+      quickOfferExtra,
+      customerName,
+    }),
+    offer_number: offerNumber,
+    terms_snapshot: buildCurrentOfferTermsSnapshot(),
+  }
 
   const { data: offer, error: offerError } = await supabase
     .from('offers')
-    .insert({
-      deal_id: dealId,
-      company_id: companyId,
-      customer_name: 'הצעה מהירה',
-
-      // Pergola data
-      pergolas_data: pergolasData,
-      pergola_shape_data: pergolaShapeData,
-      pergola_width: pergolaWidth,
-      pergola_length: pergolaLength,
-      pergola_height: includes.pergola ? firstPergola?.height ?? null : null,
-      pergola_location: includes.pergola ? firstPergola?.location ?? null : null,
-      pergola_price_per_sqm: firstPergola?.pricePerSqm ?? 750,
-
-      // Color & roof
-      color_type: color?.type ?? 'white',
-      color_ral_code: color?.ralCode ?? null,
-      color_wood_name: color?.woodName ?? null,
-      roof_type: roof?.type ?? null,
-      roof_santaf_color: roof?.santafColor ?? null,
-
-      // Options
-      shading_ratio: draft.shadingRatio ?? null,
-      finish_type: draft.finishType ?? null,
-      finish_value: draft.finishValue ?? null,
-      options_notes: options?.notes ?? null,
-      discount_percent: Number(draft.discountPercent) || 0,
-
-      // Santaf
-      santaf_enabled: Boolean(santaf?.enabled),
-      santaf_with_structure: Boolean(santaf?.withStructure),
-      santaf_price_per_sqm_basic: Number(santaf?.pricePerSqmBasic) || 220,
-      santaf_price_per_sqm_with_structure: Number(santaf?.pricePerSqmWithStructure) || 450,
-
-      // ZIP screen
-      zip_screen_enabled: Boolean(zipScreen?.enabled),
-      zip_screen_type: zipScreen?.type ?? null,
-      zip_screen_price_per_sqm_manual: Number(zipScreen?.pricePerSqmManual) || 650,
-      zip_screen_price_per_sqm_electric: Number(zipScreen?.pricePerSqmElectric) || 800,
-      zip_screen_running_meters: zipScreen?.runningMeters ?? null,
-
-      // Lighting
-      lighting_enabled: Boolean(lighting?.enabled),
-      lighting_price_per_meter: Number(lighting?.pricePerMeter) || 200,
-      lighting_running_meters: lighting?.runningMeters ?? null,
-
-      // Drainage
-      drainage_enabled: Boolean(drainage?.enabled),
-      drainage_price_per_meter: Number(drainage?.pricePerMeter) || 500,
-      drainage_running_meters: drainage?.runningMeters ?? null,
-
-      // Winter closure
-      winter_closure_enabled: Boolean(winterClosure?.enabled),
-      winter_closure_items: (winterClosure?.items as unknown[]) ?? [],
-      winter_closure_glass_type: winterClosure?.glassType ?? null,
-
-      // Totals — recomputed server-side so fence/railings lines cannot be dropped
-      area: serverCalc.area,
-      pergola_total:
-        serverCalc.pergolaTotal != null
-          ? serverCalc.pergolaTotal
-          : !includes.pergola && serverCalc.railingsLineTotal != null
-            ? serverCalc.railingsLineTotal
-            : !includes.pergola && serverCalc.fenceLineTotal != null
-              ? serverCalc.fenceLineTotal
-              : 0,
-      quick_offer_extra: quickOfferExtra,
-      santaf_total: serverCalc.santafTotal,
-      zip_screen_total: serverCalc.zipScreenTotal,
-      lighting_total: serverCalc.lightingTotal,
-      drainage_total: serverCalc.drainageTotal,
-      winter_closure_total: serverCalc.winterClosureTotal,
-      total_before_vat: serverCalc.totalBeforeVat,
-      vat_percent: serverCalc.vatPercent,
-      vat_amount: serverCalc.vatAmount,
-      price_with_vat: serverCalc.priceWithVat,
-      discount_amount: serverCalc.discountAmount,
-      final_price: serverCalc.finalPrice,
-    })
+    .insert(insertRow)
     .select('id')
     .single()
 
@@ -281,5 +219,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to create offer' }, { status: 500 })
   }
 
-  return NextResponse.json({ offerId: offer.id as string }, { status: 201 })
+  return NextResponse.json(
+    { offerId: offer.id as string, offerNumber },
+    { status: 201 },
+  )
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { PlanCanvas, type PlanCanvasLabels } from './view-svg/PlanCanvas'
 import { EdgeEditor, type EdgeEditorLabels } from './view-html/EdgeEditor'
 import { AdjustPanel, type AdjustPanelLabels } from './view-html/AdjustPanel'
@@ -56,17 +56,20 @@ export interface PlanContourSnapshot {
 function ContourReporter({ onContourChange }: { onContourChange?: (contour: PlanContourSnapshot) => void }) {
   const fixedEdges = useBoundPlanEditorStore((s) => s.fixedEdges)
   const isClosed = useBoundPlanEditorStore((s) => s.isClosed)
+  const onContourChangeRef = useRef(onContourChange)
+  onContourChangeRef.current = onContourChange
 
   useEffect(() => {
-    if (!onContourChange) return
+    const report = onContourChangeRef.current
+    if (!report) return
     const polygon = toPolygon(fixedEdges)
-    onContourChange({
+    report({
       polygon,
       wallIndices: wallEdgeIndicesFromChain(fixedEdges),
       isClosed,
       isSimple: polygon.length >= 3 && isSimplePolygon(polygon),
     })
-  }, [fixedEdges, isClosed, onContourChange])
+  }, [fixedEdges, isClosed])
 
   return null
 }

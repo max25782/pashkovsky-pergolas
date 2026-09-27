@@ -27,9 +27,12 @@ export function prepareQuickOfferPergolas(draft: Partial<OfferDraft>): PreparePe
         if (!check.ok) {
           return { ok: false, error: `Pergola ${i + 1}: ${check.error}` }
         }
+        if (check.plan.confirmed !== true) {
+          return { ok: false, error: `Pergola ${i + 1}: drawing must be confirmed` }
+        }
         pergolas.push({ ...base, plan: check.plan })
       } else {
-        pergolas.push(base)
+        return { ok: false, error: `Pergola ${i + 1}: a confirmed drawing is required` }
       }
     }
     return { ok: true, pergolas }
@@ -41,9 +44,12 @@ export function prepareQuickOfferPergolas(draft: Partial<OfferDraft>): PreparePe
     if (planField !== null && planField !== undefined) {
       const check = validatePergolaPlanForApi(planField)
       if (!check.ok) return { ok: false, error: check.error }
+      if (check.plan.confirmed !== true) {
+        return { ok: false, error: 'Pergola 1: drawing must be confirmed' }
+      }
       return { ok: true, pergolas: [{ ...one, plan: check.plan }] }
     }
-    return { ok: true, pergolas: [one] }
+    return { ok: false, error: 'Pergola 1: a confirmed drawing is required' }
   }
 
   const fromArray = normalizePergolas(rawList)
