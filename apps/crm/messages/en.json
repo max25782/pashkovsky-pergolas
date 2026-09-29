@@ -217,6 +217,8 @@
     "fieldManualPrice": "Manual price ($/m²)",
     "fieldElectricPrice": "Electric price ($/m²)",
     "fieldRunningMeters": "Running meters",
+    "perimeterHintDrainage": "Perimeter: {perimeter} m · Longest edge: {longest} m",
+    "perimeterHintLighting": "Perimeter: {perimeter} m · Longest edge: {longest} m",
     "includeLighting": "Include lighting",
     "fieldPricePerMeter": "Price per meter ($)",
     "includeDrainage": "Include drainage",

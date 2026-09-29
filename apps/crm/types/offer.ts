@@ -83,6 +83,26 @@ export interface PergolaPlan {
 export { PERGOLA_PLAN_SCHEMA_VERSION }
 export const DEFAULT_PERGOLA_PLAN_CONSTRUCTION_PARAMS = DEFAULT_PLAN_CONSTRUCTION_PARAMS
 
+// ─── Per-pergola addon types ──────────────────────────────────────────────────
+
+/**
+ * Santaf (polycarbonate roof) settings scoped to a single pergola.
+ * When the pergola is ours: one rate, no structure toggle.
+ * pricePerSqm default 200 ₪/m² × covered area (not material/overlap area).
+ */
+export interface PergolaAddonSantaf {
+  enabled: boolean
+  /** ₪/m² × pergola covered area. Default 200 for our-pergola case. */
+  pricePerSqm: number
+}
+
+/** Per-running-metre addon (מרזב / LED) scoped to a single pergola. */
+export interface PergolaAddonMeter {
+  enabled: boolean
+  pricePerMeter: number
+  runningMeters?: number
+}
+
 export interface Pergola {
   /**
    * Plan-editor drawing for this pergola. `null` until the user starts a new drawing.
@@ -99,6 +119,20 @@ export interface Pergola {
   height?: number
   location?: string // מקום בבית
   pricePerSqm: number // Editable, default 750
+
+  /**
+   * Per-pergola סנטף. When present, overrides the offer-level `santaf` for this pergola.
+   * Old offers without this field fall back to offer-level santaf (backward compat).
+   */
+  santaf?: PergolaAddonSantaf
+  /**
+   * Per-pergola מרזב (drainage). When present, overrides offer-level `drainage`.
+   */
+  drainage?: PergolaAddonMeter
+  /**
+   * Per-pergola LED lighting. When present, overrides offer-level `lighting`.
+   */
+  lighting?: PergolaAddonMeter
 
   // Legacy fields для обратной совместимости (deprecated)
   /** @deprecated Use plan polygon for dimensions */
@@ -118,14 +152,21 @@ export interface Roof {
   santafColor?: 'transparent' | 'gray' | 'white' | 'gold'
 }
 
+/**
+ * Standalone (offer-level) santaf — used when includePergola = false.
+ * Two cases:
+ *   withStructure = false → 200 ₪/m²  (our pergola, pricePerSqmBasic)
+ *   withStructure = true  → 450 ₪/m²  (client's existing pergola, pricePerSqmWithStructure)
+ * Area is always covered area (pergolaAreaSqm or manual width×length), not material area.
+ */
 export interface Santaf {
   enabled: boolean
-  withStructure: boolean // false = 220 ₪/m², true = 450 ₪/m²
-  pricePerSqmBasic: number // Default 220, editable
-  pricePerSqmWithStructure: number // Default 450, editable
-  width?: number // Dimensions when pergola is not included (מידות)
-  length?: number // Dimensions when pergola is not included (מידות)
-  overlapType?: 'single' | 'double' // Sheet overlap type: 'single' (1-wave) or 'double' (2-wave, recommended)
+  withStructure: boolean
+  pricePerSqmBasic: number          // Default 200 (our pergola companion)
+  pricePerSqmWithStructure: number  // Default 450 (standalone on client's pergola)
+  width?: number   // Manual dimensions when pergola not included
+  length?: number
+  overlapType?: 'single' | 'double' // Used only for cutting list (calculateSuntufSheets), not for price
 }
 
 export interface ZipScreen {
@@ -172,6 +213,34 @@ export type QuickOfferGlazingSystem = 'aluminum_glass' | 'wet_glazing' | 'dry_gl
 
 export type QuickOfferFenceVariant = 'classic' | 'hitech' | 'hitech_angular'
 
+// ─── Fence gate (pedestrian) ──────────────────────────────────────────────────
+
+/** Pricing constants for pedestrian gates inside fence sections. */
+export const GATE_STANDARD_MAX_WIDTH_CM  = 120
+export const GATE_STANDARD_MAX_HEIGHT_CM = 180
+export const GATE_STANDARD_PRICE         = 3_500   // ₪/unit, includes lock + standard handle
+export const GATE_DECORATIVE_HANDLE_SURCHARGE = 300 // ₪/unit
+
+export interface FenceGate {
+  widthCm: number
+  heightCm: number
+  decorativeHandle: boolean
+  /**
+   * Price per unit, ₪.
+   * For standard sizes the UI pre-fills 3 500 but the salesperson may edit.
+   * For non-standard (widthCm > 120 or heightCm > 180) this is mandatory.
+   */
+  pricePerUnit?: number
+  /** True when widthCm > GATE_STANDARD_MAX_WIDTH_CM || heightCm > GATE_STANDARD_MAX_HEIGHT_CM */
+  nonStandard: boolean
+}
+
+/** Total price for one gate (base + decorative handle surcharge). */
+export function gateUnitTotal(gate: FenceGate): number {
+  const base = gate.pricePerUnit ?? 0
+  return base + (gate.decorativeHandle ? GATE_DECORATIVE_HANDLE_SURCHARGE : 0)
+}
+
 export type QuickOfferRailingsLocation = 'balcony' | 'stairs' | 'roof' | 'yard' | 'other'
 
 export interface QuickOfferRailingsDraft {
@@ -195,6 +264,8 @@ export interface QuickOfferFenceDraft {
   notes?: string
   /** ₪/m² — same area rule as railings */
   pricePerSqm: number
+  /** Pedestrian gates in this fence section. Color and fenceVariant are inherited from the section. */
+  gates?: FenceGate[]
 }
 
 /** Stored on offers.quick_offer_extra for PDF / round-trip. */
@@ -213,6 +284,13 @@ export interface QuickOfferExtraPersisted {
   fenceLineTotal?: number
   /** Per-section fence line totals (matches quickFences index). */
   fenceLineTotals?: number[]
+  /**
+   * Per-section gate line totals: fenceGateLineTotals[sectionIdx][gateIdx].
+   * Each value = gate base price + handle surcharge.
+   */
+  fenceGateLineTotals?: number[][]
+  /** Sum of all gate totals across all fence sections. */
+  fenceGateTotal?: number
 }
 
 export interface Pricing {
@@ -361,6 +439,10 @@ export interface OfferCalculation {
   fenceLineTotal?: number
   /** Per-section fence line totals — matches quickFences index. */
   fenceLineTotals?: number[]
+  /** Per-section, per-gate totals. fenceGateLineTotals[sectionIdx][gateIdx]. */
+  fenceGateLineTotals?: number[][]
+  /** Sum of all gate totals. Added to totalBeforeVat. */
+  fenceGateTotal?: number
   santafTotal: number
   zipScreenTotal: number
   lightingTotal: number
@@ -417,7 +499,7 @@ export const DEFAULT_OFFER_VALUES = {
   santaf: {
     enabled: false,
     withStructure: false,
-    pricePerSqmBasic: 220,
+    pricePerSqmBasic: 200,
     pricePerSqmWithStructure: 450,
     width: undefined,
     length: undefined,

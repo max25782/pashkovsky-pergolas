@@ -38,11 +38,11 @@ function profileThinCm(profileId: string | null | undefined): number {
  * Span dimensions show clear inner distance (face-to-face), not center-to-center.
  * Returns empty string if not a single rectangle.
  */
-export function rectanglePlanSvgFragment(offer: Offer): string {
-  const qp = offer.quickProduct ?? offer.quickOfferExtra?.quickProduct ?? 'pergola'
-  if (qp === 'railings' || qp === 'fence') return ''
-
-  const p = offer.pergolas?.[0] ?? offer.pergola
+/**
+ * Generate a top-view SVG for a single rectangle pergola.
+ * Extracted so multi-pergola offers can call it per-pergola.
+ */
+export function singleRectanglePlanSvg(p: import('@/types/offer').Pergola, offer: Offer): string {
   if (!p?.shape || p.shape.type !== 'rectangle') return ''
   const widthM = p.shape.width
   const depthM = p.shape.length
@@ -186,10 +186,25 @@ export function rectanglePlanSvgFragment(offer: Offer): string {
     lines.push(`<text x="${x0 + innerW / 2}" y="${y0 + innerH / 2 + 4}" text-anchor="middle" font-size="10" fill="#555" font-family="Noto Sans Hebrew, Arial, sans-serif">מבט מלמעלה</text>`)
   }
 
-  // Depth dimension label inside (right side)
-  lines.push(`<text x="${x0 + innerW - 6}" y="${y0 + innerH / 2}" text-anchor="end" font-size="9" fill="#777" font-family="Noto Sans Hebrew, Arial, sans-serif" transform="rotate(-90 ${x0 + innerW - 6} ${y0 + innerH / 2})">${fmt(depthCm)}</text>`)
+  // (Internal depth label removed — depth is already shown on the external left dimension line)
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}" role="img" aria-label="תרשים מבט על">
   ${lines.join('\n  ')}
 </svg>`
+}
+
+/**
+ * Generate top-view SVG drawings for ALL rectangle pergolas in the offer.
+ * Returns concatenated SVG strings (one per pergola).
+ * Use this as the fallback when no polygon plans are available.
+ */
+export function rectanglePlanSvgFragment(offer: Offer): string {
+  const qp = offer.quickProduct ?? offer.quickOfferExtra?.quickProduct ?? 'pergola'
+  if (qp === 'railings' || qp === 'fence') return ''
+
+  const pergolas = offer.pergolas?.length ? offer.pergolas : (offer.pergola ? [offer.pergola] : [])
+  const rectPergolas = pergolas.filter((p) => p?.shape?.type === 'rectangle')
+  if (rectPergolas.length === 0) return ''
+
+  return rectPergolas.map((p) => singleRectanglePlanSvg(p, offer)).filter(Boolean).join('')
 }

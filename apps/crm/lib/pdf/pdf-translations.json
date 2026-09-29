@@ -78,6 +78,10 @@
     "off_fence_prefix": "גדר ·",
     "off_fence_spec_title": "גדר — מפרט",
     "off_fence_type": "סוג גדר",
+    "off_gate_pedestrian": "שער להולכי רגל",
+    "off_gate_decorative_handle": "עם ידית דקורטיבית",
+    "off_gate_non_standard": "מידה מיוחדת",
+    "off_unit_pcs": "יח׳",
     "off_finish_color": "גימור / צבע",
     "off_finish_type": "סוג גימור",
     "off_foot_web": "Pashkovsky Group · www.pashkovsky-group.com",
@@ -290,7 +294,7 @@
     "ts_type_work": "עבודה",
     "ts_work_prefix": "עבודה",
     "cut_plan_bars_unit": "מוטות",
-    "off_unit_rm": "ר\"מ",
+    "off_unit_rm": "מ״א",
     "off_fence_short_classic": "קלאסי",
     "off_fence_short_hitech": "הייטק",
     "off_fence_short_hitech_ang": "הייטק זוויתי",
@@ -633,7 +637,11 @@
     "off_terms_warranty_product": "Product / component",
     "off_terms_warranty_period": "Warranty period",
     "off_terms_warranty_note": "Warranty covers manufacturing and material defects only.",
-    "off_non_orthogonal_pdf_note": "Schematic drawing only; final dimensions and area will be confirmed by an on-site measurement."
+    "off_non_orthogonal_pdf_note": "Schematic drawing only; final dimensions and area will be confirmed by an on-site measurement.",
+    "off_gate_pedestrian": "Pedestrian gate",
+    "off_gate_decorative_handle": "with decorative handle",
+    "off_gate_non_standard": "custom size",
+    "off_unit_pcs": "pcs"
   },
   "ru": {
     "cut_alt_preview": "Превью перголы",
@@ -951,7 +959,11 @@
     "off_terms_warranty_product": "Изделие / компонент",
     "off_terms_warranty_period": "Срок гарантии",
     "off_terms_warranty_note": "Гарантия распространяется только на производственные и материальные дефекты.",
-    "off_non_orthogonal_pdf_note": "Схематический чертёж; окончательные размеры и площадь определяются финальным замером на объекте."
+    "off_non_orthogonal_pdf_note": "Схематический чертёж; окончательные размеры и площадь определяются финальным замером на объекте.",
+    "off_gate_pedestrian": "Калитка",
+    "off_gate_decorative_handle": "с декоративной ручкой",
+    "off_gate_non_standard": "нестандартный размер",
+    "off_unit_pcs": "шт."
   },
   "sr": {
     "cut_alt_preview": "Pergola preview",
@@ -1269,6 +1281,10 @@
     "off_terms_section_warranty": "Warranty",
     "off_terms_warranty_product": "Product",
     "off_terms_warranty_period": "Period",
-    "off_terms_warranty_note": "Warranty covers manufacturing defects only."
+    "off_terms_warranty_note": "Warranty covers manufacturing defects only.",
+    "off_gate_pedestrian": "Pješačka kapija",
+    "off_gate_decorative_handle": "sa dekorativnom ručkom",
+    "off_gate_non_standard": "nestandardna veličina",
+    "off_unit_pcs": "kom"
   }
 }

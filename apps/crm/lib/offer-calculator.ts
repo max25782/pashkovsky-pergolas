@@ -1,6 +1,9 @@
 import type { OfferDraft, OfferCalculation } from '@/types/offer'
+import { gateUnitTotal } from '@/types/offer'
+// calculateSuntufSheets is used ONLY in the cutting list (lib/cut-list/calculate-cut-list.ts),
+// never for pricing. Price = covered area × rate, overlap waste is baked into the rate.
 import { lineAmountFromBillableArea, pergolaAreaSqm } from '@/lib/pergolas/pergola-area-sqm'
-import { calculateSuntufSheets, calculateSuntufPriceByArea } from '@/lib/calculations/suntuf-sheets'
+// (suntuf-sheets import removed — sheet calc is for cut list only, not pricing)
 import { resolveQuickOfferIncludes } from '@/lib/quick-offer-includes'
 
 /** Face area m² for quick-offer railings/fence: length (m) × height (m). */
@@ -68,6 +71,9 @@ export function calculateOffer(draft: OfferDraft): OfferCalculation {
     const p = quickOfferLinePerSqmLegacy(qr)
     railingsLineTotal = sqm * p
   }
+  let fenceGateLineTotals: number[][] | undefined
+  let fenceGateTotal: number | undefined
+
   if (inc.fence) {
     const fences = resolveQuickFences(draft)
     if (fences.length > 0) {
@@ -77,6 +83,16 @@ export function calculateOffer(draft: OfferDraft): OfferCalculation {
         return sqm * p
       })
       fenceLineTotal = fenceLineTotals.reduce((s, v) => s + v, 0)
+
+      // Gate totals (per section, per gate)
+      const perSectionGates = fences.map((qf) =>
+        (qf.gates ?? []).map((g) => Math.round(gateUnitTotal(g) * 100) / 100),
+      )
+      const hasAnyGates = perSectionGates.some((sg) => sg.length > 0)
+      if (hasAnyGates) {
+        fenceGateLineTotals = perSectionGates
+        fenceGateTotal = perSectionGates.flat().reduce((s, v) => s + v, 0)
+      }
     }
   }
 
@@ -98,10 +114,8 @@ export function calculateOffer(draft: OfferDraft): OfferCalculation {
   let santafArea = 0
   if (draft.santaf.enabled) {
     if (pergolaArea > 0) {
-      // Use total pergola area if pergolas are included
       santafArea = pergolaArea
     } else if (draft.santaf.width && draft.santaf.length) {
-      // Use santaf dimensions if pergola is not included
       santafArea = draft.santaf.width * draft.santaf.length
     }
   }
@@ -114,50 +128,44 @@ export function calculateOffer(draft: OfferDraft): OfferCalculation {
 
   const mainProductTotal =
     (pergolaTotalFinal ?? 0) + (railingsLineTotal ?? 0) + (fenceLineTotal ?? 0)
-  
-  // 4. Calculate santaf price (if enabled)
-  // IMPORTANT: Suntuf sheets are priced by MATERIAL AREA (full sheet dimensions),
-  // not pergola area, due to mandatory overlaps between sheets.
-  // When multiple pergolas exist each one gets its own sheet calculation — sheets
-  // cannot be shared across separate structures.
+
+  // ── Determine whether this offer uses per-pergola addons ────────────────────
+  // An offer "has per-pergola addons" if at least one pergola has an explicit
+  // santaf/drainage/lighting field (even if disabled).  Old offers stored without
+  // these fields fall back to the offer-level values (backward compat).
+  const hasPerPergolaAddons =
+    inc.pergola &&
+    pergolas.some(
+      (p) => p !== undefined && (p.santaf !== undefined || p.drainage !== undefined || p.lighting !== undefined),
+    )
+
+  // 4. Santaf
   let santafTotal = 0
-  if (draft.santaf.enabled && santafArea > 0) {
-    const santafPrice = draft.santaf.withStructure
-      ? draft.santaf.pricePerSqmWithStructure
-      : draft.santaf.pricePerSqmBasic
 
-    const overlapType = draft.santaf.overlapType || 'double'
-    let totalSuntufMaterialArea = 0
-
-    if (pergolas.length > 0) {
-      // Sheet layout only for a legacy rectangle with no plan.
-      // A plan (and legacy L/X/U) is billed from pergolaAreaSqm — no √area square.
-      for (const pergola of pergolas) {
-        if (!pergola) continue
-        const covered = pergolaAreaSqm(pergola)
-        if (covered === null || covered <= 0) continue
-        if (!pergola.plan && pergola.shape?.type === 'rectangle') {
-          const suntufCalc = calculateSuntufSheets(pergola.shape.width, pergola.shape.length, overlapType)
-          totalSuntufMaterialArea += suntufCalc.suntufMaterialArea
-        } else {
-          totalSuntufMaterialArea += covered
-        }
-      }
-    } else if (draft.santaf.width && draft.santaf.length) {
-      // Standalone santaf without pergolas
-      const suntufCalc = calculateSuntufSheets(draft.santaf.width, draft.santaf.length, overlapType)
-      totalSuntufMaterialArea = suntufCalc.suntufMaterialArea
+  // Price = covered area × rate. Sheet overlap is baked into the rate, not into the area.
+  // calculateSuntufSheets is used only in the cutting list (lib/cut-list), never here.
+  if (hasPerPergolaAddons) {
+    // Per-pergola mode: price = pergolaAreaSqm(pergola) × ps.pricePerSqm
+    // Rectangle and polygon give the same pergolaAreaSqm — no divergence.
+    for (const pergola of pergolas) {
+      if (!pergola) continue
+      const ps = pergola.santaf
+      if (!ps?.enabled) continue
+      const pgArea = pergolaAreaSqm(pergola) ?? 0
+      if (pgArea <= 0) continue
+      santafTotal += Math.round(pgArea * ps.pricePerSqm * 100) / 100
     }
-
-    if (totalSuntufMaterialArea > 0) {
-      santafTotal = calculateSuntufPriceByArea(totalSuntufMaterialArea, santafPrice)
-    } else {
-      // Fallback: use pergola area if dimensions not available (legacy support)
-      santafTotal = santafArea * santafPrice
+  } else {
+    // Legacy offer-level santaf (standalone or with untagged pergolas)
+    if (draft.santaf.enabled && santafArea > 0) {
+      const rate = draft.santaf.withStructure
+        ? draft.santaf.pricePerSqmWithStructure
+        : draft.santaf.pricePerSqmBasic
+      santafTotal = Math.round(santafArea * rate * 100) / 100
     }
   }
-  
-  // 5. Calculate ZIP screen price (if enabled)
+
+  // 5. ZIP screen price (if enabled)
   let zipScreenTotal = 0
   if (draft.zipScreen.enabled && draft.zipScreen.type) {
     const zipPrice = draft.zipScreen.type === 'electric'
@@ -174,16 +182,32 @@ export function calculateOffer(draft: OfferDraft): OfferCalculation {
     zipScreenTotal = zipQty * zipPrice
   }
   
-  // 6. Calculate lighting price (if enabled)
+  // 6. Lighting (LED)
   let lightingTotal = 0
-  if (draft.lighting.enabled) {
+  if (hasPerPergolaAddons) {
+    for (const pergola of pergolas) {
+      if (!pergola) continue
+      const pl = pergola.lighting
+      if (!pl?.enabled) continue
+      const m = pl.runningMeters ?? 0
+      lightingTotal += Math.round(m * pl.pricePerMeter * 100) / 100
+    }
+  } else if (draft.lighting.enabled) {
     const meters = draft.lighting.runningMeters || 0
     lightingTotal = meters * draft.lighting.pricePerMeter
   }
-  
-  // 7. Calculate drainage price (if enabled)
+
+  // 7. Drainage (מרזב)
   let drainageTotal = 0
-  if (draft.drainage.enabled) {
+  if (hasPerPergolaAddons) {
+    for (const pergola of pergolas) {
+      if (!pergola) continue
+      const pd = pergola.drainage
+      if (!pd?.enabled) continue
+      const m = pd.runningMeters ?? 0
+      drainageTotal += Math.round(m * pd.pricePerMeter * 100) / 100
+    }
+  } else if (draft.drainage.enabled) {
     const meters = draft.drainage.runningMeters || 0
     drainageTotal = meters * draft.drainage.pricePerMeter
   }
@@ -198,7 +222,7 @@ export function calculateOffer(draft: OfferDraft): OfferCalculation {
   
   // 9. Calculate total before VAT
   const totalBeforeVat =
-    mainProductTotal + santafTotal + zipScreenTotal + lightingTotal + drainageTotal + winterClosureTotal
+    mainProductTotal + (fenceGateTotal ?? 0) + santafTotal + zipScreenTotal + lightingTotal + drainageTotal + winterClosureTotal
   
   // 10. VAT (% of total before VAT)
   const vatPct = normalizeVatPercent(draft.vatPercent)
@@ -229,6 +253,8 @@ export function calculateOffer(draft: OfferDraft): OfferCalculation {
     railingsLineTotal,
     fenceLineTotal,
     fenceLineTotals,
+    fenceGateLineTotals,
+    fenceGateTotal,
     santafTotal,
     zipScreenTotal,
     lightingTotal,

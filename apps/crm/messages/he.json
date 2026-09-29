@@ -217,6 +217,8 @@
     "fieldManualPrice": "מחיר ידני (₪/מ\"ר)",
     "fieldElectricPrice": "מחיר חשמלי (₪/מ\"ר)",
     "fieldRunningMeters": "מטר רץ",
+    "perimeterHintDrainage": "היקף: {perimeter} מ׳ · הצלע הארוכה: {longest} מ׳",
+    "perimeterHintLighting": "היקף: {perimeter} מ׳ · הצלע הארוכה: {longest} מ׳",
     "includeLighting": "כלול תאורה",
     "fieldPricePerMeter": "מחיר למטר (₪)",
     "includeDrainage": "כלול ניקוז",

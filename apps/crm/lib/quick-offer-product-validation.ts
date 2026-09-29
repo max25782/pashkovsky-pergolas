@@ -1,4 +1,5 @@
 import type { OfferDraft } from '@/types/offer'
+import { GATE_STANDARD_MAX_WIDTH_CM, GATE_STANDARD_MAX_HEIGHT_CM } from '@/types/offer'
 
 export function validateQuickRailings(draft: Partial<OfferDraft>): string | null {
   const qr = draft.quickRailings
@@ -30,6 +31,20 @@ export function validateQuickFence(draft: Partial<OfferDraft>): string | null {
     const fv = String(qf.fenceVariant ?? '').trim()
     if (!['classic', 'hitech', 'hitech_angular'].includes(fv)) return `Fence${label}: variant is required`
     if (!qf.color?.trim()) return `Fence${label}: color is required`
+
+    // Validate gates in this section
+    for (let gi = 0; gi < (qf.gates ?? []).length; gi++) {
+      const gate = qf.gates![gi]
+      const gl = `${label ? label.slice(0, -1) + ', ' : '('}gate ${gi + 1})`
+      if (!gate.widthCm || Number(gate.widthCm) <= 0) return `Fence${gl}: gate width (cm) required`
+      if (!gate.heightCm || Number(gate.heightCm) <= 0) return `Fence${gl}: gate height (cm) required`
+      const isNonStd =
+        Number(gate.widthCm) > GATE_STANDARD_MAX_WIDTH_CM ||
+        Number(gate.heightCm) > GATE_STANDARD_MAX_HEIGHT_CM
+      if (isNonStd && (gate.pricePerUnit == null || Number(gate.pricePerUnit) <= 0)) {
+        return `Fence${gl}: מידה לא סטנדרטית — המחיר נקבע ידנית`
+      }
+    }
   }
   return null
 }

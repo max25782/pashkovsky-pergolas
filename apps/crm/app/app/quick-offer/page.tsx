@@ -1746,6 +1746,169 @@ export default function QuickOfferPage() {
                     {pergola.plan?.confirmed !== true && (
                       <p className="text-sm text-amber-300">{t('drawingFirstHint')}</p>
                     )}
+
+                    {/* ── Per-pergola addons ─────────────────────────────── */}
+                    {/* Santaf */}
+                    {/* Santaf — per-pergola: one rate (200 ₪/m² default), no withStructure */}
+                    <SectionCard title={t('sectionSantaf')} defaultOpen={false}>
+                      <div className="flex items-center gap-3 mb-2">
+                        <input
+                          type="checkbox"
+                          id={`pg-santaf-en-${index}`}
+                          checked={pergola.santaf?.enabled ?? false}
+                          onChange={(e) => updatePergola(index, {
+                            santaf: {
+                              enabled: e.target.checked,
+                              pricePerSqm: pergola.santaf?.pricePerSqm ?? 200,
+                            },
+                          })}
+                          className="w-4 h-4 accent-blue-500"
+                        />
+                        <label htmlFor={`pg-santaf-en-${index}`} className="text-white">{t('includeSantaf')}</label>
+                      </div>
+                      {(pergola.santaf?.enabled) && (
+                        <Field label={t('fieldPricePerSqm')}>
+                          <input
+                            type="number"
+                            className={inputCls}
+                            value={pergola.santaf?.pricePerSqm ?? 200}
+                            onChange={(e) => updatePergola(index, {
+                              santaf: { ...pergola.santaf!, pricePerSqm: Number(e.target.value) || 0 },
+                            })}
+                          />
+                        </Field>
+                      )}
+                    </SectionCard>
+
+                    {/* Drainage (מרזב) */}
+                    <SectionCard title={t('sectionDrainage')} defaultOpen={false}>
+                      <div className="flex items-center gap-3 mb-2">
+                        <input
+                          type="checkbox"
+                          id={`pg-drain-en-${index}`}
+                          checked={pergola.drainage?.enabled ?? false}
+                          onChange={(e) => updatePergola(index, {
+                            drainage: {
+                              enabled: e.target.checked,
+                              pricePerMeter: pergola.drainage?.pricePerMeter ?? draft.drainage.pricePerMeter,
+                              runningMeters: pergola.drainage?.runningMeters,
+                            },
+                          })}
+                          className="w-4 h-4 accent-blue-500"
+                        />
+                        <label htmlFor={`pg-drain-en-${index}`} className="text-white">{t('includeDrainage')}</label>
+                      </div>
+                      {(pergola.drainage?.enabled) && (
+                        <div className="grid grid-cols-2 gap-3">
+                          <Field label={t('fieldPricePerMeter')}>
+                            <input
+                              type="number"
+                              className={inputCls}
+                              value={pergola.drainage?.pricePerMeter ?? 500}
+                              onChange={(e) => updatePergola(index, {
+                                drainage: { ...pergola.drainage!, pricePerMeter: Number(e.target.value) || 0 },
+                              })}
+                            />
+                          </Field>
+                          <Field label={t('fieldRunningMeters')}>
+                            <input
+                              type="number"
+                              className={inputCls}
+                              placeholder="0"
+                              value={pergola.drainage?.runningMeters ?? ''}
+                              onChange={(e) => updatePergola(index, {
+                                drainage: {
+                                  ...pergola.drainage!,
+                                  runningMeters: e.target.value ? Number(e.target.value) : undefined,
+                                },
+                              })}
+                            />
+                          </Field>
+                        </div>
+                      )}
+                      {pergola.plan?.polygon && pergola.plan.polygon.length >= 3 && (() => {
+                        const poly = pergola.plan!.polygon
+                        let totalMm = 0, longestMm = 0
+                        for (let i = 0; i < poly.length; i++) {
+                          const a = poly[i], b = poly[(i + 1) % poly.length]
+                          const len = Math.hypot(b.x - a.x, b.y - a.y)
+                          totalMm += len
+                          if (len > longestMm) longestMm = len
+                        }
+                        const perim = (totalMm / 1000).toFixed(1)
+                        const longest = (longestMm / 1000).toFixed(1)
+                        return (
+                          <p className="text-xs text-white/40 mt-2">
+                            {t('perimeterHintDrainage', { perimeter: perim, longest })}
+                          </p>
+                        )
+                      })()}
+                    </SectionCard>
+
+                    {/* LED Lighting */}
+                    <SectionCard title={t('sectionLighting')} defaultOpen={false}>
+                      <div className="flex items-center gap-3 mb-2">
+                        <input
+                          type="checkbox"
+                          id={`pg-light-en-${index}`}
+                          checked={pergola.lighting?.enabled ?? false}
+                          onChange={(e) => updatePergola(index, {
+                            lighting: {
+                              enabled: e.target.checked,
+                              pricePerMeter: pergola.lighting?.pricePerMeter ?? draft.lighting.pricePerMeter,
+                              runningMeters: pergola.lighting?.runningMeters,
+                            },
+                          })}
+                          className="w-4 h-4 accent-blue-500"
+                        />
+                        <label htmlFor={`pg-light-en-${index}`} className="text-white">{t('includeLighting')}</label>
+                      </div>
+                      {(pergola.lighting?.enabled) && (
+                        <div className="grid grid-cols-2 gap-3">
+                          <Field label={t('fieldPricePerMeter')}>
+                            <input
+                              type="number"
+                              className={inputCls}
+                              value={pergola.lighting?.pricePerMeter ?? 200}
+                              onChange={(e) => updatePergola(index, {
+                                lighting: { ...pergola.lighting!, pricePerMeter: Number(e.target.value) || 0 },
+                              })}
+                            />
+                          </Field>
+                          <Field label={t('fieldRunningMeters')}>
+                            <input
+                              type="number"
+                              className={inputCls}
+                              placeholder="0"
+                              value={pergola.lighting?.runningMeters ?? ''}
+                              onChange={(e) => updatePergola(index, {
+                                lighting: {
+                                  ...pergola.lighting!,
+                                  runningMeters: e.target.value ? Number(e.target.value) : undefined,
+                                },
+                              })}
+                            />
+                          </Field>
+                        </div>
+                      )}
+                      {pergola.plan?.polygon && pergola.plan.polygon.length >= 3 && (() => {
+                        const poly = pergola.plan!.polygon
+                        let totalMm = 0, longestMm = 0
+                        for (let i = 0; i < poly.length; i++) {
+                          const a = poly[i], b = poly[(i + 1) % poly.length]
+                          const len = Math.hypot(b.x - a.x, b.y - a.y)
+                          totalMm += len
+                          if (len > longestMm) longestMm = len
+                        }
+                        const perim = (totalMm / 1000).toFixed(1)
+                        const longest = (longestMm / 1000).toFixed(1)
+                        return (
+                          <p className="text-xs text-white/40 mt-2">
+                            {t('perimeterHintLighting', { perimeter: perim, longest })}
+                          </p>
+                        )
+                      })()}
+                    </SectionCard>
                   </SectionCard>
                 ))}
 
@@ -1977,6 +2140,111 @@ export default function QuickOfferPage() {
                         {tDeals('workTypes.fence')}: {fmt(calculation.fenceLineTotals[fenceIdx])}
                       </div>
                     )}
+
+                    {/* ── Gates (שערים) ─────────────────────────────────── */}
+                    <div className="mt-3 pt-3 border-t border-white/10 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-white/70">שערים להולכי רגל</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const w = 100, h = 160
+                            const nonStandard = w > 120 || h > 180
+                            patchQuickFenceAt(fenceIdx, {
+                              gates: [
+                                ...(fence.gates ?? []),
+                                { widthCm: w, heightCm: h, decorativeHandle: false,
+                                  pricePerUnit: nonStandard ? undefined : 3500, nonStandard },
+                              ],
+                            })
+                          }}
+                          className="flex items-center gap-1 px-2.5 py-1 rounded text-xs bg-neutral-700 hover:bg-neutral-600 text-white border border-white/20"
+                        >
+                          + הוסף שער
+                        </button>
+                      </div>
+
+                      {(fence.gates ?? []).map((gate, gateIdx) => {
+                        const isNonStd = gate.widthCm > 120 || gate.heightCm > 180
+                        const gateTotal = calculation.fenceGateLineTotals?.[fenceIdx]?.[gateIdx]
+
+                        function patchGate(patch: Partial<typeof gate>) {
+                          const updated = [...(fence.gates ?? [])]
+                          const merged = { ...updated[gateIdx], ...patch }
+                          // recompute nonStandard and default price
+                          const ns = (merged.widthCm ?? 0) > 120 || (merged.heightCm ?? 0) > 180
+                          merged.nonStandard = ns
+                          if (!ns && (merged.pricePerUnit == null || merged.pricePerUnit === 0)) {
+                            merged.pricePerUnit = 3500
+                          }
+                          updated[gateIdx] = merged
+                          patchQuickFenceAt(fenceIdx, { gates: updated })
+                        }
+
+                        return (
+                          <div key={gateIdx} className="rounded border border-white/10 bg-white/5 p-3 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-white/50">שער {gateIdx + 1}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = (fence.gates ?? []).filter((_, i) => i !== gateIdx)
+                                  patchQuickFenceAt(fenceIdx, { gates: updated })
+                                }}
+                                className="text-red-400 hover:text-red-300 text-xs px-1.5 py-0.5 rounded"
+                              >
+                                ✕
+                              </button>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2">
+                              <Field label={'רוחב (ס"מ)'}>
+                                <input
+                                  type="number" min={1} className={inputCls}
+                                  value={gate.widthCm || ''}
+                                  onChange={(e) => patchGate({ widthCm: Number(e.target.value) || 0 })}
+                                />
+                              </Field>
+                              <Field label={'גובה (ס"מ)'}>
+                                <input
+                                  type="number" min={1} className={inputCls}
+                                  value={gate.heightCm || ''}
+                                  onChange={(e) => patchGate({ heightCm: Number(e.target.value) || 0 })}
+                                />
+                              </Field>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                id={`gate-handle-${fenceIdx}-${gateIdx}`}
+                                checked={gate.decorativeHandle}
+                                onChange={(e) => patchGate({ decorativeHandle: e.target.checked })}
+                                className="w-4 h-4 accent-blue-500"
+                              />
+                              <label htmlFor={`gate-handle-${fenceIdx}-${gateIdx}`} className="text-sm text-white">
+                                ידית דקורטיבית (+300 ₪)
+                              </label>
+                            </div>
+
+                            <Field label={'מחיר לשער (₪)'}>
+                              <input
+                                type="number" min={0} className={inputCls}
+                                value={gate.pricePerUnit ?? ''}
+                                placeholder={isNonStd ? 'חובה' : '3500'}
+                                onChange={(e) => patchGate({ pricePerUnit: e.target.value ? Number(e.target.value) : undefined })}
+                              />
+                            </Field>
+                            {isNonStd && (
+                              <p className="text-xs text-amber-400">מידה לא סטנדרטית — המחיר נקבע ידנית</p>
+                            )}
+                            {gateTotal != null && gateTotal > 0 && (
+                              <p className="text-xs text-green-400">סה״כ שער: {fmt(gateTotal)}</p>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
                 ))}
                 {(calculation.fenceLineTotal ?? 0) > 0 && getQuickFences().length > 1 && (
@@ -2019,8 +2287,9 @@ export default function QuickOfferPage() {
             </SectionCard>
             )}
 
-            {/* Santaf */}
-            {includes.pergola && (
+            {/* Santaf — global section: only for standalone offers (no pergola).
+                When pergola IS included, santaf lives inside each pergola card above. */}
+            {!includes.pergola && (
             <SectionCard title={t('sectionSantaf')} defaultOpen={false}>
               <div className="flex items-center gap-3">
                 <input
@@ -2028,7 +2297,16 @@ export default function QuickOfferPage() {
                   id="santaf-enabled"
                   checked={draft.santaf.enabled}
                   onChange={(e) =>
-                    setDraft((d) => ({ ...d, santaf: { ...d.santaf, enabled: e.target.checked } }))
+                    setDraft((d) => ({
+                      ...d,
+                      santaf: {
+                        ...d.santaf,
+                        enabled: e.target.checked,
+                        // Standalone = client's pergola → always 450; set withStructure:true
+                        // so the calculator's backward-compat branch uses pricePerSqmWithStructure
+                        withStructure: true,
+                      },
+                    }))
                   }
                   className="w-4 h-4 accent-blue-500"
                 />
@@ -2037,56 +2315,21 @@ export default function QuickOfferPage() {
                 </label>
               </div>
               {draft.santaf.enabled && (
-                <>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      id="santaf-struct"
-                      checked={draft.santaf.withStructure}
-                      onChange={(e) =>
-                        setDraft((d) => ({
-                          ...d,
-                          santaf: { ...d.santaf, withStructure: e.target.checked },
-                        }))
-                      }
-                      className="w-4 h-4 accent-blue-500"
-                    />
-                    <label htmlFor="santaf-struct" className="text-white text-sm">
-                      {t('withStructure')}
-                    </label>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <Field label={t('fieldBasicPrice')}>
-                      <input
-                        type="number"
-                        className={inputCls}
-                        value={draft.santaf.pricePerSqmBasic}
-                        onChange={(e) =>
-                          setDraft((d) => ({
-                            ...d,
-                            santaf: { ...d.santaf, pricePerSqmBasic: Number(e.target.value) || 0 },
-                          }))
-                        }
-                      />
-                    </Field>
-                    <Field label={t('fieldWithStructurePrice')}>
-                      <input
-                        type="number"
-                        className={inputCls}
-                        value={draft.santaf.pricePerSqmWithStructure}
-                        onChange={(e) =>
-                          setDraft((d) => ({
-                            ...d,
-                            santaf: {
-                              ...d.santaf,
-                              pricePerSqmWithStructure: Number(e.target.value) || 0,
-                            },
-                          }))
-                        }
-                      />
-                    </Field>
-                  </div>
-                </>
+                // Standalone santaf = client's existing pergola → rate always 450.
+                // withStructure is kept in data model for reading old offers, but not shown in UI.
+                <Field label={t('fieldPricePerSqm')}>
+                  <input
+                    type="number"
+                    className={inputCls}
+                    value={draft.santaf.pricePerSqmWithStructure}
+                    onChange={(e) =>
+                      setDraft((d) => ({
+                        ...d,
+                        santaf: { ...d.santaf, pricePerSqmWithStructure: Number(e.target.value) || 0 },
+                      }))
+                    }
+                  />
+                </Field>
               )}
             </SectionCard>
             )}
@@ -2177,8 +2420,8 @@ export default function QuickOfferPage() {
               )}
             </SectionCard>
 
-            {/* Lighting */}
-            <SectionCard title={t('sectionLighting')} defaultOpen={false}>
+            {/* Lighting — global section hidden when pergola included (per-pergola sections used instead) */}
+            {!includes.pergola && <SectionCard title={t('sectionLighting')} defaultOpen={false}>
               <div className="flex items-center gap-3">
                 <input
                   type="checkbox"
@@ -2230,10 +2473,10 @@ export default function QuickOfferPage() {
                   </Field>
                 </div>
               )}
-            </SectionCard>
+            </SectionCard>}
 
-            {/* Drainage */}
-            <SectionCard title={t('sectionDrainage')} defaultOpen={false}>
+            {/* Drainage — global section hidden when pergola included */}
+            {!includes.pergola && <SectionCard title={t('sectionDrainage')} defaultOpen={false}>
               <div className="flex items-center gap-3">
                 <input
                   type="checkbox"
@@ -2285,7 +2528,7 @@ export default function QuickOfferPage() {
                   </Field>
                 </div>
               )}
-            </SectionCard>
+            </SectionCard>}
 
             {/* Winter Closure */}
             <SectionCard title={t('sectionWinterClosure')} defaultOpen={false}>

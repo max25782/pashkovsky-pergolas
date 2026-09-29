@@ -191,6 +191,164 @@ describe('offer PDF totals', () => {
     expect(html).toContain('11,887.50')
   })
 
+  it('per-pergola addons: 2 pergolas, p1 has santaf+drainage+lighting, p2 bare', async () => {
+    // Pергола 1: 4×6=24 m², 750 → 18 000
+    // Сантеф с конструкцией: 24×450 → 10 800
+    // Мрзб: 20 м × 500 → 10 000
+    // LED: 12 м × 200 → 2 400
+    // Пергола 2: 3×6=18 m², 750 → 13 500
+    // Итого до НДС: 54 700; НДС 18% = 9 846; всего 64 546
+    const draft: OfferDraft = {
+      ...DEFAULT_OFFER_VALUES,
+      dealId: '',
+      customerName: 'Per-Pergola Test',
+      quickProduct: 'pergola',
+      includePergola: true,
+      includeRailings: false,
+      includeFence: false,
+      pergolas: [
+        {
+          plan: null,
+          shape: { type: 'rectangle', width: 4, length: 6 },
+          pricePerSqm: 750,
+          santaf: { enabled: true, pricePerSqm: 200 },   // 24 × 200 = 4 800
+          drainage: { enabled: true, pricePerMeter: 500, runningMeters: 20 },
+          lighting: { enabled: true, pricePerMeter: 200, runningMeters: 12 },
+        },
+        {
+          plan: null,
+          shape: { type: 'rectangle', width: 3, length: 6 },
+          pricePerSqm: 750,
+        },
+      ],
+      vatPercent: 18,
+      discountPercent: 0,
+    }
+
+    const calc = calculateOffer(draft)
+
+    // Santaf price = covered area × rate, no sheet overlap
+    // 24 × 200 = 4 800; 18000+4800+10000+2400+13500 = 48 700
+    expect(calc.pergolaTotal).toBe(31500)   // 18 000 + 13 500
+    expect(calc.santafTotal).toBe(4800)     // 24 × 200
+    expect(calc.drainageTotal).toBe(10000)  // 20 × 500
+    expect(calc.lightingTotal).toBe(2400)   // 12 × 200
+    expect(calc.totalBeforeVat).toBe(48700)
+    expect(calc.vatAmount).toBeCloseTo(8766, 0)    // 48700 × 18%
+    expect(calc.priceWithVat).toBeCloseTo(57466, 0) // 48700 × 1.18
+
+    // PDF row sum = totalBeforeVat
+    const offer: Offer = {
+      ...draft, ...calc,
+      id: 'per-pergola-test', offerNumber: '2026-TEST',
+      termsSnapshot: buildCurrentOfferTermsSnapshot(),
+      pergolas: draft.pergolas, pdf: {},
+      createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
+    }
+    const dict = pdfT.he
+    const rows = collectOfferPdfLineRows(offer, dict)
+    // 5 rows: pg1 (18000), santaf-pg1 (4800), drainage-pg1 (10000), led-pg1 (2400), pg2 (13500)
+    expect(rows).toHaveLength(5)
+    const printed = sumPdfLineTotals(rows.map(r => r.lineTotal))
+    // Invariant: printed rows = totalBeforeVat
+    expect(printed).toBe(48700)
+
+    // Row labels contain pergola reference
+    const descriptions = rows.map(r => r.description)
+    expect(descriptions.some(d => d.includes('פרגולה 1') || d.includes('פרגולה #1'))).toBe(true)
+  })
+
+  it('point-6a: 4×6 m pergola + per-pergola santaf → 24 × 200 = 4 800', () => {
+    const draft: OfferDraft = {
+      ...DEFAULT_OFFER_VALUES,
+      dealId: '', customerName: 'Test', quickProduct: 'pergola',
+      includePergola: true, includeRailings: false, includeFence: false,
+      pergolas: [{
+        plan: null,
+        shape: { type: 'rectangle', width: 4, length: 6 },
+        pricePerSqm: 750,
+        santaf: { enabled: true, pricePerSqm: 200 },
+      }],
+      vatPercent: 18, discountPercent: 0,
+    }
+    const calc = calculateOffer(draft)
+    expect(calc.santafTotal).toBe(4800)   // 24 × 200
+    expect(calc.totalBeforeVat).toBe(22800) // 18000 + 4800
+  })
+
+  it('point-6b: standalone santaf 4×6 on client pergola → 24 × 450 = 10 800', () => {
+    const draft: OfferDraft = {
+      ...DEFAULT_OFFER_VALUES,
+      dealId: '', customerName: 'Test', quickProduct: 'pergola',
+      includePergola: false, includeRailings: false, includeFence: false,
+      santaf: {
+        enabled: true,
+        withStructure: true,         // true = standalone / client pergola = 450
+        pricePerSqmBasic: 200,
+        pricePerSqmWithStructure: 450,
+        width: 4, length: 6,
+        overlapType: 'double',
+      },
+      vatPercent: 18, discountPercent: 0,
+    }
+    const calc = calculateOffer(draft)
+    expect(calc.santafTotal).toBe(10800)  // 24 × 450
+  })
+
+  it('fence 10m × 180cm × 350/m² + standard gate with decorative handle = 10 100', () => {
+    // Fence: 10 × (180/100) × 350 = 18 m² × 350 = 6 300
+    // Gate:  110 × 180 standard (≤120×180) → 3 500 + decorative 300 = 3 800
+    // Total before VAT: 6 300 + 3 800 = 10 100
+    const draft: OfferDraft = {
+      ...DEFAULT_OFFER_VALUES,
+      dealId: '',
+      customerName: 'Gate Test',
+      quickProduct: 'fence',
+      includePergola: false,
+      includeRailings: false,
+      includeFence: true,
+      quickFences: [
+        {
+          metersTotal: 10,
+          heightCm: 180,
+          fenceVariant: 'classic',
+          color: 'שחור',
+          pricePerSqm: 350,
+          gates: [
+            {
+              widthCm: 110,
+              heightCm: 180,
+              decorativeHandle: true,
+              pricePerUnit: 3500,
+              nonStandard: false,
+            },
+          ],
+        },
+      ],
+      vatPercent: 18,
+      discountPercent: 0,
+    }
+
+    const calc = calculateOffer(draft)
+
+    // Fence area: 10 × 1.80 = 18 m²
+    expect(calc.fenceLineTotal).toBe(6300)
+    // Gate: 3500 + 300 = 3800
+    expect(calc.fenceGateTotal).toBe(3800)
+    expect(calc.fenceGateLineTotals).toEqual([[3800]])
+    expect(calc.totalBeforeVat).toBe(10100)
+  })
+
+  it('non-standard gate (width 130) fails validation', () => {
+    const err = require('@/lib/quick-offer-product-validation').validateQuickFence({
+      quickFences: [{
+        metersTotal: 5, heightCm: 160, fenceVariant: 'classic', color: 'לבן', pricePerSqm: 350,
+        gates: [{ widthCm: 130, heightCm: 160, decorativeHandle: false, pricePerUnit: undefined, nonStandard: true }],
+      }],
+    })
+    expect(err).toContain('מידה לא סטנדרטית')
+  })
+
   it('rejects PDF when stored total_before_vat disagrees with printed lines', async () => {
     const draft = threeProductDraft()
     const calc = calculateOffer(draft)

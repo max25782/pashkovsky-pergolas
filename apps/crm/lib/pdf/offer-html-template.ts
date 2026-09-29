@@ -1,5 +1,6 @@
 import type { Offer } from '@/types/offer'
 import { quickOfferRailingsFenceAreaSqm } from '@/lib/offer-calculator'
+// (suntuf-sheets removed — pricing uses covered area × rate; sheet calc is for cut list only)
 import { resolvePdfQuickOfferIncludes, resolveQuickFencesFromDraft } from '@/lib/quick-offer-includes'
 import { rectanglePlanSvgFragment } from '@/lib/pdf/plan-view-svg'
 import { generateDrawingsFromPlan, generateOfferDrawings } from '@/lib/pdf/polygon-plan-drawing.server'
@@ -157,6 +158,15 @@ export function collectOfferPdfLineRows(offer: Offer, dict: PdfDict): LineRow[] 
   const qExtra = offer.quickOfferExtra
 
   const pergolas = offer.pergolas || (offer.pergola ? [offer.pergola] : [])
+
+  // Pre-compute hasPerPergolaAddons here so the main pergola loop can attach
+  // addon rows (santaf / drainage / lighting) immediately after each pergola line.
+  const hasPerPergolaAddons =
+    inc.pergola &&
+    pergolas.some(
+      (p) => p !== undefined && (p.santaf !== undefined || p.drainage !== undefined || p.lighting !== undefined),
+    )
+
   if (inc.pergola) {
     if (pergolas.length > 0) {
       for (let i = 0; i < pergolas.length; i++) {
@@ -171,6 +181,58 @@ export function collectOfferPdfLineRows(offer: Offer, dict: PdfDict): LineRow[] 
           unitPrice: pg.pricePerSqm,
           lineTotal: lineAmountFromBillableArea(pgArea, pg.pricePerSqm),
         })
+
+        // ── Per-pergola addon rows immediately after this pergola's line ──────
+        if (hasPerPergolaAddons) {
+          const pergolaLabel = pergolas.length > 1 ? ` — פרגולה ${i + 1}` : ''
+
+          // Santaf per pergola — price = covered area × rate (no sheet overlap in pricing)
+          const ps = pg.santaf
+          if (ps?.enabled && pgArea > 0) {
+            const lineTotal = Math.round(pgArea * ps.pricePerSqm * 100) / 100
+            if (lineTotal > 0) {
+              rows.push({
+                description: `${dict.off_santaf_bh}${pergolaLabel}`,
+                unitLabel: dict.off_unit_sqm,
+                quantity: Math.round(pgArea * 100) / 100,
+                unitPrice: ps.pricePerSqm,
+                lineTotal,
+              })
+            }
+          }
+
+          // Drainage (מרזב)
+          const pd = pg.drainage
+          if (pd?.enabled && (pd.runningMeters ?? 0) > 0) {
+            const m = pd.runningMeters!
+            const lineTotal = Math.round(m * pd.pricePerMeter * 100) / 100
+            if (lineTotal > 0) {
+              rows.push({
+                description: `${dict.off_drainage}${pergolaLabel}`,
+                unitLabel: dict.off_unit_rm,
+                quantity: Math.round(m * 100) / 100,
+                unitPrice: pd.pricePerMeter,
+                lineTotal,
+              })
+            }
+          }
+
+          // LED lighting
+          const pl = pg.lighting
+          if (pl?.enabled && (pl.runningMeters ?? 0) > 0) {
+            const m = pl.runningMeters!
+            const lineTotal = Math.round(m * pl.pricePerMeter * 100) / 100
+            if (lineTotal > 0) {
+              rows.push({
+                description: `${dict.off_led_light}${pergolaLabel}`,
+                unitLabel: dict.off_unit_rm,
+                quantity: Math.round(m * 100) / 100,
+                unitPrice: pl.pricePerMeter,
+                lineTotal,
+              })
+            }
+          }
+        }
       }
     } else if (offer.pergolaTotal != null && offer.pergolaTotal > 0) {
       const up = offer.pergolaTotal / area
@@ -272,18 +334,47 @@ export function collectOfferPdfLineRows(offer: Offer, dict: PdfDict): LineRow[] 
           lineTotal,
         })
       }
+
+      // ── Gate rows for this fence section ─────────────────────────────────
+      const gates = qf.gates ?? []
+      gates.forEach((gate, gateIdx) => {
+        const precomputed = qExtra?.fenceGateLineTotals?.[idx]?.[gateIdx]
+        const gateTotal = precomputed ?? (
+          (gate.pricePerUnit ?? 0) + (gate.decorativeHandle ? 300 : 0)
+        )
+        if (gateTotal <= 0) return
+
+        const descParts: (string | null)[] = [dict.off_gate_pedestrian]
+        if (gate.decorativeHandle) descParts.push(dict.off_gate_decorative_handle)
+        if (gate.nonStandard) descParts.push(`${dict.off_gate_non_standard} ${gate.widthCm}×${gate.heightCm} ס"מ`)
+
+        rows.push({
+          description: joinDescriptionParts(...descParts),
+          unitLabel: dict.off_unit_pcs,
+          quantity: 1,
+          unitPrice: gateTotal,
+          lineTotal: gateTotal,
+        })
+      })
     })
   }
 
-  if (offer.santaf?.enabled && offer.santafTotal > 0) {
-    const up = offer.santafTotal / area
-    rows.push({
-      description: offer.santaf.withStructure ? dict.off_santaf_with_struct : dict.off_santaf_bh,
-      unitLabel: dict.off_unit_sqm,
-      quantity: Math.round(area * 100) / 100,
-      unitPrice: Math.round(up * 100) / 100,
-      lineTotal: offer.santafTotal,
-    })
+  // ── Santaf / drainage / lighting ────────────────────────────────────────────
+  // Per-pergola rows are already inserted inside the main pergola loop above
+  // (immediately after each pergola's line), so they appear in the correct order.
+  // Only the legacy offer-level santaf row needs to be added here.
+  if (!hasPerPergolaAddons) {
+    // Legacy offer-level santaf row
+    if (offer.santaf?.enabled && offer.santafTotal > 0) {
+      const up = offer.santafTotal / area
+      rows.push({
+        description: offer.santaf.withStructure ? dict.off_santaf_with_struct : dict.off_santaf_bh,
+        unitLabel: dict.off_unit_sqm,
+        quantity: Math.round(area * 100) / 100,
+        unitPrice: Math.round(up * 100) / 100,
+        lineTotal: offer.santafTotal,
+      })
+    }
   }
 
   if (offer.zipScreenTotal > 0) {
@@ -304,30 +395,33 @@ export function collectOfferPdfLineRows(offer: Offer, dict: PdfDict): LineRow[] 
     })
   }
 
-  if (offer.lightingTotal > 0) {
-    const rm = offer.lighting?.runningMeters
-    const ppm = offer.lighting?.pricePerMeter ?? 200
-    const qty = rm != null && rm > 0 ? rm : offer.lightingTotal / ppm
-    rows.push({
-      description: dict.off_led_light,
-      unitLabel: dict.off_unit_rm,
-      quantity: Math.round(qty * 100) / 100,
-      unitPrice: ppm,
-      lineTotal: offer.lightingTotal,
-    })
-  }
+  // Legacy offer-level lighting/drainage rows (only when NOT per-pergola mode)
+  if (!hasPerPergolaAddons) {
+    if (offer.lightingTotal > 0) {
+      const rm = offer.lighting?.runningMeters
+      const ppm = offer.lighting?.pricePerMeter ?? 200
+      const qty = rm != null && rm > 0 ? rm : offer.lightingTotal / ppm
+      rows.push({
+        description: dict.off_led_light,
+        unitLabel: dict.off_unit_rm,
+        quantity: Math.round(qty * 100) / 100,
+        unitPrice: ppm,
+        lineTotal: offer.lightingTotal,
+      })
+    }
 
-  if (offer.drainageTotal > 0) {
-    const rm = offer.drainage?.runningMeters
-    const ppm = offer.drainage?.pricePerMeter ?? 500
-    const qty = rm != null && rm > 0 ? rm : offer.drainageTotal / ppm
-    rows.push({
-      description: dict.off_drainage,
-      unitLabel: dict.off_unit_rm,
-      quantity: Math.round(qty * 100) / 100,
-      unitPrice: ppm,
-      lineTotal: offer.drainageTotal,
-    })
+    if (offer.drainageTotal > 0) {
+      const rm = offer.drainage?.runningMeters
+      const ppm = offer.drainage?.pricePerMeter ?? 500
+      const qty = rm != null && rm > 0 ? rm : offer.drainageTotal / ppm
+      rows.push({
+        description: dict.off_drainage,
+        unitLabel: dict.off_unit_rm,
+        quantity: Math.round(qty * 100) / 100,
+        unitPrice: ppm,
+        lineTotal: offer.drainageTotal,
+      })
+    }
   }
 
   if (offer.winterClosure?.enabled && offer.winterClosure.items?.length) {
@@ -363,12 +457,31 @@ export function collectOfferPdfLineRows(offer: Offer, dict: PdfDict): LineRow[] 
   return rows
 }
 
+/** Addon rows (santaf / drainage / lighting) for one pergola in the tech spec. */
+function formatPergolaAddonsSpecHtml(pergola: import('@/types/offer').Pergola, dict: PdfDict): string {
+  const rows: string[] = []
+  const ps = pergola.santaf
+  if (ps?.enabled) {
+    rows.push(`<tr><td>${dict.off_santaf_bh}</td><td>${ps.pricePerSqm} ₪/${dict.off_unit_sqm}</td></tr>`)
+  }
+  const pd = pergola.drainage
+  if (pd?.enabled && (pd.runningMeters ?? 0) > 0) {
+    rows.push(`<tr><td>${dict.off_drainage}</td><td>${pd.runningMeters} ${dict.off_unit_rm}</td></tr>`)
+  }
+  const pl = pergola.lighting
+  if (pl?.enabled && (pl.runningMeters ?? 0) > 0) {
+    rows.push(`<tr><td>${dict.off_led_light}</td><td>${pl.runningMeters} ${dict.off_unit_rm}</td></tr>`)
+  }
+  return rows.join('')
+}
+
 function formatPolygonSpecHtml(
   polygon: Array<{ x: number; y: number }>,
   dict: PdfDict,
   index?: number,
   location?: string,
   includeTotalAreaRow = true,
+  pergola?: import('@/types/offer').Pergola,
 ): string {
   if (polygon.length < 3) return ''
   const headingText =
@@ -383,16 +496,17 @@ function formatPolygonSpecHtml(
   const locationRow = location?.trim()
     ? `<tr><td>${dict.off_location}</td><td>${escapeHtml(location.trim())}</td></tr>`
     : ''
-
   const areaRow = includeTotalAreaRow
     ? `<tr><td>${dict.off_area_total}</td><td>${areaSqm.toFixed(2)} ${dict.off_unit_sqm_dot}</td></tr>`
     : ''
+  const addonRows = pergola ? formatPergolaAddonsSpecHtml(pergola, dict) : ''
   return (
     prefix +
     `<tr><td>${dict.off_shape}</td><td>${dict.off_shape_from_drawing}</td></tr>
      ${dimsRow}
      ${areaRow}
-     ${locationRow}`
+     ${locationRow}
+     ${addonRows}`
   )
 }
 
@@ -445,7 +559,8 @@ function formatSinglePergolaDimensionsHtml(pergola: Offer['pergola'], dict: PdfD
         prefix +
         `<tr><td>${dict.off_shape}</td><td>${dict.off_shape_rect}</td></tr>
          <tr><td>${dict.off_dim_w_l}</td><td>${shape.width} × ${shape.length} ${m}</td></tr>` +
-        locationRow
+        locationRow +
+        formatPergolaAddonsSpecHtml(pergola, dict)
       )
     case 'L':
       return (
@@ -478,7 +593,7 @@ function formatSinglePergolaDimensionsHtml(pergola: Offer['pergola'], dict: PdfD
         locationRow
       )
     default:
-      return prefix + locationRow
+      return prefix + locationRow + (pergola ? formatPergolaAddonsSpecHtml(pergola, dict) : '')
   }
 }
 
@@ -569,6 +684,7 @@ function formatAllPergolasTechnicalHtml(offer: Offer, dict: PdfDict): string {
                 idx,
                 p.location,
                 includePerPergolaTotalArea,
+                p,  // pass pergola for addon rows
               )
             }
             return formatSinglePergolaDimensionsHtml(p, dict, idx)

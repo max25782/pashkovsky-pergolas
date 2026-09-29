@@ -217,6 +217,8 @@
     "fieldManualPrice": "Ручная цена (₽/м²)",
     "fieldElectricPrice": "Электрическая цена (₽/м²)",
     "fieldRunningMeters": "Погонные метры",
+    "perimeterHintDrainage": "Периметр: {perimeter} м · Длинная сторона: {longest} м",
+    "perimeterHintLighting": "Периметр: {perimeter} м · Длинная сторона: {longest} м",
     "includeLighting": "Включить освещение",
     "fieldPricePerMeter": "Цена за метр (₽)",
     "includeDrainage": "Включить дренаж",

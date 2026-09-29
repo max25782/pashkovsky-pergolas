@@ -99,6 +99,29 @@ export function normalizePergola(raw: unknown): Pergola {
   const height =
     heightRaw !== undefined && Number.isFinite(heightRaw) && heightRaw > 0 ? heightRaw : undefined
 
+  // ── Per-pergola addon fields ──────────────────────────────────────────────
+  // These must be preserved — losing them causes the PDF to silently fall back
+  // to offer-level defaults, giving wrong prices on saved offers.
+  const santafRaw = o.santaf && typeof o.santaf === 'object' ? (o.santaf as Record<string, unknown>) : null
+  const santaf = santafRaw != null ? {
+    enabled: Boolean(santafRaw.enabled),
+    pricePerSqm: Number(santafRaw.pricePerSqm) || 200,
+  } : undefined
+
+  const drainageRaw = o.drainage && typeof o.drainage === 'object' ? (o.drainage as Record<string, unknown>) : null
+  const drainage = drainageRaw != null ? {
+    enabled: Boolean(drainageRaw.enabled),
+    pricePerMeter: Number(drainageRaw.pricePerMeter) || 500,
+    runningMeters: drainageRaw.runningMeters != null ? Number(drainageRaw.runningMeters) : undefined,
+  } : undefined
+
+  const lightingRaw = o.lighting && typeof o.lighting === 'object' ? (o.lighting as Record<string, unknown>) : null
+  const lighting = lightingRaw != null ? {
+    enabled: Boolean(lightingRaw.enabled),
+    pricePerMeter: Number(lightingRaw.pricePerMeter) || 200,
+    runningMeters: lightingRaw.runningMeters != null ? Number(lightingRaw.runningMeters) : undefined,
+  } : undefined
+
   return {
     plan: parsePergolaPlan(o.plan),
     shape: normalizeShape(o.shape),
@@ -108,6 +131,9 @@ export function normalizePergola(raw: unknown): Pergola {
     pricePerSqm,
     width: o.width != null && Number.isFinite(Number(o.width)) ? Number(o.width) : undefined,
     length: o.length != null && Number.isFinite(Number(o.length)) ? Number(o.length) : undefined,
+    santaf,
+    drainage,
+    lighting,
   }
 }
 

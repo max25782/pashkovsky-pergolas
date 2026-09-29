@@ -181,6 +181,8 @@ export async function POST(req: NextRequest) {
     railingsLineTotal: serverCalc.railingsLineTotal,
     fenceLineTotal: serverCalc.fenceLineTotal,
     fenceLineTotals: serverCalc.fenceLineTotals,
+    fenceGateLineTotals: serverCalc.fenceGateLineTotals,
+    fenceGateTotal: serverCalc.fenceGateTotal,
   })
 
   let offerNumber: string

@@ -55,7 +55,7 @@ export function usesQuickOfferIncludeFlags(draft: Partial<OfferDraft>): boolean 
 
 export function buildQuickOfferExtra(
   draft: Partial<OfferDraft>,
-  calc?: Pick<OfferCalculation, 'railingsLineTotal' | 'fenceLineTotal' | 'fenceLineTotals'>,
+  calc?: Pick<OfferCalculation, 'railingsLineTotal' | 'fenceLineTotal' | 'fenceLineTotals' | 'fenceGateLineTotals' | 'fenceGateTotal'>,
 ): QuickOfferExtraPersisted | null {
   const inc = resolveQuickOfferIncludes(draft)
   const hasNewFlags = usesQuickOfferIncludeFlags(draft)
@@ -84,6 +84,12 @@ export function buildQuickOfferExtra(
   }
   if (calc?.fenceLineTotals && calc.fenceLineTotals.length > 0) {
     extra.fenceLineTotals = calc.fenceLineTotals
+  }
+  if (calc?.fenceGateLineTotals && calc.fenceGateLineTotals.length > 0) {
+    extra.fenceGateLineTotals = calc.fenceGateLineTotals
+  }
+  if (calc?.fenceGateTotal != null && calc.fenceGateTotal > 0) {
+    extra.fenceGateTotal = calc.fenceGateTotal
   }
   return extra
 }

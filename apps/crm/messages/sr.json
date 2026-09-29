@@ -217,6 +217,8 @@
     "fieldManualPrice": "Ručna cena (RSD/m²)",
     "fieldElectricPrice": "Električna cena (RSD/m²)",
     "fieldRunningMeters": "Tekući metri",
+    "perimeterHintDrainage": "Obim: {perimeter} m · Najduža strana: {longest} m",
+    "perimeterHintLighting": "Obim: {perimeter} m · Najduža strana: {longest} m",
     "includeLighting": "Uključi osvetljenje",
     "fieldPricePerMeter": "Cena po metru (RSD)",
     "includeDrainage": "Uključi odvodnjavanje",
