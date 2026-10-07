@@ -457,12 +457,16 @@ export function collectOfferPdfLineRows(offer: Offer, dict: PdfDict): LineRow[] 
   return rows
 }
 
-/** Addon rows (santaf / drainage / lighting) for one pergola in the tech spec. */
+/** Addon rows (santaf / drainage / lighting) for one pergola in the tech spec.
+ *  Each row shows quantity only — price belongs in the price table. */
 function formatPergolaAddonsSpecHtml(pergola: import('@/types/offer').Pergola, dict: PdfDict): string {
   const rows: string[] = []
   const ps = pergola.santaf
   if (ps?.enabled) {
-    rows.push(`<tr><td>${dict.off_santaf_bh}</td><td>${ps.pricePerSqm} ₪/${dict.off_unit_sqm}</td></tr>`)
+    // Santaf area = same covered area used for pricing
+    const area = pergolaAreaSqm(pergola)
+    const areaStr = area !== null ? `${area.toFixed(2)} ${dict.off_unit_sqm}` : `— ${dict.off_unit_sqm}`
+    rows.push(`<tr><td>${dict.off_santaf_bh}</td><td>${areaStr}</td></tr>`)
   }
   const pd = pergola.drainage
   if (pd?.enabled && (pd.runningMeters ?? 0) > 0) {

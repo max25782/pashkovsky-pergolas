@@ -74,6 +74,39 @@ function uiLanguageToAiDefault(lang: Language): OfferAiOutputLanguage {
   return 'en'
 }
 
+interface PriceSummaryRow {
+  label: string
+  value: number
+}
+
+// Gate prices are part of "before VAT" but not of the fence line, so the
+// summary needs its own rows: one per gate, plus a subtotal when there are
+// several (the label contains סה״כ, which the live summary renders as a subtotal).
+function buildGateSummaryRows(
+  gateLineTotals: number[][] | undefined,
+  gatesLabel: string
+): PriceSummaryRow[] {
+  const sections = gateLineTotals ?? []
+  const gates = sections.flatMap((section, sectionIdx) =>
+    section.map((value, gateIdx) => ({ value, gateIdx, sectionIdx }))
+  )
+  const priced = gates.filter((g) => g.value > 0)
+  if (priced.length === 0) return []
+
+  const rows = priced.map((g): PriceSummaryRow => {
+    const gateName = priced.length > 1 ? `שער ${g.gateIdx + 1}` : 'שער'
+    const sectionSuffix = sections.length > 1 ? ` (גדר ${g.sectionIdx + 1})` : ''
+    return { label: `${gateName}${sectionSuffix}`, value: g.value }
+  })
+  if (priced.length > 1) {
+    rows.push({
+      label: `${gatesLabel} סה״כ`,
+      value: priced.reduce((sum, g) => sum + g.value, 0),
+    })
+  }
+  return rows
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Step = 'form' | 'result'
@@ -618,6 +651,7 @@ function ResultScreen({
         label: tDeals('workTypes.fence'),
         value: calculation.fenceLineTotal,
       },
+    ...buildGateSummaryRows(calculation.fenceGateLineTotals, tDeals('workTypes.gates')),
     calculation.santafTotal > 0 && { label: t('labelSantaf'), value: calculation.santafTotal },
     calculation.zipScreenTotal > 0 && { label: t('labelZipScreen'), value: calculation.zipScreenTotal },
     calculation.lightingTotal > 0 && { label: t('labelLighting'), value: calculation.lightingTotal },
@@ -2793,6 +2827,7 @@ export default function QuickOfferPage() {
                 if (calculation.winterClosureTotal > 0) rows.push({ label: t('labelWinterClosure'), value: calculation.winterClosureTotal })
                 if (calculation.railingsLineTotal != null && calculation.railingsLineTotal > 0) rows.push({ label: tDeals('workTypes.railings'), value: calculation.railingsLineTotal })
                 if (calculation.fenceLineTotal != null && calculation.fenceLineTotal > 0) rows.push({ label: tDeals('workTypes.fence'), value: calculation.fenceLineTotal })
+                rows.push(...buildGateSummaryRows(calculation.fenceGateLineTotals, tDeals('workTypes.gates')))
                 if (rows.length === 0) return null
                 return (
                   <div className="space-y-1 border-b border-white/10 pb-2">
