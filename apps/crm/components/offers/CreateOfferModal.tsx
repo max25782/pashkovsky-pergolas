@@ -23,6 +23,7 @@ import {
   primaryQuickProduct,
   resolveQuickOfferIncludes,
 } from '@/lib/quick-offer-includes'
+import { fenceVariantChangePatch } from '@/lib/quick-offer-fence-defaults'
 import { usePriceFormatter } from '@/lib/use-price-formatter'
 import { PergolaShapeSelector } from './PergolaShapeSelector'
 import { calculatePergolaArea } from '@/lib/calculations/pergola-area'
@@ -1090,7 +1091,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
                         <button
                           key={v}
                           type="button"
-                          onClick={() => patchQuickFenceAt(fenceIdx, { fenceVariant: v as QuickOfferFenceVariant })}
+                          onClick={() => patchQuickFenceAt(fenceIdx, fenceVariantChangePatch(fence, v as QuickOfferFenceVariant))}
                           className={`px-3 py-1 rounded text-sm border ${
                             fence.fenceVariant === v
                               ? 'bg-blue-600 border-blue-500 text-white'
@@ -1101,6 +1102,17 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
                         </button>
                       ))}
                     </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-white/80 mb-1">מרחק בין הרצועות (ס״מ)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.5}
+                      value={fence.slatGapCm ?? ''}
+                      onChange={(e) => patchQuickFenceAt(fenceIdx, { slatGapCm: e.target.value === '' ? undefined : Number(e.target.value) })}
+                      className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white"
+                    />
                   </div>
                   <div>
                     <label className="block text-sm text-white/80 mb-1">{tDeals('color')}</label>

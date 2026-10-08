@@ -213,6 +213,19 @@ export type QuickOfferGlazingSystem = 'aluminum_glass' | 'wet_glazing' | 'dry_gl
 
 export type QuickOfferFenceVariant = 'classic' | 'hitech' | 'hitech_angular'
 
+/**
+ * Starting price (₪/m²) and slat gap (cm) per fence type. These are only
+ * defaults: both stay editable per fence section in the quick-offer form.
+ */
+export const FENCE_VARIANT_DEFAULTS: Record<
+  QuickOfferFenceVariant,
+  { pricePerSqm: number; slatGapCm: number }
+> = {
+  classic: { pricePerSqm: 750, slatGapCm: 1 },
+  hitech: { pricePerSqm: 900, slatGapCm: 2 },
+  hitech_angular: { pricePerSqm: 1200, slatGapCm: 2 },
+}
+
 // ─── Fence gate (pedestrian) ──────────────────────────────────────────────────
 
 /** Pricing constants for pedestrian gates inside fence sections. */
@@ -264,6 +277,8 @@ export interface QuickOfferFenceDraft {
   notes?: string
   /** ₪/m² — same area rule as railings */
   pricePerSqm: number
+  /** Gap between slats, cm. Informational (shown in the offer spec); does not affect price. */
+  slatGapCm?: number
   /** Pedestrian gates in this fence section. Color and fenceVariant are inherited from the section. */
   gates?: FenceGate[]
 }
@@ -548,7 +563,8 @@ export const DEFAULT_OFFER_VALUES = {
     fenceVariant: 'classic' as QuickOfferFenceVariant,
     color: '',
     notes: '',
-    pricePerSqm: 350,
+    pricePerSqm: FENCE_VARIANT_DEFAULTS.classic.pricePerSqm,
+    slatGapCm: FENCE_VARIANT_DEFAULTS.classic.slatGapCm,
   },
   discountPercent: 0,
   vatPercent: 18, // Changed from 17% to 18%

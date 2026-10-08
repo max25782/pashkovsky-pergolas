@@ -652,6 +652,7 @@ function fenceTechnicalHtml(
     <tr><td>${dict.off_height}</td><td>${qf.heightCm != null ? escapeHtml(String(qf.heightCm)) : dash} ${dict.off_cm}</td></tr>
     <tr><td>${dict.off_est_area}</td><td>${sqm.toFixed(2)} ${dict.off_unit_sqm_dot}</td></tr>
     <tr><td>${dict.off_fence_type}</td><td>${escapeHtml(fenceLabels[qf.fenceVariant] ?? qf.fenceVariant)}</td></tr>
+    ${qf.slatGapCm != null && qf.slatGapCm > 0 ? `<tr><td>${dict.off_fence_gap}</td><td>${escapeHtml(String(qf.slatGapCm))} ${dict.off_cm}</td></tr>` : ''}
     <tr><td>${dict.off_color}</td><td>${escapeHtml(qf.color || dash)}</td></tr>
     ${qf.notes ? `<tr><td>${dict.off_notes}</td><td>${escapeHtml(qf.notes)}</td></tr>` : ''}`
     })

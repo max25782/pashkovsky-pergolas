@@ -38,6 +38,7 @@ import {
   primaryQuickProduct,
   resolveQuickOfferIncludes,
 } from '@/lib/quick-offer-includes'
+import { fenceVariantChangePatch } from '@/lib/quick-offer-fence-defaults'
 import { usePriceFormatter } from '@/lib/use-price-formatter'
 import { polygonAreaM2 } from '@pashkovsky/pergola-core'
 import { lineAmountFromBillableArea, roundBillableAreaSqm } from '@/lib/pergolas/pergola-area-sqm'
@@ -2137,13 +2138,23 @@ export default function QuickOfferPage() {
                           <button
                             key={v}
                             type="button"
-                            onClick={() => patchQuickFenceAt(fenceIdx, { fenceVariant: v as QuickOfferFenceVariant })}
+                            onClick={() => patchQuickFenceAt(fenceIdx, fenceVariantChangePatch(fence, v as QuickOfferFenceVariant))}
                             className={toggleCls(fence.fenceVariant === v)}
                           >
                             {tDeals(msgKey)}
                           </button>
                         ))}
                       </div>
+                    </Field>
+                    <Field label={'מרחק בין הרצועות (ס"מ)'}>
+                      <input
+                        type="number"
+                        min={0}
+                        step={0.5}
+                        className={inputCls}
+                        value={fence.slatGapCm ?? ''}
+                        onChange={(e) => patchQuickFenceAt(fenceIdx, { slatGapCm: e.target.value === '' ? undefined : Number(e.target.value) })}
+                      />
                     </Field>
                     <Field label={tDeals('color')}>
                       <input
