@@ -9,6 +9,8 @@ interface KanbanBoardProps {
   paymentsMap?: Record<string, number>
   laborMap?: Record<string, number>
   materialOrdersMap?: Record<string, DealMaterialOrdersSummary>
+  /** Display names keyed by user id (for deals.created_by). */
+  memberNames?: Record<string, string>
   onDragOver: (e: React.DragEvent) => void
   onDrop: (stage: string) => void
   onDealDragStart: (deal: Deal) => void
@@ -20,6 +22,7 @@ export function KanbanBoard({
   paymentsMap = {},
   laborMap = {},
   materialOrdersMap = {},
+  memberNames = {},
   onDragOver,
   onDrop,
   onDealDragStart,
@@ -50,6 +53,7 @@ export function KanbanBoard({
               paymentsMap={paymentsMap}
               laborMap={laborMap}
               materialOrdersMap={materialOrdersMap}
+              memberNames={memberNames}
               onDragOver={onDragOver}
               onDrop={() => onDrop(stage.id)}
               onDealDragStart={onDealDragStart}

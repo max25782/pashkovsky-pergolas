@@ -520,7 +520,13 @@
     "viewModes": {
       "kanban": "קנבן",
       "table": "טבלה"
-    }
+    },
+    "scopeSaved": "עסקאות",
+    "scopeQuickOffers": "הצעות מהירות שלא נשמרו",
+    "quickOfferBadge": "הצעה מהירה",
+    "quickOfferHint": "הצעות מחיר מהירות שטרם נשמרו ב-CRM. כדי להעביר הצעה ללוח, שמור אותה ב-CRM ממסך ההצעה המהירה.",
+    "createdBy": "נוצר על ידי",
+    "createdByUnknown": "לא ידוע"
   },
   "leads": {
     "title": "לידים",

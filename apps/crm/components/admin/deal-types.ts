@@ -85,6 +85,8 @@ export interface Deal {
   updated_at?: string | null
   /** Deal origin, e.g. quick_offer vs quick_offer_saved (CRM board visibility). */
   source?: string | null
+  /** Auth user id of whoever created the deal (set for quick offers). */
+  created_by?: string | null
   // Railings fields (for PATCH payload when work_type is railings)
   meters_total?: number | null
   height_cm?: number | null

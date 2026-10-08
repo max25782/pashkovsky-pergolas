@@ -520,7 +520,13 @@
     "viewModes": {
       "kanban": "Kanban",
       "table": "Tabela"
-    }
+    },
+    "scopeSaved": "Poslovi",
+    "scopeQuickOffers": "Nesačuvane brze ponude",
+    "quickOfferBadge": "Brza ponuda",
+    "quickOfferHint": "Brze ponude koje još nisu sačuvane u CRM-u. Da biste ponudu prebacili na tablu, sačuvajte je u CRM-u sa ekrana brze ponude.",
+    "createdBy": "Kreirao",
+    "createdByUnknown": "nepoznato"
   },
   "leads": {
     "title": "Kontakti",

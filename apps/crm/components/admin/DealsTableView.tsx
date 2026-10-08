@@ -5,6 +5,7 @@ import { useCRMTranslations } from './useCRMTranslations'
 
 interface DealsTableViewProps {
   deals: Deal[]
+  memberNames?: Record<string, string>
   loading: boolean
   onDealClick: (deal: Deal) => void
   onDealDelete: (deal: Deal) => void
@@ -12,6 +13,7 @@ interface DealsTableViewProps {
 
 export function DealsTableView({
   deals,
+  memberNames = {},
   loading,
   onDealClick,
   onDealDelete
@@ -39,6 +41,7 @@ export function DealsTableView({
             <DealTableRow
               key={deal.id}
               deal={deal}
+              createdByName={deal.created_by ? memberNames[deal.created_by] : undefined}
               onClick={() => onDealClick(deal)}
               onDelete={() => onDealDelete(deal)}
             />
@@ -58,10 +61,12 @@ export function DealsTableView({
 
 function DealTableRow({
   deal,
+  createdByName,
   onClick,
   onDelete
 }: {
   deal: Deal
+  createdByName?: string
   onClick: () => void
   onDelete: () => void
 }) {
@@ -70,12 +75,26 @@ function DealTableRow({
   const stage = stages.find(s => s.id === deal.stage)
   return (
     <tr 
-      className="border-t border-white/5 hover:bg-white/5 transition-colors cursor-pointer"
+      className={`border-t transition-colors cursor-pointer ${
+        deal.source === 'quick_offer'
+          ? 'border-sky-400/20 bg-sky-500/10 hover:bg-sky-500/15'
+          : 'border-white/5 hover:bg-white/5'
+      }`}
       onClick={onClick}
     >
       <td className="p-3 whitespace-nowrap text-white/70">{formatDate(deal.created_at)}</td>
       <td className="p-3">
+        {deal.source === 'quick_offer' && (
+          <span className="mb-1 inline-block px-2 py-0.5 rounded bg-sky-400/25 text-sky-100 text-xs font-semibold">
+            ⚡ {t.deals.quickOfferBadge}
+          </span>
+        )}
         <div className="font-medium">{deal.customer_name || '-'}</div>
+        {deal.created_by && (
+          <div className="text-xs text-white/50">
+            {t.deals.createdBy}: {createdByName ?? t.deals.createdByUnknown}
+          </div>
+        )}
         {deal.customer_city && (
           <div className="text-xs text-white/50">{deal.customer_city}</div>
         )}

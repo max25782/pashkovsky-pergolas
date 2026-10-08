@@ -109,6 +109,8 @@ export async function POST(req: NextRequest) {
       project_type: projectType,
       source: 'quick_offer',
       currency: 'ILS',
+      // Who made the offer; shown on the board's "unsaved quick offers" tab.
+      created_by: auth.user.id,
     })
     .select('id')
     .single()

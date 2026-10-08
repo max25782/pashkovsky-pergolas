@@ -237,6 +237,12 @@ export function useCRMTranslations() {
         kanban: deals('viewModes.kanban'),
         table: deals('viewModes.table'),
       },
+      scopeSaved: deals('scopeSaved'),
+      scopeQuickOffers: deals('scopeQuickOffers'),
+      quickOfferBadge: deals('quickOfferBadge'),
+      quickOfferHint: deals('quickOfferHint'),
+      createdBy: deals('createdBy'),
+      createdByUnknown: deals('createdByUnknown'),
     },
     leads: {
       title: leads('title'),

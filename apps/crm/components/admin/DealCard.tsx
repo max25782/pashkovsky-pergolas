@@ -10,6 +10,8 @@ interface DealCardProps {
   laborCost?: number
   /** Sum of material_orders.total_price (non-cancelled), batched on board load. */
   materialOrdersSummary?: DealMaterialOrdersSummary
+  /** Resolved display name for deal.created_by (undefined while unresolved). */
+  createdByName?: string
   onDragStart: () => void
   onClick: () => void
   formatCurrency: (amount: number | null | undefined) => string
@@ -21,6 +23,7 @@ export function DealCard({
   paidToDate,
   laborCost,
   materialOrdersSummary,
+  createdByName,
   onDragStart, 
   onClick,
   formatCurrency,
@@ -38,14 +41,27 @@ export function DealCard({
   const showCostBreakdown =
     deal.price != null || material > 0 || labor > 0 || ordersCount > 0
 
+  // Unsaved quick offers live on their own tab: distinct sky/dashed styling, and they
+  // are not draggable (moving one between stages would not make it a board deal).
+  const isUnsavedQuickOffer = deal.source === 'quick_offer'
+
   return (
     <div
-      draggable
+      draggable={!isUnsavedQuickOffer}
       onDragStart={onDragStart}
       onClick={onClick}
-      className="bg-white/5 border border-white/10 rounded-lg p-4 cursor-move hover:bg-white/10 hover:border-white/20 transition-all shadow-lg hover:shadow-xl"
+      className={`rounded-lg p-4 transition-all shadow-lg hover:shadow-xl ${
+        isUnsavedQuickOffer
+          ? 'cursor-pointer bg-sky-500/10 border border-dashed border-sky-400/50 hover:bg-sky-500/15 hover:border-sky-300/70'
+          : 'cursor-move bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20'
+      }`}
     >
       <div className="space-y-2">
+        {isUnsavedQuickOffer && (
+          <span className="inline-block px-2 py-0.5 rounded bg-sky-400/25 text-sky-100 text-xs font-semibold">
+            ⚡ {t.deals.quickOfferBadge}
+          </span>
+        )}
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <h4 className="font-semibold text-white mb-1">
@@ -134,6 +150,12 @@ export function DealCard({
           </div>
         )}
         
+        {deal.created_by && (
+          <div className="text-xs text-white/50">
+            ✍️ {t.deals.createdBy}: {createdByName ?? t.deals.createdByUnknown}
+          </div>
+        )}
+
         <div className="text-xs text-white/40 pt-1">
           {formatDate(deal.created_at)}
         </div>

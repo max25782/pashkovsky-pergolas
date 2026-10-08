@@ -2,7 +2,11 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Deal } from '../deal-types'
 
+/** 'board' = saved deals (default); 'quick' = unsaved quick offers (source='quick_offer'). */
+export type DealsScope = 'board' | 'quick'
+
 interface UseDealsParams {
+  scope?: DealsScope
   searchQuery?: string
   stageFilter?: string
   projectTypeFilter?: string
@@ -22,6 +26,7 @@ async function getCompanyId(): Promise<string | null> {
 }
 
 export function useDeals({
+  scope = 'board',
   searchQuery = '',
   stageFilter = '',
   projectTypeFilter = '',
@@ -30,6 +35,8 @@ export function useDeals({
 }: UseDealsParams = {}) {
   const [deals, setDeals] = useState<Deal[]>([])
   const [totalCount, setTotalCount] = useState<number | null>(null)
+  // How many unsaved quick offers exist (badge on the "quick offers" tab).
+  const [quickOfferCount, setQuickOfferCount] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -48,14 +55,29 @@ export function useDeals({
       }
       
       // Start with base query (include deal_railings_details for railings work type)
-      // Exclude unsaved quick offers — they become visible only after save-to-crm sets source='quick_offer_saved'.
-      // Must use .or() because .neq() also excludes rows where source IS NULL.
-      let query = supabase
+      // The main board excludes unsaved quick offers — they join it once save-to-crm sets
+      // source='quick_offer_saved'. Must use .or() because .neq() also excludes rows where
+      // source IS NULL. The 'quick' scope shows exactly those hidden quick offers instead.
+      const base = supabase
         .from('deals')
         .select('*, deal_railings_details(*)', { count: 'exact' })
         .eq('company_id', companyId)
-        .or('source.is.null,source.neq.quick_offer')
-        .order('created_at', { ascending: false })
+      let query = (
+        scope === 'quick'
+          ? base.eq('source', 'quick_offer')
+          : base.or('source.is.null,source.neq.quick_offer')
+      ).order('created_at', { ascending: false })
+
+      const { count: hiddenCount, error: hiddenError } = await supabase
+        .from('deals')
+        .select('id', { count: 'exact', head: true })
+        .eq('company_id', companyId)
+        .eq('source', 'quick_offer')
+      if (hiddenError) {
+        console.error('[useDeals] Quick offer count error:', hiddenError.message)
+      } else {
+        setQuickOfferCount(hiddenCount ?? 0)
+      }
       
       // Apply filters
       if (stageFilter) {
@@ -96,11 +118,12 @@ export function useDeals({
 
   useEffect(() => {
     load()
-  }, [searchQuery, stageFilter, projectTypeFilter, page, limit])
+  }, [scope, searchQuery, stageFilter, projectTypeFilter, page, limit])
 
   return {
     deals,
     totalCount,
+    quickOfferCount,
     loading,
     error,
     reload: load

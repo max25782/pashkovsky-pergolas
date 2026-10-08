@@ -520,7 +520,13 @@
     "viewModes": {
       "kanban": "Kanban",
       "table": "Table"
-    }
+    },
+    "scopeSaved": "Deals",
+    "scopeQuickOffers": "Unsaved quick offers",
+    "quickOfferBadge": "Quick offer",
+    "quickOfferHint": "Quick offers that have not been saved to the CRM yet. To move one onto the board, save it to the CRM from the quick offer screen.",
+    "createdBy": "Created by",
+    "createdByUnknown": "unknown"
   },
   "leads": {
     "title": "Leads",
