@@ -5,6 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
 import type { CompanyMember } from '@/types/membership'
@@ -31,11 +32,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No company found' }, { status: 404 })
     }
 
-    // Check if user has permission to edit company settings
-    const canEdit = 
-      membership.role === 'owner' ||
-      membership.role === 'admin' ||
-      membership.permissions?.settings === true
+    // Only owner/admin of the session user's own company may change the logo.
+    // company_id comes from the verified session membership, never from the request.
+    const canEdit = membership.role === 'owner' || membership.role === 'admin'
 
     if (!canEdit) {
       return NextResponse.json(
@@ -70,6 +69,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Service-role client for the DB write; fail before uploading anything.
+    const supabaseUrl = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!supabaseUrl || !serviceKey) {
+      console.error('[Company Logo Upload] Service role not configured')
+      return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
+    }
+    const adminClient = createAdminClient(supabaseUrl, serviceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+
     // Upload to S3
     const s3 = new S3Client({
       region: process.env.AWS_S3_REGION || 'eu-north-1',
@@ -79,7 +89,10 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    const fileExtension = file.name.split('.').pop() || 'png'
+    // The extension is client-controlled: accept only a short alphanumeric one so the
+    // S3 key can never contain path separators or traversal segments.
+    const rawExtension = (file.name.split('.').pop() ?? '').toLowerCase()
+    const fileExtension = /^[a-z0-9]{1,5}$/.test(rawExtension) ? rawExtension : 'png'
     const key = `companies/${membership.company_id}/logo.${fileExtension}`
     const buffer = Buffer.from(await file.arrayBuffer())
 
@@ -93,18 +106,19 @@ export async function POST(request: NextRequest) {
 
     const logoUrl = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_S3_REGION || 'eu-north-1'}.amazonaws.com/${key}`
 
-    // Update logo_url in database
-    const { data: company, error: updateError } = await supabase
+    // Update logo_url with the service role: `companies` has no UPDATE policy for
+    // the user-scoped client. Authorization was established above (owner/admin of
+    // this exact company), so the write is pinned to membership.company_id.
+    const { data: company, error: updateError } = await adminClient
       .from('companies')
-      .update({ 
-        logo_url: logoUrl
-      })
+      .update({ logo_url: logoUrl })
       .eq('id', membership.company_id)
       .select()
       .single()
 
     if (updateError) {
-      return NextResponse.json({ error: updateError.message }, { status: 500 })
+      console.error('[Company Logo Upload] Update failed:', updateError)
+      return NextResponse.json({ error: 'Failed to save logo' }, { status: 500 })
     }
 
     return NextResponse.json({ 
