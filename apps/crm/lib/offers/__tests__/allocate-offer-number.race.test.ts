@@ -1,16 +1,19 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { allocateOfferNumber } from '@/lib/offers/allocate-offer-number'
+import { readIntegrationEnv, SKIP_MESSAGE_SUPABASE } from '../../../tests/helpers/integration-guard'
 
-const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL
-const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+// Throws before any network call when the configured URL is not local.
+const env = readIntegrationEnv()
+const describeIfLocalSupabase = env ? describe : describe.skip
+if (!env) console.warn(`[allocate-offer-number.race] ${SKIP_MESSAGE_SUPABASE}`)
 
-const describeIfSupabase = url && key ? describe : describe.skip
-
-describeIfSupabase('allocateOfferNumber concurrency', () => {
-  const supabase = createClient(url!, key!, { db: { schema: 'public' } })
+describeIfLocalSupabase('allocateOfferNumber concurrency', () => {
+  // describe.skip still runs this callback, so nothing is created until a hook runs.
+  let supabase: SupabaseClient
   let companyId: string
 
   beforeAll(async () => {
+    supabase = createClient(env!.url, env!.serviceKey, { db: { schema: 'public' } })
     const { data, error } = await supabase.from('companies').select('id').limit(1).single()
     if (error || !data) throw new Error('Need at least one company for race test')
     companyId = data.id as string

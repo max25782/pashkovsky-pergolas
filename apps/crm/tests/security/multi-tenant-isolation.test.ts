@@ -9,9 +9,15 @@
  */
 
 import { describe, test, expect, beforeAll } from '@jest/globals'
+import { readTestApiUrl, SKIP_MESSAGE_HTTP } from '../helpers/integration-guard'
 
-// Configuration
-const API_BASE_URL = process.env.TEST_API_URL || 'http://localhost:3000'
+// Configuration. No default address: this suite logs in and writes through a running
+// server, so it only runs when TEST_API_URL is set to a local server (a non-local value
+// throws here, before any request).
+const TEST_API_URL = readTestApiUrl()
+if (TEST_API_URL === null) console.warn(`[multi-tenant-isolation] ${SKIP_MESSAGE_HTTP}`)
+const describeIfLocalServer = TEST_API_URL === null ? describe.skip : describe
+const API_BASE_URL = TEST_API_URL ?? ''
 
 // Test users (you need to create these in your test database)
 const USER_A = {
@@ -77,7 +83,7 @@ async function authenticatedRequest(
   })
 }
 
-describe('Multi-Tenant Security Isolation', () => {
+describeIfLocalServer('Multi-Tenant Security Isolation', () => {
   let userATokens: AuthTokens
   let userBTokens: AuthTokens
 

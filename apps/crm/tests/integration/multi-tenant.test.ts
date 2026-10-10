@@ -5,13 +5,19 @@
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals'
 import { createClient } from '@supabase/supabase-js'
+import { readIntegrationEnv, SKIP_MESSAGE_SUPABASE } from '../helpers/integration-guard'
 
-const SUPABASE_URL = process.env.SUPABASE_URL!
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
+// Throws before any network call when the configured URL is not local. The data suite is
+// skipped (with a warning) when no local Supabase is configured.
+const integrationEnv = readIntegrationEnv()
+if (!integrationEnv) console.warn(`[multi-tenant.test] ${SKIP_MESSAGE_SUPABASE}`)
+const describeIfLocalSupabase = integrationEnv ? describe : describe.skip
 
-const supabase = createClient(SUPABASE_URL, SERVICE_KEY, { db: { schema: 'public' } })
+const supabase = integrationEnv
+  ? createClient(integrationEnv.url, integrationEnv.serviceKey, { db: { schema: 'public' } })
+  : (undefined as never)
 
-describe('Multi-Tenant Data Isolation', () => {
+describeIfLocalSupabase('Multi-Tenant Data Isolation', () => {
   let companyA_id: string
   let companyB_id: string
   let userA_id: string
