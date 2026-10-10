@@ -1,24 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { loginApprovedEmployeeByEmail } from '@/lib/auth/employee-email-login'
+import { NextResponse } from 'next/server'
+import { EMPLOYEE_LOGIN_DISABLED_MESSAGE } from '@/lib/auth/employee-login-disabled'
 
 export const dynamic = 'force-dynamic'
 
 /**
- * POST /api/auth/employee-login
- * Email-only login for admin-approved team members — no password, no email sent.
+ * POST /api/auth/employee-login — DISABLED (410 Gone).
+ *
+ * The endpoint used to mint a session from an email address alone. It now
+ * answers with a fixed message and touches neither the database nor Supabase
+ * Auth. The request body is intentionally not read.
  */
-export async function POST(req: NextRequest) {
-  try {
-    const body = (await req.json()) as { email?: string }
-    const email = body.email?.trim()
-
-    if (!email) {
-      return NextResponse.json({ error: 'Email is required' }, { status: 400 })
-    }
-
-    return loginApprovedEmployeeByEmail(email, req)
-  } catch (e) {
-    console.error('[employee-login]', e)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
+export async function POST() {
+  return NextResponse.json(
+    { error: EMPLOYEE_LOGIN_DISABLED_MESSAGE },
+    { status: 410 },
+  )
 }
