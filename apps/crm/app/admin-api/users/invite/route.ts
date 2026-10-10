@@ -4,6 +4,7 @@ import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { requirePermissionAsync } from '@/lib/middleware/auth'
 import { isValidRole } from '@/lib/permissions'
 import { logResourceEvent } from '@/lib/audit/logger'
+import { findAuthUserByEmail, type AuthUserRef } from '@/lib/auth/find-auth-user-by-email'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -15,7 +16,8 @@ const supabase = SUPABASE_URL && SERVICE_KEY
 
 /**
  * POST /admin-api/users/invite
- * Approve email for company access — employee logs in with email only (no password).
+ * Create a new auth user for an email that has no account yet and add it to the
+ * caller's company. Existing accounts are rejected with 409 (never re-attached).
  */
 export async function POST(req: NextRequest) {
   const authCheck = await requireAuthAsync(req)
@@ -38,35 +40,53 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
     }
 
-    if (permissionCheck.companyId && permissionCheck.companyId !== companyId) {
+    // Fail closed: the caller's company must be known AND equal the target company.
+    // (Previously a missing session company skipped this check entirely.)
+    if (!permissionCheck.companyId || permissionCheck.companyId !== companyId) {
       return NextResponse.json({ error: 'Forbidden: wrong company' }, { status: 403 })
     }
 
-    const cleanEmail = email.toLowerCase().trim()
+    const cleanEmail = String(email).toLowerCase().trim()
 
-    const { data: existingAuthUsers } = await supabase.auth.admin.listUsers()
-    const existingUser = existingAuthUsers?.users?.find(u => u.email?.toLowerCase() === cleanEmail)
-
-    let userId: string
+    // An email that already has an auth account is never attached to a company
+    // from here: that would let a company admin pull any registered user (even
+    // another tenant's owner) into their company.
+    let existingUser: AuthUserRef | null
+    try {
+      existingUser = await findAuthUserByEmail(supabase, cleanEmail)
+    } catch (lookupError) {
+      console.error('[Invite] Auth user lookup failed:', lookupError)
+      return NextResponse.json({ error: 'Failed to verify email' }, { status: 500 })
+    }
 
     if (existingUser) {
-      userId = existingUser.id
-    } else {
-      const { data: newAuthUser, error: authError } = await supabase.auth.admin.createUser({
-        email: cleanEmail,
-        email_confirm: true,
-        user_metadata: {
-          full_name: cleanEmail.split('@')[0],
-        },
-      })
-
-      if (authError || !newAuthUser.user) {
-        console.error('[Invite] Auth user creation error:', authError)
-        return NextResponse.json({ error: 'Failed to create user in auth system' }, { status: 500 })
-      }
-
-      userId = newAuthUser.user.id
+      return NextResponse.json(
+        { error: 'A user with this email already exists' },
+        { status: 409 },
+      )
     }
+
+    const { data: newAuthUser, error: authError } = await supabase.auth.admin.createUser({
+      email: cleanEmail,
+      email_confirm: true,
+      user_metadata: {
+        full_name: cleanEmail.split('@')[0],
+      },
+    })
+
+    if (authError?.code === 'email_exists') {
+      return NextResponse.json(
+        { error: 'A user with this email already exists' },
+        { status: 409 },
+      )
+    }
+
+    if (authError || !newAuthUser.user) {
+      console.error('[Invite] Auth user creation error:', authError)
+      return NextResponse.json({ error: 'Failed to create user in auth system' }, { status: 500 })
+    }
+
+    const userId = newAuthUser.user.id
 
     const { error: profileError } = await supabase.from('users').upsert(
       {
@@ -80,22 +100,6 @@ export async function POST(req: NextRequest) {
     if (profileError) {
       console.error('[Invite] User profile error:', profileError)
       return NextResponse.json({ error: 'Failed to save user profile' }, { status: 500 })
-    }
-
-    const { data: existingMember } = await supabase
-      .from('company_members')
-      .select('id, role')
-      .eq('user_id', userId)
-      .eq('company_id', companyId)
-      .maybeSingle()
-
-    if (existingMember) {
-      return NextResponse.json({
-        success: true,
-        message: 'User is already approved for this company',
-        membership: existingMember,
-        loginUrl: `${APP_URL}/login?mode=employee&email=${encodeURIComponent(cleanEmail)}`,
-      })
     }
 
     const { data: membership, error: memberError } = await supabase
@@ -119,9 +123,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'User approved — they can log in with email only',
+      message: 'User created and added to the company',
       membership,
-      loginUrl: `${APP_URL}/login?mode=employee&email=${encodeURIComponent(cleanEmail)}`,
+      loginUrl: `${APP_URL}/login`,
     }, { status: 201 })
 
   } catch (error) {
