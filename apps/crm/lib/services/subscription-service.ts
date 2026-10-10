@@ -13,6 +13,13 @@ import type {
   SubscriptionUsage,
 } from '@/types/subscription'
 
+export class SubscriptionMutationDisabledError extends Error {
+  constructor(operation: string) {
+    super(`Subscription ${operation} is disabled`)
+    this.name = 'SubscriptionMutationDisabledError'
+  }
+}
+
 export class SubscriptionService {
   /**
    * Get all available subscription plans
@@ -145,57 +152,19 @@ export class SubscriptionService {
   }
 
   /**
-   * Change subscription plan
+   * Change subscription plan -- DISABLED.
+   *
+   * This used to write company_subscriptions / subscription_history through the
+   * per-request USER client, i.e. any company admin could pick their own plan.
+   * Plan changes must go through a trusted billing path (payment webhook or a
+   * platform-admin service-role route); until that exists this always throws.
    */
   async changePlan(
-    company_id: string,
-    user_id: string,
-    dto: ChangePlanDTO
+    _company_id: string,
+    _user_id: string,
+    _dto: ChangePlanDTO
   ): Promise<CompanySubscription> {
-    const supabase = createClient()
-    
-    // Get new plan
-    const newPlan = await this.getPlanByKey(dto.new_plan_key)
-    if (!newPlan) {
-      throw new Error(`Plan not found: ${dto.new_plan_key}`)
-    }
-    
-    // Get current subscription
-    const currentSubscription = await this.getCurrentSubscription(company_id)
-    if (!currentSubscription) {
-      throw new Error('No active subscription found')
-    }
-    
-    // Update subscription
-    const updateData = {
-      plan_id: newPlan.id,
-      billing_cycle: dto.billing_cycle || currentSubscription.billing_cycle,
-      updated_at: new Date().toISOString()
-    }
-    
-    const { data, error } = await (supabase
-      .from('company_subscriptions') as any)
-      .update(updateData)
-      .eq('company_id', company_id)
-      .select()
-      .single()
-    
-    if (error) {
-      throw new Error(`Failed to update subscription: ${error.message}`)
-    }
-    
-    // Log to history
-    await (supabase
-      .from('subscription_history') as any)
-      .insert({
-        company_id,
-        old_plan_id: currentSubscription.plan_id,
-        new_plan_id: newPlan.id,
-        changed_by: user_id,
-        change_reason: dto.reason
-      })
-    
-    return data as CompanySubscription
+    throw new SubscriptionMutationDisabledError('changePlan')
   }
 
   /**
@@ -219,54 +188,16 @@ export class SubscriptionService {
   }
 
   /**
-   * Cancel subscription
+   * Cancel subscription -- DISABLED (same reason as changePlan: it wrote through
+   * the user-scoped client). Always throws.
    */
   async cancelSubscription(
-    company_id: string,
-    user_id: string,
-    reason?: string,
-    immediately: boolean = false
+    _company_id: string,
+    _user_id: string,
+    _reason?: string,
+    _immediately: boolean = false
   ): Promise<CompanySubscription> {
-    const supabase = createClient()
-    
-    const currentSubscription = await this.getCurrentSubscription(company_id)
-    if (!currentSubscription) {
-      throw new Error('No active subscription found')
-    }
-    
-    const updateData: Partial<CompanySubscription> = {
-      status: 'canceled',
-      canceled_at: new Date().toISOString(),
-      auto_renew: false
-    }
-    
-    if (immediately) {
-      updateData.current_period_end = new Date().toISOString()
-    }
-    
-    const { data, error } = await (supabase
-      .from('company_subscriptions') as any)
-      .update(updateData)
-      .eq('company_id', company_id)
-      .select()
-      .single()
-    
-    if (error) {
-      throw new Error(`Failed to cancel subscription: ${error.message}`)
-    }
-    
-    // Log to history
-    await (supabase
-      .from('subscription_history') as any)
-      .insert({
-        company_id,
-        old_plan_id: currentSubscription.plan_id,
-        new_plan_id: currentSubscription.plan_id,
-        changed_by: user_id,
-        change_reason: `Canceled: ${reason || 'No reason provided'}`
-      })
-    
-    return data as CompanySubscription
+    throw new SubscriptionMutationDisabledError('cancelSubscription')
   }
 
   /**
