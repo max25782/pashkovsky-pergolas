@@ -4,7 +4,7 @@ import { useState, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { EMPLOYEE_LOGIN_DISABLED_MESSAGE } from '@/lib/auth/employee-login-disabled'
+import { EMPLOYEE_LOGIN_DENIED_ERROR } from '@/lib/auth/employee-email-login'
 
 type LoginMode = 'admin' | 'employee'
 
@@ -53,9 +53,30 @@ function LoginPageContent() {
       return
     }
 
-    // Email-only login is disabled server-side (410). Do not call the endpoint;
-    // tell the user clearly and point to the supported sign-in methods.
-    setError(EMPLOYEE_LOGIN_DISABLED_MESSAGE)
+    try {
+      setLoading(true)
+      setError(null)
+
+      const response = await fetch('/api/auth/employee-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: employeeEmail.trim() }),
+      })
+
+      const result = await response.json() as { redirectTo?: string }
+
+      if (!response.ok) {
+        setError(EMPLOYEE_LOGIN_DENIED_ERROR)
+        setLoading(false)
+        return
+      }
+
+      window.location.href = result.redirectTo ?? '/app'
+    } catch {
+      setError(EMPLOYEE_LOGIN_DENIED_ERROR)
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function handleEmailLogin(e: React.FormEvent) {

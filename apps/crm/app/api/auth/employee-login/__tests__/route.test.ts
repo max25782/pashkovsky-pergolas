@@ -1,58 +1,53 @@
-const mockCreateClient = jest.fn()
 const mockLoginByEmail = jest.fn()
 
-jest.mock('@supabase/supabase-js', () => ({
-  createClient: (...args: unknown[]) => mockCreateClient(...args),
-}))
+jest.mock('@/lib/auth/employee-email-login', () => {
+  const actual = jest.requireActual('@/lib/auth/employee-email-login') as typeof import('@/lib/auth/employee-email-login')
+  return {
+    ...actual,
+    loginApprovedEmployeeByEmail: (...args: unknown[]) => mockLoginByEmail(...args),
+  }
+})
 
-jest.mock('@/lib/auth/employee-email-login', () => ({
-  loginApprovedEmployeeByEmail: (...args: unknown[]) => mockLoginByEmail(...args),
-}))
-
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { POST } from '@/app/api/auth/employee-login/route'
-import { EMPLOYEE_LOGIN_DISABLED_MESSAGE } from '@/lib/auth/employee-login-disabled'
+import {
+  EMPLOYEE_LOGIN_DENIED_ERROR,
+  EMPLOYEE_LOGIN_DENIED_STATUS,
+} from '@/lib/auth/employee-email-login'
 
 function loginRequest(body: unknown) {
-  return new NextRequest('http://localhost/api/auth/employee-login', {
+  return new NextRequest('http://127.0.0.1/api/auth/employee-login', {
     method: 'POST',
-    body: JSON.stringify(body),
+    body: typeof body === 'string' ? body : JSON.stringify(body),
     headers: { 'Content-Type': 'application/json' },
   })
 }
 
-describe('POST /api/auth/employee-login (disabled)', () => {
+describe('POST /api/auth/employee-login', () => {
   beforeEach(() => {
-    process.env.SUPABASE_URL = 'http://localhost:54321'
-    process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-test'
-    mockCreateClient.mockClear()
-    mockLoginByEmail.mockClear()
+    mockLoginByEmail.mockReset()
+    mockLoginByEmail.mockImplementation(async () =>
+      NextResponse.json({ error: EMPLOYEE_LOGIN_DENIED_ERROR }, { status: EMPLOYEE_LOGIN_DENIED_STATUS }),
+    )
   })
 
-  it('returns 410 Gone with the fixed message', async () => {
-    const res = await POST()
-    expect(res.status).toBe(410)
-    await expect(res.json()).resolves.toEqual({ error: EMPLOYEE_LOGIN_DISABLED_MESSAGE })
+  it('forwards the email to the membership-rule login', async () => {
+    mockLoginByEmail.mockResolvedValue(
+      NextResponse.json({ ok: true, redirectTo: '/app', companyId: 'co-1', role: 'salesperson' }),
+    )
+    const req = loginRequest({ email: 'sales@co.com' })
+    const res = await POST(req)
+    expect(res.status).toBe(200)
+    expect(mockLoginByEmail).toHaveBeenCalledWith('sales@co.com', req)
   })
 
-  it('does not touch Supabase or the email-login implementation', async () => {
-    await POST()
-    expect(mockCreateClient).not.toHaveBeenCalled()
-    expect(mockLoginByEmail).not.toHaveBeenCalled()
-  })
-
-  it('ignores the request body (valid, empty and malformed bodies all get 410)', async () => {
-    const route = POST as unknown as (req: NextRequest) => Promise<Response>
-    const bodies: unknown[] = [{ email: 'someone@example.com' }, {}, 'not-json']
-    for (const body of bodies) {
-      const res = await route(loginRequest(body))
-      expect(res.status).toBe(410)
-    }
-    expect(mockLoginByEmail).not.toHaveBeenCalled()
-  })
-
-  it('message mentions the supported alternatives', () => {
-    expect(EMPLOYEE_LOGIN_DISABLED_MESSAGE).toMatch(/password/i)
-    expect(EMPLOYEE_LOGIN_DISABLED_MESSAGE).toMatch(/Google/)
+  it('uses the same denial for a missing body and for an empty email', async () => {
+    const missing = await POST(loginRequest('not-json'))
+    const empty = await POST(loginRequest({}))
+    expect(mockLoginByEmail.mock.calls[0][0]).toBe('')
+    expect(mockLoginByEmail.mock.calls[1][0]).toBe('')
+    expect(missing.status).toBe(EMPLOYEE_LOGIN_DENIED_STATUS)
+    expect(empty.status).toBe(EMPLOYEE_LOGIN_DENIED_STATUS)
+    expect(await missing.json()).toEqual(await empty.json())
   })
 })
