@@ -29,6 +29,12 @@ const planParamsSchema = z
     lamellaAngleDeg: z.union([z.literal(0), z.literal(45)]),
     colorHex: z.string(),
     supportType: z.enum(['free-standing', 'wall-mounted', 'hanging']),
+    slope: z.object({
+      mode: z.enum(['deg', 'percent', 'dropCm']),
+      value: z.number().finite(),
+    }),
+    highEdgeIndex: z.number().int().nonnegative(),
+    postHeightOverridesMm: z.record(z.string(), z.number().finite()),
   })
   .partial()
 

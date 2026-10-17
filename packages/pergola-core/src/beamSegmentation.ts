@@ -4,6 +4,7 @@ import { pieceAxis } from './pieceAxis'
 import { longPointOffset } from './lamellas'
 import { effectiveKerfMm } from './packProfile'
 import { decomposeIntoRectangles, findWingBoundariesAlongSegment, type Rectangle } from './rectangleDecomposition'
+import { heightOnPlane, type RoofPlane } from './roof'
 
 /** Tolerance for "is this point on the beam's line" / "is this length effectively at the limit", mm. */
 const EPS_MM = 1
@@ -196,15 +197,17 @@ export function segmentReserveMm(
   return deltaStart + deltaEnd + Math.max(kerfStart, kerfEnd)
 }
 
-function makePost(spec: PergolaSpec, pos: Point2D, nextId: () => string): CutPiece {
+function makePost(spec: PergolaSpec, pos: Point2D, nextId: () => string, roof?: RoofPlane): CutPiece {
+  const id = nextId()
+  const h = roof != null ? heightOnPlane(roof, pos) : spec.heightMm
   return {
-    id: nextId(),
+    id,
     role: 'post',
     profileId: spec.postProfileId,
 
-    lengthAxisMm: spec.heightMm,
-    lengthLongMm: spec.heightMm,
-    lengthShortMm: spec.heightMm,
+    lengthAxisMm: h,
+    lengthLongMm: h,
+    lengthShortMm: h,
 
     cutMiterStartDeg: 0,
     cutBevelStartDeg: 0,
@@ -651,7 +654,7 @@ export function segmentBeamsForStock(
       // beams sharing an endpoint region could otherwise double up.
       const already = outputPosts.some((p) => dist2(pieceAxis(p).start, pos) <= EPS_MM)
       if (already) continue
-      outputPosts.push(makePost(spec, pos, nextPostId))
+      outputPosts.push(makePost(spec, pos, nextPostId, frame.roof))
     }
   }
 

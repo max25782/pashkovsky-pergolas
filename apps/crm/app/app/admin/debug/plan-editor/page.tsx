@@ -48,6 +48,7 @@ import {
 } from '@pashkovsky/pergola-core'
 import type { CutPiece, Point2D, ProfileDimensions } from '@pashkovsky/pergola-core'
 import { PergolaCutPieceViewer } from '@pashkovsky/pergola-3d-preview'
+import { RoofSlopeFields } from '@/components/offers/RoofSlopeFields'
 import { TopPlanSheet, LamellaLayoutSheet, CellFrameSheet } from '@pashkovsky/pergola-drawing'
 import { OrderAndCuttingPanel } from '@/components/cut-list/OrderAndCuttingPanel'
 
@@ -234,16 +235,21 @@ export default function PlanEditorDebugPage() {
   // должно попасть в тот же видимый банер preview3DError, а не просто
   // console.error и молчаливое исчезновение сцены — эффект ниже синхронизирует
   // ошибку реактивного пересчёта в то же state, что и первый клик «В 3D».
-  const buildResult = useMemo<{ pieces: CutPiece[] | null; isOrthogonal: boolean; error: string | null }>(() => {
-    if (!lastPolygonMm) return { pieces: null, isOrthogonal: true, error: null }
+  const buildResult = useMemo<{
+    pieces: CutPiece[] | null
+    isOrthogonal: boolean
+    error: string | null
+    roofWarning: string | null
+  }>(() => {
+    if (!lastPolygonMm) return { pieces: null, isOrthogonal: true, error: null, roofWarning: null }
     try {
       const contour: Point2D[] = lastPolygonMm.map((p): Point2D => [p.x, p.y])
       const built = buildHostPieces(contour, lastWallEdgeIndices, params)
-      return { pieces: built.pieces, isOrthogonal: built.isOrthogonal, error: null }
+      return { pieces: built.pieces, isOrthogonal: built.isOrthogonal, error: null, roofWarning: built.roof.warning }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       console.error('[planEditor→3D] пересчёт после смены параметров упал:', err)
-      return { pieces: null, isOrthogonal: true, error: message }
+      return { pieces: null, isOrthogonal: true, error: message, roofWarning: null }
     }
   }, [lastPolygonMm, lastWallEdgeIndices, params])
 
@@ -340,7 +346,13 @@ export default function PlanEditorDebugPage() {
       </div>
 
       <ParamsDrawer open={paramsOpen} onClose={() => setParamsOpen(false)} t={t}>
-        <ConstructionParamsPanel params={params} onChange={setParams} t={t} />
+        <ConstructionParamsPanel
+          params={params}
+          onChange={setParams}
+          t={t}
+          contourMm={lastPolygonMm}
+          wallEdgeIndices={lastWallEdgeIndices}
+        />
       </ParamsDrawer>
 
       <div className="relative min-h-[600px] w-full flex-1 overflow-hidden rounded-lg border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-900">
@@ -375,6 +387,11 @@ export default function PlanEditorDebugPage() {
                 {t('preview3D.closeButton')}
               </button>
             </div>
+            {buildResult.roofWarning && (
+              <p className="border-b border-amber-300 bg-amber-50 px-4 py-2 text-xs text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
+                {buildResult.roofWarning}
+              </p>
+            )}
             <div className="min-h-0 flex-1">
               <PergolaCutPieceViewer
                 pieces={pieces}
@@ -534,6 +551,8 @@ interface ConstructionParamsPanelProps {
   params: ConstructionParams
   onChange: (params: ConstructionParams) => void
   t: ReturnType<typeof useTranslations>
+  contourMm: Point[] | null
+  wallEdgeIndices: number[]
 }
 
 /**
@@ -548,7 +567,7 @@ interface ConstructionParamsPanelProps {
  * Раскладка вертикальная (flex-col) — панель теперь живёт в боковом
  * выдвижном drawer (ParamsDrawer), не в горизонтальной полосе над холстом.
  */
-function ConstructionParamsPanel({ params, onChange, t }: ConstructionParamsPanelProps) {
+function ConstructionParamsPanel({ params, onChange, t, contourMm, wallEdgeIndices }: ConstructionParamsPanelProps) {
   function patch(p: Partial<ConstructionParams>) {
     onChange({ ...params, ...p })
   }
@@ -726,6 +745,16 @@ function ConstructionParamsPanel({ params, onChange, t }: ConstructionParamsPane
           <option value="hanging">{t('paramsPanel.supportHanging')}</option>
         </select>
       </label>
+
+      <RoofSlopeFields
+        params={params}
+        onChange={onChange}
+        contourMm={contourMm}
+        wallEdgeIndices={wallEdgeIndices}
+        profiles={DEMO_PROFILES}
+        selectClass={selectClass}
+        labelClass={labelClass}
+      />
     </div>
   )
 }

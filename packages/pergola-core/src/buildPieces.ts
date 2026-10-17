@@ -12,12 +12,14 @@ import { DEFAULT_VISTUR_TOLERANCES } from './visturTolerances'
 import { resolveLamellaPatternIds } from './lamellaPresets'
 import { clampLamellaAngleDeg, resolveSupportType, specColorHex } from './support'
 import type { SupportType } from './types'
+import type { RoofPlane } from './roof'
 
 export interface BuiltPieces {
   pieces: CutPiece[]
   isOrthogonal: boolean
   colorHex: string
   heightMm: number
+  roof: RoofPlane
 }
 
 export interface SpecFromPlanInput {
@@ -63,6 +65,9 @@ export function specFromPlan(input: SpecFromPlanInput): PergolaSpec {
     color: colorHex.startsWith('#') ? colorHex : '#9aa0a6',
     colorHex,
     visturTolerances: params.visturMode ? DEFAULT_VISTUR_TOLERANCES : undefined,
+    slope: params.slope,
+    highEdgeIndex: params.highEdgeIndex,
+    postHeightOverridesMm: params.postHeightOverridesMm,
   }
 }
 
@@ -88,8 +93,9 @@ export function buildPieces(
 ): BuiltPieces {
   const kerfMm = options?.kerfMm ?? DEFAULT_KERF_MM
   const frame = computeFrame(spec, profiles)
-  const lamellas = computeLamellas(spec, profiles)
-  const ledResult = segmentLedPurlinsForStock(spec, profiles, frame.posts, frame.beams, kerfMm)
+  const roof = frame.roof
+  const lamellas = computeLamellas(spec, profiles, roof)
+  const ledResult = segmentLedPurlinsForStock(spec, profiles, frame.posts, frame.beams, kerfMm, roof)
   const purlins = [...ledResult.purlins, ...ledResult.dividers]
   const beamResult = segmentBeamsForStock(spec, frame, [...lamellas, ...purlins], profiles, kerfMm)
 
@@ -116,6 +122,7 @@ export function buildPieces(
     isOrthogonal: frame.isOrthogonal,
     colorHex: specColorHex(spec),
     heightMm: spec.heightMm,
+    roof,
   }
 }
 

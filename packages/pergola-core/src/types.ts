@@ -91,6 +91,13 @@ export interface CutPiece {
  */
 export type SupportType = 'free-standing' | 'posts' | 'wall-mounted' | 'hanging'
 
+export type SlopeMode = 'deg' | 'percent' | 'dropCm'
+
+export interface RoofSlope {
+  mode: SlopeMode
+  value: number
+}
+
 /** Product-facing lamella tilt. Kernel still stores a number; hosts clamp to these. */
 export type LamellaAngleDeg = 0 | 45
 
@@ -207,6 +214,25 @@ export interface PergolaSpec {
 
   /** @deprecated Use supportType: 'wall-mounted' instead */
   attachedToWall?: boolean
+
+  /**
+   * Roof slope. Default / omitted / value 0 = flat roof (heightMm everywhere).
+   * heightMm is the post/hanger height on the high side.
+   */
+  slope?: RoofSlope
+
+  /**
+   * Index of the contour edge that stays high (vertex i → i+1 on the
+   * sanitised original contour, not the CCW-reversed copy).
+   */
+  highEdgeIndex?: number
+
+  /**
+   * Per-post height overrides, keyed by the frame post id (`post-0`…).
+   * One or two overrides (or three collinear) change only those posts.
+   * Three or more non-collinear overrides replace the slope plane (least squares).
+   */
+  postHeightOverridesMm?: Record<string, number>
 
   /**
    * Opts this pergola into "вистур" factory-welded-frame assembly clearances

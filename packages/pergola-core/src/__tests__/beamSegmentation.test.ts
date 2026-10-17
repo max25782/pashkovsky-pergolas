@@ -740,7 +740,7 @@ describe('snapBoundaryToExistingPost — re-target a fresh splice onto a nearby 
     }
     const cornerEnd: CutPiece = { ...cornerStart, id: 'corner-end', position: [9000, 0, 0] }
     const existingMidPost: CutPiece = { ...cornerStart, id: 'existing-mid-post', position: [5940, 0, 0] }
-    const frame: FrameResult = { beams: [beam], posts: [cornerStart, cornerEnd, existingMidPost], hangers: [], isOrthogonal: true }
+    const frame: FrameResult = { beams: [beam], posts: [cornerStart, cornerEnd, existingMidPost], hangers: [], isOrthogonal: true, roof: { a: 0, b: 0, c: 2600, normal: [0, 1, 0], slopeAngleRad: 0, fallDir: [0, 1], source: 'slope', residualsMm: [], maxAbsResidualMm: 0, warning: null } }
 
     const crossingPurlinEnd: CutPiece = {
       id: 'purlin-crossing', role: 'purlin', profileId: 'post-1',

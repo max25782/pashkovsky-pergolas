@@ -9,6 +9,15 @@ import {
 } from './rectangleDecomposition'
 import { sanitizeContour } from './contourSanitize'
 import { HANGER_LENGTH_MM, resolveSupportType, specColorHex } from './support'
+import {
+  heightOnPlane,
+  isHorizontalPlane,
+  placeOnRoof,
+  postHeightMm,
+  roofPlane,
+  type RoofPlane,
+  type SupportPoint,
+} from './roof'
 
 /** Tolerance for "is this grid coordinate actually ON this edge" / "does it
  * coincide with this edge's own wing-boundary post", mm — same role as
@@ -36,6 +45,8 @@ export interface FrameResult {
   posts: CutPiece[]
   /** Ceiling/wall hangers — only when supportType === 'hanging' */
   hangers: CutPiece[]
+  /** Roof plane used for post/beam/hanger heights. Flat when slope is 0. */
+  roof: RoofPlane
   /**
    * True iff the contour is strictly axis-aligned (see
    * `isOrthogonalContour`) — the post/beam layout above is then EXACT
@@ -323,6 +334,51 @@ export function computeFrame(
   const visturBeamReductionMm = spec.visturTolerances?.beamSegmentReductionMm ?? 0
   const segmentBeams = spec.visturTolerances != null && supportType !== 'hanging'
 
+  function collectSupportPoints(kind: 'post' | 'hanger'): SupportPoint[] {
+    const skipWall = kind === 'post'
+    const points: SupportPoint[] = []
+    let id = 0
+    const prefix = kind
+    for (let i = 0; i < n; i++) {
+      if (skipWall && wallVertices.has(i)) continue
+      points.push({ id: `${prefix}-${id++}`, plan: pts[i] })
+    }
+    for (let i = 0; i < n; i++) {
+      if (skipWall && wallEdgeIndices.has(i)) continue
+      const A = pts[i]
+      const B = pts[(i + 1) % n]
+      const edgeLen = dist2(A, B)
+      for (const distMm of edgeSegmentPlans[i].intraWingSpanPointsMm) {
+        const t = distMm / edgeLen
+        points.push({
+          id: `${prefix}-${id++}`,
+          plan: [A[0] + t * (B[0] - A[0]), A[1] + t * (B[1] - A[1])],
+        })
+      }
+    }
+    return points
+  }
+
+  const supportPoints = collectSupportPoints(supportType === 'hanging' ? 'hanger' : 'post')
+  const roof = roofPlane(spec, supportPoints)
+  const flatRoof = isHorizontalPlane(roof)
+
+  function beamPlacement(start: Point2D, end: Point2D, planLen: number): {
+    position: [number, number, number]
+    rotation: [number, number, number]
+    axisMm: number
+  } {
+    if (flatRoof) {
+      const yaw = Math.atan2(end[1] - start[1], end[0] - start[0])
+      return {
+        position: [start[0], spec.heightMm, start[1]],
+        rotation: [0, -yaw, 0],
+        axisMm: planLen,
+      }
+    }
+    return placeOnRoof(start, end, roof)
+  }
+
   // ── Beams ──────────────────────────────────────────────────────────────────
 
   const beams: CutPiece[] = []
@@ -347,7 +403,6 @@ export function computeFrame(
 
     const edgeVec = sub2(B, A)
     const edgeLen = len2(edgeVec)
-    const θ = Math.atan2(edgeVec[1], edgeVec[0])
     const dir: Vector2D = edgeLen > 1e-9 ? [edgeVec[0] / edgeLen, edgeVec[1] / edgeLen] : [1, 0]
 
     const mS = miters[i]
@@ -367,14 +422,15 @@ export function computeFrame(
       const δStart = miterOffset(cms, profile.widthMm)
       const δEnd   = miterOffset(cme, profile.widthMm)
 
+      const pose = beamPlacement(A, B, edgeLen)
       beams.push({
         id:       `beam-${beamId++}`,
         role:     'beam',
         profileId,
 
-        lengthAxisMm:  edgeLen,
-        lengthLongMm:  edgeLen + δStart + δEnd,
-        lengthShortMm: edgeLen - δStart - δEnd,
+        lengthAxisMm:  pose.axisMm,
+        lengthLongMm:  pose.axisMm + δStart + δEnd,
+        lengthShortMm: pose.axisMm - δStart - δEnd,
 
         cutMiterStartDeg: cms,
         cutBevelStartDeg: 0,
@@ -384,10 +440,8 @@ export function computeFrame(
         cutBevelEndDeg: 0,
         cutHandEnd:     che,
 
-        // position = start of beam at pergola height (Y is up in Three.js)
-        position: [A[0], spec.heightMm, A[1]],
-        // rotation around Y: negative azimuth (Three.js right-hand, Y-up convention)
-        rotation: [0, -θ, 0],
+        position: pose.position,
+        rotation: pose.rotation,
         color: pieceColor,
       })
       continue
@@ -440,15 +494,20 @@ export function computeFrame(
         A[0] + startDistMm * dir[0],
         A[1] + startDistMm * dir[1],
       ]
+      const endPos: Point2D = [
+        startPos[0] + segLenMm * dir[0],
+        startPos[1] + segLenMm * dir[1],
+      ]
+      const pose = beamPlacement(startPos, endPos, segLenMm)
 
       beams.push({
         id:       `beam-${beamId++}`,
         role:     'beam',
         profileId,
 
-        lengthAxisMm:  segLenMm,
-        lengthLongMm:  segLenMm + δStart + δEnd,
-        lengthShortMm: segLenMm - δStart - δEnd,
+        lengthAxisMm:  pose.axisMm,
+        lengthLongMm:  pose.axisMm + δStart + δEnd,
+        lengthShortMm: pose.axisMm - δStart - δEnd,
 
         cutMiterStartDeg: segCms,
         cutBevelStartDeg: 0,
@@ -458,8 +517,8 @@ export function computeFrame(
         cutBevelEndDeg: 0,
         cutHandEnd:     segChe,
 
-        position: [startPos[0], spec.heightMm, startPos[1]],
-        rotation: [0, -θ, 0],
+        position: pose.position,
+        rotation: pose.rotation,
         color: pieceColor,
       })
     }
@@ -470,18 +529,16 @@ export function computeFrame(
   const posts: CutPiece[] = []
   const hangers: CutPiece[] = []
 
-  let postId = 0
-  let hangerId = 0
-
-  function makePost(pos: Point2D): CutPiece {
+  function makePost(point: SupportPoint): CutPiece {
+    const h = postHeightMm(spec, roof, point.id, point.plan)
     return {
-      id:       `post-${postId++}`,
+      id:       point.id,
       role:     'post',
       profileId: spec.postProfileId,
 
-      lengthAxisMm:  spec.heightMm,
-      lengthLongMm:  spec.heightMm,   // straight cuts both ends
-      lengthShortMm: spec.heightMm,
+      lengthAxisMm:  h,
+      lengthLongMm:  h,
+      lengthShortMm: h,
 
       cutMiterStartDeg: 0,
       cutBevelStartDeg: 0,
@@ -492,15 +549,15 @@ export function computeFrame(
       cutHandEnd:     'straight',
 
       // position = base of post at ground level
-      position: [pos[0], 0, pos[1]],
+      position: [point.plan[0], 0, point.plan[1]],
       rotation: [0, 0, 0],
       color: pieceColor,
     }
   }
 
-  function makeHanger(pos: Point2D): CutPiece {
+  function makeHanger(point: SupportPoint): CutPiece {
     return {
-      id:       `hanger-${hangerId++}`,
+      id:       point.id,
       role:     'hanger',
       profileId: spec.postProfileId,
 
@@ -516,49 +573,27 @@ export function computeFrame(
       cutBevelEndDeg: 0,
       cutHandEnd:     'straight',
 
-      // Base of the hanger sits on the beam; the rod grows upward (ceiling).
-      position: [pos[0], spec.heightMm, pos[1]],
+      // Base of the hanger sits on the roof plane; the rod grows upward.
+      position: [point.plan[0], heightOnPlane(roof, point.plan), point.plan[1]],
       rotation: [0, 0, 0],
       color: pieceColor,
     }
   }
 
-  function collectSupportPositions(skipWallEdges: boolean, skipWallVertices: boolean): Point2D[] {
-    const positions: Point2D[] = []
-    for (let i = 0; i < n; i++) {
-      if (skipWallVertices && wallVertices.has(i)) continue
-      positions.push(pts[i])
-    }
-    for (let i = 0; i < n; i++) {
-      if (skipWallEdges && wallEdgeIndices.has(i)) continue
-      const A = pts[i]
-      const B = pts[(i + 1) % n]
-      const edgeLen = dist2(A, B)
-      for (const distMm of edgeSegmentPlans[i].intraWingSpanPointsMm) {
-        const t = distMm / edgeLen
-        positions.push([
-          A[0] + t * (B[0] - A[0]),
-          A[1] + t * (B[1] - A[1]),
-        ])
-      }
-    }
-    return positions
-  }
-
   if (supportType === 'hanging') {
-    for (const pos of collectSupportPositions(false, false)) {
-      hangers.push(makeHanger(pos))
+    for (const point of supportPoints) {
+      hangers.push(makeHanger(point))
     }
-    return { beams, posts, hangers, isOrthogonal }
+    return { beams, posts, hangers, isOrthogonal, roof }
   }
 
   // free-standing / wall-mounted: posts at free corners + maxSpan points
   // on free edges only (wall-marked edges have no posts — the wall is the
   // support). Intermediate points stay symmetric because intermediatePostTs
   // already spaces them uniformly along each free edge.
-  for (const pos of collectSupportPositions(true, true)) {
-    posts.push(makePost(pos))
+  for (const point of supportPoints) {
+    posts.push(makePost(point))
   }
 
-  return { beams, posts, hangers, isOrthogonal }
+  return { beams, posts, hangers, isOrthogonal, roof }
 }

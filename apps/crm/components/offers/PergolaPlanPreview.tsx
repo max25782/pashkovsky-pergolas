@@ -35,10 +35,12 @@ export function PergolaPlanPreview({ plan, title }: PergolaPlanPreviewProps) {
 
   const built = useMemo(() => {
     try {
-      return { pieces: buildPiecesFromPlan(plan), error: null as string | null }
+      const built = buildPiecesFromPlan(plan)
+      return { pieces: built.pieces, roofWarning: built.roof.warning, error: null as string | null }
     } catch (error) {
       return {
         pieces: null,
+        roofWarning: null,
         error: error instanceof Error ? error.message : String(error),
       }
     }
@@ -87,6 +89,11 @@ export function PergolaPlanPreview({ plan, title }: PergolaPlanPreviewProps) {
                 {t('preview3D.closeButton')}
               </button>
             </div>
+            {built.roofWarning && (
+              <p className="border-b border-amber-300 bg-amber-50 px-4 py-2 text-xs text-amber-900">
+                {built.roofWarning}
+              </p>
+            )}
             <div className="min-h-0 flex-1">
               <PergolaCutPieceViewer
                 pieces={built.pieces}

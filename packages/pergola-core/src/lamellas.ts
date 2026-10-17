@@ -3,6 +3,7 @@ import { isCCW } from './miter'
 import { computeSpanDivisionPointsMm } from './lamellaSpans'
 import { resolveLamellaPattern, patternMaxLamellaSpanMm, type LamellaPatternEntry } from './lamellaPattern'
 import { sanitizeContour } from './contourSanitize'
+import { isHorizontalPlane, placeOnRoof, roofPlane, type RoofPlane } from './roof'
 
 const DEG = 180 / Math.PI
 const RAD = Math.PI / 180
@@ -286,6 +287,7 @@ const STRAIGHT_END_CUT: EndCut = { cutMiterDeg: 0, cutHand: 'straight' }
 export function computeLamellas(
   spec: PergolaSpec,
   profiles: Map<string, ProfileDimensions>,
+  roof?: RoofPlane,
 ): CutPiece[] {
   const {
     contour, lamellaDirectionDeg, lamellaGapMm,
@@ -298,6 +300,8 @@ export function computeLamellas(
   // resolved through the exact same call, not a separate branch.
   const pattern = resolveLamellaPattern(spec, profiles)
 
+  const plane = roof ?? roofPlane(spec)
+  const sloped = !isHorizontalPlane(plane)
   const effectiveTiltDeg = lamellaOnEdge ? lamellaAngleDeg + 90 : lamellaAngleDeg
 
   // Same entry-point sanitisation as computeFrame (see contourSanitize.ts) —
@@ -390,6 +394,10 @@ export function computeLamellas(
           anchor[0] + sStart * dir[0],
           anchor[1] + sStart * dir[1],
         ]
+        const endPt: Point2D = [
+          anchor[0] + sEnd * dir[0],
+          anchor[1] + sEnd * dir[1],
+        ]
 
         // The bevel is always the lamella's effective tilt (open/close angle,
         // plus the +90° from lamellaOnEdge if set), regardless of which edge
@@ -400,15 +408,19 @@ export function computeLamellas(
         // measurement, using the VISIBLE (in-plan) width — see lamellaOnEdge.
         const δStart = longPointOffset(cutStart.cutMiterDeg, visibleWidthMm)
         const δEnd   = longPointOffset(cutEnd.cutMiterDeg, visibleWidthMm)
-        const lengthLongMm  = lengthAxisMm + δStart + δEnd
-        const lengthShortMm = lengthAxisMm - δStart - δEnd
+        const placed = sloped
+          ? placeOnRoof(startPt, endPt, plane, effectiveTiltDeg * RAD)
+          : null
+        const axisMm = placed?.axisMm ?? lengthAxisMm
+        const lengthLongMm  = axisMm + δStart + δEnd
+        const lengthShortMm = axisMm - δStart - δEnd
 
         pieces.push({
           id:       `lamella-${id++}`,
           role:     'lamella',
           profileId: lamellaProfileId,
 
-          lengthAxisMm,
+          lengthAxisMm: axisMm,
           lengthLongMm,
           lengthShortMm,
 
@@ -421,10 +433,10 @@ export function computeLamellas(
           cutHandEnd:     cutEnd.cutHand,
 
           // plan (x, y) → world (x, heightMm, y);  Y is up in Three.js
-          position: [startPt[0], heightMm, startPt[1]],
+          position: placed?.position ?? [startPt[0], heightMm, startPt[1]],
           // rotation[0]: effective tilt (lamellaAngleDeg, +90° if onEdge);
           // rotation[1]: azimuth (−θ: Three.js +Y goes X→−Z)
-          rotation: [effectiveTiltDeg * RAD, -θ, 0],
+          rotation: placed?.rotation ?? [effectiveTiltDeg * RAD, -θ, 0],
           color,
         })
       }

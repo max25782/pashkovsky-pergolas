@@ -20,6 +20,7 @@ import {
 } from '@pashkovsky/pergola-core'
 import type { Point2D, ProfileDimensions } from '@pashkovsky/pergola-core'
 import { PergolaCutPieceViewer } from '@pashkovsky/pergola-3d-preview'
+import { RoofSlopeFields } from '@/components/offers/RoofSlopeFields'
 import type { Locale } from '@/lib/locales'
 import type { Offer, PergolaPlan, PergolaPlanConstructionParams } from '@/types/offer'
 import { authFetch } from '@/lib/api/auth-fetch'
@@ -106,7 +107,7 @@ export const OfferPlanConfiguratorEmbed = forwardRef<
       const savedParams = meta.planParams as ConstructionParams
       setLastPolygonMm(savedPolygon)
       setLastWallEdgeIndices(savedIndices)
-      setParams(savedParams)
+      setParams({ ...DEFAULT_PARAMS, ...savedParams })
     }
   }, [offer])
 
@@ -214,14 +215,14 @@ export const OfferPlanConfiguratorEmbed = forwardRef<
   )
 
   const buildResult = useMemo(() => {
-    if (!lastPolygonMm) return { pieces: null, error: null, isOrthogonal: true }
+    if (!lastPolygonMm) return { pieces: null, error: null, isOrthogonal: true, roofWarning: null }
     try {
       const contour: Point2D[] = lastPolygonMm.map((p): Point2D => [p.x, p.y])
       const built = buildHostPieces(contour, lastWallEdgeIndices, params)
-      return { pieces: built.pieces, error: null, isOrthogonal: built.isOrthogonal }
+      return { pieces: built.pieces, error: null, isOrthogonal: built.isOrthogonal, roofWarning: built.roof.warning }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
-      return { pieces: null, error: message, isOrthogonal: true }
+      return { pieces: null, error: message, isOrthogonal: true, roofWarning: null }
     }
   }, [lastPolygonMm, lastWallEdgeIndices, params])
 
@@ -318,7 +319,13 @@ export const OfferPlanConfiguratorEmbed = forwardRef<
       </div>
 
       <ParamsDrawer open={paramsOpen} onClose={() => setParamsOpen(false)} t={t}>
-        <ConstructionParamsPanel params={params} onChange={setParams} t={t} />
+        <ConstructionParamsPanel
+          params={params}
+          onChange={setParams}
+          t={t}
+          contourMm={lastPolygonMm}
+          wallEdgeIndices={lastWallEdgeIndices}
+        />
       </ParamsDrawer>
 
       {/* Plan editor canvas */}
@@ -371,6 +378,11 @@ export const OfferPlanConfiguratorEmbed = forwardRef<
                 {t('preview3D.closeButton')}
               </button>
             </div>
+            {buildResult.roofWarning && (
+              <p className="border-b border-amber-300 bg-amber-50 px-4 py-2 text-xs text-amber-900">
+                {buildResult.roofWarning}
+              </p>
+            )}
             <div className="min-h-0 flex-1">
               <PergolaCutPieceViewer
                 pieces={buildResult.pieces}
@@ -422,9 +434,11 @@ interface ConstructionParamsPanelProps {
   params: ConstructionParams
   onChange: (params: ConstructionParams) => void
   t: ReturnType<typeof useTranslations>
+  contourMm: Array<{ x: number; y: number }> | null
+  wallEdgeIndices: number[]
 }
 
-function ConstructionParamsPanel({ params, onChange, t }: ConstructionParamsPanelProps) {
+function ConstructionParamsPanel({ params, onChange, t, contourMm, wallEdgeIndices }: ConstructionParamsPanelProps) {
   function patch(p: Partial<ConstructionParams>) {
     onChange({ ...params, ...p })
   }
@@ -602,6 +616,16 @@ function ConstructionParamsPanel({ params, onChange, t }: ConstructionParamsPane
           <option value="hanging">{t('paramsPanel.supportHanging')}</option>
         </select>
       </label>
+
+      <RoofSlopeFields
+        params={params}
+        onChange={onChange}
+        contourMm={contourMm}
+        wallEdgeIndices={wallEdgeIndices}
+        profiles={DEMO_PROFILES}
+        selectClass={selectClass}
+        labelClass={labelClass}
+      />
     </div>
   )
 }

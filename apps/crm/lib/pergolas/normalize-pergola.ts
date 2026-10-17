@@ -37,6 +37,22 @@ function parseParams(raw: unknown): PlanConstructionParams {
   if (o.supportType === 'free-standing' || o.supportType === 'wall-mounted' || o.supportType === 'hanging') {
     base.supportType = o.supportType
   }
+  if (o.slope && typeof o.slope === 'object') {
+    const s = o.slope as Record<string, unknown>
+    if ((s.mode === 'deg' || s.mode === 'percent' || s.mode === 'dropCm') && isFiniteNumber(s.value)) {
+      base.slope = { mode: s.mode, value: s.value as number }
+    }
+  }
+  if (typeof o.highEdgeIndex === 'number' && Number.isInteger(o.highEdgeIndex) && o.highEdgeIndex >= 0) {
+    base.highEdgeIndex = o.highEdgeIndex
+  }
+  if (o.postHeightOverridesMm && typeof o.postHeightOverridesMm === 'object') {
+    const rec: Record<string, number> = {}
+    for (const [key, value] of Object.entries(o.postHeightOverridesMm as Record<string, unknown>)) {
+      if (isFiniteNumber(value)) rec[key] = value as number
+    }
+    base.postHeightOverridesMm = rec
+  }
   return base
 }
 

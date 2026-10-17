@@ -7,6 +7,7 @@ import { computePurlins } from './purlins'
 import { effectiveKerfMm } from './packProfile'
 import { findJointCandidates, planBoundaries, segmentReserveMm } from './beamSegmentation'
 import { sanitizeContour } from './contourSanitize'
+import { isHorizontalPlane, offsetAlongNormal, placeOnRoof, roofPlane, type RoofPlane } from './roof'
 
 const RAD = Math.PI / 180
 const HALF_PI = Math.PI / 2
@@ -102,6 +103,7 @@ export function segmentLedPurlinsForStock(
   existingPosts: CutPiece[] = [],
   crossingPieces: CutPiece[] = [],
   kerfMm = 0,
+  roof?: RoofPlane,
 ): LedPurlinReversalResult {
   const { contour, lamellaDirectionDeg, heightMm, color, purlinProfileId } = spec
 
@@ -112,8 +114,11 @@ export function segmentLedPurlinsForStock(
     throw new Error(`Profile "${purlinProfileId}" not found in profiles map`)
   }
 
+  const plane = roof ?? roofPlane(spec)
+  const sloped = !isHorizontalPlane(plane)
+
   const fallback = (): LedPurlinReversalResult => ({
-    purlins: computePurlins(spec, profiles),
+    purlins: computePurlins(spec, profiles, plane),
     dividers: [],
     issues: [],
     reversed: false,
@@ -130,9 +135,43 @@ export function segmentLedPurlinsForStock(
 
   const pattern = resolveLamellaPattern(spec, profiles)
   const maxLamellaSpanMm = patternMaxLamellaSpanMm(pattern)
-  const baseYmm = purlinProfile.interruptsLamella === true
-    ? heightMm
-    : heightMm + patternMaxVerticalThicknessMm(pattern)
+  const aboveLamellaMm = purlinProfile.interruptsLamella === true
+    ? 0
+    : patternMaxVerticalThicknessMm(pattern)
+  const baseYmm = heightMm + aboveLamellaMm
+
+  function seatOnRoof(
+    startPt: Point2D,
+    endPt: Point2D,
+    planLen: number,
+    δStart: number,
+    δEnd: number,
+    flatRot: [number, number, number],
+  ): {
+    axisMm: number
+    longMm: number
+    shortMm: number
+    position: [number, number, number]
+    rotation: [number, number, number]
+  } {
+    if (!sloped) {
+      return {
+        axisMm: planLen,
+        longMm: planLen + δStart + δEnd,
+        shortMm: planLen - δStart - δEnd,
+        position: [startPt[0], baseYmm, startPt[1]],
+        rotation: flatRot,
+      }
+    }
+    const placed = placeOnRoof(startPt, endPt, plane)
+    return {
+      axisMm: placed.axisMm,
+      longMm: placed.axisMm + δStart + δEnd,
+      shortMm: placed.axisMm - δStart - δEnd,
+      position: offsetAlongNormal(placed.position, plane, aboveLamellaMm),
+      rotation: placed.rotation,
+    }
+  }
 
   // Same entry-point sanitisation as computeFrame/computeLamellas/computePurlins
   // (see contourSanitize.ts) — segmentLedPurlinsForStock is called independently
@@ -225,7 +264,7 @@ export function segmentLedPurlinsForStock(
 
   if (capacityMm <= MIN_SEGMENT_MM) {
     return {
-      purlins: computePurlins(spec, profiles),
+      purlins: computePurlins(spec, profiles, plane),
       dividers: [],
       issues: [{
         code: 'led-purlin-exceeds-stock-no-joint',
@@ -246,7 +285,7 @@ export function segmentLedPurlinsForStock(
 
   if (!plan) {
     return {
-      purlins: computePurlins(spec, profiles),
+      purlins: computePurlins(spec, profiles, plane),
       dividers: [],
       issues: [{
         code: 'led-purlin-exceeds-stock-no-joint',
@@ -289,22 +328,24 @@ export function segmentLedPurlinsForStock(
       const δStart = longPointOffset(cms, dividerProfile.widthMm)
       const δEnd = longPointOffset(cme, dividerProfile.widthMm)
       const startPt: Point2D = [anchor[0] + h0.s * dir[0], anchor[1] + h0.s * dir[1]]
+      const endPt: Point2D = [anchor[0] + h1.s * dir[0], anchor[1] + h1.s * dir[1]]
+      const seated = seatOnRoof(startPt, endPt, lengthAxisMm, δStart, δEnd, [0, -θ, 0])
 
       dividers.push({
         id: `led-divider-${divId++}`,
         role: 'purlin', // structurally a crossing member, like a purlin — see LedPurlinReversalResult doc.
         profileId: dividerProfileId,
-        lengthAxisMm,
-        lengthLongMm: lengthAxisMm + δStart + δEnd,
-        lengthShortMm: lengthAxisMm - δStart - δEnd,
+        lengthAxisMm: seated.axisMm,
+        lengthLongMm: seated.longMm,
+        lengthShortMm: seated.shortMm,
         cutMiterStartDeg: cms,
         cutBevelStartDeg: 0,
         cutHandStart: chs,
         cutMiterEndDeg: cme,
         cutBevelEndDeg: 0,
         cutHandEnd: che,
-        position: [startPt[0], baseYmm, startPt[1]],
-        rotation: [0, -θ, 0],
+        position: seated.position,
+        rotation: seated.rotation,
         color,
       })
     }
@@ -370,22 +411,24 @@ export function segmentLedPurlinsForStock(
         }
 
         const startPt: Point2D = [anchor[0] + effStart * perp[0], anchor[1] + effStart * perp[1]]
+        const endPt: Point2D = [anchor[0] + effEnd * perp[0], anchor[1] + effEnd * perp[1]]
+        const seated = seatOnRoof(startPt, endPt, lengthAxisMm, δStart, δEnd, [0, -(θ + HALF_PI), 0])
 
         ledPurlins.push({
           id: `led-purlin-${ledId++}`,
           role: 'purlin',
           profileId: purlinProfileId,
-          lengthAxisMm,
-          lengthLongMm,
-          lengthShortMm: lengthAxisMm - δStart - δEnd,
+          lengthAxisMm: seated.axisMm,
+          lengthLongMm: seated.longMm,
+          lengthShortMm: seated.shortMm,
           cutMiterStartDeg: startCut.cutMiterDeg,
           cutBevelStartDeg: 0,
           cutHandStart: startCut.cutHand,
           cutMiterEndDeg: endCut.cutMiterDeg,
           cutBevelEndDeg: 0,
           cutHandEnd: endCut.cutHand,
-          position: [startPt[0], baseYmm, startPt[1]],
-          rotation: [0, -(θ + HALF_PI), 0],
+          position: seated.position,
+          rotation: seated.rotation,
           color,
         })
       }

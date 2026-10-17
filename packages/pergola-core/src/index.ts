@@ -9,6 +9,8 @@ export type {
   ContourMiters,
   SupportType,
   LamellaAngleDeg,
+  SlopeMode,
+  RoofSlope,
 } from './types'
 
 export {
@@ -102,6 +104,20 @@ export {
 } from './rectangleDecomposition'
 
 export { sanitizeContour, SANITIZE_EPS_MM } from './contourSanitize'
+
+export type { RoofPlane, RoofResidual, SupportPoint } from './roof'
+export {
+  DEFAULT_ROOF_SLOPE,
+  ROOF_PLANE_RESIDUAL_WARN_MM,
+  roofPlane,
+  heightOnPlane,
+  postHeightMm,
+  slopedAxisLengthMm,
+  isFlatRoofSpec,
+  isHorizontalPlane,
+  horizontalRoofPlane,
+  placeOnRoof,
+} from './roof'
 
 export type { PlanPointMm } from './simplePolygon'
 export { isSimplePolygon } from './simplePolygon'

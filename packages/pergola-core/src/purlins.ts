@@ -4,6 +4,7 @@ import { scanLineClip, cutAtEdge, longPointOffset } from './lamellas'
 import { computeSpanDivisionPointsMm } from './lamellaSpans'
 import { resolveLamellaPattern, patternMaxLamellaSpanMm, patternMaxVerticalThicknessMm } from './lamellaPattern'
 import { sanitizeContour } from './contourSanitize'
+import { isHorizontalPlane, offsetAlongNormal, placeOnRoof, roofPlane, type RoofPlane } from './roof'
 
 const RAD = Math.PI / 180
 const HALF_PI = Math.PI / 2
@@ -71,6 +72,7 @@ const MIN_SEGMENT_MM = 1.0
 export function computePurlins(
   spec: PergolaSpec,
   profiles: Map<string, ProfileDimensions>,
+  roof?: RoofPlane,
 ): CutPiece[] {
   const { contour, lamellaDirectionDeg, heightMm, color, purlinProfileId } = spec
 
@@ -83,10 +85,13 @@ export function computePurlins(
     throw new Error(`Profile "${purlinProfileId}" not found in profiles map`)
   }
 
-  // See VERTICAL SEATING RULE above.
-  const baseYmm = purlinProfile.interruptsLamella === true
-    ? heightMm
-    : heightMm + patternMaxVerticalThicknessMm(pattern)
+  const plane = roof ?? roofPlane(spec)
+  const sloped = !isHorizontalPlane(plane)
+  const aboveLamellaMm = purlinProfile.interruptsLamella === true
+    ? 0
+    : patternMaxVerticalThicknessMm(pattern)
+  // See VERTICAL SEATING RULE above. Flat roof keeps the historic world-Y seat.
+  const baseYmm = heightMm + aboveLamellaMm
 
   // Same entry-point sanitisation as computeFrame/computeLamellas (see
   // contourSanitize.ts) — computePurlins is called independently of both.
@@ -122,21 +127,27 @@ export function computePurlins(
         anchor[0] + h0.s * perp[0],
         anchor[1] + h0.s * perp[1],
       ]
+      const endPt: Point2D = [
+        anchor[0] + h1.s * perp[0],
+        anchor[1] + h1.s * perp[1],
+      ]
 
       const { cutMiterDeg: cms, cutHand: chs } = cutAtEdge(perp, pts, h0.edgeIndex)
       const { cutMiterDeg: cme, cutHand: che } = cutAtEdge(perp, pts, h1.edgeIndex)
 
       const δStart = longPointOffset(cms, purlinProfile.widthMm)
       const δEnd   = longPointOffset(cme, purlinProfile.widthMm)
+      const placed = sloped ? placeOnRoof(startPt, endPt, plane) : null
+      const axisMm = placed?.axisMm ?? lengthAxisMm
 
       pieces.push({
         id:       `purlin-${id++}`,
         role:     'purlin',
         profileId: purlinProfileId,
 
-        lengthAxisMm,
-        lengthLongMm:  lengthAxisMm + δStart + δEnd,
-        lengthShortMm: lengthAxisMm - δStart - δEnd,
+        lengthAxisMm: axisMm,
+        lengthLongMm:  axisMm + δStart + δEnd,
+        lengthShortMm: axisMm - δStart - δEnd,
 
         cutMiterStartDeg: cms,
         cutBevelStartDeg: 0,
@@ -150,10 +161,12 @@ export function computePurlins(
         // is heightMm (flush with lamella/beam bottom) when this purlin
         // interrupts the lamella, or the lamella's own top face when it
         // doesn't — see VERTICAL SEATING RULE above.
-        position: [startPt[0], baseYmm, startPt[1]],
+        position: placed
+          ? offsetAlongNormal(placed.position, plane, aboveLamellaMm)
+          : [startPt[0], baseYmm, startPt[1]],
         // Purlin's own length axis points along `perp`, i.e. at angle θ+90°
         // from +X — rotation[1] follows the same −angle convention as beams.
-        rotation: [0, -(θ + HALF_PI), 0],
+        rotation: placed?.rotation ?? [0, -(θ + HALF_PI), 0],
         color,
       })
     }

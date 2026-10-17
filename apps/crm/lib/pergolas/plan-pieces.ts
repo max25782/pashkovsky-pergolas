@@ -1,4 +1,4 @@
-import type { CutPiece, ProfileDimensions } from '@pashkovsky/pergola-core'
+import type { BuiltPieces, ProfileDimensions } from '@pashkovsky/pergola-core'
 import {
   buildPiecesFromPlan as buildPiecesFromPlanCore,
   type PlanConstructionParams,
@@ -20,7 +20,7 @@ export function buildPiecesFromPlan(input: {
   polygon: Array<{ x: number; y: number }>
   wallIndices: number[]
   params: PlanConstructionParams
-}): CutPiece[] {
+}): BuiltPieces {
   return buildPiecesFromPlanCore(
     {
       contour: input.polygon.map((p): [number, number] => [p.x, p.y]),

@@ -1,4 +1,5 @@
-import type { LamellaAngleDeg, SupportType } from './types'
+import type { LamellaAngleDeg, RoofSlope, SupportType } from './types'
+import { DEFAULT_ROOF_SLOPE } from './roof'
 
 /** Current JSON schema for `Pergola.plan` stored in `pergolas_data`. */
 export const PERGOLA_PLAN_SCHEMA_VERSION = 1
@@ -17,6 +18,9 @@ export interface PlanConstructionParams {
   /** `#RRGGBB`, `RAL7016`, or `wood` / `wood:oak`. */
   colorHex: string
   supportType: Exclude<SupportType, 'posts'>
+  slope: RoofSlope
+  highEdgeIndex: number
+  postHeightOverridesMm: Record<string, number>
 }
 
 export const DEFAULT_PLAN_CONSTRUCTION_PARAMS: PlanConstructionParams = {
@@ -32,4 +36,7 @@ export const DEFAULT_PLAN_CONSTRUCTION_PARAMS: PlanConstructionParams = {
   lamellaAngleDeg: 0,
   colorHex: '#9aa0a6',
   supportType: 'free-standing',
+  slope: { ...DEFAULT_ROOF_SLOPE },
+  highEdgeIndex: 0,
+  postHeightOverridesMm: {},
 }
