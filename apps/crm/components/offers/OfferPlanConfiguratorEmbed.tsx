@@ -13,17 +13,12 @@ import {
 import { useTranslations } from 'next-intl'
 import { PlanEditor, type PlanContourSnapshot, type PlanEditorLabels, type Point } from '@pashkovsky/plan-editor'
 import {
-  computeFrame,
-  computeLamellas,
-  segmentBeamsForStock,
-  segmentLedPurlinsForStock,
-  validateLamellaSpans,
-  DEFAULT_KERF_MM,
-  DEFAULT_VISTUR_TOLERANCES,
+  buildPiecesFromPlan,
   DEFAULT_PLAN_CONSTRUCTION_PARAMS,
+  LAMELLA_PATTERN_PRESETS,
   type PlanConstructionParams,
 } from '@pashkovsky/pergola-core'
-import type { CutPiece, PergolaSpec, Point2D, ProfileDimensions, StructuralIssue } from '@pashkovsky/pergola-core'
+import type { Point2D, ProfileDimensions } from '@pashkovsky/pergola-core'
 import { PergolaCutPieceViewer } from '@pashkovsky/pergola-3d-preview'
 import type { Locale } from '@/lib/locales'
 import type { Offer, PergolaPlan, PergolaPlanConstructionParams } from '@/types/offer'
@@ -48,23 +43,6 @@ const DEMO_PROFILES: Map<string, ProfileDimensions> = new Map([
   ['purlin-led-6040', { widthMm: 40, heightMm: 60, maxSpanMm: 3000, interruptsLamella: true, ledChannelWidthMm: 12, ledMaxStockLengthMm: 5000, availableStockLengthsMm: [6000] }],
 ])
 
-interface LamellaPatternPreset {
-  id: string
-  pattern: string[]
-}
-
-const LAMELLA_PATTERN_PRESETS: LamellaPatternPreset[] = [
-  { id: 'all-20', pattern: ['f2020'] },
-  { id: 'all-40', pattern: ['f4020'] },
-  { id: 'all-70', pattern: ['f7020'] },
-  { id: 'mixed-70-40', pattern: ['f7020', 'f4020'] },
-  { id: 'mixed-70-40-20', pattern: ['f7020', 'f4020', 'f2020'] },
-]
-
-function getLamellaPatternPreset(id: string): LamellaPatternPreset {
-  return LAMELLA_PATTERN_PRESETS.find((p) => p.id === id) ?? LAMELLA_PATTERN_PRESETS[0]
-}
-
 const BEAM_PROFILE_IDS = ['f10040', 'f12050']
 const PURLIN_PROFILE_IDS = ['purlin-plain-5030', 'purlin-led-6040']
 const POST_PROFILE_IDS = ['f8080', 'f6060']
@@ -73,73 +51,8 @@ type ConstructionParams = PlanConstructionParams
 
 const DEFAULT_PARAMS: ConstructionParams = DEFAULT_PLAN_CONSTRUCTION_PARAMS
 
-function buildSpec(contourMm: Point2D[], wallEdgeIndices: number[], params: ConstructionParams): PergolaSpec {
-  const pattern = getLamellaPatternPreset(params.lamellaPatternId).pattern
-  return {
-    contour: contourMm,
-    heightMm: 2600,
-    lamellaGapMm: params.lamellaGapMm,
-    lamellaAngleDeg: 0,
-    lamellaDirectionDeg: params.lamellaDirectionDeg,
-    lamellaOnEdge: params.lamellaOnEdge,
-    postProfileId: params.postProfileId,
-    beamProfileId: params.beamProfileId,
-    lamellaProfileId: pattern[0],
-    lamellaPattern: [...pattern],
-    purlinProfileId: params.purlinProfileId || undefined,
-    wallEdgeIndices,
-    color: '#9aa0a6',
-    visturTolerances: params.visturMode ? DEFAULT_VISTUR_TOLERANCES : undefined,
-  }
-}
-
-interface BuiltPieces {
-  pieces: CutPiece[]
-  isOrthogonal: boolean
-}
-
-function buildPieces(contourMm: Point2D[], wallEdgeIndices: number[], params: ConstructionParams): BuiltPieces {
-  const spec = buildSpec(contourMm, wallEdgeIndices, params)
-  const frame = computeFrame(spec, DEMO_PROFILES)
-  const lamellas = computeLamellas(spec, DEMO_PROFILES)
-
-  // LED purlins + dividers
-  const ledResult = segmentLedPurlinsForStock(spec, DEMO_PROFILES, frame.posts, frame.beams, DEFAULT_KERF_MM)
-  const purlins = [...ledResult.purlins, ...ledResult.dividers]
-
-  // Beam segmentation
-  const beamResult = segmentBeamsForStock(spec, frame, [...lamellas, ...purlins], DEMO_PROFILES, DEFAULT_KERF_MM)
-
-  // Validation
-  const structuralIssues = validateLamellaSpans(lamellas, DEMO_PROFILES)
-  if (structuralIssues.length > 0) {
-    throw new Error(summarizeStructuralIssues(structuralIssues))
-  }
-  if (beamResult.issues.length > 0 || ledResult.issues.length > 0) {
-    const lines = [
-      ...beamResult.issues.map((i) => `  beam "${i.pieceId}" (profile "${i.profileId}"): ${i.message}`),
-      ...ledResult.issues.map((i) => `  LED purlin (profile "${i.profileId}"): ${i.message}`),
-    ]
-    throw new Error(`Construction gap — cannot fit onto any available stock:\n${lines.join('\n')}`)
-  }
-
-  return {
-    pieces: [...beamResult.beams, ...beamResult.posts, ...lamellas, ...purlins],
-    isOrthogonal: frame.isOrthogonal,
-  }
-}
-
-function summarizeStructuralIssues(issues: StructuralIssue[]): string {
-  const lines = issues.map((issue) => {
-    const span = issue.spanMm
-    const limit = issue.maxSpanMm
-    return `  profile "${issue.profileId}": ${span}mm unsupported (limit ${limit}mm)`
-  })
-  return (
-    `Structural violation — ${issues.length} lamella piece(s) exceed their profile's maxLamellaSpanMm:\n` +
-    `${lines.join('\n')}\n` +
-    `Add a purlin profile with interruptsLamella: true, or a lamella profile rated for this span.`
-  )
+function buildHostPieces(contourMm: Point2D[], wallEdgeIndices: number[], params: ConstructionParams) {
+  return buildPiecesFromPlan({ contour: contourMm, wallEdgeIndices, params }, DEMO_PROFILES)
 }
 
 export interface OfferPlanConfiguratorEmbedHandle {
@@ -245,7 +158,7 @@ export const OfferPlanConfiguratorEmbed = forwardRef<
       setTimeout(() => {
         try {
           const contour: Point2D[] = polygonMm.map((p): Point2D => [p.x, p.y])
-          const built = buildPieces(contour, wallEdgeIndices, params)
+          const built = buildHostPieces(contour, wallEdgeIndices, params)
           console.log('[planEditor→3D] computed →', built.pieces.length, 'CutPiece')
 
           setLastPolygonMm(polygonMm)
@@ -274,7 +187,7 @@ export const OfferPlanConfiguratorEmbed = forwardRef<
       if (polygonMm.length < 3) return true
       try {
         const contour: Point2D[] = polygonMm.map((p): Point2D => [p.x, p.y])
-        return buildPieces(contour, wallEdgeIndices, params).isOrthogonal
+        return buildHostPieces(contour, wallEdgeIndices, params).isOrthogonal
       } catch {
         return true
       }
@@ -304,7 +217,7 @@ export const OfferPlanConfiguratorEmbed = forwardRef<
     if (!lastPolygonMm) return { pieces: null, error: null, isOrthogonal: true }
     try {
       const contour: Point2D[] = lastPolygonMm.map((p): Point2D => [p.x, p.y])
-      const built = buildPieces(contour, lastWallEdgeIndices, params)
+      const built = buildHostPieces(contour, lastWallEdgeIndices, params)
       return { pieces: built.pieces, error: null, isOrthogonal: built.isOrthogonal }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
@@ -459,7 +372,11 @@ export const OfferPlanConfiguratorEmbed = forwardRef<
               </button>
             </div>
             <div className="min-h-0 flex-1">
-              <PergolaCutPieceViewer pieces={buildResult.pieces} profiles={DEMO_PROFILES} />
+              <PergolaCutPieceViewer
+                pieces={buildResult.pieces}
+                profiles={DEMO_PROFILES}
+                colorHex={params.colorHex}
+              />
             </div>
           </div>
         </div>
@@ -625,11 +542,74 @@ function ConstructionParamsPanel({ params, onChange, t }: ConstructionParamsPane
           ))}
         </select>
       </label>
+
+      <label className={labelClass}>
+        {t('paramsPanel.heightLabel')}
+        <input
+          type="number"
+          min={1000}
+          step={50}
+          className={selectClass}
+          value={params.heightMm}
+          onChange={(e) => {
+            const v = parseFloat(e.target.value)
+            if (Number.isFinite(v) && v > 0) patch({ heightMm: v })
+          }}
+        />
+      </label>
+
+      <label className={labelClass}>
+        {t('paramsPanel.lamellaAngleLabel')}
+        <select
+          className={selectClass}
+          value={params.lamellaAngleDeg}
+          onChange={(e) => patch({ lamellaAngleDeg: e.target.value === '45' ? 45 : 0 })}
+        >
+          <option value={0}>0°</option>
+          <option value={45}>45°</option>
+        </select>
+      </label>
+
+      <label className={labelClass}>
+        {t('paramsPanel.colorHexLabel')}
+        <select
+          className={selectClass}
+          value={params.colorHex}
+          onChange={(e) => patch({ colorHex: e.target.value })}
+        >
+          <option value="#9aa0a6">RAL 9006 / #9aa0a6</option>
+          <option value="RAL7016">RAL 7016</option>
+          <option value="RAL8019">RAL 8019</option>
+          <option value="RAL9010">RAL 9010</option>
+          <option value="wood:oak">Wood / oak</option>
+        </select>
+      </label>
+
+      <label className={labelClass}>
+        {t('paramsPanel.supportTypeLabel')}
+        <select
+          className={selectClass}
+          value={params.supportType}
+          onChange={(e) => {
+            const v = e.target.value
+            if (v === 'free-standing' || v === 'wall-mounted' || v === 'hanging') {
+              patch({ supportType: v })
+            }
+          }}
+        >
+          <option value="free-standing">{t('paramsPanel.supportFreeStanding')}</option>
+          <option value="wall-mounted">{t('paramsPanel.supportWallMounted')}</option>
+          <option value="hanging">{t('paramsPanel.supportHanging')}</option>
+        </select>
+      </label>
     </div>
   )
 }
 
-function formatPatternOption(preset: LamellaPatternPreset, t: ReturnType<typeof useTranslations>): string {
+function formatPatternOption(
+  preset: { id: string; pattern: string[] },
+  t: ReturnType<typeof useTranslations>,
+): string {
   const widths = preset.pattern.map((id) => DEMO_PROFILES.get(id)?.widthMm ?? '?').join('/')
   return t('paramsPanel.lamellaPatternOption', { widths })
 }

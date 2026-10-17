@@ -25,6 +25,10 @@ const planParamsSchema = z
     purlinProfileId: z.string(),
     postProfileId: z.string(),
     visturMode: z.boolean(),
+    heightMm: z.number().finite().positive(),
+    lamellaAngleDeg: z.union([z.literal(0), z.literal(45)]),
+    colorHex: z.string(),
+    supportType: z.enum(['free-standing', 'wall-mounted', 'hanging']),
   })
   .partial()
 

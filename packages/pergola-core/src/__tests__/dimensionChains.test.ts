@@ -127,13 +127,12 @@ describe('buildAxialDimensionChains', () => {
 
     const chains = buildAxialDimensionChains(beams, posts)
     const wallChain = chains[0]
-    // Corners are still there (from the beam's own endpoints), intermediate
-    // posts along a long wall edge are NOT skipped by computeFrame today
-    // (see frame.ts: the maxSpan loop doesn't check wallEdgeIndices) — the
-    // chain must reflect that reality, not invent a different rule.
+    // Corners stay (from the beam endpoints). The wall itself is the
+    // support, so computeFrame no longer places maxSpan posts on a
+    // wall-marked edge — the chain must not invent ticks that are not there.
     expect(wallChain.points[0]).toMatchObject({ kind: 'corner', point: [0, 0] })
     expect(wallChain.points[wallChain.points.length - 1]).toMatchObject({ kind: 'corner', point: [6000, 0] })
-    expect(wallChain.points.filter((p) => p.kind === 'post')).toHaveLength(2)
+    expect(wallChain.points.filter((p) => p.kind === 'post')).toHaveLength(0)
   })
 
   it('one chain per beam, same order, same beamId', () => {

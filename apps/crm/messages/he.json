@@ -1172,7 +1172,14 @@
       "beamProfileLabel": "פרופיל קורת היקף",
       "purlinProfileLabel": "פרופיל מריש ביניים",
       "purlinProfileNone": "בלי מריש ביניים",
-      "postProfileLabel": "פרופיל עמוד"
+      "postProfileLabel": "פרופיל עמוד",
+      "heightLabel": "גובה, מ״מ",
+      "lamellaAngleLabel": "זווית שלבים",
+      "colorHexLabel": "צבע / גימור",
+      "supportTypeLabel": "תמיכה",
+      "supportFreeStanding": "עומדת חופשית",
+      "supportWallMounted": "צמודה לקיר",
+      "supportHanging": "תלויה"
     },
     "preview3D": {
       "title": "תצוגת 3D",

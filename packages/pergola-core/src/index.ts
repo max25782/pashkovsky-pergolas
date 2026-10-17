@@ -8,6 +8,7 @@ export type {
   MiterAtVertex,
   ContourMiters,
   SupportType,
+  LamellaAngleDeg,
 } from './types'
 
 export {
@@ -32,6 +33,21 @@ export { computeLedStripLengthMm, ledPurlinPieces } from './ledChannel'
 
 export type { FrameResult } from './frame'
 export { computeFrame } from './frame'
+
+export type { CanonicalSupportType } from './support'
+export {
+  resolveSupportType,
+  specColorHex,
+  clampLamellaAngleDeg,
+  isFreeStanding,
+  HANGER_LENGTH_MM,
+} from './support'
+
+export type { BuiltPieces, SpecFromPlanInput } from './buildPieces'
+export { specFromPlan, buildPieces, buildPiecesFromPlan, planSupportType } from './buildPieces'
+
+export type { LamellaPatternPreset } from './lamellaPresets'
+export { LAMELLA_PATTERN_PRESETS, resolveLamellaPatternIds } from './lamellaPresets'
 
 export type {
   StockPlanLine,

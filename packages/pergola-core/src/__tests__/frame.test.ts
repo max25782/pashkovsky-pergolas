@@ -216,6 +216,11 @@ describe('hanging pergola — no posts', () => {
 
   it('still has 4 beams', () => expect(beams).toHaveLength(4))
   it('no posts', () => expect(posts).toHaveLength(0))
+  it('emits hangers instead of posts', () => {
+    const { hangers } = computeFrame(spec, profiles)
+    expect(hangers.length).toBeGreaterThan(0)
+    hangers.forEach((h) => expect(h.role).toBe('hanger'))
+  })
 })
 
 // ── 4. Trapeze — beams of different lengths, miter angles from miter.ts ───────

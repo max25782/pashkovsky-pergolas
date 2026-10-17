@@ -84,13 +84,15 @@ export interface CutPiece {
 
 /**
  * How the pergola is supported.
- *   'posts'        — freestanding on vertical posts (default)
- *   'wall-mounted' — one edge attaches to a wall (posts only on free sides)
- *                    Requires wallEdgeIndex.  The wall edge uses wallProfileId
- *                    (a mounting channel) instead of beamProfileId.
- *   'hanging'      — suspended from ceiling/wall, no posts at all
+ *   'free-standing' — posts on corners + maxSpan intermediates (default)
+ *   'posts'         — deprecated alias of 'free-standing'
+ *   'wall-mounted'  — no posts on wall-marked edges; beam attaches to the wall
+ *   'hanging'       — no posts; hangers (role: 'hanger') at support points
  */
-export type SupportType = 'posts' | 'wall-mounted' | 'hanging'
+export type SupportType = 'free-standing' | 'posts' | 'wall-mounted' | 'hanging'
+
+/** Product-facing lamella tilt. Kernel still stores a number; hosts clamp to these. */
+export type LamellaAngleDeg = 0 | 45
 
 /**
  * Full specification for one pergola.
@@ -111,7 +113,11 @@ export interface PergolaSpec {
    * heavily overlapping pieces.
    */
   lamellaGapMm: number
-  /** Tilt of each lamella from horizontal (0 = flat/closed, 90 = vertical/open) */
+  /**
+   * Tilt of each lamella from horizontal. Product values are 0° (flat/closed)
+   * or 45°. Other numbers still compute (kernel math is continuous) but hosts
+   * must clamp via PlanConstructionParams.
+   */
   lamellaAngleDeg: number
   /** Direction the lamellas run, degrees from positive X axis (0 = left→right) */
   lamellaDirectionDeg: number
@@ -148,7 +154,13 @@ export interface PergolaSpec {
    * lamellaProfileId/lamellaGapMm/lamellaOnEdge.
    */
   lamellaPattern?: string[]
+  /** Fallback hex used on CutPiece.color when colorHex is unset. */
   color: string
+  /**
+   * Finish token consumed by the 3D viewer: `#RRGGBB`, `RAL7016`, or
+   * `wood` / `wood:oak`. Prefer this over `color`.
+   */
+  colorHex?: string
 
   /**
    * Purlin (intermediate rafter) profile ID — optional. Its
@@ -173,7 +185,7 @@ export interface PergolaSpec {
 
   /**
    * How the pergola is supported.
-   * @default 'posts'
+   * @default 'free-standing' (`'posts'` is accepted as the same mode)
    */
   supportType?: SupportType
 

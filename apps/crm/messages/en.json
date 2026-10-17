@@ -1172,7 +1172,14 @@
       "beamProfileLabel": "Perimeter beam profile",
       "purlinProfileLabel": "Purlin profile",
       "purlinProfileNone": "No purlins",
-      "postProfileLabel": "Post profile"
+      "postProfileLabel": "Post profile",
+      "heightLabel": "Height, mm",
+      "lamellaAngleLabel": "Lamella angle",
+      "colorHexLabel": "Color / finish",
+      "supportTypeLabel": "Support",
+      "supportFreeStanding": "Free-standing",
+      "supportWallMounted": "Wall-mounted",
+      "supportHanging": "Hanging"
     },
     "preview3D": {
       "title": "3D preview",

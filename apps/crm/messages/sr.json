@@ -1172,7 +1172,14 @@
       "beamProfileLabel": "Profil obodne grede",
       "purlinProfileLabel": "Profil rožnjače",
       "purlinProfileNone": "Bez rožnjača",
-      "postProfileLabel": "Profil stuba"
+      "postProfileLabel": "Profil stuba",
+      "heightLabel": "Visina, mm",
+      "lamellaAngleLabel": "Ugao lamela",
+      "colorHexLabel": "Boja / završna obrada",
+      "supportTypeLabel": "Oslonac",
+      "supportFreeStanding": "Samostojeća",
+      "supportWallMounted": "Zidna",
+      "supportHanging": "Viseća"
     },
     "preview3D": {
       "title": "3D pregled",

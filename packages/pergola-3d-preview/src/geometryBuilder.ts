@@ -1,6 +1,10 @@
 import * as THREE from 'three'
 import type { CutPiece, ProfileDimensions } from '@pashkovsky/pergola-core'
 import { MM_TO_M } from './units'
+import { buildPergolaMaterial } from './materials'
+
+/** Render-only inset so 0° slats read as separate rails. Kernel lengths stay unchanged. */
+const LAMELLA_VISUAL_REVEAL_MM = 6
 
 const RAD = Math.PI / 180
 
@@ -179,13 +183,17 @@ export function buildCutPieceGeometry(
   profile: ProfileDimensions,
 ): THREE.BufferGeometry {
   const lengthMm = Math.max(piece.lengthAxisMm, EPS)
-  const isPost = piece.role === 'post'
+  const isVertical = piece.role === 'post' || piece.role === 'hanger'
+  const visualWidthMm =
+    piece.role === 'lamella'
+      ? Math.max(profile.widthMm - LAMELLA_VISUAL_REVEAL_MM, EPS)
+      : profile.widthMm
 
   const geometry = buildMiteredBoxGeometryMm({
     lengthMm,
-    widthMm: Math.max(profile.widthMm, EPS),
+    widthMm: Math.max(visualWidthMm, EPS),
     heightMm: Math.max(profile.heightMm, EPS),
-    zMode: isPost ? 'centered' : 'based',
+    zMode: isVertical ? 'centered' : 'based',
     cutMiterStartDeg: piece.cutMiterStartDeg,
     cutHandStart: piece.cutHandStart,
     cutMiterEndDeg: piece.cutMiterEndDeg,
@@ -194,7 +202,7 @@ export function buildCutPieceGeometry(
 
   geometry.scale(MM_TO_M, MM_TO_M, MM_TO_M)
 
-  if (isPost) {
+  if (isVertical) {
     // Локальный X (длина) → локальный Y: стойка растёт от position (земля,
     // world Y=0) вверх на lengthAxisMm вдоль мирового +Y без поворота на
     // самом CutPiece (rotation всегда [0,0,0] у стоек — см. frame.ts).
@@ -204,21 +212,9 @@ export function buildCutPieceGeometry(
   return geometry
 }
 
-/** Простой единый материал — см. промпт: «материал простой, один цвет», фотореализм — отдельный шаг. */
+/** One geometry family; aluminum vs wood is chosen from the finish token. */
 export function buildCutPieceMaterial(colorHex: string): THREE.MeshStandardMaterial {
-  return new THREE.MeshStandardMaterial({
-    color: safeColor(colorHex),
-    metalness: 0.35,
-    roughness: 0.55,
-  })
-}
-
-function safeColor(hex: string): THREE.Color {
-  try {
-    return new THREE.Color(hex)
-  } catch {
-    return new THREE.Color('#9aa0a6')
-  }
+  return buildPergolaMaterial(colorHex)
 }
 
 /**

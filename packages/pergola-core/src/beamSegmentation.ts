@@ -216,7 +216,7 @@ function makePost(spec: PergolaSpec, pos: Point2D, nextId: () => string): CutPie
 
     position: [pos[0], 0, pos[1]],
     rotation: [0, 0, 0],
-    color: spec.color,
+    color: spec.colorHex ?? spec.color,
   }
 }
 

@@ -31,6 +31,12 @@ function parseParams(raw: unknown): PlanConstructionParams {
   if (typeof o.purlinProfileId === 'string') base.purlinProfileId = o.purlinProfileId
   if (typeof o.postProfileId === 'string') base.postProfileId = o.postProfileId
   if (typeof o.visturMode === 'boolean') base.visturMode = o.visturMode
+  if (isFiniteNumber(o.heightMm) && (o.heightMm as number) > 0) base.heightMm = o.heightMm as number
+  if (o.lamellaAngleDeg === 0 || o.lamellaAngleDeg === 45) base.lamellaAngleDeg = o.lamellaAngleDeg
+  if (typeof o.colorHex === 'string' && o.colorHex.length > 0) base.colorHex = o.colorHex
+  if (o.supportType === 'free-standing' || o.supportType === 'wall-mounted' || o.supportType === 'hanging') {
+    base.supportType = o.supportType
+  }
   return base
 }
 

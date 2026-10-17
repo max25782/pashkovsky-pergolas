@@ -8,6 +8,7 @@ import {
   type ShapeGrid,
 } from './rectangleDecomposition'
 import { sanitizeContour } from './contourSanitize'
+import { HANGER_LENGTH_MM, resolveSupportType, specColorHex } from './support'
 
 /** Tolerance for "is this grid coordinate actually ON this edge" / "does it
  * coincide with this edge's own wing-boundary post", mm — same role as
@@ -33,6 +34,8 @@ export interface FrameResult {
   beams: CutPiece[]
   /** Vertical posts — corner posts + intermediate posts */
   posts: CutPiece[]
+  /** Ceiling/wall hangers — only when supportType === 'hanging' */
+  hangers: CutPiece[]
   /**
    * True iff the contour is strictly axis-aligned (see
    * `isOrthogonalContour`) — the post/beam layout above is then EXACT
@@ -250,7 +253,8 @@ export function computeFrame(
   const n = pts.length
   const miters = computeContourMiters(pts)
 
-  const supportType = spec.supportType ?? (spec.attachedToWall ? 'wall-mounted' : 'posts')
+  const supportType = resolveSupportType(spec)
+  const pieceColor = specColorHex(spec)
 
   // Resolve wall edge indices (normalised to [0, n)) — a Set, so "is edge i a
   // wall edge" and "is vertex i an endpoint of some wall edge" are both O(1).
@@ -384,7 +388,7 @@ export function computeFrame(
         position: [A[0], spec.heightMm, A[1]],
         // rotation around Y: negative azimuth (Three.js right-hand, Y-up convention)
         rotation: [0, -θ, 0],
-        color: spec.color,
+        color: pieceColor,
       })
       continue
     }
@@ -456,20 +460,18 @@ export function computeFrame(
 
         position: [startPos[0], spec.heightMm, startPos[1]],
         rotation: [0, -θ, 0],
-        color: spec.color,
+        color: pieceColor,
       })
     }
   }
 
-  // ── Posts ──────────────────────────────────────────────────────────────────
+  // ── Posts / hangers ────────────────────────────────────────────────────────
 
   const posts: CutPiece[] = []
-
-  if (supportType === 'hanging') {
-    return { beams, posts, isOrthogonal }
-  }
+  const hangers: CutPiece[] = []
 
   let postId = 0
+  let hangerId = 0
 
   function makePost(pos: Point2D): CutPiece {
     return {
@@ -492,37 +494,71 @@ export function computeFrame(
       // position = base of post at ground level
       position: [pos[0], 0, pos[1]],
       rotation: [0, 0, 0],
-      color: spec.color,
+      color: pieceColor,
     }
   }
 
-  // Corner posts (one per non-wall vertex)
-  for (let i = 0; i < n; i++) {
-    if (!wallVertices.has(i)) {
-      posts.push(makePost(pts[i]))
+  function makeHanger(pos: Point2D): CutPiece {
+    return {
+      id:       `hanger-${hangerId++}`,
+      role:     'hanger',
+      profileId: spec.postProfileId,
+
+      lengthAxisMm:  HANGER_LENGTH_MM,
+      lengthLongMm:  HANGER_LENGTH_MM,
+      lengthShortMm: HANGER_LENGTH_MM,
+
+      cutMiterStartDeg: 0,
+      cutBevelStartDeg: 0,
+      cutHandStart:     'straight',
+
+      cutMiterEndDeg: 0,
+      cutBevelEndDeg: 0,
+      cutHandEnd:     'straight',
+
+      // Base of the hanger sits on the beam; the rod grows upward (ceiling).
+      position: [pos[0], spec.heightMm, pos[1]],
+      rotation: [0, 0, 0],
+      color: pieceColor,
     }
   }
 
-  // Intermediate posts along each edge, computed WITHIN each shape wing
-  // separately (see edgeSegmentPlans above) — same plan the вистур beam
-  // segmentation above reads, so the two can never disagree on where a
-  // maxSpanMm post belongs. The wing boundary itself is deliberately NOT
-  // posted here — see prompt "лишним оказывается maxSpanMm-стойка, а не
-  // стойка на границе крыла": that post remains segmentBeamsForStock's own
-  // job downstream, unchanged.
-  for (let i = 0; i < n; i++) {
-    const A = pts[i]
-    const B = pts[(i + 1) % n]
-    const edgeLen = dist2(A, B)
-    for (const distMm of edgeSegmentPlans[i].intraWingSpanPointsMm) {
-      const t = distMm / edgeLen
-      const pos: Point2D = [
-        A[0] + t * (B[0] - A[0]),
-        A[1] + t * (B[1] - A[1]),
-      ]
-      posts.push(makePost(pos))
+  function collectSupportPositions(skipWallEdges: boolean, skipWallVertices: boolean): Point2D[] {
+    const positions: Point2D[] = []
+    for (let i = 0; i < n; i++) {
+      if (skipWallVertices && wallVertices.has(i)) continue
+      positions.push(pts[i])
     }
+    for (let i = 0; i < n; i++) {
+      if (skipWallEdges && wallEdgeIndices.has(i)) continue
+      const A = pts[i]
+      const B = pts[(i + 1) % n]
+      const edgeLen = dist2(A, B)
+      for (const distMm of edgeSegmentPlans[i].intraWingSpanPointsMm) {
+        const t = distMm / edgeLen
+        positions.push([
+          A[0] + t * (B[0] - A[0]),
+          A[1] + t * (B[1] - A[1]),
+        ])
+      }
+    }
+    return positions
   }
 
-  return { beams, posts, isOrthogonal }
+  if (supportType === 'hanging') {
+    for (const pos of collectSupportPositions(false, false)) {
+      hangers.push(makeHanger(pos))
+    }
+    return { beams, posts, hangers, isOrthogonal }
+  }
+
+  // free-standing / wall-mounted: posts at free corners + maxSpan points
+  // on free edges only (wall-marked edges have no posts — the wall is the
+  // support). Intermediate points stay symmetric because intermediatePostTs
+  // already spaces them uniformly along each free edge.
+  for (const pos of collectSupportPositions(true, true)) {
+    posts.push(makePost(pos))
+  }
+
+  return { beams, posts, hangers, isOrthogonal }
 }

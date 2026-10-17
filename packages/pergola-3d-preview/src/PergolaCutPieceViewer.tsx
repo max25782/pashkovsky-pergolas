@@ -7,6 +7,7 @@ import { OrbitControls, PerspectiveCamera } from '@react-three/drei'
 import * as THREE from 'three'
 import type { CutPiece, ProfileDimensions } from '@pashkovsky/pergola-core'
 import { PergolaCutPieceScene } from './PergolaCutPieceScene'
+import type { ScenePresetId } from './SceneBackdrop'
 import { MM_TO_M } from './units'
 
 export interface PergolaCutPieceViewerProps {
@@ -14,6 +15,8 @@ export interface PergolaCutPieceViewerProps {
   profiles: Map<string, ProfileDimensions>
   className?: string
   style?: CSSProperties
+  colorHex?: string
+  scenePreset?: ScenePresetId
 }
 
 /**
@@ -33,6 +36,8 @@ export function PergolaCutPieceViewer({
   profiles,
   className,
   style,
+  colorHex,
+  scenePreset = 'classic',
 }: PergolaCutPieceViewerProps): ReactElement {
   const framing = useMemo(() => computeFraming(pieces), [pieces])
 
@@ -41,9 +46,13 @@ export function PergolaCutPieceViewer({
       <Canvas
         shadows
         style={{ width: '100%', height: '100%' }}
-        gl={{ antialias: true, preserveDrawingBuffer: true }}
+        gl={{
+          antialias: true,
+          preserveDrawingBuffer: true,
+          toneMapping: THREE.ACESFilmicToneMapping,
+          outputColorSpace: THREE.SRGBColorSpace,
+        }}
       >
-        <color attach="background" args={['#c8dff0']} />
         <PerspectiveCamera makeDefault position={framing.cameraPosition} fov={50} near={0.1} far={500} />
         <OrbitControls
           enableDamping
@@ -51,7 +60,12 @@ export function PergolaCutPieceViewer({
           target={framing.target}
           maxPolarAngle={Math.PI / 2.02}
         />
-        <PergolaCutPieceScene pieces={pieces} profiles={profiles} />
+        <PergolaCutPieceScene
+          pieces={pieces}
+          profiles={profiles}
+          colorHex={colorHex}
+          scenePreset={scenePreset}
+        />
       </Canvas>
     </div>
   )

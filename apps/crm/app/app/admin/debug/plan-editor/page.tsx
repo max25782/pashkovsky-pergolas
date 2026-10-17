@@ -39,17 +39,14 @@ import { useTranslations } from 'next-intl'
 import { PlanEditor, type PlanEditorLabels } from '@pashkovsky/plan-editor'
 import type { Point } from '@pashkovsky/plan-editor'
 import {
-  computeFrame,
-  computeLamellas,
+  buildPiecesFromPlan,
   computeLedStripLengthMm,
   compareStockLengthOptions,
-  validateLamellaSpans,
-  segmentBeamsForStock,
-  segmentLedPurlinsForStock,
-  DEFAULT_KERF_MM,
+  DEFAULT_PLAN_CONSTRUCTION_PARAMS,
   DEFAULT_VISTUR_TOLERANCES,
+  type PlanConstructionParams,
 } from '@pashkovsky/pergola-core'
-import type { CutPiece, PergolaSpec, Point2D, ProfileDimensions, StructuralIssue } from '@pashkovsky/pergola-core'
+import type { CutPiece, Point2D, ProfileDimensions } from '@pashkovsky/pergola-core'
 import { PergolaCutPieceViewer } from '@pashkovsky/pergola-3d-preview'
 import { TopPlanSheet, LamellaLayoutSheet, CellFrameSheet } from '@pashkovsky/pergola-drawing'
 import { OrderAndCuttingPanel } from '@/components/cut-list/OrderAndCuttingPanel'
@@ -142,224 +139,12 @@ const LAMELLA_PATTERN_PRESETS: readonly LamellaPatternPreset[] = [
   { id: 'mixed-70-40-20', pattern: ['f7020', 'f4020', 'f2020'] },
 ] as const
 
-function getLamellaPatternPreset(id: string): LamellaPatternPreset {
-  return LAMELLA_PATTERN_PRESETS.find((p) => p.id === id) ?? LAMELLA_PATTERN_PRESETS[0]
-}
+type ConstructionParams = PlanConstructionParams
 
-interface ConstructionParams {
-  /** Id одного из LAMELLA_PATTERN_PRESETS — не сырой profileId (см. комментарий выше пресетов). */
-  lamellaPatternId: string
-  lamellaGapMm: number
-  lamellaDirectionDeg: number
-  /**
-   * false (умолчание) — ламель плашмя (widthMm горизонталь, видна снизу).
-   * true — "на ребро" (heightMm горизонталь). Параметр РАСЧЁТА, не рендера
-   * — меняет шаг сканирования в computeLamellas и, следовательно, число
-   * деталей/лист раскроя (см. промпт «ориентация сечений» п.3 и
-   * pergola-core lamellas.ts VISIBLE WIDTH). Любое изменение → полный
-   * пересчёт, как и остальные параметры этой панели. Применяется
-   * одинаково к каждому профилю в раскладке, даже смешанной.
-   */
-  lamellaOnEdge: boolean
-  beamProfileId: string
-  purlinProfileId: string
-  postProfileId: string
-  /**
-   * "Вистур" — заводская сборка целиком (см. промпт «рама-вистур»):
-   * false (умолчание) — обычный монтаж на объекте, длина ламели равна
-   * фактическому пролёту без вычетов (поведение не меняется). true —
-   * computeLamellas вычитает заводские зазоры сборки (см. pergola-core
-   * visturTolerances.ts — по умолчанию 30мм суммарно по длине, 15мм на
-   * каждый реальный контурный конец). Влияет на реальные длины в раскрое,
-   * поэтому опт-ин, а не глобальная константа.
-   */
-  visturMode: boolean
-}
+const DEFAULT_PARAMS: ConstructionParams = DEFAULT_PLAN_CONSTRUCTION_PARAMS
 
-const DEFAULT_PARAMS: ConstructionParams = {
-  lamellaPatternId: 'all-70',
-  lamellaGapMm: 20,
-  lamellaDirectionDeg: 0,
-  lamellaOnEdge: false,
-  visturMode: false,
-  beamProfileId: 'f10040',
-  // Defaults to the ONE interrupting purlin profile in this demo catalog
-  // (see prompt "дефолт NO_PURLIN... выдаёт неисполнимую конструкцию
-  // молча"): every lamella profile here caps out at maxLamellaSpanMm=1500mm,
-  // so any span above ~1.5m needs an interrupting purlin regardless — NO_PURLIN
-  // as a starting point just guarantees the very first "В 3D" click on a
-  // real-sized polygon hits validateLamellaSpans. validateLamellaSpans stays
-  // as the hard backstop (see buildPieces below) for whatever a user
-  // deliberately switches to afterwards (NO_PURLIN, the non-interrupting
-  // purlin-plain-5030, or a span too big even for this profile) — this
-  // default does NOT replace that check, it just removes the friction of
-  // hitting it on the very first try for no reason.
-  purlinProfileId: 'purlin-led-6040',
-  postProfileId: 'f8080',
-}
-
-function buildSpec(contourMm: Point2D[], wallEdgeIndices: number[], params: ConstructionParams): PergolaSpec {
-  const pattern = getLamellaPatternPreset(params.lamellaPatternId).pattern
-  return {
-    contour: contourMm,
-    heightMm: 2600,
-    lamellaGapMm: params.lamellaGapMm,
-    lamellaAngleDeg: 0,
-    lamellaDirectionDeg: params.lamellaDirectionDeg,
-    lamellaOnEdge: params.lamellaOnEdge,
-    postProfileId: params.postProfileId,
-    beamProfileId: params.beamProfileId,
-    // lamellaProfileId is the required single-profile fallback field (used
-    // only if lamellaPattern were ever unset) — always set to the pattern's
-    // first entry so the two never disagree; lamellaPattern is authoritative
-    // (see resolveLamellaPattern in pergola-core).
-    lamellaProfileId: pattern[0],
-    lamellaPattern: [...pattern],
-    purlinProfileId: params.purlinProfileId || undefined,
-    wallEdgeIndices,
-    color: '#9aa0a6',
-    visturTolerances: params.visturMode ? DEFAULT_VISTUR_TOLERANCES : undefined,
-  }
-}
-
-/**
- * Ядро целиком: беседки/стойки/ламели/прогоны — три независимых вызова, как
- * и задумано в pergola-core (см. модуль-докстринги computeFrame/
- * computeLamellas/computePurlins).
- *
- * ВАЛИДАЦИЯ КОНСТРУКТИВА (см. промпт «дефолт NO_PURLIN... выдаёт
- * неисполнимую конструкцию молча»): пролёт ламели длиннее
- * profile.maxLamellaSpanMm без прогона (или с прогоном, который её не
- * "перебивает", interruptsLamella: false) физически провисает — это не
- * warning, а блокирующая ошибка, тем же контрактом, что computeFrame/
- * computeLamellas/computePurlins уже используют для отсутствующего профиля
- * (throw, а не молчаливый неверный результат). Намеренно не добавляем
- * дефолтный профиль прогона вместо этого: он не решает случай произвольного
- * пролёта (см. рабочий пример «6000 при maxLamellaSpanMm=1500» — дефолт
- * прогона мог бы сам не подойти без пересчёта числа прогонов), тогда как
- * явная ошибка ловит ЛЮБОЕ нарушение правила, а не только «забыли выбрать».
- */
-interface BuiltPieces {
-  pieces: CutPiece[]
-  /**
-   * See prompt "честная плашка для неортогональных форм" / `FrameResult.
-   * isOrthogonal`'s own docstring in pergola-core — threaded through here
-   * so the drawing sheets below can show the "approximate" warning banner
-   * instead of silently trusting a non-orthogonal shape's post layout.
-   */
-  isOrthogonal: boolean
-}
-
-function buildPieces(contourMm: Point2D[], wallEdgeIndices: number[], params: ConstructionParams): BuiltPieces {
-  const spec = buildSpec(contourMm, wallEdgeIndices, params)
-  const frame = computeFrame(spec, DEMO_PROFILES)
-  const lamellas = computeLamellas(spec, DEMO_PROFILES)
-
-  // Rule B first (see prompt "ПРАВИЛО B — LED-БАЛКА"): reverses an LED
-  // purlin's direction 90° — adding a plain divider + a denser short-purlin
-  // grid — whenever its own span is longer than stock (falls straight
-  // through to computePurlins' own unchanged output for every other case:
-  // no purlinProfileId, a non-LED profile, or an LED purlin that already
-  // fits — see segmentLedPurlinsForStock's own doc). Feeds frame.posts/
-  // frame.beams so a divider can reuse an existing structural joint instead
-  // of always guessing a fresh mid-span one.
-  const ledResult = segmentLedPurlinsForStock(spec, DEMO_PROFILES, frame.posts, frame.beams, DEFAULT_KERF_MM)
-  const purlins = [...ledResult.purlins, ...ledResult.dividers]
-
-  // Rule A second (see prompt "ПРАВИЛО A — ОБЫЧНАЯ БАЛКА ПЕРИМЕТРА"):
-  // splices a too-long perimeter beam only at a real structural joint
-  // (existing post, or a crossing purlin/divider's own endpoint — hence
-  // `purlins` from ABOVE, already including Rule B's dividers, is passed
-  // as a crossing-piece candidate here), adding a new post only when
-  // nothing else reaches.
-  const beamResult = segmentBeamsForStock(spec, frame, [...lamellas, ...purlins], DEMO_PROFILES, DEFAULT_KERF_MM)
-
-  const structuralIssues = validateLamellaSpans(lamellas, DEMO_PROFILES)
-  if (structuralIssues.length > 0) {
-    throw new Error(summarizeStructuralIssues(structuralIssues))
-  }
-  if (beamResult.issues.length > 0 || ledResult.issues.length > 0) {
-    const lines = [
-      ...beamResult.issues.map((i) => `  beam "${i.pieceId}" (profile "${i.profileId}"): ${i.message}`),
-      ...ledResult.issues.map((i) => `  LED purlin (profile "${i.profileId}"): ${i.message}`),
-    ]
-    throw new Error(`Construction gap \u2014 cannot fit onto any available stock:\n${lines.join('\n')}`)
-  }
-
-  return {
-    pieces: [...beamResult.beams, ...beamResult.posts, ...lamellas, ...purlins],
-    isOrthogonal: frame.isOrthogonal,
-  }
-}
-
-/**
- * validateLamellaSpans returns ONE issue per offending CutPiece — a real
- * pergola with many scan-line rows can produce dozens of pieces violating
- * the SAME structural rule. Two different shapes of "same rule, many rows"
- * both need collapsing, but not the same way:
- *   • A straight edge ⊥ to the lamellas → every row has the EXACT same span
- *     (e.g. 54 rows all at 4446mm) — exact grouping works.
- *   • A SLOPED edge (real-world trapezoid/angled contour) → each row's
- *     clipped length differs by ~1-2mm from its neighbour as the scan line
- *     climbs the slope (5460, 5461, 5463, 5465, … 5541mm) — grouping by
- *     rounded-mm span barely collapses anything (this is exactly what the
- *     user hit: 94 pieces → still ~48 near-duplicate lines).
- * Fix: cluster by PROXIMITY (sorted spans, new cluster whenever the gap to
- * the previous span exceeds GAP_THRESHOLD_MM) instead of exact/rounded
- * equality — a continuous run of close values collapses into one "min–max"
- * range, while a genuinely distant value (13117mm vs ~5500mm — two different
- * regions of the same pergola, not measurement noise on one edge) stays its
- * own line, which is real structural information the user needs (one region
- * needs far more purlins than the other).
- */
-const SPAN_CLUSTER_GAP_MM = 500
-
-interface SpanCluster {
-  profileId: string
-  count: number
-  minSpanMm: number
-  maxSpanMm: number
-  limitMm: number
-}
-
-function clusterStructuralIssues(issues: StructuralIssue[]): SpanCluster[] {
-  const byProfile = new Map<string, StructuralIssue[]>()
-  for (const issue of issues) {
-    byProfile.set(issue.profileId, [...(byProfile.get(issue.profileId) ?? []), issue])
-  }
-
-  const clusters: SpanCluster[] = []
-  for (const [profileId, profileIssues] of byProfile) {
-    const sorted = [...profileIssues].sort((a, b) => a.spanMm - b.spanMm)
-    let clusterStart = 0
-    for (let i = 1; i <= sorted.length; i++) {
-      const isBoundary = i === sorted.length || sorted[i].spanMm - sorted[i - 1].spanMm > SPAN_CLUSTER_GAP_MM
-      if (!isBoundary) continue
-      const slice = sorted.slice(clusterStart, i)
-      clusters.push({
-        profileId,
-        count: slice.length,
-        minSpanMm: Math.round(slice[0].spanMm),
-        maxSpanMm: Math.round(slice[slice.length - 1].spanMm),
-        limitMm: slice[0].maxSpanMm,
-      })
-      clusterStart = i
-    }
-  }
-  return clusters.sort((a, b) => b.maxSpanMm - a.maxSpanMm)
-}
-
-function summarizeStructuralIssues(issues: StructuralIssue[]): string {
-  const lines = clusterStructuralIssues(issues).map((c) => {
-    const range = c.minSpanMm === c.maxSpanMm ? `${c.minSpanMm}mm` : `${c.minSpanMm}\u2013${c.maxSpanMm}mm`
-    return `  ${c.count}\u00d7 profile "${c.profileId}": ${range} unsupported (limit ${c.limitMm}mm)`
-  })
-
-  return (
-    `Structural violation \u2014 ${issues.length} lamella piece(s) exceed their profile's maxLamellaSpanMm:\n` +
-    `${lines.join('\n')}\n` +
-    `Add a purlin profile with interruptsLamella: true and a high-enough purlin count, or a lamella profile rated for this span.`
-  )
+function buildHostPieces(contourMm: Point2D[], wallEdgeIndices: number[], params: ConstructionParams) {
+  return buildPiecesFromPlan({ contour: contourMm, wallEdgeIndices, params }, DEMO_PROFILES)
 }
 
 const ROLE_LABELS: Record<CutPiece['role'], string> = {
@@ -419,7 +204,7 @@ export default function PlanEditorDebugPage() {
           // Строим один раз здесь, чтобы поймать ошибку ДО открытия модалки
           // (тот же контракт, что раньше) — реальный рендер ниже пересчитывает
           // через тот же buildPieces в useMemo от lastPolygonMm/params.
-          const built = buildPieces(contour, wallEdgeIndices, params)
+          const built = buildHostPieces(contour, wallEdgeIndices, params)
           console.log('[planEditor→3D] computeFrame/computeLamellas/computePurlins →', built.pieces.length, 'CutPiece:', countByRole(built.pieces))
 
           setLastPolygonMm(polygonMm)
@@ -453,7 +238,7 @@ export default function PlanEditorDebugPage() {
     if (!lastPolygonMm) return { pieces: null, isOrthogonal: true, error: null }
     try {
       const contour: Point2D[] = lastPolygonMm.map((p): Point2D => [p.x, p.y])
-      const built = buildPieces(contour, lastWallEdgeIndices, params)
+      const built = buildHostPieces(contour, lastWallEdgeIndices, params)
       return { pieces: built.pieces, isOrthogonal: built.isOrthogonal, error: null }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
@@ -591,7 +376,11 @@ export default function PlanEditorDebugPage() {
               </button>
             </div>
             <div className="min-h-0 flex-1">
-              <PergolaCutPieceViewer pieces={pieces} profiles={DEMO_PROFILES} />
+              <PergolaCutPieceViewer
+                pieces={pieces}
+                profiles={DEMO_PROFILES}
+                colorHex={params.colorHex}
+              />
             </div>
             <div className="max-h-56 shrink-0 overflow-y-auto border-t border-neutral-200 bg-neutral-50 px-4 py-3 dark:border-neutral-700 dark:bg-neutral-900">
               <PieceSummary pieces={pieces} ledStripLengthMm={ledStripLengthMm} t={t} />
@@ -875,6 +664,66 @@ function ConstructionParamsPanel({ params, onChange, t }: ConstructionParamsPane
               {formatProfileOption(id)}
             </option>
           ))}
+        </select>
+      </label>
+
+      <label className={labelClass}>
+        {t('paramsPanel.heightLabel')}
+        <input
+          type="number"
+          min={1000}
+          step={50}
+          className={selectClass}
+          value={params.heightMm}
+          onChange={(e) => {
+            const v = parseFloat(e.target.value)
+            if (Number.isFinite(v) && v > 0) patch({ heightMm: v })
+          }}
+        />
+      </label>
+
+      <label className={labelClass}>
+        {t('paramsPanel.lamellaAngleLabel')}
+        <select
+          className={selectClass}
+          value={params.lamellaAngleDeg}
+          onChange={(e) => patch({ lamellaAngleDeg: e.target.value === '45' ? 45 : 0 })}
+        >
+          <option value={0}>0°</option>
+          <option value={45}>45°</option>
+        </select>
+      </label>
+
+      <label className={labelClass}>
+        {t('paramsPanel.colorHexLabel')}
+        <select
+          className={selectClass}
+          value={params.colorHex}
+          onChange={(e) => patch({ colorHex: e.target.value })}
+        >
+          <option value="#9aa0a6">RAL 9006 / #9aa0a6</option>
+          <option value="RAL7016">RAL 7016</option>
+          <option value="RAL8019">RAL 8019</option>
+          <option value="RAL9010">RAL 9010</option>
+          <option value="wood:oak">Wood / oak</option>
+        </select>
+      </label>
+
+      <label className={labelClass}>
+        {t('paramsPanel.supportTypeLabel')}
+        <select
+          className={selectClass}
+          value={params.supportType}
+          onChange={(e) => {
+            const v = e.target.value
+            if (v === 'free-standing' || v === 'wall-mounted' || v === 'hanging') {
+              patch({ supportType: v })
+            }
+          }}
+        >
+          <option value="free-standing">{t('paramsPanel.supportFreeStanding')}</option>
+          <option value="wall-mounted">{t('paramsPanel.supportWallMounted')}</option>
+          <option value="hanging">{t('paramsPanel.supportHanging')}</option>
         </select>
       </label>
     </div>

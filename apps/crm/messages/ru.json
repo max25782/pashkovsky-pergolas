@@ -1172,7 +1172,14 @@
       "beamProfileLabel": "Профиль балки периметра",
       "purlinProfileLabel": "Профиль прогона",
       "purlinProfileNone": "Без прогонов",
-      "postProfileLabel": "Профиль стойки"
+      "postProfileLabel": "Профиль стойки",
+      "heightLabel": "Высота, мм",
+      "lamellaAngleLabel": "Угол ламелей",
+      "colorHexLabel": "Цвет / отделка",
+      "supportTypeLabel": "Опора",
+      "supportFreeStanding": "Свободностоящая",
+      "supportWallMounted": "Пристенная",
+      "supportHanging": "Подвесная"
     },
     "preview3D": {
       "title": "Просмотр 3D",

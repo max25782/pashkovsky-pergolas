@@ -88,7 +88,11 @@ export function PergolaPlanPreview({ plan, title }: PergolaPlanPreviewProps) {
               </button>
             </div>
             <div className="min-h-0 flex-1">
-              <PergolaCutPieceViewer pieces={built.pieces} profiles={PLAN_PREVIEW_PROFILES} />
+              <PergolaCutPieceViewer
+                pieces={built.pieces}
+                profiles={PLAN_PREVIEW_PROFILES}
+                colorHex={plan.params.colorHex}
+              />
             </div>
           </div>
         </div>
