@@ -1,4 +1,5 @@
 import type { LamellaAngleDeg, RoofSlope, SupportType } from './types'
+import type { LamellaWallThicknessMm } from './pergolaProfiles'
 import { DEFAULT_ROOF_SLOPE } from './roof'
 
 /** Current JSON schema for `Pergola.plan` stored in `pergolas_data`. */
@@ -21,6 +22,8 @@ export interface PlanConstructionParams {
   slope: RoofSlope
   highEdgeIndex: number
   postHeightOverridesMm: Record<string, number>
+  /** Wall thickness for 70×20 lamellas. Default 0.8 (supplier f7020). */
+  lamellaWallThicknessMm: LamellaWallThicknessMm
 }
 
 export const DEFAULT_PLAN_CONSTRUCTION_PARAMS: PlanConstructionParams = {
@@ -39,4 +42,5 @@ export const DEFAULT_PLAN_CONSTRUCTION_PARAMS: PlanConstructionParams = {
   slope: { ...DEFAULT_ROOF_SLOPE },
   highEdgeIndex: 0,
   postHeightOverridesMm: {},
+  lamellaWallThicknessMm: 0.8,
 }

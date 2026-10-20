@@ -2,6 +2,9 @@ import { createRoot } from 'react-dom/client'
 import {
   buildPieces,
   DEFAULT_PLAN_CONSTRUCTION_PARAMS,
+  HOUSE_CONTOUR_MM,
+  HOUSE_RAL_1013_HEX,
+  HOUSE_WALL_EDGE_INDICES,
   specFromPlan,
   type SupportType,
 } from '@pashkovsky/pergola-core'
@@ -39,14 +42,18 @@ const PROFILES: Map<string, ProfileDimensions> = new Map([
 ])
 
 const params = new URLSearchParams(window.location.search)
-const shape = params.get('shape') === 'l' ? 'l' : 'rect'
-const mode = (params.get('mode') ?? 'free-standing') as SupportType
+const shapeParam = params.get('shape')
+const shape = shapeParam === 'house' ? 'house' : shapeParam === 'l' ? 'l' : 'rect'
+const mode = (params.get('mode') ?? (shape === 'house' ? 'wall-mounted' : 'free-standing')) as SupportType
 const angle = params.get('angle') === '45' ? 45 : 0
-const color = params.get('color') ?? 'RAL7016'
+const color = params.get('color') ?? (shape === 'house' ? HOUSE_RAL_1013_HEX : 'RAL7016')
 const scene = params.get('scene') === 'courtyard' ? 'courtyard' : 'classic'
 
-const contour = shape === 'l' ? L_SHAPE : RECT
-const wallEdgeIndices = mode === 'wall-mounted' ? (shape === 'l' ? [4, 5] : [0]) : []
+const contour = shape === 'house' ? HOUSE_CONTOUR_MM : shape === 'l' ? L_SHAPE : RECT
+const wallEdgeIndices =
+  mode === 'wall-mounted'
+    ? (shape === 'house' ? HOUSE_WALL_EDGE_INDICES : shape === 'l' ? [4, 5] : [0])
+    : []
 
 const spec = specFromPlan({
   contour,
@@ -78,7 +85,7 @@ function App() {
           fontSize: 13,
         }}
       >
-        {shape === 'l' ? 'L-shape' : '600×400'} · {spec.supportType} · {spec.heightMm}mm · {spec.colorHex} · {spec.lamellaAngleDeg}°
+        {shape === 'house' ? 'House A–H' : shape === 'l' ? 'L-shape' : '600×400'} · {spec.supportType} · {spec.heightMm}mm · {spec.colorHex} · {spec.lamellaAngleDeg}°
       </div>
       <div style={{ flex: 1, minHeight: 0 }}>
         <PergolaCutPieceViewer

@@ -30,6 +30,24 @@ function clamp(x: number, lo: number, hi: number): number {
 
 const DEG = 180 / Math.PI
 
+/** Corners this close to 90° / 270° are treated as square (miter 45°). */
+export const DEFAULT_RIGHT_ANGLE_SNAP_DEG = 1
+
+export interface MiterOptions {
+  /**
+   * If `|interior − 90°|` or `|interior − 270°|` is ≤ this value, snap to
+   * that right angle so the cut is exactly 45°. 0 disables snapping.
+   */
+  rightAngleSnapDeg?: number
+}
+
+function snapRightAngleInterior(interiorDeg: number, snapDeg: number): number {
+  if (snapDeg <= 0) return interiorDeg
+  if (Math.abs(interiorDeg - 90) <= snapDeg) return 90
+  if (Math.abs(interiorDeg - 270) <= snapDeg) return 270
+  return interiorDeg
+}
+
 // ── Polygon winding ───────────────────────────────────────────────────────────
 
 /**
@@ -81,6 +99,7 @@ export function miterAtVertex(
   prev: Point2D,
   curr: Point2D,
   next: Point2D,
+  options?: MiterOptions,
 ): MiterAtVertex {
   const fromPrev = norm(sub(prev, curr))  // into incoming beam
   const toNext   = norm(sub(next, curr))  // into outgoing beam
@@ -91,7 +110,9 @@ export function miterAtVertex(
 
   // CCW polygon: crossZ ≤ 0 → convex (left turn), crossZ > 0 → concave (right turn)
   const isConvex = crossZ <= 0
-  const interiorAngleDeg = isConvex ? acDeg : 360 - acDeg
+  const snapDeg = options?.rightAngleSnapDeg ?? DEFAULT_RIGHT_ANGLE_SNAP_DEG
+  const rawInterior = isConvex ? acDeg : 360 - acDeg
+  const interiorAngleDeg = snapRightAngleInterior(rawInterior, snapDeg)
   const miterAngleDeg    = (180 - interiorAngleDeg) / 2
 
   // Bisector: bisects the interior angle, perpendicular to the cut plane
@@ -120,7 +141,10 @@ export function miterAtVertex(
  * Automatically normalises to CCW winding; does not mutate the input array.
  * Throws if contour has fewer than 3 vertices.
  */
-export function computeContourMiters(contourInput: Point2D[]): ContourMiters {
+export function computeContourMiters(
+  contourInput: Point2D[],
+  options?: MiterOptions,
+): ContourMiters {
   if (contourInput.length < 3) {
     throw new Error(`Contour must have at least 3 vertices, got ${contourInput.length}`)
   }
@@ -134,6 +158,7 @@ export function computeContourMiters(contourInput: Point2D[]): ContourMiters {
       contour[(i - 1 + n) % n],
       curr,
       contour[(i + 1) % n],
+      options,
     )
   )
 }

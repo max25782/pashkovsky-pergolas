@@ -15,11 +15,17 @@ import { PlanEditor, type PlanContourSnapshot, type PlanEditorLabels, type Point
 import {
   buildPiecesFromPlan,
   DEFAULT_PLAN_CONSTRUCTION_PARAMS,
+  formatConstructionProfileLabel,
   LAMELLA_PATTERN_PRESETS,
+  PERGOLA_CONSTRUCTION_PROFILES,
+  CONSTRUCTION_BEAM_IDS,
+  CONSTRUCTION_POST_IDS,
+  CONSTRUCTION_PURLIN_IDS,
   type PlanConstructionParams,
 } from '@pashkovsky/pergola-core'
-import type { Point2D, ProfileDimensions } from '@pashkovsky/pergola-core'
+import type { Point2D } from '@pashkovsky/pergola-core'
 import { PergolaCutPieceViewer } from '@pashkovsky/pergola-3d-preview'
+import { LamellaWallThicknessField } from '@/components/offers/LamellaWallThicknessField'
 import { RoofSlopeFields } from '@/components/offers/RoofSlopeFields'
 import type { Locale } from '@/lib/locales'
 import type { Offer, PergolaPlan, PergolaPlanConstructionParams } from '@/types/offer'
@@ -27,26 +33,11 @@ import { authFetch } from '@/lib/api/auth-fetch'
 
 const NO_PURLIN = ''
 
-// Full catalog - same as debug page
-const DEMO_PROFILES: Map<string, ProfileDimensions> = new Map([
-  // Posts
-  ['f8080', { widthMm: 80, heightMm: 80, availableStockLengthsMm: [4000, 6000] }],
-  ['f6060', { widthMm: 60, heightMm: 60, availableStockLengthsMm: [4000, 6000] }],
-  // Beams
-  ['f10040', { widthMm: 40, heightMm: 100, maxSpanMm: 5000, availableStockLengthsMm: [6000, 7000] }],
-  ['f12050', { widthMm: 50, heightMm: 120, maxSpanMm: 6000, availableStockLengthsMm: [6000, 7000, 8000] }],
-  // Lamellas
-  ['f2020', { widthMm: 20, heightMm: 20, maxLamellaSpanMm: 1500, availableStockLengthsMm: [6000] }],
-  ['f4020', { widthMm: 40, heightMm: 20, maxLamellaSpanMm: 1500, availableStockLengthsMm: [6000] }],
-  ['f7020', { widthMm: 70, heightMm: 20, maxLamellaSpanMm: 1500, availableStockLengthsMm: [6000] }],
-  // Purlins
-  ['purlin-plain-5030', { widthMm: 30, heightMm: 50, maxSpanMm: 3000, interruptsLamella: false, availableStockLengthsMm: [6000] }],
-  ['purlin-led-6040', { widthMm: 40, heightMm: 60, maxSpanMm: 3000, interruptsLamella: true, ledChannelWidthMm: 12, ledMaxStockLengthMm: 5000, availableStockLengthsMm: [6000] }],
-])
+const DEMO_PROFILES = PERGOLA_CONSTRUCTION_PROFILES
 
-const BEAM_PROFILE_IDS = ['f10040', 'f12050']
-const PURLIN_PROFILE_IDS = ['purlin-plain-5030', 'purlin-led-6040']
-const POST_PROFILE_IDS = ['f8080', 'f6060']
+const BEAM_PROFILE_IDS = CONSTRUCTION_BEAM_IDS
+const PURLIN_PROFILE_IDS = CONSTRUCTION_PURLIN_IDS
+const POST_PROFILE_IDS = CONSTRUCTION_POST_IDS
 
 type ConstructionParams = PlanConstructionParams
 
@@ -464,6 +455,13 @@ function ConstructionParamsPanel({ params, onChange, t, contourMm, wallEdgeIndic
         </select>
       </label>
 
+      <LamellaWallThicknessField
+        params={params}
+        onChange={onChange}
+        selectClass={selectClass}
+        labelClass={labelClass}
+      />
+
       <label className={labelClass}>
         {t('paramsPanel.lamellaGapLabel')}
         <input
@@ -634,12 +632,16 @@ function formatPatternOption(
   preset: { id: string; pattern: string[] },
   t: ReturnType<typeof useTranslations>,
 ): string {
-  const widths = preset.pattern.map((id) => DEMO_PROFILES.get(id)?.widthMm ?? '?').join('/')
+  const widths = preset.pattern.map((id) => {
+    const profile = DEMO_PROFILES.get(id)
+    if (!profile) return '?'
+    return profile.wallThicknessMm != null
+      ? `${profile.widthMm}×${profile.wallThicknessMm}`
+      : String(profile.widthMm)
+  }).join('/')
   return t('paramsPanel.lamellaPatternOption', { widths })
 }
 
 function formatProfileOption(profileId: string): string {
-  const profile = DEMO_PROFILES.get(profileId)
-  if (!profile) return profileId
-  return `${profileId} (${profile.widthMm}×${profile.heightMm} mm)`
+  return formatConstructionProfileLabel(profileId, DEMO_PROFILES.get(profileId))
 }

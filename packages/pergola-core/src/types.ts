@@ -352,6 +352,15 @@ export interface ProfileDimensions {
    * availableStockLengthsMm, never invent them.
    */
   weightKgPerMeter?: number
+
+  /** Wall thickness of the extrusion, mm — from the supplier catalog when known. */
+  wallThicknessMm?: number
+  /** Supplier SKU / מק״ט */
+  sku?: string
+  /** Supplier Hebrew name (what the profile is). */
+  labelHe?: string
+  /** Supplier Hebrew category, e.g. מילוי פרגולה/גדר/שער */
+  categoryHe?: string
 }
 
 /** Miter data computed at one polygon vertex */

@@ -17,6 +17,7 @@ function rectanglePlan(widthMm: number, heightMm: number, confirmed = true) {
     ],
     wallIndices: [],
     params: {
+      ...DEFAULT_PLAN_CONSTRUCTION_PARAMS,
       lamellaPatternId: 'all-70',
       lamellaGapMm: 20,
       lamellaDirectionDeg: 0,

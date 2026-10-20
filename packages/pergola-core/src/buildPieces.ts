@@ -45,7 +45,7 @@ export function planSupportType(
 
 export function specFromPlan(input: SpecFromPlanInput): PergolaSpec {
   const params = { ...DEFAULT_PLAN_CONSTRUCTION_PARAMS, ...input.params }
-  const pattern = resolveLamellaPatternIds(params.lamellaPatternId)
+  const pattern = resolveLamellaPatternIds(params.lamellaPatternId, params.lamellaWallThicknessMm)
   const supportType = planSupportType(params, input.wallEdgeIndices)
   const colorHex = params.colorHex
   return {

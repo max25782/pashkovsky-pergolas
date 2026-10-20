@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { handleOfferApproved } from '@/lib/offer-approval'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -31,6 +32,26 @@ export async function POST(
       )
     }
 
+    // Read the state before signing: the deal promotion and notifications must
+    // fire once, on the transition to approved, not on every re-submit.
+    const { data: before, error: beforeError } = await supabase
+      .from('offers')
+      .select('id, approved')
+      .eq('id', params.id)
+      .maybeSingle()
+
+    if (beforeError) {
+      console.error('Error loading offer before approval:', beforeError)
+      return NextResponse.json(
+        { error: 'Failed to approve offer', details: beforeError.message },
+        { status: 500 }
+      )
+    }
+    if (!before) {
+      return NextResponse.json({ error: 'Offer not found' }, { status: 404 })
+    }
+    const wasAlreadyApproved = before.approved === true
+
     // Update offer with approval data
     const { data, error } = await supabase
       .from('offers')
@@ -54,6 +75,27 @@ export async function POST(
         { error: 'Failed to approve offer', details: error.message },
         { status: 500 }
       )
+    }
+
+    if (!wasAlreadyApproved) {
+      // Best effort: the signature is saved, so nothing here may fail the request.
+      try {
+        const outcome = await handleOfferApproved(
+          supabase,
+          {
+            id: data.id,
+            deal_id: data.deal_id ?? null,
+            company_id: data.company_id,
+            offer_number: data.offer_number ?? null,
+            final_price: data.final_price ?? null,
+            customer_name: data.customer_name ?? null,
+          },
+          { customerName, customerPhone: customerPhone || null },
+        )
+        console.log('[offer-approval]', params.id, outcome)
+      } catch (postApprovalError) {
+        console.error('[offer-approval] post-approval step failed:', params.id, postApprovalError)
+      }
     }
 
     return NextResponse.json({

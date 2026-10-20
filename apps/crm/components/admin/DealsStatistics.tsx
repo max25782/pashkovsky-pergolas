@@ -1,7 +1,14 @@
 "use client"
 import { useState, useMemo, useEffect } from 'react'
 import type { Deal } from './deal-types'
-import { formatCurrency } from './deal-utils'
+import {
+  aggregateMonthlyDealStats,
+  buildPaymentsByDeal,
+  formatCurrency,
+  isRevenueDeal,
+  type DealPayment,
+  type StatisticType,
+} from './deal-utils'
 import { MonthlyDealsModal } from './MonthlyDealsModal'
 import { DealsCharts } from './DealsCharts'
 import { MonthlyStatsChart } from './MonthlyStatsChart'
@@ -13,17 +20,6 @@ import { useLanguage } from '@/lib/language-context'
 interface DealsStatisticsProps {
   deals: Deal[]
   onDealClick?: (deal: Deal) => void
-}
-
-type StatisticType = 'all' | 'money' // 'all' - все сделки, 'money' - только завершенные
-
-interface MonthlyStats {
-  month: string
-  monthLabel: string
-  revenue: number
-  expenses: number
-  profit: number
-  dealCount: number
 }
 
 const LOCALE_MAP: Record<string, string> = {
@@ -39,7 +35,7 @@ export function DealsStatistics({ deals, onDealClick }: DealsStatisticsProps) {
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null)
   const [selectedMonthLabel, setSelectedMonthLabel] = useState<string>('')
   const [statisticType, setStatisticType] = useState<StatisticType>('money')
-  const [payments, setPayments] = useState<Array<{ deal_id: string; amount: number; paid_at: string }>>([])
+  const [payments, setPayments] = useState<DealPayment[]>([])
 
   useEffect(() => {
     let cancelled = false
@@ -52,92 +48,17 @@ export function DealsStatistics({ deals, onDealClick }: DealsStatisticsProps) {
     return () => { cancelled = true }
   }, [])
 
-  const paymentsByDeal = useMemo(() => {
-    const map = new Map<string, Array<{ amount: number; paid_at: string }>>()
-    payments.forEach((p) => {
-      const list = map.get(p.deal_id) ?? []
-      list.push({ amount: Number(p.amount), paid_at: p.paid_at })
-      map.set(p.deal_id, list)
-    })
-    return map
-  }, [payments])
+  const paymentsByDeal = useMemo(() => buildPaymentsByDeal(payments), [payments])
 
-  // Filter deals based on statistic type
-  const validDeals = useMemo(() => {
-    let filtered = deals.filter(deal => deal && deal.id)
-    
-    if (statisticType === 'money') {
-      filtered = filtered.filter(deal => {
-        const isContractor = deal.customer_type === 'contractor'
-        if (isContractor) return true
-        return deal.stage === 'done' && deal.installation_date != null
-      })
-    }
-    
-    return filtered
-  }, [deals, statisticType])
-  
-  const monthlyStats = useMemo(() => {
-    const statsMap = new Map<string, MonthlyStats>()
-    
-    const addToMonth = (monthKey: string, revenue: number, expenses: number, dealCount: number) => {
-      const [y, m] = monthKey.split('-').map(Number)
-      const localDate = new Date(y, m - 1, 1)
-      const monthLabel = localDate.toLocaleDateString(dateLocale, { year: 'numeric', month: 'long' })
-      const existing = statsMap.get(monthKey) || {
-        month: monthKey,
-        monthLabel,
-        revenue: 0,
-        expenses: 0,
-        profit: 0,
-        dealCount: 0
-      }
-      existing.revenue += revenue
-      existing.expenses += expenses
-      existing.profit = existing.revenue - existing.expenses
-      existing.dealCount += dealCount
-      statsMap.set(monthKey, existing)
-    }
+  const validDeals = useMemo(
+    () => deals.filter((deal) => isRevenueDeal(deal, statisticType)),
+    [deals, statisticType],
+  )
 
-    validDeals.forEach(deal => {
-      const isContractor = deal.customer_type === 'contractor'
-      
-      if (statisticType === 'money' && isContractor) {
-        const dealPayments = paymentsByDeal.get(deal.id) ?? []
-        const dealMonths = new Set<string>()
-        dealPayments.forEach((p) => {
-          const date = new Date(p.paid_at)
-          if (isNaN(date.getTime())) return
-          const year = date.getUTCFullYear()
-          const month = date.getUTCMonth() + 1
-          const monthKey = `${year}-${String(month).padStart(2, '0')}`
-          addToMonth(monthKey, p.amount, 0, 0)
-          dealMonths.add(monthKey)
-        })
-        dealMonths.forEach((monthKey) => addToMonth(monthKey, 0, 0, 1))
-        return
-      }
-
-      const dateToUse: string | null | undefined = statisticType === 'money'
-        ? deal.installation_date
-        : (deal.installation_date || deal.order_date || deal.created_at)
-      
-      if (!dateToUse) return
-
-      const date = new Date(dateToUse)
-      if (isNaN(date.getTime())) return
-      
-      const year = date.getUTCFullYear()
-      const month = date.getUTCMonth() + 1
-      const monthKey = `${year}-${String(month).padStart(2, '0')}`
-
-      addToMonth(monthKey, deal.price || 0, deal.my_cost || 0, 1)
-    })
-
-    return Array.from(statsMap.values())
-      .sort((a, b) => a.month.localeCompare(b.month))
-      .reverse()
-  }, [validDeals, paymentsByDeal, statisticType, dateLocale])
+  const { monthlyStats, datelessCount } = useMemo(
+    () => aggregateMonthlyDealStats(deals, statisticType, paymentsByDeal, dateLocale),
+    [deals, statisticType, paymentsByDeal, dateLocale],
+  )
 
   const totals = useMemo(() => {
     return monthlyStats.reduce(
@@ -194,6 +115,12 @@ export function DealsStatistics({ deals, onDealClick }: DealsStatisticsProps) {
       <div className="mb-4 text-sm text-white/60">
         {statisticType === 'money' ? t('noteWithMoney') : t('noteAll')}
       </div>
+
+      {statisticType === 'all' && datelessCount > 0 && (
+        <div className="mb-4 text-sm text-amber-300">
+          {t('datelessCount', { count: datelessCount })}
+        </div>
+      )}
 
       {monthlyStats.length === 0 ? (
         <div className="text-center text-white/60 py-8">
@@ -310,6 +237,7 @@ export function DealsStatistics({ deals, onDealClick }: DealsStatisticsProps) {
           {/* Charts */}
           <DealsCharts
             deals={validDeals}
+            statisticType={statisticType}
             labels={{
               revenueVsExpensesTop10: t('chartRevenueVsExpensesTop10'),
               profitByDeal: t('chartProfitByDeal'),
@@ -333,6 +261,7 @@ export function DealsStatistics({ deals, onDealClick }: DealsStatisticsProps) {
           monthLabel={selectedMonthLabel}
           deals={deals}
           statisticType={statisticType}
+          paymentsByDeal={paymentsByDeal}
           onClose={() => {
             setSelectedMonth(null)
             setSelectedMonthLabel('')

@@ -36,7 +36,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useTranslations } from 'next-intl'
-import { PlanEditor, type PlanEditorLabels } from '@pashkovsky/plan-editor'
+import { PlanEditor, type PlanContourSnapshot, type PlanEditorLabels } from '@pashkovsky/plan-editor'
 import type { Point } from '@pashkovsky/plan-editor'
 import {
   buildPiecesFromPlan,
@@ -44,101 +44,32 @@ import {
   compareStockLengthOptions,
   DEFAULT_PLAN_CONSTRUCTION_PARAMS,
   DEFAULT_VISTUR_TOLERANCES,
+  formatConstructionProfileLabel,
+  LAMELLA_PATTERN_PRESETS,
+  PERGOLA_CONSTRUCTION_PROFILES,
+  CONSTRUCTION_BEAM_IDS,
+  CONSTRUCTION_POST_IDS,
+  CONSTRUCTION_PURLIN_IDS,
   type PlanConstructionParams,
 } from '@pashkovsky/pergola-core'
 import type { CutPiece, Point2D, ProfileDimensions } from '@pashkovsky/pergola-core'
 import { PergolaCutPieceViewer } from '@pashkovsky/pergola-3d-preview'
+import { LamellaWallThicknessField } from '@/components/offers/LamellaWallThicknessField'
 import { RoofSlopeFields } from '@/components/offers/RoofSlopeFields'
 import { TopPlanSheet, LamellaLayoutSheet, CellFrameSheet } from '@pashkovsky/pergola-drawing'
 import { OrderAndCuttingPanel } from '@/components/cut-list/OrderAndCuttingPanel'
 
 /**
- * Каталог профилей для отладочной страницы — ДЕМО-данные для проверки
- * пайплайна редактор → ядро → 3D/раскрой, не настоящий справочник поставщика
- * (тот отдельно — public/data/profiles.json). maxSpanMm/maxLamellaSpanMm/
- * availableStockLengthsMm ниже — иллюстративные значения (порядок величины
- * из монтажной практики, см. промпт «крепление к стене»/«стойки»), НЕ финальные
- * цифры поставщика — те даёт заказчик (см. открытый пункт в чате, «не
- * додумывать»).
- *
- * ОРИЕНТАЦИЯ (см. промпт «ориентация сечений профилей»): widthMm/heightMm —
- * НЕ порядок цифр в id профиля (тот неоднозначен — "f10040" читается и как
- * "100×40", и как "40×100"), а явная физическая ориентация — widthMm ВСЕГДА
- * горизонталь в плане (узкая грань, на которую садится балка/прогон), heightMm
- * ВСЕГДА вертикаль (высокая грань). Балка "100×40" ставится на 40мм ребро →
- * { widthMm: 40, heightMm: 100 }, а НЕ { widthMm: 100, heightMm: 40 } — см.
- * подробный JSDoc у ProfileDimensions в pergola-core/types.ts.
- *
- * ТРЕТИЙ ПРОФИЛЬ ЛАМЕЛИ — 20×20 (подтверждено заказчиком, см. чат): раньше
- * здесь стоял открытый вопрос ("это отдельный профиль или просто толщина
- * при lamellaOnEdge?") — заказчик подтвердил полный список из трёх профилей
- * ламели (20×20, 40×20, 70×20), все толщиной 20мм, различаются видимой
- * шириной. "На ребро" для 20×20 не меняет картину (квадратное сечение) —
- * это ожидаемо, не баг.
+ * Construction catalog for the debug host — panda-alum supplier fields
+ * (name, SKU, weight, wall, stock) plus construction span/LED flags.
  */
-const DEMO_PROFILES: Map<string, ProfileDimensions> = new Map([
-  ['f8080', { widthMm: 80, heightMm: 80 }],
-  ['f6060', { widthMm: 60, heightMm: 60 }],
+const DEMO_PROFILES = PERGOLA_CONSTRUCTION_PROFILES
 
-  ['f10040', { widthMm: 40, heightMm: 100, maxSpanMm: 5000, availableStockLengthsMm: [6000, 7000] }],
-  ['f12050', { widthMm: 50, heightMm: 120, maxSpanMm: 6000, availableStockLengthsMm: [6000, 7000, 8000] }],
-
-  ['f2020', { widthMm: 20, heightMm: 20, maxLamellaSpanMm: 1500, availableStockLengthsMm: [6000] }],
-  ['f4020', { widthMm: 40, heightMm: 20, maxLamellaSpanMm: 1500, availableStockLengthsMm: [6000] }],
-  ['f7020', { widthMm: 70, heightMm: 20, maxLamellaSpanMm: 1500, availableStockLengthsMm: [6000] }],
-
-  [
-    // "60×40" прогон, узкая грань (40) горизонтально, широкая (60) вертикально.
-    'purlin-led-6040',
-    {
-      widthMm: 40,
-      heightMm: 60,
-      interruptsLamella: true,
-      hasLedChannel: true,
-      availableStockLengthsMm: [6000, 7000],
-    },
-  ],
-  [
-    // "50×30" прогон, узкая грань (30) горизонтально, широкая (50) вертикально.
-    'purlin-plain-5030',
-    {
-      widthMm: 30,
-      heightMm: 50,
-      interruptsLamella: false,
-      hasLedChannel: false,
-      availableStockLengthsMm: [6000, 7000],
-    },
-  ],
-])
-
-const BEAM_PROFILE_IDS = ['f10040', 'f12050'] as const
-const POST_PROFILE_IDS = ['f8080', 'f6060'] as const
-const PURLIN_PROFILE_IDS = ['purlin-led-6040', 'purlin-plain-5030'] as const
+const BEAM_PROFILE_IDS = CONSTRUCTION_BEAM_IDS
+const POST_PROFILE_IDS = CONSTRUCTION_POST_IDS
+const PURLIN_PROFILE_IDS = CONSTRUCTION_PURLIN_IDS
 /** Значение в <select> для "без прогонов" — spec.purlinProfileId остаётся undefined (см. computePurlins: undefined ⇒ []). */
 const NO_PURLIN = ''
-
-/**
- * Раскладки ламелей (промпт «смешанные ламели — чередование разных
- * ширин»): пользователю НЕ дают собирать произвольную последовательность —
- * ровно четыре пункта в выпадающем списке, три однородных + один
- * смешанный. Однородный вариант — это узор длиной 1, а не отдельная ветка
- * кода: обе ветки (однородная/смешанная) идут через ОДНО и то же поле
- * spec.lamellaPattern → resolveLamellaPattern в ядре (см.
- * pergola-core/lamellaPattern.ts). Если позже появится ещё одно сочетание —
- * это новая строка в массиве ниже, без правки алгоритма или UI-компонента.
- */
-interface LamellaPatternPreset {
-  id: string
-  /** Порядок id профилей — цикличный (см. PergolaSpec.lamellaPattern). Длина 1 = однородная раскладка. */
-  pattern: readonly string[]
-}
-
-const LAMELLA_PATTERN_PRESETS: readonly LamellaPatternPreset[] = [
-  { id: 'all-70', pattern: ['f7020'] },
-  { id: 'all-40', pattern: ['f4020'] },
-  { id: 'all-20', pattern: ['f2020'] },
-  { id: 'mixed-70-40-20', pattern: ['f7020', 'f4020', 'f2020'] },
-] as const
 
 type ConstructionParams = PlanConstructionParams
 
@@ -222,6 +153,15 @@ export default function PlanEditorDebugPage() {
       }, 0)
     },
     [params],
+  )
+
+  const handleContourChange = useCallback(
+    (contour: PlanContourSnapshot) => {
+      if (!contour.isClosed || contour.polygon.length < 3) return
+      setLastPolygonMm(contour.polygon)
+      setLastWallEdgeIndices(contour.wallIndices)
+    },
+    [],
   )
 
   // Реактивный пересчёт: любое изменение params (или самого контура) даёт
@@ -356,7 +296,7 @@ export default function PlanEditorDebugPage() {
       </ParamsDrawer>
 
       <div className="relative min-h-[600px] w-full flex-1 overflow-hidden rounded-lg border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-900">
-        <PlanEditor labels={labels} onTo3D={handleTo3D} />
+        <PlanEditor labels={labels} onTo3D={handleTo3D} onContourChange={handleContourChange} />
       </div>
 
       {isBuilding3D && (
@@ -593,6 +533,13 @@ function ConstructionParamsPanel({ params, onChange, t, contourMm, wallEdgeIndic
         </select>
       </label>
 
+      <LamellaWallThicknessField
+        params={params}
+        onChange={onChange}
+        selectClass={selectClass}
+        labelClass={labelClass}
+      />
+
       <label className={labelClass}>
         {t('paramsPanel.lamellaGapLabel')}
         <input
@@ -767,22 +714,30 @@ function ConstructionParamsPanel({ params, onChange, t, contourMm, wallEdgeIndic
  * «пресеты лежат в справочнике данными, а не ветками кода»). Оборачивающий
  * текст ("мм"/"mm"/"מ״מ"/"mm") идёт через i18n-шаблон, один на все пресеты.
  */
-function formatPatternOption(preset: LamellaPatternPreset, t: ReturnType<typeof useTranslations>): string {
-  const widths = preset.pattern.map((id) => DEMO_PROFILES.get(id)?.widthMm ?? '?').join('/')
+function formatPatternOption(
+  preset: { id: string; pattern: string[] },
+  t: ReturnType<typeof useTranslations>,
+): string {
+  const widths = preset.pattern.map((id) => {
+    const profile = DEMO_PROFILES.get(id)
+    if (!profile) return '?'
+    return profile.wallThicknessMm != null
+      ? `${profile.widthMm}×${profile.wallThicknessMm}`
+      : String(profile.widthMm)
+  }).join('/')
   return t('paramsPanel.lamellaPatternOption', { widths })
 }
 
-/** "f7020" + справочник → "f7020 (70×20 мм)" — профиль читаемым текстом рядом с id, а не голым идентификатором. */
 function formatProfileOption(profileId: string): string {
   const profile = DEMO_PROFILES.get(profileId)
-  if (!profile) return profileId
+  const base = formatConstructionProfileLabel(profileId, profile)
+  if (!profile) return base
   const traits: string[] = []
   if (profile.maxSpanMm) traits.push(`maxSpan ${profile.maxSpanMm}мм`)
   if (profile.maxLamellaSpanMm) traits.push(`maxSpan ${profile.maxLamellaSpanMm}мм`)
   if (profile.interruptsLamella) traits.push('перебивает ламель')
   if (profile.hasLedChannel) traits.push('LED')
-  const traitsStr = traits.length > 0 ? ` — ${traits.join(', ')}` : ''
-  return `${profileId} (${profile.widthMm}×${profile.heightMm} мм)${traitsStr}`
+  return traits.length > 0 ? `${base} — ${traits.join(', ')}` : base
 }
 
 interface PieceSummaryProps {

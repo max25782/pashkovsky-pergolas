@@ -1,6 +1,7 @@
 import {
   DEFAULT_PLAN_CONSTRUCTION_PARAMS,
   isSimplePolygon,
+  parseLamellaWallThicknessMm,
   PERGOLA_PLAN_SCHEMA_VERSION,
   polygonAreaM2,
   type PlanConstructionParams,
@@ -53,6 +54,8 @@ function parseParams(raw: unknown): PlanConstructionParams {
     }
     base.postHeightOverridesMm = rec
   }
+  const wallThickness = parseLamellaWallThicknessMm(o.lamellaWallThicknessMm)
+  if (wallThickness !== undefined) base.lamellaWallThicknessMm = wallThickness
   return base
 }
 

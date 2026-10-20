@@ -165,3 +165,29 @@ describe('degenerate straight vertex', () => {
     expect(mid.cutHandOutgoing).toBe('straight')
   })
 })
+
+describe('right-angle snap (default 1°)', () => {
+  it('snaps a 89.2° corner to 90° / 45° miter', () => {
+    const dy = 3000 * Math.tan((0.8 * Math.PI) / 180)
+    const contour: Point2D[] = [[0, 0], [3000, 0], [3000 - dy, 3000], [0, 3000]]
+    const [a, b] = computeContourMiters(contour)
+    expect(b.interiorAngleDeg).toBe(90)
+    expect(b.miterAngleDeg).toBeCloseTo(45, 8)
+    expect(a.interiorAngleDeg).toBe(90)
+  })
+
+  it('does not snap an 88° corner when snap is 1°', () => {
+    const dy = 3000 * Math.tan((2 * Math.PI) / 180)
+    const contour: Point2D[] = [[0, 0], [3000, 0], [3000 - dy, 3000], [0, 3000]]
+    const [, b] = computeContourMiters(contour)
+    expect(Math.abs(b.interiorAngleDeg - 90)).toBeGreaterThan(1)
+    expect(b.miterAngleDeg).not.toBeCloseTo(45, 1)
+  })
+
+  it('can disable the snap', () => {
+    const dy = 3000 * Math.tan((0.8 * Math.PI) / 180)
+    const contour: Point2D[] = [[0, 0], [3000, 0], [3000 - dy, 3000], [0, 3000]]
+    const [, b] = computeContourMiters(contour, { rightAngleSnapDeg: 0 })
+    expect(b.interiorAngleDeg).not.toBe(90)
+  })
+})

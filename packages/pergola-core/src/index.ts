@@ -18,7 +18,25 @@ export {
   isCCW,
   miterAtVertex,
   computeContourMiters,
+  DEFAULT_RIGHT_ANGLE_SNAP_DEG,
 } from './miter'
+export type { MiterOptions } from './miter'
+
+export type { FrameEdgePart } from './frameParts'
+export { buildFrameEdgeParts, piecesWeightKg } from './frameParts'
+
+export {
+  CLOSURE_GAP_TOLERANCE_MM,
+  HOUSE_CONTOUR_MM,
+  HOUSE_WALL_EDGE_INDICES,
+  HOUSE_FREE_EDGE_INDICES,
+  HOUSE_RAL_1013_HEX,
+  contourClosureGapMm,
+  houseContourWithGhCm,
+  houseSpec,
+  houseSpecInput,
+  houseConstructionParams,
+} from './acceptance/houseContour'
 
 export {
   scanLineClip,
@@ -50,6 +68,33 @@ export { specFromPlan, buildPieces, buildPiecesFromPlan, planSupportType } from 
 
 export type { LamellaPatternPreset } from './lamellaPresets'
 export { LAMELLA_PATTERN_PRESETS, resolveLamellaPatternIds } from './lamellaPresets'
+
+export type { LamellaWallThicknessMm } from './pergolaProfiles'
+export {
+  PERGOLA_CONSTRUCTION_PROFILES,
+  buildPergolaConstructionProfiles,
+  applyLamellaWallThickness,
+  parseLamellaWallThicknessMm,
+  formatConstructionProfileLabel,
+  CONSTRUCTION_LAMELLA_IDS,
+  CONSTRUCTION_BEAM_IDS,
+  CONSTRUCTION_POST_IDS,
+  CONSTRUCTION_PURLIN_IDS,
+  LAMELLA_70_08_ID,
+  LAMELLA_70_16_ID,
+  LAMELLA_70_10_ID,
+} from './pergolaProfiles'
+
+export type { PandaAlumProfile, PergolaCatalogSlot } from './supplier/pandaAlum'
+export {
+  PANDA_ALUM_CATALOG_URL,
+  PANDA_ALUM_PROFILES,
+  findPandaAlumBySku,
+  pandaAlumLabel,
+  pergolaCatalogSlot,
+  parseCatalogNameDims,
+  pandaAlumPergolaRows,
+} from './supplier/pandaAlum'
 
 export type {
   StockPlanLine,

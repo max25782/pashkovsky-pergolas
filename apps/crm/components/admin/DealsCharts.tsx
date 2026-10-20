@@ -14,6 +14,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import type { Deal } from './deal-types'
+import { isRevenueDeal, type StatisticType } from './deal-utils'
 
 interface DealsChartsLabels {
   revenueVsExpensesTop10: string
@@ -30,6 +31,7 @@ interface DealsChartsLabels {
 
 interface DealsChartsProps {
   deals: Deal[]
+  statisticType?: StatisticType
   labels: DealsChartsLabels
 }
 
@@ -40,9 +42,13 @@ const COLORS = {
   profitNegative: '#ef4444', // red
 }
 
-export function DealsCharts({ deals, labels }: DealsChartsProps) {
+export function DealsCharts({ deals, statisticType, labels }: DealsChartsProps) {
+  const chartDeals = statisticType
+    ? deals.filter((deal) => isRevenueDeal(deal, statisticType))
+    : deals
+
   // Calculate totals
-  const totals = deals.reduce(
+  const totals = chartDeals.reduce(
     (acc, deal) => {
       const revenue = deal.price || 0
       const expenses = deal.my_cost || 0
@@ -59,7 +65,7 @@ export function DealsCharts({ deals, labels }: DealsChartsProps) {
   )
 
   // Prepare data for charts
-  const chartData = deals
+  const chartData = chartDeals
     .filter(deal => (deal.price || 0) > 0 || (deal.my_cost || 0) > 0)
     .map((deal) => {
       const customerName = deal.customer_name || labels.noName

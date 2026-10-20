@@ -1,7 +1,7 @@
 "use client"
 import { useMemo } from 'react'
 import type { Deal } from './deal-types'
-import { formatCurrency, formatDate } from './deal-utils'
+import { formatCurrency, formatDate, getMonthDealRows, type StatisticType } from './deal-utils'
 import { getStages } from './deal-types'
 import { useCRMTranslations } from './useCRMTranslations'
 import { useTranslations } from 'next-intl'
@@ -10,7 +10,8 @@ interface MonthlyDealsModalProps {
   month: string
   monthLabel: string
   deals: Deal[]
-  statisticType?: 'all' | 'money'
+  statisticType?: StatisticType
+  paymentsByDeal?: Map<string, Array<{ amount: number; paid_at: string }>>
   onClose: () => void
   onDealClick?: (deal: Deal) => void
 }
@@ -20,6 +21,7 @@ export function MonthlyDealsModal({
   monthLabel,
   deals,
   statisticType = 'all',
+  paymentsByDeal,
   onClose,
   onDealClick
 }: MonthlyDealsModalProps) {
@@ -27,49 +29,10 @@ export function MonthlyDealsModal({
   const tCRM = useCRMTranslations()
   const stages = getStages(tCRM.deals)
 
-  const monthlyDeals = useMemo(() => {
-    return deals.filter(deal => {
-      if (!deal || !deal.id) return false
-
-      // Mirror the exact same filter logic used in DealsStatistics validDeals
-      if (statisticType === 'money') {
-        const isContractor = deal.customer_type === 'contractor'
-        if (!isContractor) {
-          // Non-contractors: must be done AND have an installation_date
-          if (deal.stage !== 'done' || deal.installation_date == null) return false
-        }
-        // Contractors: always included (their revenue comes from payments, not deal.price)
-      }
-
-      // Date bucketing — same logic as DealsStatistics monthlyStats
-      const dateToUse: string | null | undefined = statisticType === 'money'
-        ? deal.installation_date
-        : (deal.installation_date || deal.order_date || deal.created_at)
-
-      if (!dateToUse) return false
-
-      const date = new Date(dateToUse)
-      if (isNaN(date.getTime())) return false
-
-      const year = date.getUTCFullYear()
-      const dealMonth = date.getUTCMonth() + 1
-      const dealMonthKey = `${year}-${String(dealMonth).padStart(2, '0')}`
-
-      return dealMonthKey === month
-    })
-  }, [deals, month, statisticType])
-
-  const totals = useMemo(() => {
-    return monthlyDeals.reduce(
-      (acc, deal) => ({
-        revenue: acc.revenue + (deal.price || 0),
-        expenses: acc.expenses + (deal.my_cost || 0),
-        profit: acc.profit + ((deal.price || 0) - (deal.my_cost || 0)),
-        dealCount: acc.dealCount + 1
-      }),
-      { revenue: 0, expenses: 0, profit: 0, dealCount: 0 }
-    )
-  }, [monthlyDeals])
+  const { rows: monthlyDeals, totals } = useMemo(
+    () => getMonthDealRows(deals, month, statisticType, paymentsByDeal ?? new Map()),
+    [deals, month, statisticType, paymentsByDeal],
+  )
 
   const getStageLabel = (stage: string | null | undefined) => {
     const stageObj = stages.find(s => s.id === stage)
@@ -144,8 +107,8 @@ export function MonthlyDealsModal({
                   </tr>
                 </thead>
                 <tbody>
-                  {monthlyDeals.map((deal) => {
-                    const dealProfit = (deal.price || 0) - (deal.my_cost || 0)
+                  {monthlyDeals.map((row) => {
+                    const { deal, revenue, expenses, profit: dealProfit } = row
                     const dealDate = deal.installation_date || deal.order_date || deal.created_at
                     
                     return (
@@ -182,10 +145,10 @@ export function MonthlyDealsModal({
                           {dealDate ? formatDate(dealDate) : '—'}
                         </td>
                         <td className="p-3 text-right font-semibold text-green-400">
-                          {formatCurrency(deal.price)}
+                          {formatCurrency(revenue)}
                         </td>
                         <td className="p-3 text-right font-semibold text-red-400">
-                          {formatCurrency(deal.my_cost)}
+                          {formatCurrency(expenses)}
                         </td>
                         <td className={`p-3 text-right font-bold ${
                           dealProfit >= 0 ? 'text-green-400' : 'text-red-400'

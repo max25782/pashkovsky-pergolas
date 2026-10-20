@@ -35,6 +35,7 @@ const planParamsSchema = z
     }),
     highEdgeIndex: z.number().int().nonnegative(),
     postHeightOverridesMm: z.record(z.string(), z.number().finite()),
+    lamellaWallThicknessMm: z.number().refine((n): n is 0.8 | 1.6 | 1 => n === 0.8 || n === 1.6 || n === 1),
   })
   .partial()
 

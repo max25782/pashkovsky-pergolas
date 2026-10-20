@@ -1,0 +1,1929 @@
+{
+  "source": "https://www.panda-alum.co.il/profile-calculator/",
+  "profiles": [
+    {
+      "nameHe": "20/70/0.8 PAN1",
+      "sku": "PA2024",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 0.4,
+      "wallThicknessMm": 0.8,
+      "categoryHe": "מילוי פרגולה/גדר/שער"
+    },
+    {
+      "nameHe": "20/70/0.8 PAN2",
+      "sku": "PA 2023",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 0.4,
+      "wallThicknessMm": 0.8,
+      "categoryHe": "מילוי פרגולה/גדר/שער"
+    },
+    {
+      "nameHe": "20/70/0.8 PAN3",
+      "sku": "PA 2024",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.4,
+      "wallThicknessMm": 0.8,
+      "categoryHe": "מילוי פרגולה/גדר/שער"
+    },
+    {
+      "nameHe": "20/70/0.8 PAN4",
+      "sku": "PA 2025",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.4,
+      "wallThicknessMm": 0.8,
+      "categoryHe": "מילוי פרגולה/גדר/שער"
+    },
+    {
+      "nameHe": "pan 1 זד הצללה גוון עץ",
+      "sku": "pa2557",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.33,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "pan 3 זד הצללה גוון עץ",
+      "sku": "pa2556",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.33,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "pan 4 זד הצללה גוון עץ",
+      "sku": "pa2555",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.33,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "אביזר - תותב לעמוד גדר",
+      "sku": "pa 2009",
+      "stockLengthsMm": [],
+      "weightKgPerM": null,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "אביזר - ידית חצי קפיצית דו כיוונית",
+      "sku": "PA2030",
+      "stockLengthsMm": [],
+      "weightKgPerM": null,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "אביזר - סט לעמוד תותב רוזטה פקק פלסטיק",
+      "sku": "AV103",
+      "stockLengthsMm": [],
+      "weightKgPerM": null,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "אביזר - פקק פלסטיק לעמוד פנדה משולב",
+      "sku": "PA2031",
+      "stockLengthsMm": [],
+      "weightKgPerM": null,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "אביזרים אביזר מאלומיניום לתלייה פרגולה",
+      "sku": "pa2513",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.0,
+      "wallThicknessMm": null,
+      "categoryHe": "אביזר תליה לפרגולה"
+    },
+    {
+      "nameHe": "אביזרים אביזר עכביש ל100/40",
+      "sku": "pa0015",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 0.0,
+      "wallThicknessMm": null,
+      "categoryHe": "אביזר לחיבור פינה 100/40"
+    },
+    {
+      "nameHe": "אביזרים אביזר עכביש ל120/40",
+      "sku": "pa0014",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 0.0,
+      "wallThicknessMm": null,
+      "categoryHe": "אביזר לחיבור פינה 120/40"
+    },
+    {
+      "nameHe": "אביזרים אביזר תלייה לקיר",
+      "sku": "pa1020",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": null,
+      "wallThicknessMm": null,
+      "categoryHe": "אביזר לחיבור צינור תלייה לקיר"
+    },
+    {
+      "nameHe": "אביזרים מחבר יו 36/30 ל100/40 או 120/40",
+      "sku": "pa0013",
+      "stockLengthsMm": [],
+      "weightKgPerM": null,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "אביזרים פקק לפרופיל מקור ימין/שמאל",
+      "sku": "pa0010",
+      "stockLengthsMm": [],
+      "weightKgPerM": null,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "אביזרים פקק עליון לעמוד 50/50,60/60,70/70",
+      "sku": null,
+      "stockLengthsMm": [],
+      "weightKgPerM": null,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "אביזרים רוזטה 100/100",
+      "sku": null,
+      "stockLengthsMm": [],
+      "weightKgPerM": null,
+      "wallThicknessMm": null,
+      "categoryHe": "רוזטה לעמוד פנים 50/50"
+    },
+    {
+      "nameHe": "אביזרים תושבת לעמוד 80/80",
+      "sku": null,
+      "stockLengthsMm": [],
+      "weightKgPerM": null,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "אביזרים תושבת לפרופיל 100/100",
+      "sku": "pa0011",
+      "stockLengthsMm": [],
+      "weightKgPerM": null,
+      "wallThicknessMm": null,
+      "categoryHe": "תושבת יו 95 עבור עמוד 100/100"
+    },
+    {
+      "nameHe": "אביזרים תושבת קיר לפרגולה",
+      "sku": "PA2032",
+      "stockLengthsMm": [],
+      "weightKgPerM": null,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "אביזרים: תפס לפרגולה תלויה",
+      "sku": null,
+      "stockLengthsMm": [],
+      "weightKgPerM": null,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "גדר 20/40",
+      "sku": "9409A",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.62608,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "גדר 40/40",
+      "sku": "I235",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.76128,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "גדר 40/60",
+      "sku": "I234",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 0.987,
+      "wallThicknessMm": 1.4,
+      "categoryHe": "פרופיל עבור גדר/שער בריתוך"
+    },
+    {
+      "nameHe": "גדר 50/40",
+      "sku": "pa0062",
+      "stockLengthsMm": [
+        7000
+      ],
+      "weightKgPerM": 0.89,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "דאבל טי 120",
+      "sku": "pa1429",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 2.314,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "דאבל טי 142/1.6",
+      "sku": "R242",
+      "stockLengthsMm": [
+        6000,
+        7000,
+        6500
+      ],
+      "weightKgPerM": 2.529,
+      "wallThicknessMm": 1.6,
+      "categoryHe": "מסגרת לפרגולה"
+    },
+    {
+      "nameHe": "דאבל טי מעוצב (הייטק) 120",
+      "sku": "PA268 דאבל טי מעוצב 120",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 2.704,
+      "wallThicknessMm": null,
+      "categoryHe": "מסגרת לפרגולה"
+    },
+    {
+      "nameHe": "הובלת סחורה",
+      "sku": "PA4000",
+      "stockLengthsMm": [],
+      "weightKgPerM": null,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "הצללה חצי ירח",
+      "sku": "PA 0620",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 0.28,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "הצללה/רפפה זד",
+      "sku": "I225",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 0.413,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "וואל לסוככים",
+      "sku": "pa6207",
+      "stockLengthsMm": [],
+      "weightKgPerM": null,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "זוית 10/10",
+      "sku": "pa5654",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.731,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "זוית 14/120",
+      "sku": "R241",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.865,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "זוית 15/20/1.5",
+      "sku": "1017A",
+      "stockLengthsMm": [],
+      "weightKgPerM": 1.141,
+      "wallThicknessMm": 1.5,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "זוית 18/100/1.5",
+      "sku": "1069A",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 0.507,
+      "wallThicknessMm": 1.5,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "זוית 18/30/1.5",
+      "sku": "1076A",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 0.202,
+      "wallThicknessMm": 1.5,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "זוית 18/40/1.5",
+      "sku": "1020A",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 0.238,
+      "wallThicknessMm": 1.5,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "זוית 18/50/1.5",
+      "sku": "1022A",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 0.292,
+      "wallThicknessMm": 1.5,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "זוית 18/60/1.5",
+      "sku": "pa1023",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 0.334,
+      "wallThicknessMm": 1.5,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "זוית 18/70/1.5",
+      "sku": "pa7018",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.378,
+      "wallThicknessMm": 1.5,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "זוית 18/80/1.5",
+      "sku": "PA1062 זווית 18/80",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.421,
+      "wallThicknessMm": 1.5,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "זוית 20/20/1.5",
+      "sku": "PA1032",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.162,
+      "wallThicknessMm": 1.5,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "זוית 30/30",
+      "sku": "p1034",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 0.353,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "זוית 4/4/3",
+      "sku": "KAN051",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.679,
+      "wallThicknessMm": 3.0,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "זוית 40/40/2",
+      "sku": "TSN11",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.463,
+      "wallThicknessMm": 2.0,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "זוית 40/40/4",
+      "sku": "pa1028",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.913,
+      "wallThicknessMm": 4.0,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "זוית 40/50/2.5",
+      "sku": "pa1086",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.638,
+      "wallThicknessMm": 2.5,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "זוית 50/50/2.5",
+      "sku": "ALG043",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.716,
+      "wallThicknessMm": 2.5,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "זוית 50/50/5",
+      "sku": "p1031",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 1.426,
+      "wallThicknessMm": 5.0,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "זוית 80/40",
+      "sku": "pa 1083",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 1.751,
+      "wallThicknessMm": 5.0,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "חיפוי בורג נסתר 15 ס\"מ",
+      "sku": "pa 2021",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 1.04,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "טי 100 (חוצץ לפרגולה)",
+      "sku": "hs022",
+      "stockLengthsMm": [
+        6000,
+        7000
+      ],
+      "weightKgPerM": 1.73,
+      "wallThicknessMm": 1.8,
+      "categoryHe": "חוצץ/אגד לפרגולה"
+    },
+    {
+      "nameHe": "טי 120 (חוצץ לפרגולה)",
+      "sku": "HS001",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 2.249,
+      "wallThicknessMm": null,
+      "categoryHe": "חוצץ/אגד לפרגולה"
+    },
+    {
+      "nameHe": "טי 80 חוצץ לפרגולה",
+      "sku": "pa6211",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000,
+        5000,
+        4000
+      ],
+      "weightKgPerM": 1.297,
+      "wallThicknessMm": null,
+       "categoryHe": "חוצץ/אגד לפרגולה"
+    },
+    {
+      "nameHe": "טי תאורה 120/40",
+      "sku": "PA3022",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 1.892,
+      "wallThicknessMm": null,
+      "categoryHe": "חוצץ/אגד לפרגולה עם מקום לתאורה"
+    },
+    {
+      "nameHe": "טי תאורה 40/100",
+      "sku": "pa2005",
+      "stockLengthsMm": [
+        6000,
+        7000
+      ],
+      "weightKgPerM": 1.862,
+      "wallThicknessMm": null,
+      "categoryHe": "חוצץ/אגד לפרגולה עם מקום לתאורה"
+    },
+    {
+      "nameHe": "יו 10/10",
+      "sku": null,
+      "stockLengthsMm": [],
+      "weightKgPerM": null,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "יו + מכסה 20/40",
+      "sku": "R 322",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.634,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "יו 20/20/1",
+      "sku": "pa1359",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.167,
+      "wallThicknessMm": 1.0,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "יו 25/25/2",
+      "sku": "HS1105",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.398,
+      "wallThicknessMm": 2.0,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "יו 30/36/2.2",
+      "sku": "1381A",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.558,
+      "wallThicknessMm": 2.2,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "יו 36/30/2.5",
+      "sku": "1358A",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 0.64,
+      "wallThicknessMm": 2.5,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "יו 95/50/3",
+      "sku": "p1328",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 1.632,
+      "wallThicknessMm": 3.0,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "יו הגבה למעקה",
+      "sku": "pa6581",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 0.404,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "יו הצללה 25/50",
+      "sku": "pa 4990",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 0.404,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "יו הצללה 44.5/14.5",
+      "sku": "pa1303",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000,
+        5000,
+        4000
+      ],
+      "weightKgPerM": 0.235,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "יו לסורג שקוף",
+      "sku": "pa6580",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 0.562,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "יו סוככים 120/35",
+      "sku": "p2512",
+      "stockLengthsMm": [],
+      "weightKgPerM": 1.206,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "יו סוככים 120/45.4",
+      "sku": "PA2500",
+      "stockLengthsMm": [
+        4600,
+        6000
+      ],
+      "weightKgPerM": 1.778,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "יו תחתון למעקה",
+      "sku": "pa6519",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 0.47,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "יו תחתון למעקה 26/25",
+      "sku": "pa 046",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 0.424,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "לד תאורה שקוע שחור + מכסה שקוף",
+      "sku": "pa 1126",
+      "stockLengthsMm": [],
+      "weightKgPerM": null,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "לד תאורה חיצוני שחור + מכסה פלסטיק",
+      "sku": "pa2019",
+      "stockLengthsMm": [],
+      "weightKgPerM": null,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מאחז יד מלבני",
+      "sku": "pa0103",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 2.123,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מאחז מעוגל",
+      "sku": "PA5779",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 1.878,
+      "wallThicknessMm": null,
+      "categoryHe": "פרופיל למעקה"
+    },
+    {
+      "nameHe": "מגש 130",
+      "sku": "PA1319",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 0.69,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מגש 18/150/1.5",
+      "sku": "pa2033",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 0.838,
+      "wallThicknessMm": 1.5,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מגש 200",
+      "sku": "pa1323",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 1.059,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מכורסם 50/40 מרווח 2 סמ",
+      "sku": "pa2008",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": null,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מכורסם 60 מרווח 2 סמ / 1.5 סמ",
+      "sku": "pa2004",
+      "stockLengthsMm": [
+        6000,
+        3000
+      ],
+      "weightKgPerM": 112.0,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מכסה לעמוד פנדה משולב",
+      "sku": "R 328",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.32,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מכסה פלסטיק ל טי תאורה",
+      "sku": "pa2011",
+      "stockLengthsMm": [],
+      "weightKgPerM": null,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מכסה שטוח 2000",
+      "sku": "241300000600",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 0.28,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מלבן 135/53",
+      "sku": "pa 5772",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000,
+        5000,
+        4000
+      ],
+      "weightKgPerM": null,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מלבן 20/10",
+      "sku": "PA1165",
+      "stockLengthsMm": [],
+      "weightKgPerM": null,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מלבן 10/40",
+      "sku": "pa1345",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.334,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מלבן 120/40 עובי 4 ממ",
+      "sku": "PA1195",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 3.42,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מלבן 20/100/0.9",
+      "sku": "f20/100",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 0.608,
+      "wallThicknessMm": 0.9,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מלבן 20/120",
+      "sku": null,
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 0.926,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מלבן 20/130/1.2",
+      "sku": "hs006",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 1.102,
+      "wallThicknessMm": 1.2,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מלבן 20/150/1.2",
+      "sku": "hs007",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 1.31,
+      "wallThicknessMm": 1.2,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מלבן 20/200/1.8",
+      "sku": "HS009",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 2.4,
+      "wallThicknessMm": 1.8,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מלבן 20/26 (הייטק)",
+      "sku": "HS013",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.357,
+      "wallThicknessMm": null,
+      "categoryHe": "lamella לפרגולה"
+    },
+    {
+      "nameHe": "מלבן 20/40 עובי דופן 1.3",
+      "sku": "pa1089",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 0.496,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מלבן 20/40/0.9",
+      "sku": "HS002",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.305,
+      "wallThicknessMm": 0.9,
+      "categoryHe": "lamella לפרגולה"
+    },
+    {
+      "nameHe": "מלבן 20/40/1.15",
+      "sku": "F4020",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000,
+        5000,
+        4000
+      ],
+      "weightKgPerM": 0.383,
+      "wallThicknessMm": 1.15,
+      "categoryHe": "lamella לפרגולה"
+    },
+    {
+      "nameHe": "מלבן 20/40/2",
+      "sku": "pa1171",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 0.73,
+      "wallThicknessMm": 2.0,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מלבן 20/50/1.1",
+      "sku": "F5020",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.499,
+      "wallThicknessMm": 1.1,
+      "categoryHe": "lamella לפרגולה"
+    },
+    {
+      "nameHe": "מלבן 20/50/2",
+      "sku": "pa1091",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 0.851,
+      "wallThicknessMm": 2.0,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מלבן 20/70/0.8",
+      "sku": "f7020",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 0.411,
+      "wallThicknessMm": 0.8,
+      "categoryHe": "lamella לפרגולה"
+    },
+    {
+      "nameHe": "מלבן 20/70/1.6",
+      "sku": "pa 1121",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 0.89,
+      "wallThicknessMm": 1.6,
+      "categoryHe": "lamella לפרגולה"
+    },
+    {
+      "nameHe": "מלבן 20/90/1",
+      "sku": "HS005",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 0.62,
+      "wallThicknessMm": 1.0,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מלבן 300/100 צבע לבן",
+      "sku": "pa2017",
+      "stockLengthsMm": [
+        8500
+      ],
+      "weightKgPerM": 7.176,
+      "wallThicknessMm": 3.0,
+      "categoryHe": "מסגרת לפרגולה"
+    },
+    {
+      "nameHe": "מלבן 300/100 צבע שחור",
+      "sku": "pa2016",
+      "stockLengthsMm": [
+        8500
+      ],
+      "weightKgPerM": 7.176,
+      "wallThicknessMm": null,
+      "categoryHe": "מסגרת לפרגולה"
+    },
+    {
+      "nameHe": "מלבן 40/100/1.8",
+      "sku": "f10040",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000,
+        5000,
+        4000,
+        3850
+      ],
+      "weightKgPerM": 1.372,
+      "wallThicknessMm": 1.8,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מלבן 40/120/1.8",
+      "sku": "pa1162",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000,
+        5000,
+        4000
+      ],
+      "weightKgPerM": 1.632,
+      "wallThicknessMm": 1.8,
+      "categoryHe": "מסגרת לפרגולה"
+    },
+    {
+      "nameHe": "מלבן 40/60/1.2",
+      "sku": "F4060",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.709,
+      "wallThicknessMm": 1.2,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מלבן 40/60/2",
+      "sku": "PA1296",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 1.098,
+      "wallThicknessMm": 2.0,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מלבן 40/80/1.4",
+      "sku": "pan1156",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 0.99,
+      "wallThicknessMm": 1.4,
+      "categoryHe": "מסגרת לפרגולה"
+    },
+    {
+      "nameHe": "מלבן 40/80/2",
+      "sku": "pa1191",
+      "stockLengthsMm": [],
+      "weightKgPerM": null,
+      "wallThicknessMm": 2.0,
+      "categoryHe": "מסגרת לפרגולה"
+    },
+    {
+      "nameHe": "מלבן 50/100/2",
+      "sku": "pa1377",
+      "stockLengthsMm": [],
+      "weightKgPerM": 1.64,
+      "wallThicknessMm": 2.0,
+      "categoryHe": "מסגרת לפרגולה"
+    },
+    {
+      "nameHe": "מלבן 50/150 עובי דופן 4 ממ",
+      "sku": "1197 pa",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 4.326,
+      "wallThicknessMm": null,
+      "categoryHe": "מסגרת לפרגולה"
+    },
+    {
+      "nameHe": "מלבן 50/150/2",
+      "sku": "hs012",
+      "stockLengthsMm": [
+        7500,
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 2.388,
+      "wallThicknessMm": 2.0,
+      "categoryHe": "מסגרת לפרגולה"
+    },
+    {
+      "nameHe": "מלבן 50/200/3",
+      "sku": "F20050",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 4.248,
+      "wallThicknessMm": 3.0,
+      "categoryHe": "מסגרת לפרגולה"
+    },
+    {
+      "nameHe": "מלבן 50/40/3",
+      "sku": "PA1193",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 1.415,
+      "wallThicknessMm": 3.0,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מלבן 60/30",
+      "sku": "PA1160",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 0.78,
+      "wallThicknessMm": 1.6,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מלבן 60/30",
+      "sku": "pa1160",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 0.8112,
+      "wallThicknessMm": 1.6,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מסגרת גדר עם קליפס",
+      "sku": "HS015",
+      "stockLengthsMm": [],
+      "weightKgPerM": 1.08,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מסתור כביסה 5800",
+      "sku": "pa5800",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.454,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מעצור שער",
+      "sku": "9404A",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.197,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מקבילית גדולה 78.5/20",
+      "sku": "HS024",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 0.387,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מקבילית קטנה 58.5/20",
+      "sku": "HS025",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.297,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מרובע 15/15",
+      "sku": "pa 1135",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.208,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מרובע 150/150",
+      "sku": null,
+      "stockLengthsMm": [],
+      "weightKgPerM": null,
+      "wallThicknessMm": null,
+      "categoryHe": "עמוד פרגולה"
+    },
+    {
+      "nameHe": "מרובע 100/100/2",
+      "sku": "F100100",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 2.242,
+      "wallThicknessMm": 2.0,
+      "categoryHe": "עמוד פרגולה"
+    },
+    {
+      "nameHe": "מרובע 130/130/2",
+      "sku": "HS004",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 2.932,
+      "wallThicknessMm": 2.0,
+      "categoryHe": "עמוד פרגולה"
+    },
+    {
+      "nameHe": "מרובע 150/150",
+      "sku": "pa2012",
+      "stockLengthsMm": [
+        6000,
+        7000
+      ],
+      "weightKgPerM": 4.256,
+      "wallThicknessMm": 2.5,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מרובע 20/20/1",
+      "sku": "f2020",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 0.301,
+      "wallThicknessMm": 1.0,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מרובע 200/200 ללא ציפוי",
+      "sku": "pa2013",
+      "stockLengthsMm": [
+        7000
+      ],
+      "weightKgPerM": 6.032,
+      "wallThicknessMm": 2.5,
+      "categoryHe": "עמוד פרגולה"
+    },
+    {
+      "nameHe": "מרובע 200/200 צבע לבן",
+      "sku": "pa2015",
+      "stockLengthsMm": [
+        6000,
+        7000
+      ],
+      "weightKgPerM": 6.032,
+      "wallThicknessMm": null,
+      "categoryHe": "עמוד פרגולה"
+    },
+    {
+      "nameHe": "מרובע 200/200 צבע שחור",
+      "sku": "pa2014",
+      "stockLengthsMm": [
+        6000,
+        7000
+      ],
+      "weightKgPerM": 6.032,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מרובע 27.5/27.5/1.2",
+      "sku": "pa1153",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.36,
+      "wallThicknessMm": 1.2,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מרובע 30/30/1.4",
+      "sku": "pa1139",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.649,
+      "wallThicknessMm": 1.4,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מרובע 30/30/2",
+      "sku": "pa1182",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.829,
+      "wallThicknessMm": 2.0,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מרובע 40/40/1.2",
+      "sku": "F4040",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 0.727,
+      "wallThicknessMm": 1.2,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מרובע 40/40/2",
+      "sku": "pa1184",
+      "stockLengthsMm": [],
+      "weightKgPerM": 1.088,
+      "wallThicknessMm": 2.0,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מרובע 50/50/1.8",
+      "sku": "F5050",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.954,
+      "wallThicknessMm": 1.8,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מרובע 80/80",
+      "sku": "F8080",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 1.912,
+      "wallThicknessMm": 2.0,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "מרזב 120",
+      "sku": "R291",
+      "stockLengthsMm": [
+        6000,
+        7000
+      ],
+      "weightKgPerM": 2.6,
+      "wallThicknessMm": 2.0,
+      "categoryHe": "מלבן עם מרזב נסתר"
+    },
+    {
+      "nameHe": "ספייסר/מכסה לעמוד משולב",
+      "sku": "R 340",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 0.291,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "סרגל זיגוג למאחז מלבני",
+      "sku": "pa0104",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 0.294,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "עכביש 120",
+      "sku": "3631A",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 2.39,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "עכביש 150",
+      "sku": "4631A",
+      "stockLengthsMm": [],
+      "weightKgPerM": 2.726,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "עכביש 40.8",
+      "sku": "pa5207",
+      "stockLengthsMm": [],
+      "weightKgPerM": 2.256,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "עמוד 45/45 פנדה",
+      "sku": "045700000600 עמוד 45/45 פנדה",
+      "stockLengthsMm": [],
+      "weightKgPerM": 1.139,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "עמוד 60/60 פלוס מכסה",
+      "sku": "pa 1055",
+      "stockLengthsMm": [],
+      "weightKgPerM": 1.726,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "עמוד גדר + מכסה",
+      "sku": "HS015",
+      "stockLengthsMm": [],
+      "weightKgPerM": null,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "עמוד גדר 70/70",
+      "sku": "PA1127",
+      "stockLengthsMm": [],
+      "weightKgPerM": 1.726,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "עמוד לגדר 40/70",
+      "sku": "p2344",
+      "stockLengthsMm": [],
+      "weightKgPerM": null,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "עמוד פנדה משולב",
+      "sku": "R 320",
+      "stockLengthsMm": [],
+      "weightKgPerM": 1.664,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "עמוד פנדה קנט 1",
+      "sku": "045800000600",
+      "stockLengthsMm": [],
+      "weightKgPerM": 1.545,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "ערבי קנט 1",
+      "sku": "PA2200",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 0.462,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "פח גיבל ישר",
+      "sku": "pa2010",
+      "stockLengthsMm": [
+        3000
+      ],
+      "weightKgPerM": 0.01,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "פלח 30/3",
+      "sku": "p1233",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 0.26,
+      "wallThicknessMm": 3.0,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "פלח 40/1.5",
+      "sku": "p1285",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 0.172,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "פלח 40/5",
+      "sku": "p1284",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 0.686,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "פלח 50/2",
+      "sku": "p1281",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.27,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "פלח שטוח 20/1.5",
+      "sku": "pa1351",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.863,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "פרופיל 2000 66/100",
+      "sku": "3601",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 1.326,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "פרופיל 2000 66/40",
+      "sku": "360000000600",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": null,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "פרופיל 2000 66\\66",
+      "sku": "3602",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 1.307,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "פרופיל 2000 אומגה",
+      "sku": null,
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": null,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "פרופיל 2000 קליפס",
+      "sku": null,
+      "stockLengthsMm": [],
+      "weightKgPerM": null,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "פרופיל 2000 קליפס בידודי",
+      "sku": "pa2406",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 1.476,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "פרופיל 2000 קליפס משופע",
+      "sku": "pa2417",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 0.27,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "פרופיל 2000 רבע עגול",
+      "sku": "pa3603",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 1.17,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "פרופיל 2000 שולב",
+      "sku": null,
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 0.0,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "פרופיל גדר 2 קנטים",
+      "sku": "I245",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 0.799,
+      "wallThicknessMm": 1.3,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "פרופיל גדר קנט אחד",
+      "sku": "I246",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 0.785,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "פרופיל יו 40/40 עם מכסה",
+      "sku": "PA3040",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.915,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "פרופיל לכרסום",
+      "sku": "HS017",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.832,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "פרופיל מדרגה דק (מדורג,זיגזג)",
+      "sku": "pa 2018",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.712,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "פרופיל מדרגה - עבה - זיגזג",
+      "sku": "HS 016",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.953,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "פרופיל מקור",
+      "sku": "HS019",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.421,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "פרופיל עוגן",
+      "sku": "9411A",
+      "stockLengthsMm": [],
+      "weightKgPerM": 1.399,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "פרופיל תריס 43.5/27.5/1",
+      "sku": "F2844A",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": 0.427,
+      "wallThicknessMm": 1.0,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "צינור 30/2",
+      "sku": "RT30",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.498,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "צינור 35/2",
+      "sku": "RT35",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 0.586,
+      "wallThicknessMm": 2.0,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "צינור 40/2",
+      "sku": "9402A",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 0.669,
+      "wallThicknessMm": 2.0,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "ציר השחלה לגדר",
+      "sku": "pa0012",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 0.0,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "קונסטרוקציה למסתור כביסה",
+      "sku": "R240",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 0.693,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "קליפס למכורסם",
+      "sku": "pa2508",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 0.176,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "קליק 20/25",
+      "sku": "0460",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 0.28,
+      "wallThicknessMm": 1.62,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "קליק 20/45",
+      "sku": "046100000600",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.469,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "קליק חיפוי בקליק",
+      "sku": "0456",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.469,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "קליק מחבר משופע",
+      "sku": "0453",
+      "stockLengthsMm": [],
+      "weightKgPerM": 1.04,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "קליק מכסה אחורי",
+      "sku": "0454",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.062,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "קליק תושבת לחיפוי",
+      "sku": null,
+      "stockLengthsMm": [],
+      "weightKgPerM": null,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "קנט 1 100/40",
+      "sku": "HS021",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": null,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "קנט 1 120/40",
+      "sku": "HS023",
+      "stockLengthsMm": [
+        6000,
+        6500,
+        7000
+      ],
+      "weightKgPerM": null,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "רבע עגול למסתור",
+      "sku": "R230",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 1.0,
+      "wallThicknessMm": 1.4,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "רוזטה 30/30",
+      "sku": "Rozeta3030",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.0,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "רוזטה 50/50",
+      "sku": "Rozeta5050",
+      "stockLengthsMm": [],
+      "weightKgPerM": 0.0,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "שער ,פרופיל עם מעצור לשער",
+      "sku": "I247",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 0.845,
+      "wallThicknessMm": 1.3,
+      "categoryHe": null
+    },
+    {
+      "nameHe": "תרסיס / ספריי צבע",
+      "sku": "pa2020 תרסיס צבע",
+      "stockLengthsMm": [
+        6000
+      ],
+      "weightKgPerM": 0.001,
+      "wallThicknessMm": null,
+      "categoryHe": null
+    }
+  ]
+}

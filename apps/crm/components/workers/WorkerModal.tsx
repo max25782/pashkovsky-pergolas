@@ -7,6 +7,12 @@ import { useToast } from '@/components/ui/toast'
 import type { Worker } from '@/types/workers'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
 
+// The subcontractor's price is agreed per job, so it is typed in by hand
+// (no prefilled default) and stored in the same daily_rate column that all
+// shift-cost calculations already read.
+const SUBCONTRACTOR_ROLE = 'קבלן משנה'
+const DEFAULT_DAILY_RATE = 500
+
 interface WorkerFormData {
   firstName: string
   lastName: string
@@ -30,7 +36,7 @@ export function WorkerModal({ worker, onClose, onSave }: Props) {
     lastName: worker?.lastName ?? '',
     phone: worker?.phone ?? '',
     role: worker?.role ?? '',
-    dailyRate: worker?.dailyRate ?? 500,
+    dailyRate: worker?.dailyRate ?? DEFAULT_DAILY_RATE,
     isActive: worker?.isActive ?? true,
   })
   const [submitting, setSubmitting] = useState(false)
@@ -84,6 +90,7 @@ export function WorkerModal({ worker, onClose, onSave }: Props) {
 
   const ROLE_OPTIONS = [
     'קבלן',
+    SUBCONTRACTOR_ROLE,
     'עובד',
     'מנהל',
     'נהג',
@@ -93,6 +100,7 @@ export function WorkerModal({ worker, onClose, onSave }: Props) {
 
   const isCustomRole = form.role !== '' && !ROLE_OPTIONS.includes(form.role)
   const selectValue = isCustomRole ? 'אחר' : form.role
+  const isSubcontractor = form.role === SUBCONTRACTOR_ROLE
 
   const textFields: { label: string; key: keyof WorkerFormData; type: string; required: boolean }[] = [
     { label: t.workers.firstName, key: 'firstName', type: 'text', required: true },
@@ -141,6 +149,10 @@ export function WorkerModal({ worker, onClose, onSave }: Props) {
                   update('role', '')
                 } else {
                   update('role', e.target.value)
+                  // New subcontractor: drop the generic default so the price is entered manually.
+                  if (e.target.value === SUBCONTRACTOR_ROLE && !worker && form.dailyRate === DEFAULT_DAILY_RATE) {
+                    update('dailyRate', 0)
+                  }
                 }
               }}
               className="w-full px-3 py-2 rounded bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -162,12 +174,15 @@ export function WorkerModal({ worker, onClose, onSave }: Props) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-white/80 mb-2">{t.workers.dailyRate}</label>
+            <label className="block text-sm font-medium text-white/80 mb-2">
+              {isSubcontractor ? 'מחיר קבלן משנה (₪) — הזנה ידנית' : t.workers.dailyRate}
+            </label>
             <input
               type="number"
               min="0"
               step="0.01"
-              value={form.dailyRate}
+              placeholder={isSubcontractor ? 'הכנס מחיר...' : undefined}
+              value={form.dailyRate === 0 ? '' : form.dailyRate}
               onChange={(e) => update('dailyRate', parseFloat(e.target.value) || 0)}
               required
               className="w-full px-3 py-2 rounded bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
