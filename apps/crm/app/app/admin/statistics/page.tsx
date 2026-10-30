@@ -24,10 +24,22 @@ export default function StatisticsPage() {
         setLoading(true)
         
         const supabase = createClient()
-        
+
+        const companyRes = await fetch('/api/companies/me')
+        if (!companyRes.ok) {
+          setError('Unauthorized')
+          return
+        }
+        const { company_id: companyId } = (await companyRes.json()) as { company_id?: string }
+        if (!companyId) {
+          setDeals([])
+          return
+        }
+
         const { data, error: dbError } = await supabase
           .from('deals')
           .select('*')
+          .eq('company_id', companyId)
           .or('source.is.null,source.neq.quick_offer')
           .order('created_at', { ascending: false })
           .limit(1000)

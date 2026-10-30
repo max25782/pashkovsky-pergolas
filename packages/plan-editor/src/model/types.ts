@@ -86,7 +86,11 @@ export interface PlanEditorState {
    * Replace the empty chain with a closed contour (draft restore).
    * Vertices are not repeated; the last edge closes back to the first.
    */
-  hydrateContour: (polygon: Point[], wallIndices: number[]) => void
+  hydrateContour: (
+    polygon: Point[],
+    wallIndices: number[],
+    measuredOuterLengthMmByEdgeIndex?: Array<number | null>,
+  ) => void
 
   setViewport: (patch: Partial<Viewport>) => void
 
@@ -165,7 +169,22 @@ export interface PlanEditorState {
    * пересчитывается только to. Если сторона не последняя, вся цепочка после
    * неё пересобирается (см. geometry/chain.ts rebuildChain) — хвост сдвигается.
    */
-  updateEdgeLength: (id: string, mm: number) => void
+  updateEdgeLength: (
+    id: string,
+    mm: number,
+    options?: { skipAutoCloseAdjust?: boolean; measuredOuterLengthMm?: number },
+  ) => void
+
+  /** Rebuild axis chain from outer targets (construction overlay panel). */
+  applyOuterLengths: (
+    outerLengthsMm: number[],
+    updatedEdgeIndex: number,
+    beamPlanWidthMm: number,
+    planWidthForEdge?: (edgeIndex: number) => number,
+  ) => void
+
+  /** After outer-length solve iterations — run closed-contour adjust once. */
+  syncClosedContourAdjust: () => void
 
   /** Аналогично updateEdgeLength, но меняется направление, длина сохраняется. */
   updateEdgeAngle: (id: string, deg: number) => void

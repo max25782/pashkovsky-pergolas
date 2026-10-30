@@ -1,3 +1,4 @@
+export type { PieceWarning } from '../types'
 export type {
   AluminumLine,
   BomCatalog,

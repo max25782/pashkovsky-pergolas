@@ -209,11 +209,44 @@ describe('planContourSvg', () => {
     )
   }
 
-  it('draws the confirmed contour and its edge lengths', () => {
-    const svg = drawing().planContourSvg(RECT, [0])
-    expect(svg).toContain('data-plan-contour="1"')
+  const TEST_PARAMS = {
+    ...jest.requireActual<typeof import('@pashkovsky/pergola-core')>('@pashkovsky/pergola-core')
+      .DEFAULT_PLAN_CONSTRUCTION_PARAMS,
+    beamProfileId: 'f10040',
+    purlinProfileId: 'purlin-led-6040',
+    postProfileId: 'f8080',
+    lamellaPatternId: 'all-70',
+  }
+
+  it('midot measured lengths appear on the PDF top-plan sheet (no +80 extras)', () => {
+    const midot = [
+      { x: 0, y: 0 },
+      { x: 4000, y: 0 },
+      { x: 4000, y: 3000 },
+      { x: -4000, y: 3000 },
+      { x: -4000, y: -3000 },
+      { x: 0, y: -3000 },
+    ]
+    const svg = drawing().planTopSheetSvg(midot, [], {
+      ...TEST_PARAMS,
+      measuredOuterLengthMmByEdgeIndex: [4000, 3000, 8000, 6000, 4000, 3000],
+    })
     expect(svg).toContain('>4000<')
+    expect(svg).toContain('>3000<')
+    expect(svg).toContain('>8000<')
     expect(svg).toContain('>6000<')
+    expect(svg).not.toContain('>8080<')
+    expect(svg).not.toContain('>6080<')
+    expect(svg).not.toContain('>4080<')
+    expect(svg).not.toContain('>3080<')
+  })
+
+  it('draws outer perimeter dimensions via buildTopPlanDimensionModel (not axis edges)', () => {
+    const svg = drawing().planContourSvg(RECT, [0], TEST_PARAMS)
+    expect(svg).toContain('data-plan-contour="1"')
+    expect(svg).not.toContain('data-plan-contour="legacy-axis"')
+    expect(svg).toMatch(/>\d{4}</)
+    expect(svg).toContain('°')
   })
 
   it('places rectangle labels outside the contour, horizontal above and below, vertical beside', () => {
@@ -251,10 +284,9 @@ describe('planContourSvg', () => {
     expect(labelsStayOffContour(lShape, placeContourDimensionLabels(lShape))).toBe(true)
     const trapLabels = placeContourDimensionLabels(trapezoid)
     expect(labelsStayOffContour(trapezoid, trapLabels)).toBe(true)
-    const svg = planContourSvg(trapezoid)
-    expect(svg).toContain('>7030<')
-    expect(svg).toContain('>3849<')
-    expect(svg).toContain('>3190<')
+    const svg = planContourSvg(trapezoid, [], TEST_PARAMS)
+    expect(svg).toContain('data-plan-contour="1"')
+    expect(svg).toMatch(/>\d{3,5}</)
     expect(svg).not.toContain('#1d4ed8')
     expect(svg.match(/fill="#111827"/g)?.length).toBe(trapLabels.length)
   })

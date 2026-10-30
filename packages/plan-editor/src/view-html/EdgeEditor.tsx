@@ -1,9 +1,12 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useContext, useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
-import { useBoundPlanEditorStore, MIN_EDGE_LENGTH_MM } from '../model/store'
+import { useBoundPlanEditorStore, MIN_EDGE_LENGTH_MM, PlanEditorStoreContext } from '../model/store'
+import { usePlanEditorConstruction } from '../model/constructionContext'
 import { worldToScreen } from '../geometry/coords'
+import { axisLengthFromUserInputMm, edgeDisplayLengthMm } from './edgeOuterLength'
+import { commitOuterLengthMm } from './commitOuterLength'
 import { mmToLengthUnit, lengthUnitToMm } from '../input/dynamicInputBuffer'
 
 export interface EdgeEditorLabels {
@@ -41,10 +44,16 @@ export function EdgeEditor({ labels }: EdgeEditorProps) {
   const viewport = useBoundPlanEditorStore((s) => s.viewport)
   const inputUnit = useBoundPlanEditorStore((s) => s.inputUnit)
   const updateEdgeLength = useBoundPlanEditorStore((s) => s.updateEdgeLength)
+  const applyOuterLengths = useBoundPlanEditorStore((s) => s.applyOuterLengths)
   const updateEdgeAngle = useBoundPlanEditorStore((s) => s.updateEdgeAngle)
   const closeEditor = useBoundPlanEditorStore((s) => s.closeEditor)
 
+  const construction = usePlanEditorConstruction()
+  const storeApi = useContext(PlanEditorStoreContext)
   const edge = editingEdgeId ? fixedEdges.find((e) => e.id === editingEdgeId) ?? null : null
+  const { displayLengthMm, outerDeltaMm, usesOuterLength } = edge
+    ? edgeDisplayLengthMm(edge, construction)
+    : { displayLengthMm: 0, outerDeltaMm: undefined, usesOuterLength: false }
 
   const [lengthText, setLengthText] = useState('')
   const [angleText, setAngleText] = useState('')
@@ -54,7 +63,7 @@ export function EdgeEditor({ labels }: EdgeEditorProps) {
   // не на каждый ре-рендер: иначе набор в поле сбрасывался бы собственным эхом.
   useEffect(() => {
     if (!edge) return
-    setLengthText(formatNumber(mmToLengthUnit(edge.lengthMm, inputUnit)))
+    setLengthText(formatNumber(mmToLengthUnit(displayLengthMm, inputUnit)))
     setAngleText(formatNumber(edge.angleDeg))
     // Фокус в длину — «фокус в длине» по спецификации A2.
     requestAnimationFrame(() => lengthInputRef.current?.focus())
@@ -71,7 +80,17 @@ export function EdgeEditor({ labels }: EdgeEditorProps) {
     // (model/store.ts) сам применяет как защиту от вырожденной/почти-дубль
     // вершины: держим UI-проверку в согласии с фактическим порогом, а не
     // молча пропускаем значение, которое store всё равно отбросит.
-    if (Number.isFinite(lengthMm) && lengthMm >= MIN_EDGE_LENGTH_MM) updateEdgeLength(edge.id, lengthMm)
+    if (usesOuterLength && construction?.overlayForFixedEdges) {
+      commitOuterLengthMm(lengthMm, edge.id, {
+        overlayForFixedEdges: construction.overlayForFixedEdges,
+        getFixedEdges: () => storeApi?.getState().fixedEdges ?? [],
+        applyOuterLengths: (outers, idx) =>
+          applyOuterLengths(outers, idx, construction.beamPlanWidthMm, construction.planWidthForEdge),
+      })
+    } else {
+      const axisMm = axisLengthFromUserInputMm(lengthMm, outerDeltaMm, usesOuterLength)
+      if (Number.isFinite(axisMm) && axisMm >= MIN_EDGE_LENGTH_MM) updateEdgeLength(edge.id, axisMm)
+    }
     if (Number.isFinite(angleDeg)) updateEdgeAngle(edge.id, angleDeg)
     closeEditor()
   }

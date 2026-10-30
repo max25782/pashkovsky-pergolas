@@ -25,6 +25,8 @@ interface FixedEdgesProps {
   worstEdgeId?: string | null
   /** id сторон из lastAdjustResult.ambiguousCandidates — подсветка жёлтым (обе/все, различить нельзя). */
   ambiguousEdgeIds?: string[]
+  /** When construction overlay draws outer perimeter dimensions, hide axis mm on edges. */
+  hideAxisLengthLabels?: boolean
 }
 
 const EDGE_COLOR = '#e2e8f0'
@@ -58,6 +60,7 @@ export function FixedEdges({
   hoveredEdgeId,
   worstEdgeId,
   ambiguousEdgeIds,
+  hideAxisLengthLabels,
 }: FixedEdgesProps) {
   return (
     <g>
@@ -127,19 +130,21 @@ export function FixedEdges({
               style={{ pointerEvents: 'none' }}
             />
             <circle cx={to.x} cy={to.y} r={4} fill={color} style={{ pointerEvents: 'none' }} />
-            <text
-              x={midX}
-              y={midY}
-              fill={color}
-              fontSize={12}
-              fontFamily="monospace"
-              textAnchor="middle"
-              dominantBaseline="middle"
-              transform={`rotate(${labelAngle}, ${midX}, ${midY}) translate(0, -${LABEL_OFFSET_PX})`}
-              style={{ userSelect: 'none', pointerEvents: 'none' }}
-            >
-              {Math.round(edge.lengthMm)} мм
-            </text>
+            {!hideAxisLengthLabels && (
+              <text
+                x={midX}
+                y={midY}
+                fill={color}
+                fontSize={12}
+                fontFamily="monospace"
+                textAnchor="middle"
+                dominantBaseline="middle"
+                transform={`rotate(${labelAngle}, ${midX}, ${midY}) translate(0, -${LABEL_OFFSET_PX})`}
+                style={{ userSelect: 'none', pointerEvents: 'none' }}
+              >
+                {Math.round(edge.lengthMm)} мм
+              </text>
+            )}
           </g>
         )
       })}

@@ -8,6 +8,8 @@ import {
   type ShapeGrid,
 } from './rectangleDecomposition'
 import { sanitizeContour } from './contourSanitize'
+import { sideBeamProfileId, sidePlanWidthMm } from './beamPlanWidth'
+import { beamCutLengths, frameEndJoint } from './frameJoints'
 import { HANGER_LENGTH_MM, resolveSupportType, specColorHex } from './support'
 import {
   heightOnPlane,
@@ -283,7 +285,7 @@ export function computeFrame(
   if (!postProfile) {
     throw new Error(`Post profile "${spec.postProfileId}" not found in profiles map`)
   }
-  const maxSpan = beamProfile.maxSpanMm
+  const maxSpan = spec.postMaxSpanMm ?? beamProfile.maxSpanMm
 
   // Shape-driven wing boundaries + maxSpanMm intermediate points, per edge —
   // computed ONCE, here, BEFORE either the beam or the post loop below, so
@@ -391,10 +393,12 @@ export function computeFrame(
 
     const isWallEdge = wallEdgeIndices.has(i)
 
-    // Wall-mounted pergola: use the wall profile on the wall edge
-    const profileId = (isWallEdge && spec.wallProfileId)
-      ? spec.wallProfileId
-      : spec.beamProfileId
+    const profileId = sideBeamProfileId({
+      isWall: isWallEdge,
+      beamProfileId: spec.beamProfileId,
+      wallProfileId: spec.wallProfileId,
+      wallBeamWidthVersion: spec.wallBeamWidthVersion,
+    })
 
     const profile = profiles.get(profileId)
     if (!profile) {
@@ -408,13 +412,54 @@ export function computeFrame(
     const mS = miters[i]
     const mE = miters[j]
 
-    const cms = Math.abs(mS.miterAngleDeg)
-    const cme = Math.abs(mE.miterAngleDeg)
+    let cms = Math.abs(mS.miterAngleDeg)
+    let cme = Math.abs(mE.miterAngleDeg)
 
     // cutHandStart: the beam OUTGOES from vertex i → use cutHandOutgoing
     // cutHandEnd:   the beam ARRIVES at vertex j → use cutHandIncoming
-    const chs = mS.cutHandOutgoing
-    const che = mE.cutHandIncoming
+    let chs = mS.cutHandOutgoing
+    let che = mE.cutHandIncoming
+
+    // Version 1 reads wall flags. Unset keeps the bisector miter on every corner.
+    let cutLong: number | null = null
+    let cutShort: number | null = null
+    if (spec.frameJointVersion === 1) {
+      const widthOf = (idx: number) => sidePlanWidthMm(profiles, {
+        isWall: wallEdgeIndices.has(idx),
+        beamProfileId: spec.beamProfileId,
+        wallProfileId: spec.wallProfileId,
+        wallBeamWidthVersion: spec.wallBeamWidthVersion,
+      })
+      const prev = (i + n - 1) % n
+      const startJoint = frameEndJoint({
+        edgeIsWall: isWallEdge,
+        neighborIsWall: wallEdgeIndices.has(prev),
+        interiorDeg: mS.interiorAngleDeg,
+        neighborWidthMm: widthOf(prev),
+      })
+      const endJoint = frameEndJoint({
+        edgeIsWall: isWallEdge,
+        neighborIsWall: wallEdgeIndices.has(j),
+        interiorDeg: mE.interiorAngleDeg,
+        neighborWidthMm: widthOf(j),
+      })
+      cms = startJoint.cutDeg
+      cme = endJoint.cutDeg
+      if (startJoint.cutDeg === 0) chs = 'straight'
+      if (endJoint.cutDeg === 0) che = 'straight'
+      if (!segmentBeams) {
+        const outer = spec.measuredOuterLengthMmByEdgeIndex?.[i]
+        const cut = beamCutLengths({
+          outerMm: outer != null && outer > 0 ? outer : null,
+          axisMm: edgeLen,
+          beamWidthMm: widthOf(i),
+          start: startJoint,
+          end: endJoint,
+        })
+        cutLong = cut.longMm
+        cutShort = cut.shortMm
+      }
+    }
 
     if (!segmentBeams) {
       // Legacy / non-вистур path — exactly the pre-existing single
@@ -429,8 +474,8 @@ export function computeFrame(
         profileId,
 
         lengthAxisMm:  pose.axisMm,
-        lengthLongMm:  pose.axisMm + δStart + δEnd,
-        lengthShortMm: pose.axisMm - δStart - δEnd,
+        lengthLongMm:  cutLong ?? pose.axisMm + δStart + δEnd,
+        lengthShortMm: cutShort ?? pose.axisMm - δStart - δEnd,
 
         cutMiterStartDeg: cms,
         cutBevelStartDeg: 0,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { requireAIDirectorAuth } from '@/lib/middleware/ai-director-auth'
+import { sumRevenueDealTotals } from '@/lib/deals/revenue'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -109,14 +110,17 @@ export async function GET(req: NextRequest) {
     // Total revenue (prefer offers, fallback to deals)
     const totalRevenue = revenueFromOffers > 0 ? revenueFromOffers : revenueFromDeals
     
+    // Pipeline value (mode `all`): signed-offer and later. Drafts stay out.
+    const pipeline = sumRevenueDealTotals(deals ?? [], 'all')
+
     // Aggregate deals data
     const dealsData = {
       total: deals?.length || 0,
       byStage: {} as Record<string, number>,
-      totalValue: deals?.reduce((sum, d) => sum + (parseFloat(d.price?.toString() || '0') || 0), 0) || 0,
+      totalValue: pipeline.revenue,
       avgValue: 0,
       completed: deals?.filter(d => d.stage === 'done').length || 0,
-      totalCost: deals?.reduce((sum, d) => sum + (parseFloat(d.my_cost?.toString() || '0') || 0), 0) || 0,
+      totalCost: pipeline.expenses,
     }
     
     deals?.forEach((deal) => {

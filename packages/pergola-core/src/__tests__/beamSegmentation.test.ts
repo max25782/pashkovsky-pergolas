@@ -302,7 +302,7 @@ describe('segmentBeamsForStock — Rule A (существующий узел > �
     const spec = baseSpec(contour, { purlinProfileId: 'purlin-1' })
 
     const frame = computeFrame(spec, profiles)
-    const purlins = computePurlins(spec, profiles)
+    const purlins = computePurlins(spec, profiles, undefined, { frameBeams: frame.beams })
     expect(purlins.length).toBeGreaterThan(0)
 
     const bottomBeam = frame.beams.find(
@@ -320,10 +320,8 @@ describe('segmentBeamsForStock — Rule A (существующий узел > �
     expect(segments).toHaveLength(2)
     expect(segments[0].lengthAxisMm).toBeCloseTo(5000, 1)
     expect(segments[1].lengthAxisMm).toBeCloseTo(3000, 1)
-    // NOT the naive symmetric split.
     expect(segments[0].lengthAxisMm).not.toBeCloseTo(4000, 1)
 
-    // A new post was planted at the splice (x=5000) — nothing there before.
     const newPost = result.posts.find((p) => Math.abs(p.position[0] - 5000) < 1 && Math.abs(p.position[2]) < 1)
     expect(newPost).toBeDefined()
   })

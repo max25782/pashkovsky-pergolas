@@ -14,7 +14,7 @@ async function fetchApiProjects() {
     const supabase = createClient(url, key)
     const { data } = await supabase
       .from('pergola_projects')
-      .select('*')
+      .select('id, title_he, title_ru, title_en, desc_he, desc_ru, desc_en, images, created_at')
       .order('created_at', { ascending: false })
     return data ?? []
   } catch {

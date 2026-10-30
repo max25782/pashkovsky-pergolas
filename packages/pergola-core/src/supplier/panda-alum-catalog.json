@@ -241,7 +241,7 @@
       ],
       "weightKgPerM": 2.314,
       "wallThicknessMm": null,
-      "categoryHe": null
+      "categoryHe": "מסגרת לפרגולה"
     },
     {
       "nameHe": "דאבל טי 142/1.6",
@@ -1102,7 +1102,7 @@
       "nameHe": "מלבן 40/80/2",
       "sku": "pa1191",
       "stockLengthsMm": [],
-      "weightKgPerM": null,
+      "weightKgPerM": 1.29,
       "wallThicknessMm": 2.0,
       "categoryHe": "מסגרת לפרגולה"
     },
@@ -1123,7 +1123,7 @@
         7000
       ],
       "weightKgPerM": 4.326,
-      "wallThicknessMm": null,
+      "wallThicknessMm": 4.0,
       "categoryHe": "מסגרת לפרגולה"
     },
     {
@@ -1239,7 +1239,7 @@
       "nameHe": "מרובע 150/150",
       "sku": null,
       "stockLengthsMm": [],
-      "weightKgPerM": null,
+      "weightKgPerM": 4.256,
       "wallThicknessMm": null,
       "categoryHe": "עמוד פרגולה"
     },

@@ -1,7 +1,9 @@
 import {
+  canonicalProfileId,
   DEFAULT_PLAN_CONSTRUCTION_PARAMS,
   isSimplePolygon,
   parseLamellaWallThicknessMm,
+  parseMeasuredOuterLengthMmByEdgeIndex,
   PERGOLA_PLAN_SCHEMA_VERSION,
   polygonAreaM2,
   type PlanConstructionParams,
@@ -20,17 +22,40 @@ function isFiniteNumber(value: unknown): boolean {
 
 function parseParams(raw: unknown): PlanConstructionParams {
   if (!raw || typeof raw !== 'object') {
-    return { ...DEFAULT_PLAN_CONSTRUCTION_PARAMS }
+    const {
+      postMaxSpanMm: _omit,
+      lamellaSectionLayoutVersion: _omitSections,
+      wallBeamWidthVersion: _omitWallWidth,
+      wallProfileId: _omitWallProfile,
+      frameJointVersion: _omitJoints,
+      skewSectionVersion: _omitSkew,
+      lamellaLengthStepMm: _omitStep,
+      ...legacy
+    } = DEFAULT_PLAN_CONSTRUCTION_PARAMS
+    return legacy
   }
   const o = raw as Record<string, unknown>
-  const base = { ...DEFAULT_PLAN_CONSTRUCTION_PARAMS }
+  const {
+    postMaxSpanMm: _omit,
+    purlinClearLayoutVersion: _omitLayout,
+    lamellaSectionLayoutVersion: _omitSections,
+    purlinMaxSpanMm: _omitPurlinMax,
+    wingShelfProfileId: _omitShelfProfile,
+    wallBeamWidthVersion: _omitWallWidth,
+    wallProfileId: _omitWallProfile,
+    frameJointVersion: _omitJoints,
+    skewSectionVersion: _omitSkew,
+    lamellaLengthStepMm: _omitStep,
+    ...legacyDefaults
+  } = DEFAULT_PLAN_CONSTRUCTION_PARAMS
+  const base: PlanConstructionParams = { ...legacyDefaults }
   if (typeof o.lamellaPatternId === 'string') base.lamellaPatternId = o.lamellaPatternId
   if (isFiniteNumber(o.lamellaGapMm)) base.lamellaGapMm = o.lamellaGapMm as number
   if (isFiniteNumber(o.lamellaDirectionDeg)) base.lamellaDirectionDeg = o.lamellaDirectionDeg as number
   if (typeof o.lamellaOnEdge === 'boolean') base.lamellaOnEdge = o.lamellaOnEdge
-  if (typeof o.beamProfileId === 'string') base.beamProfileId = o.beamProfileId
+  if (typeof o.beamProfileId === 'string') base.beamProfileId = canonicalProfileId(o.beamProfileId)
   if (typeof o.purlinProfileId === 'string') base.purlinProfileId = o.purlinProfileId
-  if (typeof o.postProfileId === 'string') base.postProfileId = o.postProfileId
+  if (typeof o.postProfileId === 'string') base.postProfileId = canonicalProfileId(o.postProfileId)
   if (typeof o.visturMode === 'boolean') base.visturMode = o.visturMode
   if (isFiniteNumber(o.heightMm) && (o.heightMm as number) > 0) base.heightMm = o.heightMm as number
   if (o.lamellaAngleDeg === 0 || o.lamellaAngleDeg === 45) base.lamellaAngleDeg = o.lamellaAngleDeg
@@ -56,6 +81,64 @@ function parseParams(raw: unknown): PlanConstructionParams {
   }
   const wallThickness = parseLamellaWallThicknessMm(o.lamellaWallThicknessMm)
   if (wallThickness !== undefined) base.lamellaWallThicknessMm = wallThickness
+  if (o.purlinDividers && typeof o.purlinDividers === 'object') {
+    const d = o.purlinDividers as Record<string, unknown>
+    if (d.mode === 'auto' || d.mode === 'manual') {
+      const lines: Array<{ id: string; positionMm: number }> = []
+      if (Array.isArray(d.lines)) {
+        for (const rawLine of d.lines) {
+          if (!rawLine || typeof rawLine !== 'object') continue
+          const line = rawLine as Record<string, unknown>
+          if (typeof line.id === 'string' && line.id.length > 0 && isFiniteNumber(line.positionMm)) {
+            lines.push({ id: line.id, positionMm: line.positionMm as number })
+          }
+        }
+      }
+      base.purlinDividers = d.mode === 'manual' ? { mode: 'manual', lines } : { mode: 'auto' }
+    }
+  }
+  if (isFiniteNumber(o.postMaxSpanMm) && (o.postMaxSpanMm as number) > 0) {
+    base.postMaxSpanMm = o.postMaxSpanMm as number
+  } else {
+    delete base.postMaxSpanMm
+  }
+  const measured = parseMeasuredOuterLengthMmByEdgeIndex(o.measuredOuterLengthMmByEdgeIndex)
+  if (measured) base.measuredOuterLengthMmByEdgeIndex = measured
+  else delete base.measuredOuterLengthMmByEdgeIndex
+  if (o.purlinClearLayoutVersion === 1) base.purlinClearLayoutVersion = 1
+  else delete base.purlinClearLayoutVersion
+  if (o.lamellaSectionLayoutVersion === 1) base.lamellaSectionLayoutVersion = 1
+  else delete base.lamellaSectionLayoutVersion
+  if (isFiniteNumber(o.purlinMaxSpanMm) && (o.purlinMaxSpanMm as number) > 0) {
+    base.purlinMaxSpanMm = o.purlinMaxSpanMm as number
+  } else {
+    delete base.purlinMaxSpanMm
+  }
+  if (typeof o.wingShelfProfileId === 'string' && o.wingShelfProfileId.length > 0) {
+    base.wingShelfProfileId = o.wingShelfProfileId
+  } else {
+    delete base.wingShelfProfileId
+  }
+  if (o.wallBeamWidthVersion === 1) {
+    base.wallBeamWidthVersion = 1
+    if (o.wallProfileId === 'f10040' || o.wallProfileId === 'pa1162') {
+      base.wallProfileId = o.wallProfileId
+    } else {
+      base.wallProfileId = 'f10040'
+    }
+  } else {
+    delete base.wallBeamWidthVersion
+    delete base.wallProfileId
+  }
+  if (o.frameJointVersion === 1) base.frameJointVersion = 1
+  else delete base.frameJointVersion
+  if (o.skewSectionVersion === 1) base.skewSectionVersion = 1
+  else delete base.skewSectionVersion
+  if (isFiniteNumber(o.lamellaLengthStepMm) && (o.lamellaLengthStepMm as number) > 0) {
+    base.lamellaLengthStepMm = o.lamellaLengthStepMm as number
+  } else {
+    delete base.lamellaLengthStepMm
+  }
   return base
 }
 

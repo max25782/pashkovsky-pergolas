@@ -1,16 +1,17 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import type { ReactElement, CSSProperties } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei'
 import * as THREE from 'three'
 import type { CutPiece, ProfileDimensions } from '@pashkovsky/pergola-core'
 import { PergolaCutPieceScene } from './PergolaCutPieceScene'
+import type { DividerEditProps } from './PergolaCutPieceScene'
 import type { ScenePresetId } from './SceneBackdrop'
 import { MM_TO_M } from './units'
 
-export interface PergolaCutPieceViewerProps {
+export interface PergolaCutPieceViewerProps extends DividerEditProps {
   pieces: CutPiece[]
   profiles: Map<string, ProfileDimensions>
   className?: string
@@ -38,8 +39,16 @@ export function PergolaCutPieceViewer({
   style,
   colorHex,
   scenePreset = 'classic',
+  selectedDividerId,
+  warningDividerIds,
+  addDividerActive,
+  dividerHitPieces,
+  onSelectDivider,
+  onMoveDivider,
+  onAddDividerAt,
 }: PergolaCutPieceViewerProps): ReactElement {
   const framing = useMemo(() => computeFraming(pieces), [pieces])
+  const [dragging, setDragging] = useState(false)
 
   return (
     <div className={className} style={{ position: 'relative', width: '100%', height: '100%', ...style }}>
@@ -52,6 +61,8 @@ export function PergolaCutPieceViewer({
           toneMapping: THREE.ACESFilmicToneMapping,
           outputColorSpace: THREE.SRGBColorSpace,
         }}
+        // Divider hits are resolved in capture-phase (DividerNativePicker).
+        // R3F onPointerMissed would immediately clear a successful pick.
       >
         <PerspectiveCamera makeDefault position={framing.cameraPosition} fov={50} near={0.1} far={500} />
         <OrbitControls
@@ -59,12 +70,21 @@ export function PergolaCutPieceViewer({
           dampingFactor={0.08}
           target={framing.target}
           maxPolarAngle={Math.PI / 2.02}
+          enabled={!dragging && !addDividerActive}
         />
         <PergolaCutPieceScene
           pieces={pieces}
           profiles={profiles}
           colorHex={colorHex}
           scenePreset={scenePreset}
+          selectedDividerId={selectedDividerId}
+          warningDividerIds={warningDividerIds}
+          addDividerActive={addDividerActive}
+          dividerHitPieces={dividerHitPieces}
+          onSelectDivider={onSelectDivider}
+          onMoveDivider={onMoveDivider}
+          onAddDividerAt={onAddDividerAt}
+          onDragChange={setDragging}
         />
       </Canvas>
     </div>

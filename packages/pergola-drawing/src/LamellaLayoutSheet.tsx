@@ -24,19 +24,60 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { CutPiece, ProfileDimensions, Point2D } from '@pashkovsky/pergola-core'
+import type { CutPiece, ProfileDimensions, Point2D, LamellaSection } from '@pashkovsky/pergola-core'
+import { formatPurlinClearLabelMm, groupLamellaSectionTypes, lamellaSectionTypeById } from '@pashkovsky/pergola-core'
 import { pieceAxis } from '@pashkovsky/pergola-core'
-import { computeFitToScreenViewport, worldToScreen } from '@pashkovsky/plan-editor'
-import type { Viewport, Point, CanvasSize, WorldBounds } from '@pashkovsky/plan-editor'
+import { computeFitToScreenViewport, worldToScreen } from './viewport'
+import type { Viewport, Point, CanvasSize, WorldBounds } from './viewport'
 import { lamellaFootprintCorners } from './geometry/footprints'
 import { buildDimensionLineLayout, type DimensionLineLayout } from './geometry/dimensionLayout'
 import { groupLamellaRows, buildLamellaRhythm } from './geometry/lamellaRhythm'
 import { DimensionChainSvg } from './DimensionChainSvg'
 
+function sectionCorners(section: LamellaSection): Point2D[] {
+  return section.trapezoid?.corners ?? [
+    [section.minX, section.minY],
+    [section.maxX, section.minY],
+    [section.maxX, section.maxY],
+    [section.minX, section.maxY],
+  ]
+}
+
+function pointInPolygon(point: Point2D, polygon: Point2D[]): boolean {
+  let inside = false
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const yi = polygon[i][1]
+    const yj = polygon[j][1]
+    if ((yi > point[1]) === (yj > point[1])) continue
+    const xi = polygon[i][0]
+    const xj = polygon[j][0]
+    const x = ((xj - xi) * (point[1] - yi)) / (yj - yi) + xi
+    if (point[0] < x) inside = !inside
+  }
+  return inside
+}
+
+function outsideEdgePoint(a: Point2D, b: Point2D, interior: Point2D, offsetMm: number): Point2D {
+  const dx = b[0] - a[0]
+  const dy = b[1] - a[1]
+  const len = Math.hypot(dx, dy) || 1
+  let nx = dy / len
+  let ny = -dx / len
+  const mx = (a[0] + b[0]) / 2
+  const my = (a[1] + b[1]) / 2
+  if (nx * (interior[0] - mx) + ny * (interior[1] - my) > 0) {
+    nx = -nx
+    ny = -ny
+  }
+  return [mx + nx * offsetMm, my + ny * offsetMm]
+}
+
 export interface LamellaLayoutSheetProps {
   pieces: CutPiece[]
   profiles: Map<string, ProfileDimensions>
   lamellaOnEdge?: boolean
+  /** Factory sections (version 1): one rectangle per cassette, no per-row labels. */
+  sections?: LamellaSection[]
   className?: string
 }
 
@@ -74,7 +115,13 @@ function boundsFromPoints(points: Point2D[]): WorldBounds {
   return { minX, minY, maxX, maxY }
 }
 
-export function LamellaLayoutSheet({ pieces, profiles, lamellaOnEdge = false, className }: LamellaLayoutSheetProps) {
+export function LamellaLayoutSheet({
+  pieces,
+  profiles,
+  lamellaOnEdge = false,
+  sections,
+  className,
+}: LamellaLayoutSheetProps) {
   const svgRef = useRef<SVGSVGElement>(null)
   const [canvasPx, setCanvasPx] = useState<CanvasSize>({ widthPx: 0, heightPx: 0 })
 
@@ -82,17 +129,31 @@ export function LamellaLayoutSheet({ pieces, profiles, lamellaOnEdge = false, cl
     const svg = svgRef.current
     if (!svg) return
     function measure() {
-      const rect = svg!.getBoundingClientRect()
-      if (rect.width <= 0 || rect.height <= 0) return
-      setCanvasPx({ widthPx: rect.width, heightPx: rect.height })
+      const parent = svg.parentElement?.getBoundingClientRect()
+      const rect = svg.getBoundingClientRect()
+      const widthPx = Math.max(rect.width, parent?.width ?? 0)
+      const heightPx = Math.max(rect.height, parent?.height ?? 0)
+      if (widthPx < 40 || heightPx < 40) return
+      setCanvasPx((prev) => (
+        prev.widthPx === widthPx && prev.heightPx === heightPx ? prev : { widthPx, heightPx }
+      ))
     }
     measure()
+    const raf = requestAnimationFrame(measure)
     const observer = new ResizeObserver(measure)
     observer.observe(svg)
-    return () => observer.disconnect()
+    if (svg.parentElement) observer.observe(svg.parentElement)
+    return () => {
+      cancelAnimationFrame(raf)
+      observer.disconnect()
+    }
   }, [])
 
   const lamellas = useMemo(() => pieces.filter((p) => p.role === 'lamella'), [pieces])
+  const sectionTypeById = useMemo(
+    () => lamellaSectionTypeById(groupLamellaSectionTypes(sections ?? [])),
+    [sections],
+  )
 
   // Common run direction/perpendicular — every lamella in one pergola
   // shares the same azimuth (rotation.y), see lamellaRhythm.ts.
@@ -158,13 +219,21 @@ export function LamellaLayoutSheet({ pieces, profiles, lamellaOnEdge = false, cl
   )
 
   const worldBounds = useMemo<WorldBounds>(() => {
+    if (sections && sections.length > 0) {
+      return boundsFromPoints(sections.flatMap((s) => s.trapezoid?.corners ?? [
+        [s.minX, s.minY],
+        [s.maxX, s.minY],
+        [s.maxX, s.maxY],
+        [s.minX, s.maxY],
+      ]))
+    }
     const allPoints: Point2D[] = [
       ...footprints.flatMap((f) => f.corners),
       ...(pitchLayout?.extensionLines.map((e) => e.to) ?? []),
       ...gapMarkers.flatMap((g) => [g.from, g.to]),
     ]
     return boundsFromPoints(allPoints)
-  }, [footprints, pitchLayout, gapMarkers])
+  }, [footprints, pitchLayout, gapMarkers, sections])
 
   const viewport = useMemo(
     () => computeFitToScreenViewport(worldBounds, canvasPx.widthPx > 0 ? canvasPx : { widthPx: 800, heightPx: 600 }, MARGIN_RATIO),
@@ -172,20 +241,125 @@ export function LamellaLayoutSheet({ pieces, profiles, lamellaOnEdge = false, cl
   )
 
   return (
-    <svg ref={svgRef} className={className ?? 'h-full w-full'} style={{ background: '#ffffff', display: 'block' }}>
+    <svg
+      ref={svgRef}
+      className={className ?? 'h-full w-full'}
+      style={{ background: '#ffffff', display: 'block', direction: 'ltr', unicodeBidi: 'isolate' }}
+    >
       <defs>
         <marker id="pergola-dim-arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
           <path d="M0,1 L9,5 L0,9 Z" fill="#1f2937" />
         </marker>
       </defs>
 
-      {/* Ламели */}
-      {footprints.map(({ piece, corners }) => (
+      {sections && sections.length > 0 ? (
+        sections.map((section) => {
+          const corners: Point2D[] = section.trapezoid?.corners ?? [
+            [section.minX, section.minY],
+            [section.maxX, section.minY],
+            [section.maxX, section.maxY],
+            [section.minX, section.maxY],
+          ]
+          const topLeft = worldToScreen({ x: section.minX, y: section.maxY }, viewport)
+          const bottomRight = worldToScreen({ x: section.maxX, y: section.minY }, viewport)
+          const screenCorners = corners.map((p) => worldToScreen(toPoint(p), viewport))
+          const center = {
+            x: screenCorners.reduce((sum, p) => sum + p.x, 0) / screenCorners.length,
+            y: screenCorners.reduce((sum, p) => sum + p.y, 0) / screenCorners.length,
+          }
+          const trap = section.trapezoid
+          const box = Math.min(Math.abs(bottomRight.x - topLeft.x), Math.abs(bottomRight.y - topLeft.y))
+          const fontSize = Math.max(16, Math.min(42, box * 0.42))
+          return (
+            <g key={section.id}>
+              <polygon
+                data-section-trapezoid={trap ? '1' : undefined}
+                points={pointsToSvg(corners, viewport)}
+                fill="#e7e5e4"
+                stroke="#44403c"
+                strokeWidth={1.5}
+              />
+              {trap ? (() => {
+                const interior = corners.reduce<Point2D>(
+                  (sum, point) => [sum[0] + point[0] / corners.length, sum[1] + point[1] / corners.length],
+                  [0, 0],
+                )
+                const others = (sections ?? [])
+                  .filter((other) => other.id !== section.id)
+                  .map(sectionCorners)
+                let topPoint = outsideEdgePoint(corners[3], corners[2], interior, 260)
+                const heightPoint = outsideEdgePoint(corners[1], corners[2], interior, 320)
+                const bottomPoint = outsideEdgePoint(corners[0], corners[1], interior, 240)
+                if (others.some((polygon) => pointInPolygon(topPoint, polygon))) {
+                  topPoint = [heightPoint[0], corners[2][1] - 420]
+                }
+                const top = worldToScreen(toPoint(topPoint), viewport)
+                const bottom = worldToScreen(toPoint(bottomPoint), viewport)
+                const height = worldToScreen(toPoint(heightPoint), viewport)
+                return (
+                  <>
+                    <text
+                      data-layout-top={formatPurlinClearLabelMm(trap.widthAtHighMm)}
+                      x={top.x}
+                      y={top.y}
+                      textAnchor="middle"
+                      fontSize={12}
+                      fontFamily="sans-serif"
+                      fill="#111827"
+                    >
+                      {formatPurlinClearLabelMm(trap.widthAtHighMm)}
+                    </text>
+                    <text
+                      data-layout-bottom={formatPurlinClearLabelMm(trap.widthAtLowMm)}
+                      x={bottom.x}
+                      y={bottom.y}
+                      textAnchor="middle"
+                      fontSize={12}
+                      fontFamily="sans-serif"
+                      fill="#111827"
+                    >
+                      {formatPurlinClearLabelMm(trap.widthAtLowMm)}
+                    </text>
+                    <text
+                      data-layout-height={formatPurlinClearLabelMm(section.heightMm)}
+                      x={height.x}
+                      y={height.y}
+                      textAnchor="start"
+                      dominantBaseline="middle"
+                      fontSize={12}
+                      fontFamily="sans-serif"
+                      fill="#111827"
+                    >
+                      {formatPurlinClearLabelMm(section.heightMm)}
+                    </text>
+                  </>
+                )
+              })() : null}
+              <text
+                x={center.x}
+                y={center.y}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fontSize={fontSize}
+                fontFamily="sans-serif"
+                fontWeight={700}
+                fill="#1c1917"
+                stroke="#ffffff"
+                strokeWidth={Math.max(3, fontSize * 0.12)}
+                paintOrder="stroke"
+              >
+                {sectionTypeById.get(section.id) ?? ''}
+              </text>
+            </g>
+          )
+        })
+      ) : (
+      footprints.map(({ piece, corners }) => (
         <polygon key={piece.id} points={pointsToSvg(corners, viewport)} fill="#d6d3d1" stroke="#57534e" strokeWidth={1} />
-      ))}
+      ))
+      )}
 
-      {/* Просвет между соседними рядами — короткая размерная связка ближе к деталям */}
-      {gapMarkers.map((g) => {
+      {!(sections && sections.length > 0) && gapMarkers.map((g) => {
         const from = worldToScreen(toPoint(g.from), viewport)
         const to = worldToScreen(toPoint(g.to), viewport)
         const midX = (from.x + to.x) / 2
@@ -204,8 +378,9 @@ export function LamellaLayoutSheet({ pieces, profiles, lamellaOnEdge = false, cl
         )
       })}
 
-      {/* Осевой шаг между рядами — цепочка дальше за краем */}
-      {pitchLayout && <DimensionChainSvg layout={pitchLayout} viewport={viewport} />}
+      {!(sections && sections.length > 0) && pitchLayout && (
+        <DimensionChainSvg layout={pitchLayout} viewport={viewport} />
+      )}
     </svg>
   )
 }

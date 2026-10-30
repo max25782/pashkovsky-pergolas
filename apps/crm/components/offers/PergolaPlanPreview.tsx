@@ -36,11 +36,17 @@ export function PergolaPlanPreview({ plan, title }: PergolaPlanPreviewProps) {
   const built = useMemo(() => {
     try {
       const built = buildPiecesFromPlan(plan)
-      return { pieces: built.pieces, roofWarning: built.roof.warning, error: null as string | null }
+      return {
+        pieces: built.pieces,
+        roofWarning: built.roof.warning,
+        warnings: built.warnings,
+        error: null as string | null,
+      }
     } catch (error) {
       return {
         pieces: null,
         roofWarning: null,
+        warnings: [],
         error: error instanceof Error ? error.message : String(error),
       }
     }
@@ -64,7 +70,17 @@ export function PergolaPlanPreview({ plan, title }: PergolaPlanPreviewProps) {
       </div>
       <div className="h-72 bg-white">
         {built.pieces ? (
-          <TopPlanSheet pieces={built.pieces} profiles={PLAN_PREVIEW_PROFILES} isOrthogonal />
+          <TopPlanSheet
+            pieces={built.pieces}
+            profiles={PLAN_PREVIEW_PROFILES}
+            planContour={plan.polygon.map((p): [number, number] => [p.x, p.y])}
+            constructionParams={plan.params}
+            lamellaDirectionDeg={plan.params.lamellaDirectionDeg}
+            isOrthogonal
+            showPurlinLengthLegend={false}
+            rowBoundaryLabel={t('drawing.rowBoundary')}
+            lamellaDirectionLabel={t('drawing.lamellaDirection')}
+          />
         ) : (
           <svg viewBox={polygonViewBox(plan.polygon)} className="h-full w-full">
             <polygon points={outline} fill="#e8eef5" stroke="#1d4ed8" strokeWidth={80} />
@@ -75,32 +91,45 @@ export function PergolaPlanPreview({ plan, title }: PergolaPlanPreviewProps) {
         <p className="px-4 py-2 text-xs text-red-300 whitespace-pre-line">{built.error}</p>
       )}
       {open && built.pieces && (
-        <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/60 p-4">
-          <div className="flex h-full w-full max-w-6xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3">
-              <span className="text-sm font-semibold text-neutral-900">
-                {title} — {t('preview3D.title')}
-              </span>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="rounded px-3 py-1 text-sm text-neutral-600 hover:bg-neutral-100"
-              >
-                {t('preview3D.closeButton')}
-              </button>
+        <div className="border-t border-white/10">
+          <div className="flex items-center justify-between px-4 py-2">
+            <span className="text-xs font-semibold text-white">
+              {title} — {t('preview3D.title')}
+            </span>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="rounded px-2 py-1 text-xs text-white/70 hover:bg-white/10"
+            >
+              {t('preview3D.closeButton')}
+            </button>
+          </div>
+          {built.roofWarning && (
+            <p className="border-b border-amber-300 bg-amber-50 px-4 py-2 text-xs text-amber-900">
+              {built.roofWarning}
+            </p>
+          )}
+          {built.warnings.length > 0 && (
+            <div className="whitespace-pre-line border-b border-amber-300 bg-amber-50 px-4 py-2 text-xs text-amber-950">
+              {t('preview3D.spanWarningTitle')}
+              {built.warnings.slice(0, 4).map((warning) => (
+                <div key={`${warning.pieceId}-${warning.spanStartMm}`}>
+                  {t('preview3D.spanWarningLine', {
+                    span: Math.round(warning.spanMm),
+                    max: Math.round(warning.maxSpanMm),
+                    start: warning.startDividerId ?? t('preview3D.contourEdge'),
+                    end: warning.endDividerId ?? t('preview3D.contourEdge'),
+                  })}
+                </div>
+              ))}
             </div>
-            {built.roofWarning && (
-              <p className="border-b border-amber-300 bg-amber-50 px-4 py-2 text-xs text-amber-900">
-                {built.roofWarning}
-              </p>
-            )}
-            <div className="min-h-0 flex-1">
-              <PergolaCutPieceViewer
-                pieces={built.pieces}
-                profiles={PLAN_PREVIEW_PROFILES}
-                colorHex={plan.params.colorHex}
-              />
-            </div>
+          )}
+          <div className="h-80 bg-white">
+            <PergolaCutPieceViewer
+              pieces={built.pieces}
+              profiles={PLAN_PREVIEW_PROFILES}
+              colorHex={plan.params.colorHex}
+            />
           </div>
         </div>
       )}

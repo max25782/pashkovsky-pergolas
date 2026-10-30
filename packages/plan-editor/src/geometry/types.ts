@@ -152,6 +152,8 @@ export interface FixedEdge {
 
   /** Длина, явно введённая пользователем числом. undefined = не вводилась. */
   measuredLengthMm?: number
+  /** Внешняя длина (мидот), подтверждённая в панели при construction overlay. */
+  measuredOuterLengthMm?: number
   /** Угол, явно введённый пользователем числом. undefined = не вводился. */
   measuredAngleDeg?: number
 

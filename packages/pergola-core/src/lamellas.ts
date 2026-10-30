@@ -1,9 +1,10 @@
 import type { Point2D, Vector2D, CutPiece, PergolaSpec, ProfileDimensions } from './types'
 import { isCCW } from './miter'
-import { computeSpanDivisionPointsMm } from './lamellaSpans'
+import { resolveContourPurlinPositions } from './lamellaSpans'
 import { resolveLamellaPattern, patternMaxLamellaSpanMm, type LamellaPatternEntry } from './lamellaPattern'
 import { sanitizeContour } from './contourSanitize'
 import { isHorizontalPlane, placeOnRoof, roofPlane, type RoofPlane } from './roof'
+import { buildLamellaSections, computeLamellasFromSections, isLamellaSectionLayoutV1 } from './lamellaSections'
 
 const DEG = 180 / Math.PI
 const RAD = Math.PI / 180
@@ -251,7 +252,7 @@ const STRAIGHT_END_CUT: EndCut = { cutMiterDeg: 0, cutHand: 'straight' }
  *   A purlin that physically interrupts the lamella run cuts it into one
  *   piece per span between purlins, each inner end straight (miter=0), the
  *   outer ends keeping the real contour cut. Division points come from
- *   computeSpanDivisionPointsMm — the SAME points computePurlins uses to
+ *   resolvePurlinPositionsMm — the SAME points computePurlins uses to
  *   place the purlins themselves, so a segment boundary always lines up
  *   with an actual purlin, never a "phantom" cut. The span limit used is
  *   patternMaxLamellaSpanMm — the SMALLEST maxLamellaSpanMm among all
@@ -289,6 +290,11 @@ export function computeLamellas(
   profiles: Map<string, ProfileDimensions>,
   roof?: RoofPlane,
 ): CutPiece[] {
+  if (isLamellaSectionLayoutV1(spec.lamellaSectionLayoutVersion)) {
+    const sections = buildLamellaSections(spec, profiles)
+    if (sections.length > 0) return computeLamellasFromSections(spec, profiles, sections, roof)
+  }
+
   const {
     contour, lamellaDirectionDeg, lamellaGapMm,
     lamellaAngleDeg, heightMm, color, purlinProfileId,
@@ -326,11 +332,20 @@ export function computeLamellas(
   const purlinProfile = purlinProfileId ? profiles.get(purlinProfileId) : undefined
   const divisionPointsMm =
     purlinProfile?.interruptsLamella === true
-      ? computeSpanDivisionPointsMm(
-          Math.min(...pts.map(p => dot2(p, dir))),
-          Math.max(...pts.map(p => dot2(p, dir))),
-          patternMaxLamellaSpanMm(pattern),
-        )
+      ? resolveContourPurlinPositions({
+          contour: pts,
+          lamellaDirectionDeg: spec.lamellaDirectionDeg,
+          maxSpanMm: patternMaxLamellaSpanMm(pattern),
+          mode: spec.purlinDividers?.mode,
+          lines: spec.purlinDividers?.lines,
+          profiles,
+          beamProfileId: spec.beamProfileId,
+          wallProfileId: spec.wallProfileId,
+          wallEdgeIndices: spec.wallEdgeIndices,
+          wallBeamWidthVersion: spec.wallBeamWidthVersion,
+          measuredOuterLengthMmByEdgeIndex: spec.measuredOuterLengthMmByEdgeIndex,
+          layoutVersion: spec.purlinClearLayoutVersion === 1 ? 1 : undefined,
+        }).map((line) => line.positionMm)
       : []
 
   // Row-by-row scan positions: NOT a fixed pitch — see MIXED-WIDTH PATTERN

@@ -2,7 +2,10 @@ import { createContext, useContext } from 'react'
 import { create, useStore, type StoreApi } from 'zustand'
 import { computeFitToScreenViewport, distance, mmToPx } from '../geometry/coords'
 import { rebuildChain, currentAnchor as computeCurrentAnchor, toPolygon, fixedEdgesFromPolygon } from '../geometry/chain'
+import { axisLengthsFromOuterLengthsMm } from '@pashkovsky/pergola-core'
 import { adjustContour } from '../geometry/adjust'
+import { allEdgesCardinalAngles } from '../geometry/cardinalAngles'
+import { closureGap } from '../geometry/closure'
 import { finalizeDraftEdge } from '../geometry/draftEdge'
 import { normalizeAngle } from '../geometry/snap'
 import { isSimplePolygon } from '../geometry/selfIntersection'
@@ -103,12 +106,30 @@ function applyEdgePatch(
   edges: FixedEdge[],
   startPoint: FixedEdge['from'],
   id: string,
-  patch: Partial<Pick<FixedEdge, 'angleDeg' | 'lengthMm' | 'measuredAngleDeg' | 'measuredLengthMm'>>,
+  patch: Partial<
+    Pick<FixedEdge, 'angleDeg' | 'lengthMm' | 'measuredAngleDeg' | 'measuredLengthMm' | 'measuredOuterLengthMm'>
+  >,
 ): FixedEdge[] | null {
   const idx = edges.findIndex((e) => e.id === id)
   if (idx === -1) return null
   const patched = edges.map((e, i) => (i === idx ? { ...e, ...patch } : e))
   return rebuildChain(patched, startPoint)
+}
+
+/** После правки одной стороны замкнутого контура хвост «разъезжается»; подгоняем замыкание, не трогая измеренные стороны по возможности. */
+function edgesAfterClosedContourEdit(
+  edges: FixedEdge[],
+  startPoint: FixedEdge['from'],
+  isClosed: boolean,
+): FixedEdge[] {
+  if (!isClosed || edges.length < 3) return edges
+  if (closureGap(edges).distMm < 0.05) return edges
+  const measuredCount = edges.filter((e) => e.measuredLengthMm != null).length
+  // Пока не все стороны введены числом — подгоняем замыкание за счёт свободных.
+  // Когда все измерены, невязку показывает «Выровнять» (adjustAndClose).
+  if (measuredCount >= edges.length) return edges
+  const result = adjustContour(edges, startPoint)
+  return result.converged ? result.edges : edges
 }
 
 /**
@@ -191,8 +212,13 @@ export function createPlanEditorStore() {
       set({ viewport })
     },
 
-    hydrateContour: (polygon, wallIndices) => {
-      const edges = fixedEdgesFromPolygon(polygon, wallIndices, () => String(++nextEdgeId))
+    hydrateContour: (polygon, wallIndices, measuredOuterLengthMmByEdgeIndex) => {
+      const edges = fixedEdgesFromPolygon(polygon, wallIndices, () => String(++nextEdgeId)).map(
+        (edge, i) => {
+          const measured = measuredOuterLengthMmByEdgeIndex?.[i]
+          return measured != null ? { ...edge, measuredOuterLengthMm: measured } : edge
+        },
+      )
       if (edges.length < 3) return
       set({
         startPoint: polygon[0],
@@ -343,7 +369,53 @@ export function createPlanEditorStore() {
       }))
     },
 
-    updateEdgeLength: (id: string, mm: number) => {
+    applyOuterLengths: (outerLengthsMm: number[], updatedEdgeIndex: number, beamPlanWidthMm: number, planWidthForEdge?: (edgeIndex: number) => number) => {
+      set((s) => {
+        const { fixedEdges, startPoint } = s
+        if (outerLengthsMm.length !== fixedEdges.length || updatedEdgeIndex < 0) return {}
+
+        const measuredAfter = fixedEdges.map((e, i) =>
+          i === updatedEdgeIndex ? Math.round(outerLengthsMm[i]) : e.measuredOuterLengthMm,
+        )
+        const allOuterEntered = measuredAfter.every((o) => o != null)
+
+        if (!allOuterEntered) {
+          const typedOuterMm = Math.round(outerLengthsMm[updatedEdgeIndex])
+          const axisMm = typedOuterMm
+          if (!(axisMm >= MIN_EDGE_LENGTH_MM)) return {}
+          const patched = applyEdgePatch(fixedEdges, startPoint, fixedEdges[updatedEdgeIndex].id, {
+            lengthMm: axisMm,
+            measuredLengthMm: axisMm,
+            measuredOuterLengthMm: Math.round(outerLengthsMm[updatedEdgeIndex]),
+          })
+          if (!patched) return {}
+          return { fixedEdges: patched, closeContourError: null }
+        }
+
+        const angleDeg = fixedEdges.map((e) => e.angleDeg)
+        const outerTargets = measuredAfter.map((o) => o as number)
+        const axisLengths = axisLengthsFromOuterLengthsMm({
+          outerLengthsMm: outerTargets,
+          angleDeg,
+          defaultBeamPlanWidthMm: beamPlanWidthMm,
+          planWidthForEdge,
+        })
+        if (axisLengths.length !== fixedEdges.length) return {}
+        for (const a of axisLengths) {
+          if (!(a >= MIN_EDGE_LENGTH_MM)) return {}
+        }
+        const patched = fixedEdges.map((e, i) => ({
+          ...e,
+          lengthMm: axisLengths[i],
+          measuredOuterLengthMm: outerTargets[i],
+          measuredLengthMm: axisLengths[i],
+        }))
+        const rebuilt = rebuildChain(patched, startPoint)
+        return { fixedEdges: rebuilt, closeContourError: null }
+      })
+    },
+
+    updateEdgeLength: (id: string, mm: number, options?: { skipAutoCloseAdjust?: boolean; measuredOuterLengthMm?: number }) => {
       // Ниже MIN_EDGE_LENGTH_MM — числовой ввод, минующий MIN_COMMIT_LENGTH_PX,
       // создал бы вырожденную/почти-дубль вершину прямо на живом контуре (см.
       // комментарий у MIN_EDGE_LENGTH_MM). No-op, как и при id не найден —
@@ -356,8 +428,24 @@ export function createPlanEditorStore() {
         const rebuilt = applyEdgePatch(s.fixedEdges, s.startPoint, id, {
           lengthMm: mm,
           measuredLengthMm: mm,
+          ...(options?.measuredOuterLengthMm != null
+            ? { measuredOuterLengthMm: options.measuredOuterLengthMm }
+            : {}),
         })
-        return rebuilt ? { fixedEdges: rebuilt, closeContourError: null } : {}
+        if (!rebuilt) return {}
+        const fixedEdges =
+          options?.skipAutoCloseAdjust === true
+            ? rebuilt
+            : edgesAfterClosedContourEdit(rebuilt, s.startPoint, s.isClosed)
+        return { fixedEdges, closeContourError: null }
+      })
+    },
+
+    syncClosedContourAdjust: () => {
+      set((s) => {
+        if (!s.isClosed) return {}
+        const fixedEdges = edgesAfterClosedContourEdit(s.fixedEdges, s.startPoint, s.isClosed)
+        return { fixedEdges, closeContourError: null }
       })
     },
 
@@ -367,7 +455,9 @@ export function createPlanEditorStore() {
           angleDeg: deg,
           measuredAngleDeg: deg,
         })
-        return rebuilt ? { fixedEdges: rebuilt, closeContourError: null } : {}
+        if (!rebuilt) return {}
+        const fixedEdges = edgesAfterClosedContourEdit(rebuilt, s.startPoint, s.isClosed)
+        return { fixedEdges, closeContourError: null }
       })
     },
 
@@ -391,7 +481,29 @@ export function createPlanEditorStore() {
     adjustAndClose: () => {
       const { fixedEdges, startPoint, isClosed } = get()
       if (fixedEdges.length === 0) return
+      const axisGap = closureGap(fixedEdges).distMm
+      const cardinal = allEdgesCardinalAngles(fixedEdges.map((e) => e.angleDeg))
+      if (axisGap < 0.05 && cardinal) {
+        const noop = adjustContour(fixedEdges, startPoint)
+        set({
+          fixedEdges,
+          isClosed: true,
+          lastAdjustResult: { ...noop, edges: fixedEdges, closureGapMm: axisGap },
+          preAdjustSnapshot: { edges: fixedEdges, isClosed },
+        })
+        return
+      }
       const result = adjustContour(fixedEdges, startPoint)
+      const lengthWouldChange = result.residuals.some(
+        (r) => !r.wasUnmeasured && Math.abs(r.lengthResidualMm) > 0.5,
+      )
+      if (cardinal && lengthWouldChange) {
+        set({
+          lastAdjustResult: result,
+          preAdjustSnapshot: { edges: fixedEdges, isClosed },
+        })
+        return
+      }
       set({
         fixedEdges: result.edges,
         isClosed: true,
@@ -411,7 +523,14 @@ export function createPlanEditorStore() {
       })
     },
 
-    acceptAdjust: () => set({ preAdjustSnapshot: null }),
+    acceptAdjust: () => {
+      const { lastAdjustResult, fixedEdges } = get()
+      if (lastAdjustResult && lastAdjustResult.edges !== fixedEdges) {
+        set({ fixedEdges: lastAdjustResult.edges, preAdjustSnapshot: null })
+        return
+      }
+      set({ preAdjustSnapshot: null })
+    },
   }))
 }
 

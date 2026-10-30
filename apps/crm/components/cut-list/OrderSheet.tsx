@@ -1,60 +1,62 @@
 'use client'
 
-/**
- * Лист заказа (промпт «ЧАСТЬ 2 — ЛИСТ ЗАКАЗА») — сколько какого алюминия
- * заказать у поставщика. Одна строка на связку (профиль + цвет), с
- * управляемым выбором длины хлыста (пользователь видит сравнение по всем
- * доступным длинам и фиксирует, откуда заказывать этот профиль — см.
- * lib/cut-list/order-sheet.ts buildProfileBundlePlans).
- *
- * Строится ИСКЛЮЧИТЕЛЬНО из props.pieces + props.profiles — тот же
- * CutPiece[], что уже ушёл в 3D/чертёж (единый источник правды, см.
- * TopPlanSheet.tsx). Никакого отдельного пересчёта конструктива здесь нет.
- */
-
 import { useMemo } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import type { CutPiece, ProfileDimensions } from '@pashkovsky/pergola-core'
 import {
   buildProfileBundlePlans,
   buildOrderSheetTotals,
+  chosenStockLengthMm,
+  DEFAULT_KERF_MM,
+  fittingStockOptions,
   type ProfileBundlePlan,
 } from '@/lib/cut-list/order-sheet'
 
 export interface OrderSheetProps {
   pieces: CutPiece[]
   profiles: Map<string, ProfileDimensions>
-  /** Lifted up so CuttingSheet (Part 3) can read the SAME choice the user made here. */
   chosenLengths: Map<string, number>
   onChooseLength: (bundleKey: string, stockLengthMm: number) => void
+  /** Order PDF: only the chosen bar length, no radios and no other lengths. */
+  printMode?: boolean
 }
 
-function formatProfileLabel(bundle: ProfileBundlePlan): string {
-  const dims = bundle.profileWidthMm && bundle.profileHeightMm
-    ? ` (${bundle.profileWidthMm}×${bundle.profileHeightMm} мм)`
-    : ''
-  return `${bundle.profileId}${dims}`
+function formatMeters(mm: number): string {
+  return (mm / 1000).toFixed(mm % 1000 === 0 ? 1 : 2)
 }
 
-export function OrderSheet({ pieces, profiles, chosenLengths, onChooseLength }: OrderSheetProps) {
+export function OrderSheet({ pieces, profiles, chosenLengths, onChooseLength, printMode = false }: OrderSheetProps) {
+  const t = useTranslations('planEditor.drawing')
+  const locale = useLocale()
+  const dir = locale === 'he' ? 'rtl' : 'ltr'
   const plans = useMemo(() => buildProfileBundlePlans(pieces, profiles), [pieces, profiles])
-  const totals = useMemo(() => buildOrderSheetTotals(plans, chosenLengths), [plans, chosenLengths])
+  const effectiveLengths = useMemo(() => {
+    const next = new Map<string, number>()
+    for (const bundle of plans) {
+      const lengthMm = chosenStockLengthMm(bundle, chosenLengths)
+      if (lengthMm != null) next.set(bundle.bundleKey, lengthMm)
+    }
+    return next
+  }, [plans, chosenLengths])
+  const totals = useMemo(() => buildOrderSheetTotals(plans, effectiveLengths), [plans, effectiveLengths])
 
   return (
-    <div className="flex h-full flex-col gap-4 overflow-y-auto p-4 text-sm">
+    <div dir={dir} className="flex h-full flex-col gap-4 overflow-y-auto p-4 text-sm">
+      <p className="text-xs text-neutral-500 dark:text-neutral-400">{t('kerfNote', { mm: DEFAULT_KERF_MM })}</p>
       <div className="flex flex-col gap-3">
         {plans.map((bundle) => (
           <BundleRow
             key={bundle.bundleKey}
             bundle={bundle}
-            chosenStockLengthMm={chosenLengths.get(bundle.bundleKey) ?? bundle.recommendedStockLengthMm}
+            chosenStockLengthMm={chosenStockLengthMm(bundle, chosenLengths)}
             onChoose={(len) => onChooseLength(bundle.bundleKey, len)}
+            printMode={printMode}
           />
         ))}
         {plans.length === 0 && (
-          <div className="text-neutral-500 dark:text-neutral-400">Нет деталей для отображения.</div>
+          <div className="text-neutral-500 dark:text-neutral-400">{t('noPieces')}</div>
         )}
       </div>
-
       <TotalsTable totals={totals} />
     </div>
   )
@@ -64,48 +66,72 @@ interface BundleRowProps {
   bundle: ProfileBundlePlan
   chosenStockLengthMm: number | null
   onChoose: (stockLengthMm: number) => void
+  printMode: boolean
 }
 
-function BundleRow({ bundle, chosenStockLengthMm, onChoose }: BundleRowProps) {
-  const chosenOption = bundle.options.find((o) => o.stockLengthMm === chosenStockLengthMm)
-  const hasAnyValidOption = bundle.options.some((o) => o.plan != null)
+function BundleRow({ bundle, chosenStockLengthMm, onChoose, printMode }: BundleRowProps) {
+  const t = useTranslations('planEditor.drawing')
+  const fitting = fittingStockOptions(bundle)
+  const chosen = fitting.some((option) => option.stockLengthMm === chosenStockLengthMm)
+    ? chosenStockLengthMm
+    : bundle.recommendedStockLengthMm
+  const chosenOption = fitting.find((option) => option.stockLengthMm === chosen)
 
   return (
-    <div className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-700">
-      <div className="mb-2 flex flex-wrap items-center gap-3">
-        <span className="font-mono font-semibold text-neutral-900 dark:text-neutral-100">
-          {formatProfileLabel(bundle)}
+    <div data-pdf-keep="" className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-700">
+      {bundle.lamellaOversizeMm != null && (
+        <div className="mb-2 rounded bg-amber-50 px-2 py-1 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+          {t('lamellaTooLong', { length: Math.round(bundle.lamellaOversizeMm), stock: 6000 })}
+        </div>
+      )}
+      <div className="mb-2 flex flex-nowrap items-center gap-3">
+        <span className="shrink-0 whitespace-nowrap font-mono font-semibold text-neutral-900 dark:text-neutral-100">
+          {bundle.profileId}
+          {bundle.profileWidthMm && bundle.profileHeightMm ? (
+            <>
+              {' '}
+              <bdi dir="ltr">({bundle.profileWidthMm}×{bundle.profileHeightMm} {t('unitMm')})</bdi>
+            </>
+          ) : null}
         </span>
         <span
           className="inline-block h-3.5 w-3.5 rounded-sm border border-neutral-300 dark:border-neutral-600"
           style={{ backgroundColor: bundle.color }}
           title={bundle.color}
         />
-        <span className="font-mono text-xs text-neutral-500 dark:text-neutral-400">{bundle.color}</span>
-        <span className="text-neutral-500 dark:text-neutral-400">
-          {bundle.pieceCount} дет. · {(bundle.totalLengthLongMm / 1000).toFixed(2)} м суммарно
+        <span className="font-mono text-xs text-neutral-500 dark:text-neutral-400"><bdi dir="ltr">{bundle.color}</bdi></span>
+        <span className="shrink-0 whitespace-nowrap text-neutral-500 dark:text-neutral-400">
+          {t('pieceSummary', {
+            count: bundle.pieceCount,
+            meters: (bundle.totalLengthLongMm / 1000).toFixed(2),
+          })}
         </span>
       </div>
 
       {bundle.options.length === 0 ? (
         <div className="rounded bg-amber-50 px-2 py-1 text-xs text-amber-700 dark:bg-amber-950 dark:text-amber-300">
-          Для профиля &quot;{bundle.profileId}&quot; не заданы доступные длины хлыста (availableStockLengthsMm) —
-          лист заказа по нему не считается, пока каталог не заполнен.
+          {t('noStockCatalog', { profile: bundle.profileId })}
         </div>
-      ) : (
+      ) : fitting.length > 0 && printMode ? (
+        chosenOption?.plan ? (
+          <div data-pdf-keep="" data-pdf-row="" className="overflow-hidden text-sm font-semibold" style={{ height: '8mm', lineHeight: '8mm' }}>
+            <bdi dir="ltr">{chosenOption.plan.totalBars} × {formatMeters(chosenOption.stockLengthMm)} m</bdi>
+          </div>
+        ) : null
+      ) : fitting.length > 0 ? (
         <>
           <table className="w-full text-xs">
             <thead>
-              <tr className="text-left text-neutral-500 dark:text-neutral-400">
-                <th className="py-1 pr-3 font-normal"> </th>
-                <th className="py-1 pr-3 font-normal">Длина хлыста</th>
-                <th className="py-1 pr-3 font-normal">Хлыстов</th>
-                <th className="py-1 pr-3 font-normal">Отход</th>
+              <tr className="text-start text-neutral-500 dark:text-neutral-400">
+                <th className="py-1 pe-3 font-normal"> </th>
+                <th className="py-1 pe-3 font-normal">{t('stockLength')}</th>
+                <th className="py-1 pe-3 font-normal">{t('bars')}</th>
+                <th className="py-1 pe-3 font-normal">{t('waste')}</th>
               </tr>
             </thead>
             <tbody>
-              {bundle.options.map((opt) => {
-                const isChosen = opt.stockLengthMm === chosenStockLengthMm
+              {fitting.map((opt) => {
+                const isChosen = opt.stockLengthMm === chosen
                 const isRecommended = opt.stockLengthMm === bundle.recommendedStockLengthMm
                 return (
                   <tr
@@ -116,35 +142,28 @@ function BundleRow({ bundle, chosenStockLengthMm, onChoose }: BundleRowProps) {
                         : 'text-neutral-900 dark:text-neutral-100'
                     }
                   >
-                    <td className="py-1 pr-3">
+                    <td className="py-1 pe-3">
                       <label className="flex items-center gap-1.5">
                         <input
                           type="radio"
                           name={`stock-${bundle.bundleKey}`}
                           checked={isChosen}
-                          disabled={opt.plan == null}
                           onChange={() => onChoose(opt.stockLengthMm)}
                         />
                       </label>
                     </td>
-                    <td className="py-1 pr-3">
-                      {(opt.stockLengthMm / 1000).toFixed(1)} м
+                    <td className="py-1 pe-3">
+                      <bdi dir="ltr">{formatMeters(opt.stockLengthMm)} m</bdi>
                       {isRecommended && (
-                        <span className="ml-1 text-emerald-600 dark:text-emerald-400">(рекомендуется)</span>
+                        <span className="ms-1 text-emerald-600 dark:text-emerald-400">({t('recommended')})</span>
                       )}
                     </td>
-                    {opt.plan ? (
-                      <>
-                        <td className="py-1 pr-3 font-semibold">{opt.plan.totalBars}</td>
-                        <td className="py-1 pr-3">
-                          {(opt.plan.totalWasteMm / 1000).toFixed(2)} м ({opt.plan.wastePct.toFixed(1)}%)
-                        </td>
-                      </>
-                    ) : (
-                      <td className="py-1 pr-3 text-red-600 dark:text-red-400" colSpan={2} title={opt.error ?? undefined}>
-                        не влезает — в связке есть деталь длиннее этого хлыста
-                      </td>
-                    )}
+                    <td className="py-1 pe-3 font-semibold"><bdi dir="ltr">{opt.plan?.totalBars}</bdi></td>
+                    <td className="py-1 pe-3">
+                      <bdi dir="ltr">
+                        {((opt.plan?.totalWasteMm ?? 0) / 1000).toFixed(2)} m ({opt.plan?.wastePct.toFixed(1)}%)
+                      </bdi>
+                    </td>
                   </tr>
                 )
               })}
@@ -153,52 +172,52 @@ function BundleRow({ bundle, chosenStockLengthMm, onChoose }: BundleRowProps) {
 
           {chosenOption?.plan && (
             <div className="mt-2 text-neutral-600 dark:text-neutral-300">
-              Заказ: <strong>{chosenOption.plan.totalBars}</strong> хлыстов ×{' '}
-              {(chosenOption.stockLengthMm / 1000).toFixed(1)} м
-              {bundle.weightKgPerMeter != null && (
+              {t('orderSummary', {
+                bars: chosenOption.plan.totalBars,
+                meters: formatMeters(chosenOption.stockLengthMm),
+              })}
+              {bundle.weightKgPerMeter != null ? (
                 <>
                   {' '}
-                  · вес ≈{' '}
-                  {((chosenOption.plan.totalBars * chosenOption.stockLengthMm * bundle.weightKgPerMeter) / 1000).toFixed(1)}{' '}
-                  кг
+                  · {t('weightApprox', {
+                    kg: ((chosenOption.plan.totalBars * chosenOption.stockLengthMm * bundle.weightKgPerMeter) / 1000).toFixed(1),
+                  })}
+                </>
+              ) : (
+                <>
+                  {' '}
+                  · {t('weightNotSet')}
                 </>
               )}
             </div>
           )}
-
-          {!hasAnyValidOption && (
-            <div className="mt-2 rounded bg-red-50 px-2 py-1 text-xs text-red-700 dark:bg-red-950 dark:text-red-300">
-              Ни одна доступная длина хлыста для &quot;{bundle.profileId}&quot; не подходит — самая длинная деталь в
-              этой связке длиннее любой из них. Нужна более длинная позиция в availableStockLengthsMm каталога, или
-              деталь нужно сегментировать выше по потоку (это НЕ решается выбором хлыста здесь).
-            </div>
-          )}
         </>
-      )}
+      ) : null}
     </div>
   )
 }
 
 function TotalsTable({ totals }: { totals: ReturnType<typeof buildOrderSheetTotals> }) {
+  const t = useTranslations('planEditor.drawing')
   if (totals.length === 0) return null
   return (
     <div className="mt-2 border-t border-neutral-200 pt-3 dark:border-neutral-700">
-      <div className="mb-1 text-xs font-semibold text-neutral-700 dark:text-neutral-300">Итого по профилям</div>
+      <div className="mb-1 text-xs font-semibold text-neutral-700 dark:text-neutral-300">{t('totalByProfile')}</div>
       <table className="text-xs">
         <thead>
-          <tr className="text-left text-neutral-500 dark:text-neutral-400">
-            <th className="py-1 pr-4 font-normal">Профиль</th>
-            <th className="py-1 pr-4 font-normal">Хлыстов всего</th>
-            <th className="py-1 font-normal">Вес</th>
+          <tr className="text-start text-neutral-500 dark:text-neutral-400">
+            <th className="py-1 pe-4 font-normal">{t('colProfile')}</th>
+            <th className="py-1 pe-4 font-normal">{t('barsTotal')}</th>
+            <th className="py-1 font-normal">{t('colWeight')}</th>
           </tr>
         </thead>
         <tbody>
           {totals.map((row) => (
             <tr key={row.profileId} className="text-neutral-900 dark:text-neutral-100">
-              <td className="py-1 pr-4 font-mono">{row.profileId}</td>
-              <td className="py-1 pr-4 font-semibold">{row.totalBars}</td>
+              <td className="py-1 pe-4 font-mono">{row.profileId}</td>
+              <td className="py-1 pe-4 font-semibold"><bdi dir="ltr">{row.totalBars}</bdi></td>
               <td className="py-1 text-neutral-600 dark:text-neutral-300">
-                {row.totalWeightKg != null ? `${row.totalWeightKg.toFixed(1)} кг` : '—'}
+                {row.totalWeightKg != null ? <bdi dir="ltr">{row.totalWeightKg.toFixed(1)} {t('unitKg')}</bdi> : '—'}
               </td>
             </tr>
           ))}

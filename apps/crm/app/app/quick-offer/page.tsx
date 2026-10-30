@@ -48,8 +48,11 @@ import { authFetch } from '@/lib/api/auth-fetch'
 import { formatPhoneForWhatsApp } from '@/lib/offer-sharing'
 import {
   OfferPlanConfiguratorEmbed,
+  type OfferPlanConfiguratorEmbedHandle,
   type PlanGeometryChange,
 } from '@/components/offers/OfferPlanConfiguratorEmbed'
+import { PlanDrawingSheetsModal } from '@/components/offers/PlanDrawingSheetsModal'
+import { buildPiecesFromPlan, PLAN_PREVIEW_PROFILES } from '@/lib/pergolas/plan-pieces'
 import { PergolaPlanPreview } from '@/components/offers/PergolaPlanPreview'
 import { PergolaDrawingSummary } from '@/components/offers/PergolaDrawingSummary'
 import {
@@ -899,12 +902,15 @@ export default function QuickOfferPage() {
   const [draftRestored, setDraftRestored] = useState(false)
   const [formEpoch, setFormEpoch] = useState(0)
   const [planEditorOpen, setPlanEditorOpen] = useState<Record<number, boolean>>({})
+  const [planDrawingConfirmIndex, setPlanDrawingConfirmIndex] = useState<number | null>(null)
   const [planOrthogonal, setPlanOrthogonal] = useState<Record<number, boolean>>({})
   const [editSessionAcknowledged, setEditSessionAcknowledged] = useState(false)
   const [boundCustomerName, setBoundCustomerName] = useState<string | null>(null)
   const [editingOfferDisplayNumber, setEditingOfferDisplayNumber] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const submitGateRef = useRef(createQuickOfferSubmitGate())
+  const planEmbedRefs = useRef<Record<number, OfferPlanConfiguratorEmbedHandle | null>>({})
+  const [planSaveBlocked, setPlanSaveBlocked] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [generatingAi, setGeneratingAi] = useState(false)
   const [improvingAi, setImprovingAi] = useState(false)
@@ -1047,6 +1053,27 @@ export default function QuickOfferPage() {
     })
   }, [includes.pergola, pergolas, t])
 
+  const planDrawingConfirmModal = useMemo(() => {
+    if (planDrawingConfirmIndex === null) return null
+    const plan = pergolas[planDrawingConfirmIndex]?.plan
+    if (!plan) return null
+    try {
+      const built = buildPiecesFromPlan({
+        polygon: plan.polygon,
+        wallIndices: plan.wallIndices,
+        params: plan.params,
+      })
+      return {
+        index: planDrawingConfirmIndex,
+        plan,
+        pieces: built.pieces,
+        isOrthogonal: planOrthogonal[planDrawingConfirmIndex] !== false,
+      }
+    } catch {
+      return null
+    }
+  }, [planDrawingConfirmIndex, pergolas, planOrthogonal])
+
   const handlePlanGeometry = useCallback((index: number, geometry: PlanGeometryChange) => {
     setPlanOrthogonal((prev) => {
       if (prev[index] === geometry.isOrthogonal) return prev
@@ -1073,6 +1100,52 @@ export default function QuickOfferPage() {
       setPlanEditorOpen((prev) => ({ ...prev, [index]: false }))
       return { ...d, pergolas: updated }
     })
+  }
+
+  async function beginConfirmPergolaPlan(index: number) {
+    const flushed = await planEmbedRefs.current[index]?.flushPlan()
+    if (flushed) {
+      setPlanSaveBlocked(!flushed.ok)
+      setPlanOrthogonal((prev) => ({ ...prev, [index]: flushed.isOrthogonal }))
+      setDraft((d) => {
+        const current = d.pergolas?.length ? d.pergolas : [{ ...DEFAULT_OFFER_VALUES.pergola }]
+        const next = applyPlanGeometry(current[index], {
+          polygon: flushed.polygon,
+          wallIndices: flushed.wallIndices,
+          params: flushed.params,
+          isClosed: true,
+          isSimple: true,
+        })
+        if (next === current[index]) return d
+        const updated = [...current]
+        updated[index] = next
+        return { ...d, pergolas: updated }
+      })
+      try {
+        buildPiecesFromPlan({
+          polygon: flushed.polygon,
+          wallIndices: flushed.wallIndices,
+          params: flushed.params,
+        })
+        setPlanDrawingConfirmIndex(index)
+      } catch {
+        confirmPergolaPlan(index)
+      }
+      return
+    }
+    const pergola = pergolas[index]
+    const plan = pergola?.plan
+    if (!plan || plan.polygon.length < 3) return
+    try {
+      buildPiecesFromPlan({
+        polygon: plan.polygon,
+        wallIndices: plan.wallIndices,
+        params: plan.params,
+      })
+      setPlanDrawingConfirmIndex(index)
+    } catch {
+      confirmPergolaPlan(index)
+    }
   }
 
   function reopenPergolaDrawing(index: number) {
@@ -1687,11 +1760,15 @@ export default function QuickOfferPage() {
                         </div>
                       ) : (
                         <>
-                          <div className="h-[480px]">
+                          <div className="flex h-[min(82dvh,960px)] min-h-[640px] w-full flex-col">
                             <OfferPlanConfiguratorEmbed
                               key={`${formEpoch}-${index}`}
+                              ref={(node) => {
+                                planEmbedRefs.current[index] = node
+                              }}
                               locale={uiLanguage}
-                              canvasClassName="relative h-full w-full overflow-hidden rounded-lg border border-white/15 bg-white"
+                              showDrawingOpenButton={false}
+                              canvasClassName="relative h-full min-h-0 w-full overflow-hidden rounded-lg border border-white/15 bg-white"
                               initialPlan={pergola.plan}
                               onPlanGeometry={(geometry) => handlePlanGeometry(index, geometry)}
                             />
@@ -1730,7 +1807,7 @@ export default function QuickOfferPage() {
                           <button
                             type="button"
                             disabled={!pergola.plan || pergola.plan.polygon.length < 3 || pergola.plan.confirmed}
-                            onClick={() => confirmPergolaPlan(index)}
+                            onClick={() => { void beginConfirmPergolaPlan(index) }}
                             className="mt-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-40"
                           >
                             {pergola.plan?.confirmed ? t('drawingConfirmed') : t('btnConfirmDrawing')}
@@ -1881,7 +1958,7 @@ export default function QuickOfferPage() {
                     </SectionCard>
 
                     {/* LED Lighting */}
-                    <SectionCard title={t('sectionLighting')} defaultOpen={false}>
+                    <SectionCard title={t('sectionLighting')} defaultOpen={true}>
                       <div className="flex items-center gap-3 mb-2">
                         <input
                           type="checkbox"
@@ -2965,6 +3042,39 @@ export default function QuickOfferPage() {
           </div>
         )}
       </div>
+
+      {planDrawingConfirmModal && (
+        <PlanDrawingSheetsModal
+          open
+          onClose={() => {
+            const idx = planDrawingConfirmModal.index
+            setPlanDrawingConfirmIndex(null)
+            confirmPergolaPlan(idx)
+          }}
+          pieces={planDrawingConfirmModal.pieces}
+          profiles={PLAN_PREVIEW_PROFILES}
+          planContour={planDrawingConfirmModal.plan.polygon.map(
+            (p): [number, number] => [p.x, p.y],
+          )}
+          wallEdgeIndices={planDrawingConfirmModal.plan.wallIndices}
+          constructionParams={planDrawingConfirmModal.plan.params}
+          lamellaDirectionDeg={planDrawingConfirmModal.plan.params.lamellaDirectionDeg}
+          isOrthogonal={planDrawingConfirmModal.isOrthogonal}
+          lamellaOnEdge={planDrawingConfirmModal.plan.params.lamellaOnEdge}
+          visturMode={planDrawingConfirmModal.plan.params.visturMode}
+          exportBlocked={planSaveBlocked}
+          beforePrint={async () => {
+            const index = planDrawingConfirmModal.index
+            const flushed = await planEmbedRefs.current[index]?.flushPlan()
+            if (!flushed) return false
+            setPlanSaveBlocked(!flushed.ok)
+            return flushed.ok
+          }}
+          onReplaceProfile={(field, profileId) => {
+            planEmbedRefs.current[planDrawingConfirmModal.index]?.replaceProfile(field, profileId)
+          }}
+        />
+      )}
     </main>
   )
 }

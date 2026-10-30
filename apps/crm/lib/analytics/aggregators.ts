@@ -8,6 +8,7 @@
 import { createClient } from '@supabase/supabase-js'
 import type { AnalyticsPeriod } from '@/lib/ai/analyticsTypes'
 import { DEFAULT_TIMEZONE } from '@/lib/ai/analyticsTypes'
+import { buildPaymentsByDeal, sumMoneyInDateRange, type RevenueDeal } from '@/lib/deals/revenue'
 
 // ============================================================================
 // Supabase Client Setup
@@ -354,7 +355,7 @@ export async function getDealsSummary(
 // ============================================================================
 
 export interface FinanceSummary {
-  revenue: number // Sum of deals.price OR offers.final_price for won deals
+  revenue: number // money-mode: done+installation deal.price + contractor payments by paid_at
   laborCost: number // Sum of work_shifts.daily_rate_snapshot
   profit: number // revenue - laborCost
   profitMargin: number // percentage (profit / revenue)
@@ -371,59 +372,73 @@ export async function getFinanceSummary(
 
   const { from, to } = getDateRange(period)
 
-  // Get revenue from deals with stage='done' OR from offers with final_price
-  // Strategy: Use deals.price if available, otherwise use offers.final_price
-  
-  // Get won deals (stage='done') by installation_date for revenue attribution
-  let dealsQuery = supabase
+  const dealCols = 'id, price, my_cost, stage, customer_type, installation_date'
+
+  let doneQuery = supabase
     .from('deals')
-    .select('id, price, stage')
+    .select(dealCols)
     .eq('stage', 'done')
     .not('installation_date', 'is', null)
     .gte('installation_date', from)
     .lte('installation_date', to)
 
   if (companyId) {
-    dealsQuery = dealsQuery.eq('company_id', companyId)
+    doneQuery = doneQuery.eq('company_id', companyId)
   }
 
-  const { data: wonDeals, error: dealsError } = await dealsQuery
+  const { data: wonDeals, error: dealsError } = await doneQuery
 
   if (dealsError) {
     console.error('Error fetching won deals:', dealsError)
     throw new Error(`Failed to fetch won deals: ${dealsError.message}`)
   }
 
-  const dealsData = wonDeals || []
-  const dealIds = dealsData.map(d => d.id)
+  let contractorQuery = supabase
+    .from('deals')
+    .select(dealCols)
+    .eq('customer_type', 'contractor')
 
-  // Calculate revenue from deals.price
-  let revenue = dealsData.reduce((sum, deal) => {
-    const price = parseFloat(deal.price) || 0
-    return sum + price
-  }, 0)
-
-  // Also check offers for deals that might have final_price but no price in deals table
-  if (dealIds.length > 0) {
-    const { data: offers } = await supabase
-      .from('offers')
-      .select('deal_id, final_price')
-      .in('deal_id', dealIds)
-      .not('final_price', 'is', null)
-
-    if (offers) {
-      // For deals without price, use offer final_price
-      const dealsWithoutPrice = dealsData.filter(d => !d.price || parseFloat(d.price) === 0)
-      const dealsWithoutPriceIds = new Set(dealsWithoutPrice.map(d => d.id))
-      
-      offers.forEach(offer => {
-        if (dealsWithoutPriceIds.has(offer.deal_id)) {
-          const finalPrice = parseFloat(offer.final_price) || 0
-          revenue += finalPrice
-        }
-      })
-    }
+  if (companyId) {
+    contractorQuery = contractorQuery.eq('company_id', companyId)
   }
+
+  const { data: contractorDeals, error: contractorError } = await contractorQuery.lte(
+    'created_at',
+    '9999-12-31T23:59:59.000Z',
+  )
+  if (contractorError) {
+    console.error('Error fetching contractor deals:', contractorError)
+    throw new Error(`Failed to fetch contractor deals: ${contractorError.message}`)
+  }
+
+  let paymentsQuery = supabase
+    .from('deal_payments')
+    .select('deal_id, amount, paid_at')
+
+  if (companyId) {
+    paymentsQuery = paymentsQuery.eq('company_id', companyId)
+  }
+
+  const { data: payments, error: paymentsError } = await paymentsQuery
+    .gte('paid_at', from)
+    .lte('paid_at', to)
+  if (paymentsError) {
+    console.error('Error fetching deal payments:', paymentsError)
+    throw new Error(`Failed to fetch deal payments: ${paymentsError.message}`)
+  }
+
+  const byId = new Map<string, RevenueDeal>()
+  for (const deal of [...(wonDeals ?? []), ...(contractorDeals ?? [])]) {
+    byId.set(deal.id, deal as RevenueDeal)
+  }
+
+  const money = sumMoneyInDateRange(
+    Array.from(byId.values()),
+    buildPaymentsByDeal(payments ?? []),
+    from,
+    to,
+  )
+  const revenue = money.revenue
 
   // Get labor cost from work_shifts
   let shiftsQuery = supabase

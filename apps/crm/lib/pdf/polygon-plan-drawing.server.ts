@@ -1,5 +1,14 @@
 import type { Offer, PergolaPlan } from '@/types/offer'
-import type { PlanConstructionParams } from '@pashkovsky/pergola-core'
+import type { PlanConstructionParams, Point2D, ProfileDimensions } from '@pashkovsky/pergola-core'
+import {
+  PERGOLA_CONSTRUCTION_PROFILES,
+  buildPiecesFromPlan,
+  buildTopPlanDimensionModel,
+  contourSideWidthMm,
+  lamellaRunEndWidthsMm,
+  resolvePlanPurlinLines,
+} from '@pashkovsky/pergola-core'
+import { beamSplicePoints, groupBeamsIntoGeometricSides, renderPlanDimensionsSvg } from '@pashkovsky/pergola-drawing/server'
 
 const DIM_FONT = 220
 const DIM_STROKE = 40
@@ -75,9 +84,8 @@ function labelHitsContour(
 }
 
 /**
- * Edge lengths sit outside the contour: horizontal edges above or below,
- * vertical edges to the left or right, diagonals along the outward normal.
- * The box is the digit run, so a slanted edge cannot cut through the glyphs.
+ * @deprecated Axis edge lengths only — kept for regression snapshots of the
+ * pre–TopPlanSheet PDF. Production PDF uses `planTopSheetSvg`.
  */
 export function placeContourDimensionLabels(
   polygon: Array<{ x: number; y: number }>,
@@ -139,13 +147,8 @@ export function placeContourDimensionLabels(
   return labels
 }
 
-/**
- * Server-safe plan schematic. The drawing sheets are client components
- * (hooks), and Next turns that import into a client reference that
- * renderToStaticMarkup cannot render. The PDF only needs the confirmed
- * contour and its edge lengths.
- */
-export function planContourSvg(
+/** Legacy axis-edge SVG (editor polygon vertices only). */
+export function planContourSvgLegacy(
   polygon: Array<{ x: number; y: number }>,
   wallIndices: number[] = [],
 ): string {
@@ -186,22 +189,99 @@ export function planContourSvg(
     const labelPt = screen(label)
     return `<text x="${labelPt.x.toFixed(1)}" y="${labelPt.y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-size="${DIM_FONT}" font-family="Arial, sans-serif" fill="#111827">${label.text}</text>`
   }).join('')
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width.toFixed(1)} ${height.toFixed(1)}" width="520" height="360" data-plan-contour="1"><polygon points="${points}" fill="#f8fafc" stroke="#0f172a" stroke-width="${DIM_STROKE}"/>${labelMarkup}</svg>`
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width.toFixed(1)} ${height.toFixed(1)}" width="520" height="360" data-plan-contour="legacy-axis"><polygon points="${points}" fill="#f8fafc" stroke="#0f172a" stroke-width="${DIM_STROKE}"/>${labelMarkup}</svg>`
+}
+
+function centroidOf(points: Point2D[]): Point2D {
+  if (points.length === 0) return [0, 0]
+  const sum = points.reduce<Point2D>((acc, p) => [acc[0] + p[0], acc[1] + p[1]], [0, 0])
+  return [sum[0] / points.length, sum[1] / points.length]
+}
+
+/**
+ * Top plan SVG aligned with TopPlanSheet: outer perimeter dims, interior
+ * angles, purlin clear-span chain — via `buildTopPlanDimensionModel`.
+ */
+export function planTopSheetSvg(
+  polygon: Array<{ x: number; y: number }>,
+  wallIndices: number[],
+  params: PlanConstructionParams,
+  profiles: Map<string, ProfileDimensions> = PERGOLA_CONSTRUCTION_PROFILES,
+): string {
+  const contour: Point2D[] = polygon.map((p) => [p.x, p.y])
+  const built = buildPiecesFromPlan({ contour, wallEdgeIndices: wallIndices, params }, profiles)
+  const beams = built.pieces.filter((p) => p.role === 'beam')
+  const geometricSides = groupBeamsIntoGeometricSides(beams)
+  const drawContour: Point2D[] = geometricSides.map((s) => s.start)
+  const centroid = centroidOf(drawContour)
+  const dividerPositions = resolvePlanPurlinLines(contour, params, profiles, wallIndices)
+  const endWidths = params.wallBeamWidthVersion === 1
+    ? lamellaRunEndWidthsMm(contour, params.lamellaDirectionDeg ?? 0, profiles, {
+        wallEdgeIndices: wallIndices,
+        beamProfileId: params.beamProfileId,
+        wallProfileId: params.wallProfileId,
+        wallBeamWidthVersion: 1,
+      })
+    : null
+  const model = buildTopPlanDimensionModel({
+    geometricSides,
+    beams,
+    profiles,
+    beamProfileId: params.beamProfileId,
+    centroid,
+    contourVertices: contour,
+    lamellaDirectionDeg: params.lamellaDirectionDeg ?? 0,
+    dividerPositions,
+    measuredOuterLengthMmByEdgeIndex: params.measuredOuterLengthMmByEdgeIndex,
+    purlinClearLayoutVersion: params.purlinClearLayoutVersion,
+    ...(endWidths
+      ? {
+          leftEndWidthMm: endWidths.leftMm,
+          rightEndWidthMm: endWidths.rightMm,
+          planWidthForContourEdge: (edgeIndex: number) => contourSideWidthMm(profiles, edgeIndex, {
+            wallEdgeIndices: wallIndices,
+            beamProfileId: params.beamProfileId,
+            wallProfileId: params.wallProfileId,
+            wallBeamWidthVersion: 1,
+          }),
+        }
+      : {}),
+  })
+  return renderPlanDimensionsSvg({
+    contour: drawContour,
+    model,
+    geometricSides,
+    centroid,
+    lamellaDirectionDeg: params.lamellaDirectionDeg ?? 0,
+    splicePoints: beamSplicePoints(beams),
+  })
+}
+
+/**
+ * Server-safe plan schematic for PDF / offer drawings.
+ */
+export function planContourSvg(
+  polygon: Array<{ x: number; y: number }>,
+  wallIndices: number[] = [],
+  params?: PlanConstructionParams,
+): string {
+  if (params && polygon.length >= 3) {
+    return planTopSheetSvg(polygon, wallIndices, params)
+  }
+  return planContourSvgLegacy(polygon, wallIndices)
 }
 
 async function drawingsFromContour(
   polygon: Array<{ x: number; y: number }>,
   wallIndices: number[],
+  params?: PlanConstructionParams,
 ): Promise<OfferDrawings> {
   return {
-    topPlan: planContourSvg(polygon, wallIndices),
+    topPlan: planContourSvg(polygon, wallIndices, params),
     lamellaLayout: null,
   }
 }
 
-/**
- * Генерирует SVG чертежа плана сверху (Top Plan) из данных полигона
- */
 function legacyMetaPlan(offer: Offer): {
   polygon: Array<{ x: number; y: number }>
   wallIndices: number[]
@@ -225,7 +305,7 @@ function legacyMetaPlan(offer: Offer): {
 export async function generateDrawingsFromPlan(plan: PergolaPlan): Promise<OfferDrawings | null> {
   if (!plan.polygon || plan.polygon.length < 3) return null
   try {
-    return await drawingsFromContour(plan.polygon, plan.wallIndices ?? [])
+    return await drawingsFromContour(plan.polygon, plan.wallIndices ?? [], plan.params)
   } catch (error) {
     console.error('[generateDrawingsFromPlan]', error)
     return null
@@ -236,7 +316,7 @@ export async function generateTopPlanSvg(offer: Offer): Promise<string | null> {
   const legacy = legacyMetaPlan(offer)
   if (!legacy) return null
   try {
-    const drawings = await drawingsFromContour(legacy.polygon, legacy.wallIndices)
+    const drawings = await drawingsFromContour(legacy.polygon, legacy.wallIndices, legacy.params)
     return drawings.topPlan
   } catch (error) {
     console.error('[generateTopPlanSvg]', error)
@@ -244,14 +324,11 @@ export async function generateTopPlanSvg(offer: Offer): Promise<string | null> {
   }
 }
 
-/**
- * Генерирует SVG чертежа раскладки ламелей
- */
 export async function generateLamellaLayoutSvg(offer: Offer): Promise<string | null> {
   const legacy = legacyMetaPlan(offer)
   if (!legacy) return null
   try {
-    const drawings = await drawingsFromContour(legacy.polygon, legacy.wallIndices)
+    const drawings = await drawingsFromContour(legacy.polygon, legacy.wallIndices, legacy.params)
     return drawings.lamellaLayout
   } catch (error) {
     console.error('[generateLamellaLayoutSvg]', error)
@@ -259,9 +336,6 @@ export async function generateLamellaLayoutSvg(offer: Offer): Promise<string | n
   }
 }
 
-/**
- * Основная функция для генерации всех чертежей предложения
- */
 export interface OfferDrawings {
   topPlan: string | null
   lamellaLayout: string | null

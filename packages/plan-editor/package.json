@@ -17,6 +17,8 @@
     "react-dom": "^18.2.0"
   },
   "dependencies": {
+    "@pashkovsky/pergola-core": "*",
+    "@pashkovsky/pergola-drawing": "*",
     "zustand": "^5.0.9",
     "zundo": "^2.3.0"
   },

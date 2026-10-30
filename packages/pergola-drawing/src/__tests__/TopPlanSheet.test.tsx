@@ -1,7 +1,16 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest'
 import { render } from '@testing-library/react'
-import { computeFrame, computeLamellas, computePurlins } from '@pashkovsky/pergola-core'
+import {
+  computeFrame,
+  computeLamellas,
+  computePurlins,
+  buildPieces,
+  specFromPlan,
+  PERGOLA_CONSTRUCTION_PROFILES,
+  DEFAULT_PLAN_CONSTRUCTION_PARAMS,
+  WING_SHELF_SPAN_DIVIDER_ID,
+} from '@pashkovsky/pergola-core'
 import type { PergolaSpec, ProfileDimensions, Point2D, CutPiece } from '@pashkovsky/pergola-core'
 import { TopPlanSheet } from '../TopPlanSheet'
 
@@ -70,15 +79,14 @@ describe('TopPlanSheet', () => {
     expect(polygons.length).toBe(frame.beams.length + frame.posts.length + purlins.length + 1)
   })
 
-  it('renders one dimension segment <line> (with markers) per chain segment across all edges', () => {
+  it('renders one outer perimeter dimension per geometric side (no post splits)', () => {
     const spec = baseSpec({ contour: RECT })
     const frame = computeFrame(spec, PROFILES)
     const pieces = [...frame.beams, ...frame.posts]
 
     const { container } = render(<TopPlanSheet pieces={pieces} profiles={PROFILES} />)
     const dimensionLines = container.querySelectorAll('line[marker-start]')
-    // 6000mm sides (×2) get 2 intermediate posts (3 segments each); 3000mm sides (×2) get 1 (2 segments each).
-    expect(dimensionLines.length).toBe(3 + 3 + 2 + 2)
+    expect(dimensionLines.length).toBe(4)
   })
 
   it('renders without crashing when there are no pieces at all', () => {
@@ -106,7 +114,7 @@ describe('TopPlanSheet', () => {
    *      post (the surviving `post-6`, snapped onto by segmentation),
    *      giving two full-length pieces and one clean chain.
    */
-  it('a side segmented into 2 stock pieces at ONE shared mid-span post renders as ONE 2-segment chain', () => {
+  it('a side segmented into 2 stock pieces still gets ONE outer-face dimension (splice not shown)', () => {
     function post(id: string, x: number, z: number): CutPiece {
       return {
         id,
@@ -160,12 +168,16 @@ describe('TopPlanSheet', () => {
 
     const { container } = render(<TopPlanSheet pieces={pieces} profiles={PROFILES} />)
 
-    // One chain (one <DimensionChainSvg>'s <g> wrapper) for this one geometric side — not two.
     const dimensionLines = container.querySelectorAll('line[marker-start]')
-    expect(dimensionLines.length).toBe(2)
+    expect(dimensionLines.length).toBe(1)
 
-    const labels = Array.from(container.querySelectorAll('text')).map((t) => t.textContent)
-    expect(labels).toEqual(['4655', '4655'])
+    const lengthLabels = Array.from(container.querySelectorAll('text'))
+      .filter((node) => !node.hasAttribute('data-beam-mark') && !node.hasAttribute('data-plan-scale') && !node.hasAttribute('data-row-boundary'))
+      .map((t) => t.textContent)
+      .filter((t) => t && !t.includes('°'))
+    expect(lengthLabels).toHaveLength(1)
+    expect(Number(lengthLabels[0])).toBeGreaterThan(9000)
+    expect(container.querySelectorAll('[data-beam-splice]')).toHaveLength(1)
   })
 
   /**
@@ -234,5 +246,31 @@ describe('TopPlanSheet', () => {
       <TopPlanSheet pieces={pieces} profiles={PROFILES} isOrthogonal={false} />,
     )
     expect(container.querySelector('[role="alert"]')).toBeNull()
+  })
+
+  it('Midot L: wing-shelf purlin is drawn with a length label', () => {
+    const contour: Point2D[] = [
+      [0, 0],
+      [4000, 0],
+      [4000, 3000],
+      [-4000, 3000],
+      [-4000, -3000],
+      [0, -3000],
+    ]
+    const params = {
+      ...DEFAULT_PLAN_CONSTRUCTION_PARAMS,
+      lamellaDirectionDeg: 0,
+      purlinMaxSpanMm: 4000,
+      wingShelfProfileId: 'F4060',
+    }
+    const spec = specFromPlan({ contour, wallEdgeIndices: [], params })
+    const built = buildPieces(spec, PERGOLA_CONSTRUCTION_PROFILES)
+    const shelf = built.pieces.find((p) => p.dividerId === WING_SHELF_SPAN_DIVIDER_ID)
+    expect(shelf).toBeDefined()
+    const { container } = render(
+      <TopPlanSheet pieces={built.pieces} profiles={PERGOLA_CONSTRUCTION_PROFILES} planContour={contour} />,
+    )
+    const label = String(Math.round(shelf!.lengthAxisMm))
+    expect(container.textContent).toContain(label)
   })
 })

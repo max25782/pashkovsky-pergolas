@@ -245,6 +245,7 @@ export function buildCutPieceMesh(
   mesh.receiveShadow = true
   mesh.userData.cutPieceId = piece.id
   mesh.userData.role = piece.role
+  if (piece.dividerId) mesh.userData.dividerId = piece.dividerId
   return mesh
 }
 

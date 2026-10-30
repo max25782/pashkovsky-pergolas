@@ -72,3 +72,9 @@ export type { SizesPanelLabels } from './view-html/SizesPanel'
 
 export { PlanEditor } from './PlanEditor'
 export type { PlanEditorLabels, PlanContourSnapshot } from './PlanEditor'
+export {
+  PlanEditorConstructionProvider,
+  usePlanEditorConstruction,
+  buildConstructionContextValue,
+} from './model/constructionContext'
+export type { PlanEditorConstructionContextValue } from './model/constructionContext'

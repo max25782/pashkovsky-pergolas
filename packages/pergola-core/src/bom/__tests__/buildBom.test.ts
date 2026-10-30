@@ -40,4 +40,25 @@ describe('buildBom', () => {
     expect(bom.hardware).toHaveLength(4)
     expect(bom.fasteners).toHaveLength(3)
   })
+
+  it('exposes warnings[] (empty by default; passthrough when given)', () => {
+    const unmarked = buildBom(ACCEPTANCE_MODEL)
+    expect(unmarked.warnings).toEqual([])
+    const marked = buildBom(ACCEPTANCE_MODEL, undefined, undefined, undefined, {
+      warnings: [{
+        type: 'lamella-span-exceeds-max',
+        message: 'span',
+        pieceId: 'lam-0',
+        profileId: 'lam-1',
+        spanMm: 4000,
+        maxSpanMm: 1500,
+        startDividerId: null,
+        endDividerId: 'a',
+        spanStartMm: 0,
+        spanEndMm: 4000,
+      }],
+    })
+    expect(marked.warnings).toHaveLength(1)
+    expect(marked.parts.filter((p) => p.kind === 'division').map((d) => d.lengthCm)).toEqual([392, 392, 392])
+  })
 })

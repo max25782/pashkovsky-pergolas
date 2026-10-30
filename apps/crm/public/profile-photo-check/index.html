@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Проверка фото профилей</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 24px; background: #f4f4f5; color: #111; }
+  h1 { font-size: 22px; margin: 0 0 8px; }
+  p.lead { margin: 0 0 20px; max-width: 900px; }
+  .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+  article { background: #fff; border: 1px solid #ddd; padding: 10px; }
+  article.flag { border-color: #b45309; }
+  article.bad { border-color: #b91c1c; }
+  img { width: 100%; height: 140px; object-fit: contain; background: #fff; }
+  .missing { height: 140px; display: flex; align-items: center; justify-content: center; background: #fee2e2; color: #991b1b; font-weight: 700; }
+  h2 { font-size: 14px; margin: 8px 0 4px; word-break: break-all; }
+  p { margin: 0 0 4px; font-size: 12px; }
+  .file { color: #444; }
+  .note { color: #9a3412; }
+  h3 { margin: 28px 0 10px; }
+  ul { font-size: 13px; }
+</style>
+</head>
+<body>
+<h1>Фото профилей каталога — временная проверка</h1>
+<p class="lead">Строительный каталог. Фото скачаны по публичной ссылке, если файл открывается. Где ссылки нет — сечение по размерам каталога, с пометкой. Оригинал догрузится, когда заработают ключи галереи.</p>
+<div class="grid">
+<article class="">
+      <img src="photos/r242.jpg" alt="R242">
+      <h2>R242</h2>
+      <p>דאבל טי 142/1.6</p>
+      <p>70×142 мм, стенка 1.6 · хлыст 6000, 7000, 6500</p>
+      <p class="file">/images/profiles/R242.jpg<br>300×200 px, 5917 байт</p>
+      
+    </article><article class="flag">
+      <img src="photos/דאבל-טי-מעוצב-120.jpg" alt="PA268 דאבל טי מעוצב 120">
+      <h2>PA268 דאבל טי מעוצב 120</h2>
+      <p>דאבל טי מעוצב (הייטק) 120</p>
+      <p>70×120 мм · хлыст 6000, 6500, 7000</p>
+      <p class="file">/images/profiles/דאבל-טי-מעוצב-120.jpg<br>300×229 px, 6700 байт</p>
+      <p class="note">На чертеже нет размеров.</p>
+    </article><article class="flag">
+      <img src="photos/hs022.jpg" alt="hs022">
+      <h2>hs022</h2>
+      <p>טי 100 (חוצץ לפרגולה)</p>
+      <p>40×100 мм, стенка 1.8 · хлыст 6000, 7000</p>
+      <p class="file">/images/profiles/HS022.jpg<br>300×200 px, 6198 байт</p>
+      <p class="note">Сечение 100/40: полка 40 мм, стенка 100 мм.</p>
+    </article><article class="flag">
+      <img src="photos/hs001.jpg" alt="HS001">
+      <h2>HS001</h2>
+      <p>טי 120 (חוצץ לפרגולה)</p>
+      <p>40×120 мм · хлыст 6000, 6500, 7000</p>
+      <p class="file">/images/profiles/HS001.jpg<br>300×200 px, 5838 байт</p>
+      <p class="note">Сечение 120/40: полка 40 мм, стенка 120 мм.</p>
+    </article><article class="flag">
+      <img src="photos/טי-80-1.jpg" alt="pa6211">
+      <h2>pa6211</h2>
+      <p>טי 80 חוצץ לפרגולה</p>
+      <p>40×80 мм · хлыст 6000, 6500, 7000, 5000, 4000</p>
+      <p class="file">/images/profiles/טי-80-1.jpg<br>300×258 px, 5255 байт</p>
+      <p class="note">Сечение 80×40: полка 40 мм, стенка 80 мм.</p>
+    </article><article class="flag">
+      <img src="photos/t-120-light.jpg" alt="PA3022">
+      <h2>PA3022</h2>
+      <p>טי תאורה 120/40</p>
+      <p>40×120 мм · хлыст 6000, 6500, 7000</p>
+      <p class="file">/images/profiles/טי-תאורה-120.jpg<br>300×349 px, 9228 байт</p>
+      <p class="note">На чертеже нет размеров. Файл называется «ти таора 120».</p>
+    </article><article class="flag">
+      <svg viewBox="0 0 120 110" width="100%" height="140" role="img" aria-label="сечение 40×100">
+    <rect x="45" y="11" width="31" height="78" fill="#e5e7eb" stroke="#111" stroke-width="2"/>
+    
+    <text x="60" y="104" text-anchor="middle" font-size="11" font-family="Arial">40×100</text>
+  </svg>
+      <h2>pa2005</h2>
+      <p>טי תאורה 40/100</p>
+      <p>40×100 мм · хлыст 6000, 7000</p>
+      <p class="file">оригинал не скачан</p><p class="note">Сечение по размерам каталога. Оригинал догрузится, когда заработают ключи.</p>
+      
+    </article><article class="">
+      <img src="photos/hs013.jpg" alt="HS013">
+      <h2>HS013</h2>
+      <p>מלבן 20/26 (הייטק)</p>
+      <p>26×20 мм · хлыст —</p>
+      <p class="file">/images/profiles/HS013.jpg<br>300×200 px, 6272 байт</p>
+      
+    </article><article class="flag">
+      <svg viewBox="0 0 120 110" width="100%" height="140" role="img" aria-label="сечение 40×20">
+    <rect x="21" y="31" width="78" height="39" fill="#e5e7eb" stroke="#111" stroke-width="2"/>
+    <rect x="24" y="34" width="72" height="33" fill="#fff" stroke="#111" stroke-width="1"/>
+    <text x="60" y="104" text-anchor="middle" font-size="11" font-family="Arial">40×20</text>
+  </svg>
+      <h2>HS002</h2>
+      <p>מלבן 20/40/0.9</p>
+      <p>40×20 мм, стенка 0.9 · хлыст 6000</p>
+      <p class="file">оригинал не скачан</p><p class="note">Сечение по размерам каталога. Оригинал догрузится, когда заработают ключи.</p>
+      
+    </article><article class="flag">
+      <img src="photos/rect-2040.jpg" alt="F4020">
+      <h2>F4020</h2>
+      <p>מלבן 20/40/1.15</p>
+      <p>40×20 мм, стенка 1.15 · хлыст 6000, 6500, 7000, 5000, 4000</p>
+      <p class="file">/images/profiles/מלבן2040.jpg<br>105×84 px, 2327 байт</p>
+      <p class="note">105×84 px, подписи сжаты.</p>
+    </article><article class="flag">
+      <svg viewBox="0 0 120 110" width="100%" height="140" role="img" aria-label="сечение 50×20">
+    <rect x="21" y="35" width="78" height="31" fill="#e5e7eb" stroke="#111" stroke-width="2"/>
+    <rect x="24" y="38" width="72" height="25" fill="#fff" stroke="#111" stroke-width="1"/>
+    <text x="60" y="104" text-anchor="middle" font-size="11" font-family="Arial">50×20</text>
+  </svg>
+      <h2>F5020</h2>
+      <p>מלבן 20/50/1.1</p>
+      <p>50×20 мм, стенка 1.1 · хлыст —</p>
+      <p class="file">оригинал не скачан</p><p class="note">Сечение по размерам каталога. Оригинал догрузится, когда заработают ключи.</p>
+      
+    </article><article class="">
+      <img src="photos/f7020.jpg" alt="f7020">
+      <h2>f7020</h2>
+      <p>מלבן 20/70/0.8</p>
+      <p>70×20 мм, стенка 0.8 · хлыст 6000</p>
+      <p class="file">/images/profiles/F7020.jpg<br>300×200 px, 6595 байт</p>
+      
+    </article><article class="flag">
+      <svg viewBox="0 0 120 110" width="100%" height="140" role="img" aria-label="сечение 70×20">
+    <rect x="21" y="39" width="78" height="22" fill="#e5e7eb" stroke="#111" stroke-width="2"/>
+    <rect x="24" y="42" width="72" height="16" fill="#fff" stroke="#111" stroke-width="1"/>
+    <text x="60" y="104" text-anchor="middle" font-size="11" font-family="Arial">70×20</text>
+  </svg>
+      <h2>pa 1121</h2>
+      <p>מלבן 20/70/1.6</p>
+      <p>70×20 мм, стенка 1.6 · хлыст 6000, 6500, 7000</p>
+      <p class="file">оригинал не скачан</p><p class="note">Сечение по размерам каталога. Оригинал догрузится, когда заработают ключи.</p>
+      
+    </article><article class="flag">
+      <svg viewBox="0 0 120 110" width="100%" height="140" role="img" aria-label="сечение 300×100">
+    <rect x="21" y="37" width="78" height="26" fill="#e5e7eb" stroke="#111" stroke-width="2"/>
+    <rect x="24" y="40" width="72" height="20" fill="#fff" stroke="#111" stroke-width="1"/>
+    <text x="60" y="104" text-anchor="middle" font-size="11" font-family="Arial">300×100</text>
+  </svg>
+      <h2>pa2017</h2>
+      <p>מלבן 300/100 צבע לבן</p>
+      <p>300×100 мм, стенка 3 · хлыст 8500</p>
+      <p class="file">оригинал не скачан</p><p class="note">Сечение по размерам каталога. Оригинал догрузится, когда заработают ключи.</p>
+      
+    </article><article class="flag">
+      <svg viewBox="0 0 120 110" width="100%" height="140" role="img" aria-label="сечение 300×100">
+    <rect x="21" y="37" width="78" height="26" fill="#e5e7eb" stroke="#111" stroke-width="2"/>
+    
+    <text x="60" y="104" text-anchor="middle" font-size="11" font-family="Arial">300×100</text>
+  </svg>
+      <h2>pa2016</h2>
+      <p>מלבן 300/100 צבע שחור</p>
+      <p>300×100 мм · хлыст 8500</p>
+      <p class="file">оригинал не скачан</p><p class="note">Сечение по размерам каталога. Оригинал догрузится, когда заработают ключи.</p>
+      
+    </article><article class="flag">
+      <svg viewBox="0 0 120 110" width="100%" height="140" role="img" aria-label="сечение 40×120">
+    <rect x="47" y="11" width="26" height="78" fill="#e5e7eb" stroke="#111" stroke-width="2"/>
+    <rect x="50" y="14" width="20" height="72" fill="#fff" stroke="#111" stroke-width="1"/>
+    <text x="60" y="104" text-anchor="middle" font-size="11" font-family="Arial">40×120</text>
+  </svg>
+      <h2>pa1162</h2>
+      <p>מלבן 40/120/1.8</p>
+      <p>40×120 мм, стенка 1.8 · хлыст 6000, 6500, 7000, 5000, 4000</p>
+      <p class="file">оригинал не скачан</p><p class="note">Сечение по размерам каталога. Оригинал догрузится, когда заработают ключи.</p>
+      
+    </article><article class="flag">
+      <svg viewBox="0 0 120 110" width="100%" height="140" role="img" aria-label="сечение 40×80">
+    <rect x="41" y="11" width="39" height="78" fill="#e5e7eb" stroke="#111" stroke-width="2"/>
+    <rect x="44" y="14" width="33" height="72" fill="#fff" stroke="#111" stroke-width="1"/>
+    <text x="60" y="104" text-anchor="middle" font-size="11" font-family="Arial">40×80</text>
+  </svg>
+      <h2>pan1156</h2>
+      <p>מלבן 40/80/1.4</p>
+      <p>40×80 мм, стенка 1.4 · хлыст 6000, 6500, 7000</p>
+      <p class="file">оригинал не скачан</p><p class="note">Сечение по размерам каталога. Оригинал догрузится, когда заработают ключи.</p>
+      
+    </article><article class="flag">
+      <svg viewBox="0 0 120 110" width="100%" height="140" role="img" aria-label="сечение 40×80">
+    <rect x="41" y="11" width="39" height="78" fill="#e5e7eb" stroke="#111" stroke-width="2"/>
+    <rect x="44" y="14" width="33" height="72" fill="#fff" stroke="#111" stroke-width="1"/>
+    <text x="60" y="104" text-anchor="middle" font-size="11" font-family="Arial">40×80</text>
+  </svg>
+      <h2>pa1191</h2>
+      <p>מלבן 40/80/2</p>
+      <p>40×80 мм, стенка 2 · хлыст —</p>
+      <p class="note">Вес 1.29 кг/м.</p>
+      <p class="file">оригинал не скачан</p><p class="note">Сечение по размерам каталога. Оригинал догрузится, когда заработают ключи.</p>
+      
+    </article><article class="flag">
+      <img src="photos/rect-5040.jpg" alt="pa1377">
+      <h2>pa1377</h2>
+      <p>מלבן 50/100/2</p>
+      <p>50×100 мм, стенка 2 · хлыст —</p>
+      <p class="file">/images/profiles/מלבן-50-100.jpg<br>799×460 px, 27483 байт</p>
+      <p class="note">Файл в JSON называется rect-5040, не sku pa1377. Чертёж 100×50.</p>
+    </article><article class="">
+      <img src="photos/pa1197.jpg" alt="pa1197">
+      <h2>pa1197 (Panda: 1197 pa)</h2>
+      <p>מלבן 50/150 עובי דופן 4 ממ</p>
+      <p>50×150 мм, стенка 4 · хлыст 6000, 6500, 7000</p>
+      <p class="file">/wp-content/uploads/2022/08/HS012-300x200.jpg<br>300×200 px, 5502 байт</p>
+      <p class="note">Panda показывает для 1197 pa тот же чертёж, что для hs012 (контур 150×50, стенка не вынесена).</p>
+    </article><article class="">
+      <img src="photos/hs012.jpg" alt="hs012">
+      <h2>hs012</h2>
+      <p>מלבן 50/150/2</p>
+      <p>50×150 мм, стенка 2 · хлыст 7500, 6000, 6500, 7000</p>
+      <p class="file">/images/profiles/HS012.jpg<br>300×200 px, 5502 байт</p>
+      
+    </article><article class="">
+      <img src="photos/f20050.jpg" alt="F20050">
+      <h2>F20050</h2>
+      <p>מלבן 50/200/3</p>
+      <p>50×200 мм, стенка 3 · хлыст 6000, 6500, 7000</p>
+      <p class="file">/images/profiles/F20050.jpg<br>300×200 px, 6741 байт</p>
+      
+    </article><article class="flag">
+      <svg viewBox="0 0 120 110" width="100%" height="140" role="img" aria-label="сечение 150×150">
+    <rect x="21" y="11" width="78" height="78" fill="#e5e7eb" stroke="#111" stroke-width="2"/>
+    
+    <text x="60" y="104" text-anchor="middle" font-size="11" font-family="Arial">150×150</text>
+  </svg>
+      <h2>square-150</h2>
+      <p>מרובע 150/150</p>
+      <p>150×150 мм · хлыст —</p>
+      <p class="note">Вес 4.256 кг/м (pa2012).</p>
+      <p class="file">оригинал не скачан</p><p class="note">Сечение по размерам каталога. Оригинал догрузится, когда заработают ключи.</p>
+      
+    </article><article class="">
+      <img src="photos/f100100.jpg" alt="F100100">
+      <h2>F100100</h2>
+      <p>מרובע 100/100/2</p>
+      <p>100×100 мм, стенка 2 · хлыст 6000, 6500, 7000</p>
+      <p class="file">/images/profiles/F100100.jpg<br>300×200 px, 5296 байт</p>
+      
+    </article><article class="">
+      <img src="photos/hs004.jpg" alt="HS004">
+      <h2>HS004</h2>
+      <p>מרובע 130/130/2</p>
+      <p>130×130 мм, стенка 2 · хлыст 6000, 6500, 7000</p>
+      <p class="file">/images/profiles/HS004.jpg<br>300×200 px, 5047 байт</p>
+      
+    </article><article class="flag">
+      <svg viewBox="0 0 120 110" width="100%" height="140" role="img" aria-label="сечение 200×200">
+    <rect x="21" y="11" width="78" height="78" fill="#e5e7eb" stroke="#111" stroke-width="2"/>
+    <rect x="24" y="14" width="72" height="72" fill="#fff" stroke="#111" stroke-width="1"/>
+    <text x="60" y="104" text-anchor="middle" font-size="11" font-family="Arial">200×200</text>
+  </svg>
+      <h2>pa2013</h2>
+      <p>מרובע 200/200 ללא ציפוי</p>
+      <p>200×200 мм, стенка 2.5 · хлыст 7000</p>
+      <p class="file">оригинал не скачан</p><p class="note">Сечение по размерам каталога. Оригинал догрузится, когда заработают ключи.</p>
+      
+    </article><article class="flag">
+      <svg viewBox="0 0 120 110" width="100%" height="140" role="img" aria-label="сечение 200×200">
+    <rect x="21" y="11" width="78" height="78" fill="#e5e7eb" stroke="#111" stroke-width="2"/>
+    
+    <text x="60" y="104" text-anchor="middle" font-size="11" font-family="Arial">200×200</text>
+  </svg>
+      <h2>pa2015</h2>
+      <p>מרובע 200/200 צבע לבן</p>
+      <p>200×200 мм · хлыст 6000, 7000</p>
+      <p class="file">оригинал не скачан</p><p class="note">Сечение по размерам каталога. Оригинал догрузится, когда заработают ключи.</p>
+      
+    </article><article class="flag">
+      <img src="photos/f8080.jpg" alt="f8080">
+      <h2>f8080</h2>
+      <p>מרובע 80/80</p>
+      <p>80×80 мм, стенка 2 · хлыст 6000</p>
+      <p class="file">/images/profiles/F8080.jpg<br>300×200 px, 5609 байт</p>
+      <p class="note">Подписи 2 и 80 наезжают, сечение квадрат 80.</p>
+    </article><article class="flag">
+      <svg viewBox="0 0 120 110" width="100%" height="140" role="img" aria-label="сечение 60×60">
+    <rect x="21" y="11" width="78" height="78" fill="#e5e7eb" stroke="#111" stroke-width="2"/>
+    
+    <text x="60" y="104" text-anchor="middle" font-size="11" font-family="Arial">60×60</text>
+  </svg>
+      <h2>f6060</h2>
+      <p>עמוד 60/60 פלוס מכסה</p>
+      <p>60×60 мм · хлыст 4000, 6000</p>
+      <p class="file">оригинал не скачан</p><p class="note">Сечение по размерам каталога. Оригинал догрузится, когда заработают ключи.</p>
+      
+    </article><article class="flag">
+      <img src="photos/f10040.jpg" alt="f10040">
+      <h2>f10040</h2>
+      <p>מלבן 40/100/1.8</p>
+      <p>40×100 мм, стенка 1.8 · хлыст 6000, 6500, 7000, 5000, 4000, 3850</p>
+      <p class="file">/images/profiles/F10040.jpg<br>300×200 px, 5868 байт</p>
+      <p class="note">Чертёж подписан 100×40, в коде ширина 40 × высота 100.</p>
+    </article><article class="">
+      <img src="photos/square-20.jpg" alt="f2020">
+      <h2>f2020</h2>
+      <p>מרובע 20/20/1</p>
+      <p>20×20 мм, стенка 1 · хлыст 6000, 6500, 7000</p>
+      <p class="file">/images/profiles/מרובע-20-20.jpg<br>529×500 px, 30315 байт</p>
+      
+    </article><article class="flag">
+      <img src="photos/rect-2040.jpg" alt="f4020">
+      <h2>f4020</h2>
+      <p>מלבן 20/40/1.15</p>
+      <p>40×20 мм, стенка 1.15 · хлыст 6000, 6500, 7000, 5000, 4000</p>
+      <p class="file">/images/profiles/מלבן2040.jpg<br>105×84 px, 2327 байт</p>
+      <p class="note">Тот же файл, что у F4020. 105×84 px.</p>
+    </article><article class="flag">
+      <svg viewBox="0 0 120 110" width="100%" height="140" role="img" aria-label="сечение 70×20">
+    <rect x="21" y="39" width="78" height="22" fill="#e5e7eb" stroke="#111" stroke-width="2"/>
+    <rect x="24" y="42" width="72" height="16" fill="#fff" stroke="#111" stroke-width="1"/>
+    <text x="60" y="104" text-anchor="middle" font-size="11" font-family="Arial">70×20</text>
+  </svg>
+      <h2>f7020-1</h2>
+      <p>מלבן 20/70/1.6</p>
+      <p>70×20 мм, стенка 1.6 · хлыст 6000, 6500, 7000</p>
+      <p class="file">оригинал не скачан</p><p class="note">Сечение по размерам каталога. Оригинал догрузится, когда заработают ключи.</p>
+      
+    </article><article class="flag">
+      <svg viewBox="0 0 120 110" width="100%" height="140" role="img" aria-label="сечение 30×50">
+    <rect x="37" y="11" width="47" height="78" fill="#e5e7eb" stroke="#111" stroke-width="2"/>
+    
+    <text x="60" y="104" text-anchor="middle" font-size="11" font-family="Arial">30×50</text>
+  </svg>
+      <h2>purlin-plain-5030</h2>
+      <p>חוצץ</p>
+      <p>30×50 мм · хлыст 6000</p>
+      <p class="file">оригинал не скачан</p><p class="note">Сечение по размерам каталога. Оригинал догрузится, когда заработают ключи.</p>
+      
+    </article><article class="flag">
+      <svg viewBox="0 0 120 110" width="100%" height="140" role="img" aria-label="сечение 40×60">
+    <rect x="34" y="11" width="52" height="78" fill="#e5e7eb" stroke="#111" stroke-width="2"/>
+    
+    <text x="60" y="104" text-anchor="middle" font-size="11" font-family="Arial">40×60</text>
+  </svg>
+      <h2>purlin-led-6040 · снят с выбора</h2>
+      <p>טי תאורה</p>
+      <p>40×60 мм · хлыст 6000</p>
+      <p class="file">оригинал не скачан</p><p class="note">Сечение по размерам каталога. Оригинал догрузится, когда заработают ключи.</p>
+      
+    </article>
+</div>
+<h3>Файлы из profiles.json, не привязанные к коду строительства</h3>
+<div class="grid">
+<article>
+      <img src="photos/tz3d3kql.png" alt="tz3d3kql">
+      <h2>tz3d3kql</h2>
+      <p>tz3d3kql · </p>
+      <p class="file">/images/profiles/tz3d3kql.png<br>200×300 px, 14339 байт</p>
+    </article><article>
+      <img src="photos/מרובע.png" alt="מרובע">
+      <h2>מרובע</h2>
+      <p>מרובע · </p>
+      <p class="file">/images/profiles/מרובע.png<br>529×500 px, 20099 байт</p>
+    </article><article>
+      <img src="photos/קנט-1-100-40.png" alt="קנט-1-100-40">
+      <h2>קנט-1-100-40</h2>
+      <p>קנט-1-100-40 · </p>
+      <p class="file">/images/profiles/קנט-1-100-40.png<br>323×196 px, 3347 байт</p>
+    </article><article>
+      <img src="photos/רוזטה-100-100.jpg" alt="רוזטה-100-100">
+      <h2>רוזטה-100-100</h2>
+      <p>רוזטה-100-100 · </p>
+      <p class="file">/images/profiles/רוזטה-100-100.jpg<br>847×855 px, 112597 байт</p>
+    </article><article>
+      <img src="photos/f10020.jpg" alt="f10020">
+      <h2>f10020</h2>
+      <p>F10020 · </p>
+      <p class="file">/images/profiles/F10020.jpg<br>300×200 px, 5120 байт</p>
+    </article><article>
+      <img src="photos/f12040.jpg" alt="f12040">
+      <h2>f12040</h2>
+      <p>F12040 · </p>
+      <p class="file">/images/profiles/F12040.jpg<br>300×200 px, 6537 байт</p>
+    </article><article>
+      <img src="photos/hs003-1.jpg" alt="hs003-1">
+      <h2>hs003-1</h2>
+      <p>HS003-1 · </p>
+      <p class="file">/images/profiles/HS003-1.jpg<br>300×200 px, 6446 байт</p>
+    </article><article>
+      <img src="photos/hs003.jpg" alt="hs003">
+      <h2>hs003</h2>
+      <p>HS003 · </p>
+      <p class="file">/images/profiles/HS003.jpg<br>300×200 px, 6446 байт</p>
+    </article><article>
+      <img src="photos/hs005.jpg" alt="hs005">
+      <h2>hs005</h2>
+      <p>HS005 · </p>
+      <p class="file">/images/profiles/HS005.jpg<br>300×200 px, 5922 байт</p>
+    </article><article>
+      <img src="photos/hs006.jpg" alt="hs006">
+      <h2>hs006</h2>
+      <p>HS006 · </p>
+      <p class="file">/images/profiles/HS006.jpg<br>300×200 px, 5439 байт</p>
+    </article><article>
+      <img src="photos/hs007.jpg" alt="hs007">
+      <h2>hs007</h2>
+      <p>HS007 · </p>
+      <p class="file">/images/profiles/HS007.jpg<br>300×200 px, 5090 байт</p>
+    </article><article>
+      <img src="photos/hs009.jpg" alt="hs009">
+      <h2>hs009</h2>
+      <p>HS009 · </p>
+      <p class="file">/images/profiles/HS009.jpg<br>300×200 px, 5491 байт</p>
+    </article><article>
+      <img src="photos/hs012-1.jpg" alt="hs012-1">
+      <h2>hs012-1</h2>
+      <p>HS012-1 · </p>
+      <p class="file">/images/profiles/HS012-1.jpg<br>300×200 px, 5502 байт</p>
+    </article><article>
+      <img src="photos/hs024.jpg" alt="hs024">
+      <h2>hs024</h2>
+      <p>HS024 · </p>
+      <p class="file">/images/profiles/HS024.jpg<br>300×200 px, 7084 байт</p>
+    </article><article>
+      <img src="photos/hs025.jpg" alt="hs025">
+      <h2>hs025</h2>
+      <p>HS025 · </p>
+      <p class="file">/images/profiles/HS025.jpg<br>300×200 px, 7784 байт</p>
+    </article><article>
+      <img src="photos/rt30.jpg" alt="rt30">
+      <h2>rt30</h2>
+      <p>RT30 · </p>
+      <p class="file">/images/profiles/RT30.jpg<br>300×200 px, 7497 байт</p>
+    </article><article>
+      <img src="photos/rt35.jpg" alt="rt35">
+      <h2>rt35</h2>
+      <p>RT35 · </p>
+      <p class="file">/images/profiles/RT35.jpg<br>300×200 px, 7451 байт</p>
+    </article><article>
+      <img src="photos/טי-תאורה-120-1.jpg" alt="טי-תאורה-120-1">
+      <h2>טי-תאורה-120-1</h2>
+      <p>טי-תאורה-120-1 · 120x70mm</p>
+      <p class="file">/images/profiles/טי-תאורה-120-1.jpg<br>300×349 px, 9228 байт</p>
+    </article><article>
+      <img src="photos/לד-חיצוני.jpg" alt="לד-חיצוני">
+      <h2>לד-חיצוני</h2>
+      <p>לד-חיצוני · </p>
+      <p class="file">/images/profiles/לד-חיצוני.jpg<br>300×214 px, 7165 байт</p>
+    </article><article>
+      <img src="photos/לד-שקוע.jpg" alt="לד-שקוע">
+      <h2>לד-שקוע</h2>
+      <p>לד-שקוע · </p>
+      <p class="file">/images/profiles/לד-שקוע.jpg<br>300×156 px, 4983 байт</p>
+    </article><article>
+      <img src="photos/מכסה-פלסטיק-לפרופיל-תאורה.jpg" alt="מכסה-פלסטיק-לפרופיל-תאורה">
+      <h2>מכסה-פלסטיק-לפרופיל-תאורה</h2>
+      <p>מכסה-פלסטיק-לפרופיל-תאורה · </p>
+      <p class="file">/images/profiles/מכסה-פלסטיק-לפרופיל-תאורה.jpg<br>225×300 px, 10382 байт</p>
+    </article><article>
+      <img src="photos/מרובע-1.png" alt="מרובע-1">
+      <h2>מרובע-1</h2>
+      <p>מרובע-1 · </p>
+      <p class="file">/images/profiles/מרובע-1.png<br>529×500 px, 20099 байт</p>
+    </article><article>
+      <img src="photos/עמוד-משולב.jpg" alt="עמוד-משולב">
+      <h2>עמוד-משולב</h2>
+      <p>עמוד-משולב · </p>
+      <p class="file">/images/profiles/עמוד-משולב.jpg<br>300×212 px, 7200 байт</p>
+    </article>
+</div>
+<h3>Путь в profiles.json есть, объект на S3 не читается</h3>
+<ul><li><code>f5020</code> /images/profiles/F5020-300x200.jpg — HTTP 403</li><li><code>f5050</code> /images/profiles/F5050-300x200.jpg — HTTP 403</li><li><code>t-80</code> /images/profiles/טי-80-1-300x258.jpg — HTTP 403</li><li><code>led-outdoor</code> /images/profiles/לד-חיצוני-300x214.jpg — HTTP 403</li><li><code>led-recessed</code> /images/profiles/לד-שקוע-300x156.jpg — HTTP 403</li><li><code>1376-300x200</code> /images/profiles/1376-300x200.jpg — HTTP 403</li><li><code>9402a-300x200</code> /images/profiles/9402A-300x200.jpg — HTTP 403</li><li><code>f100100-300x200</code> /images/profiles/F100100-300x200.jpg — HTTP 403</li><li><code>f7020-300x200-1</code> /images/profiles/F7020-300x200 (1).jpg — HTTP 403</li><li><code>f7020-300x200-2</code> /images/profiles/F7020-300x200 (2).jpg — HTTP 403</li><li><code>hs003-300x200-1</code> /images/profiles/HS003-300x200 (1).jpg — HTTP 403</li><li><code>hs005-300x200</code> /images/profiles/HS005-300x200.jpg — HTTP 403</li><li><code>hs006-300x200</code> /images/profiles/HS006-300x200.jpg — HTTP 403</li><li><code>hs007-300x200</code> /images/profiles/HS007-300x200.jpg — HTTP 403</li><li><code>hs009-300x200</code> /images/profiles/HS009-300x200.jpg — HTTP 403</li><li><code>hs012-300x200-1</code> /images/profiles/HS012-300x200 (1).jpg — HTTP 403</li><li><code>hs012-300x200</code> /images/profiles/HS012-300x200.jpg — HTTP 403</li><li><code>hs013-300x200</code> /images/profiles/HS013-300x200.jpg — HTTP 403</li><li><code>hs022-300x200</code> /images/profiles/HS022-300x200.jpg — HTTP 403</li><li><code>hs024-300x200</code> /images/profiles/HS024-300x200.jpg — HTTP 403</li><li><code>hs025-300x200</code> /images/profiles/HS025-300x200.jpg — HTTP 403</li><li><code>r242-300x200</code> /images/profiles/R242-300x200.jpg — HTTP 403</li><li><code>rt30-300x200</code> /images/profiles/RT30-300x200.jpg — HTTP 403</li><li><code>rt35-300x200</code> /images/profiles/RT35-300x200.jpg — HTTP 403</li><li><code>דאבל-טי-מעוצב-120-300x229</code> /images/profiles/דאבל-טי-מעוצב-120-300x229.jpg — HTTP 403</li><li><code>מכסה-פלסטיק-לפרופיל-תאורה-225x300</code> /images/profiles/מכסה-פלסטיק-לפרופיל-תאורה--225x300.jpg — HTTP 403</li><li><code>עמוד-משולב-300x212</code> /images/profiles/עמוד-משולב-300x212.jpg — HTTP 403</li><li><code>1376</code> /images/profiles/1376.jpg — HTTP 403</li><li><code>9402a</code> /images/profiles/9402A.jpg — HTTP 403</li><li><code>f7020-1</code> /images/profiles/F7020-1.jpg — HTTP 403</li><li><code>f7020-2</code> /images/profiles/F7020-2.jpg — HTTP 403</li></ul>
+</body>
+</html>

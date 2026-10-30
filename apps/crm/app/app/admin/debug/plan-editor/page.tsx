@@ -33,31 +33,49 @@
  * wallEdgeIndices, параметры), реактивно пересчитывается в useMemo).
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useTranslations } from 'next-intl'
 import { PlanEditor, type PlanContourSnapshot, type PlanEditorLabels } from '@pashkovsky/plan-editor'
 import type { Point } from '@pashkovsky/plan-editor'
 import {
+  buildDividerPickPieces,
   buildPiecesFromPlan,
+  logDividerPickingDiagnostics,
+  resolvePlanPurlinLines,
+  beamProfileChangePatch,
+  beamPlanWidthForDrawing,
+  contourAxesMatchEnteredOuters,
+  contourSideWidthMm,
   computeLedStripLengthMm,
-  compareStockLengthOptions,
   DEFAULT_PLAN_CONSTRUCTION_PARAMS,
-  DEFAULT_VISTUR_TOLERANCES,
   formatConstructionProfileLabel,
   LAMELLA_PATTERN_PRESETS,
   PERGOLA_CONSTRUCTION_PROFILES,
   CONSTRUCTION_BEAM_IDS,
+  WALL_BEAM_PROFILE_IDS,
   CONSTRUCTION_POST_IDS,
   CONSTRUCTION_PURLIN_IDS,
+  supportProfileOptions,
+  supportProfileNeedsChoice,
+  hasLongDividerWithoutSupport,
+  WING_SHELF_SPAN_DIVIDER_ID,
+  isRetiredProfileId,
   type PlanConstructionParams,
 } from '@pashkovsky/pergola-core'
-import type { CutPiece, Point2D, ProfileDimensions } from '@pashkovsky/pergola-core'
+import type { CutPiece, PieceWarning, Point2D, ProfileDimensions } from '@pashkovsky/pergola-core'
 import { PergolaCutPieceViewer } from '@pashkovsky/pergola-3d-preview'
 import { LamellaWallThicknessField } from '@/components/offers/LamellaWallThicknessField'
 import { RoofSlopeFields } from '@/components/offers/RoofSlopeFields'
-import { TopPlanSheet, LamellaLayoutSheet, CellFrameSheet } from '@pashkovsky/pergola-drawing'
-import { OrderAndCuttingPanel } from '@/components/cut-list/OrderAndCuttingPanel'
+import { Plan3DDividerControls } from '@/components/offers/Plan3DDividerControls'
+import { PlanDrawingSheetsModal } from '@/components/offers/PlanDrawingSheetsModal'
+import { ReplaceProfileNotice } from '@/components/offers/ReplaceProfileNotice'
+import { readDebugPlanDocument, writeDebugPlanDocument } from '@/lib/pergolas/debug-plan-storage'
+import {
+  computeStockComparisons,
+  PlanPieceSummary,
+  PlanStockComparisonTable,
+} from '@/components/offers/plan-pieces-summary'
 
 /**
  * Construction catalog for the debug host — panda-alum supplier fields
@@ -74,6 +92,49 @@ const NO_PURLIN = ''
 type ConstructionParams = PlanConstructionParams
 
 const DEFAULT_PARAMS: ConstructionParams = DEFAULT_PLAN_CONSTRUCTION_PARAMS
+
+/** П-contour: two arms + a back span. Lamellas along Y so one divider line clips into two segments. */
+const U_FIXTURE: Point[] = [
+  { x: 0, y: 0 },
+  { x: 2000, y: 0 },
+  { x: 2000, y: 3500 },
+  { x: 5000, y: 3500 },
+  { x: 5000, y: 0 },
+  { x: 7000, y: 0 },
+  { x: 7000, y: 5500 },
+  { x: 0, y: 5500 },
+]
+
+/** Max-L contour used to verify stock splices + 3D after long-run joints. */
+const L_FIXTURE: Point[] = [
+  { x: 0, y: 0 },
+  { x: 5000, y: 0 },
+  { x: 5000, y: 3500 },
+  { x: 9000, y: 3500 },
+  { x: 9000, y: 7500 },
+  { x: 0, y: 7500 },
+]
+
+/** Acceptance midot: 400@0, 300@90, 800@180, 600@270, 400@0, 300@90 (cm). */
+const MIDOT_FIXTURE: Point[] = [
+  { x: 0, y: 0 },
+  { x: 4000, y: 0 },
+  { x: 4000, y: 3000 },
+  { x: -4000, y: 3000 },
+  { x: -4000, y: -3000 },
+  { x: 0, y: -3000 },
+]
+
+/** Live L: 4000 / 3000 / 8000 / 3500 / 12000 / 6500 (axis + measured outers). */
+const LIVE_L_FIXTURE: Point[] = [
+  { x: 0, y: 0 },
+  { x: 4000, y: 0 },
+  { x: 4000, y: 3000 },
+  { x: 11960, y: 3000 },
+  { x: 11960, y: 6460 },
+  { x: 0, y: 6460 },
+]
+const LIVE_L_MEASURED = [4000, 3000, 8000, 3500, 12000, 6500]
 
 function buildHostPieces(contourMm: Point2D[], wallEdgeIndices: number[], params: ConstructionParams) {
   return buildPiecesFromPlan({ contour: contourMm, wallEdgeIndices, params }, DEMO_PROFILES)
@@ -102,18 +163,32 @@ export default function PlanEditorDebugPage() {
   const [lastPolygonMm, setLastPolygonMm] = useState<Point[] | null>(null)
   const [lastWallEdgeIndices, setLastWallEdgeIndices] = useState<number[]>([])
   const [preview3DOpen, setPreview3DOpen] = useState(false)
+  const [editorKey, setEditorKey] = useState(0)
+  const [fixtureContour, setFixtureContour] = useState<{
+    polygon: Point[]
+    wallIndices: number[]
+    measuredOuterLengthMmByEdgeIndex?: Array<number | null>
+  } | null>(null)
   // Лист «План сверху» (промпт «технический чертёж перголы») — отдельная
   // модалка рядом с 3D, кнопка появляется одновременно с «В 3D» (тот же
   // pieces из того же buildPieces, см. промпт «один источник правды» —
   // здесь НЕТ отдельного построения контура/CutPiece[] для чертежа).
   const [drawingOpen, setDrawingOpen] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [storageReady, setStorageReady] = useState(false)
+  const paramsRef = useRef(params)
+  const polygonRef = useRef(lastPolygonMm)
+  const wallsRef = useRef(lastWallEdgeIndices)
+  paramsRef.current = params
+  polygonRef.current = lastPolygonMm
+  wallsRef.current = lastWallEdgeIndices
+  const [selectedCanvasDividerId, setSelectedCanvasDividerId] = useState<string | null>(null)
   // Какой лист чертежа сейчас открыт — «План сверху» (осевые размеры по
   // всему контуру) или «Раскладка ламелей» (Вид Б, промпт «рама-вистур»:
   // ритм ламелей — просвет + шаг между рядами). Общая модалка, переключатель
   // сверху, а не отдельная кнопка/модалка на каждый лист — листов будет
   // больше (Разрез, Вид А, Схема стоек), отдельная кнопка на каждый не
   // масштабируется.
-  const [drawingSheet, setDrawingSheet] = useState<'plan' | 'lamellaLayout' | 'cellFrame' | 'orderCutting'>('plan')
   const [preview3DError, setPreview3DError] = useState<string | null>(null)
   // Индикатор загрузки — computeFrame/computeLamellas синхронны и обычно
   // укладываются в единицы мс для типичного контура, но кнопка «В 3D» должна
@@ -160,9 +235,73 @@ export default function PlanEditorDebugPage() {
       if (!contour.isClosed || contour.polygon.length < 3) return
       setLastPolygonMm(contour.polygon)
       setLastWallEdgeIndices(contour.wallIndices)
+      if (contour.measuredOuterLengthMmByEdgeIndex) {
+        setParams((prev) => ({
+          ...prev,
+          measuredOuterLengthMmByEdgeIndex: contour.measuredOuterLengthMmByEdgeIndex,
+        }))
+      }
     },
     [],
   )
+
+  const flushPlan = useCallback((): boolean => {
+    const polygon = polygonRef.current
+    if (!polygon || polygon.length < 3) return false
+    try {
+      const document = {
+        polygon,
+        wallIndices: wallsRef.current,
+        params: paramsRef.current,
+      }
+      writeDebugPlanDocument(document)
+      const read = readDebugPlanDocument()
+      if (!read) throw new Error('empty')
+      setParams(read.params)
+      setLastPolygonMm(read.polygon)
+      setLastWallEdgeIndices(read.wallIndices)
+      setSaveStatus('saved')
+      return true
+    } catch {
+      setSaveStatus('error')
+      return false
+    }
+  }, [])
+
+  useEffect(() => {
+    const stored = readDebugPlanDocument()
+    if (stored) {
+      setParams(stored.params)
+      setLastPolygonMm(stored.polygon)
+      setLastWallEdgeIndices(stored.wallIndices)
+      setFixtureContour({
+        polygon: stored.polygon,
+        wallIndices: stored.wallIndices,
+        measuredOuterLengthMmByEdgeIndex: stored.params.measuredOuterLengthMmByEdgeIndex,
+      })
+      setEditorKey((key) => key + 1)
+      setSaveStatus('saved')
+    }
+    setStorageReady(true)
+  }, [])
+
+  useEffect(() => {
+    if (!storageReady) return
+    const polygon = lastPolygonMm
+    if (!polygon || polygon.length < 3) return
+    setSaveStatus('saving')
+    const timer = window.setTimeout(() => {
+      try {
+        writeDebugPlanDocument({ polygon, wallIndices: lastWallEdgeIndices, params })
+        const read = readDebugPlanDocument()
+        if (!read) throw new Error('empty')
+        setSaveStatus('saved')
+      } catch {
+        setSaveStatus('error')
+      }
+    }, 500)
+    return () => window.clearTimeout(timer)
+  }, [storageReady, params, lastPolygonMm, lastWallEdgeIndices])
 
   // Реактивный пересчёт: любое изменение params (или самого контура) даёт
   // новый CutPiece[] без нового клика на «В 3D» — 3D-сцена всегда чистая
@@ -177,19 +316,30 @@ export default function PlanEditorDebugPage() {
   // ошибку реактивного пересчёта в то же state, что и первый клик «В 3D».
   const buildResult = useMemo<{
     pieces: CutPiece[] | null
+    structuralPurlins: CutPiece[]
     isOrthogonal: boolean
     error: string | null
     roofWarning: string | null
+    warnings: PieceWarning[]
   }>(() => {
-    if (!lastPolygonMm) return { pieces: null, isOrthogonal: true, error: null, roofWarning: null }
+    if (!lastPolygonMm) {
+      return { pieces: null, structuralPurlins: [], isOrthogonal: true, error: null, roofWarning: null, warnings: [] }
+    }
     try {
       const contour: Point2D[] = lastPolygonMm.map((p): Point2D => [p.x, p.y])
       const built = buildHostPieces(contour, lastWallEdgeIndices, params)
-      return { pieces: built.pieces, isOrthogonal: built.isOrthogonal, error: null, roofWarning: built.roof.warning }
+      return {
+        pieces: built.pieces,
+        structuralPurlins: built.structuralPurlins,
+        isOrthogonal: built.isOrthogonal,
+        error: null,
+        roofWarning: built.roof.warning,
+        warnings: built.warnings,
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       console.error('[planEditor→3D] пересчёт после смены параметров упал:', err)
-      return { pieces: null, isOrthogonal: true, error: message, roofWarning: null }
+      return { pieces: null, structuralPurlins: [], isOrthogonal: true, error: message, roofWarning: null, warnings: [] }
     }
   }, [lastPolygonMm, lastWallEdgeIndices, params])
 
@@ -203,6 +353,24 @@ export default function PlanEditorDebugPage() {
   useEffect(() => {
     if (lastPolygonMm) setPreview3DError(buildResult.error)
   }, [buildResult.error, lastPolygonMm])
+
+  const dividerPickPieces = useMemo(() => {
+    if (!lastPolygonMm || lastPolygonMm.length < 3) return []
+    const contour = lastPolygonMm.map((p): Point2D => [p.x, p.y])
+    return buildDividerPickPieces(contour, params, DEMO_PROFILES)
+  }, [lastPolygonMm, params])
+
+  useEffect(() => {
+    if (!preview3DOpen || !pieces || !lastPolygonMm) return
+    const contour = lastPolygonMm.map((p): Point2D => [p.x, p.y])
+    logDividerPickingDiagnostics(
+      contour,
+      params,
+      DEMO_PROFILES,
+      buildResult.structuralPurlins,
+      pieces.filter((p) => p.role === 'purlin'),
+    )
+  }, [preview3DOpen, pieces, buildResult.structuralPurlins, lastPolygonMm, params])
 
   const ledStripLengthMm = useMemo(
     () => (pieces ? computeLedStripLengthMm(pieces, DEMO_PROFILES) : 0),
@@ -264,10 +432,101 @@ export default function PlanEditorDebugPage() {
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">{t('title')}</h1>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setFixtureContour({ polygon: U_FIXTURE, wallIndices: [] })
+              setLastPolygonMm(U_FIXTURE)
+              setLastWallEdgeIndices([])
+              setParams({ ...DEFAULT_PARAMS, lamellaDirectionDeg: 90 })
+              setEditorKey((key) => key + 1)
+              setPreview3DOpen(true)
+            }}
+            className="flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 shadow-sm hover:bg-neutral-50 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+          >
+            U-fixture
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setFixtureContour({ polygon: L_FIXTURE, wallIndices: [] })
+              setLastPolygonMm(L_FIXTURE)
+              setLastWallEdgeIndices([])
+              setParams({
+                ...DEFAULT_PARAMS,
+                postMaxSpanMm: 4000,
+                purlinProfileId: 'PA3022',
+                lamellaDirectionDeg: 0,
+              })
+              setEditorKey((key) => key + 1)
+              setPreview3DOpen(true)
+            }}
+            className="flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 shadow-sm hover:bg-neutral-50 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+          >
+            L-fixture
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const measured = [4000, 3000, 8000, 6000, 4000, 3000]
+              setFixtureContour({
+                polygon: MIDOT_FIXTURE,
+                wallIndices: [],
+                measuredOuterLengthMmByEdgeIndex: measured,
+              })
+              setLastPolygonMm(MIDOT_FIXTURE)
+              setLastWallEdgeIndices([])
+              setParams({ ...DEFAULT_PARAMS, measuredOuterLengthMmByEdgeIndex: measured })
+              setEditorKey((key) => key + 1)
+              setPreview3DOpen(false)
+            }}
+            className="flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 shadow-sm hover:bg-neutral-50 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+          >
+            Midot-fixture
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setFixtureContour({
+                polygon: LIVE_L_FIXTURE,
+                wallIndices: [],
+                measuredOuterLengthMmByEdgeIndex: LIVE_L_MEASURED,
+              })
+              setLastPolygonMm(LIVE_L_FIXTURE)
+              setLastWallEdgeIndices([])
+              setParams({
+                ...DEFAULT_PARAMS,
+                measuredOuterLengthMmByEdgeIndex: LIVE_L_MEASURED,
+                purlinMaxSpanMm: 4000,
+                purlinProfileId: 'PA3022',
+                beamProfileId: 'F20050',
+                lamellaDirectionDeg: 0,
+                lamellaSectionLayoutVersion: 1,
+                purlinClearLayoutVersion: 1,
+              })
+              setEditorKey((key) => key + 1)
+              setPreview3DOpen(true)
+            }}
+            className="flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 shadow-sm hover:bg-neutral-50 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+          >
+            12m-L
+          </button>
+          {saveStatus !== 'idle' && (
+            <span data-testid="save-status" className="text-xs font-medium text-neutral-600 dark:text-neutral-300">
+              {saveStatus === 'saving'
+                ? t('paramsPanel.saveSaving')
+                : saveStatus === 'error'
+                  ? t('paramsPanel.saveError')
+                  : t('paramsPanel.saveSaved')}
+            </span>
+          )}
           {pieces && (
             <button
               type="button"
-              onClick={() => setDrawingOpen(true)}
+              onClick={() => {
+                flushPlan()
+                setDrawingOpen(true)
+              }}
               className="flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 shadow-sm hover:bg-neutral-50 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
             >
               <span aria-hidden="true">📐</span>
@@ -292,11 +551,83 @@ export default function PlanEditorDebugPage() {
           t={t}
           contourMm={lastPolygonMm}
           wallEdgeIndices={lastWallEdgeIndices}
+          longDivider={hasLongDividerWithoutSupport(
+            (pieces ?? [])
+              .filter((piece) => piece.role === 'purlin' && piece.dividerId !== WING_SHELF_SPAN_DIVIDER_ID)
+              .map((piece) => piece.lengthAxisMm),
+            params.purlinMaxSpanMm,
+          )}
         />
       </ParamsDrawer>
 
-      <div className="relative min-h-[600px] w-full flex-1 overflow-hidden rounded-lg border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-900">
-        <PlanEditor labels={labels} onTo3D={handleTo3D} onContourChange={handleContourChange} />
+      <div className="flex min-h-0 w-full flex-1 flex-col gap-3 xl:flex-row">
+        <div className="relative h-[520px] w-full flex-1 overflow-hidden rounded-lg border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-900">
+          <PlanEditor
+            key={editorKey}
+            labels={labels}
+            onTo3D={handleTo3D}
+            onContourChange={handleContourChange}
+            initialContour={fixtureContour ?? undefined}
+            construction={{
+              params,
+              profiles: DEMO_PROFILES,
+              selectedDividerId: selectedCanvasDividerId,
+              onSelectDivider: setSelectedCanvasDividerId,
+            }}
+          />
+        </div>
+        {preview3DOpen && pieces && (
+          <div className="flex h-auto w-full min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-neutral-200 bg-white dark:border-neutral-900">
+            <div className="flex items-center justify-between border-b border-neutral-200 px-3 py-2 dark:border-neutral-700">
+              <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+                {t('preview3D.title')}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPreview3DOpen(false)}
+                className="rounded px-2 py-1 text-sm text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+              >
+                {t('preview3D.closeButton')}
+              </button>
+            </div>
+            {buildResult.roofWarning && (
+              <p className="border-b border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
+                {buildResult.roofWarning}
+              </p>
+            )}
+            <Plan3DDividerControls
+              contour={(lastPolygonMm ?? []).map((p): Point2D => [p.x, p.y])}
+              params={params}
+              profiles={DEMO_PROFILES}
+              warnings={buildResult.warnings}
+              dividerIds={
+                lastPolygonMm
+                  ? resolvePlanPurlinLines(
+                      lastPolygonMm.map((p): Point2D => [p.x, p.y]),
+                      params,
+                      DEMO_PROFILES,
+                    ).map((line) => line.id)
+                  : []
+              }
+              onChange={setParams}
+              t={t}
+            >
+                {(bind) => (
+                <PergolaCutPieceViewer
+                  pieces={pieces}
+                  profiles={DEMO_PROFILES}
+                  colorHex={params.colorHex}
+                  dividerHitPieces={dividerPickPieces}
+                  {...bind}
+                />
+              )}
+            </Plan3DDividerControls>
+            <div className="max-h-40 shrink-0 overflow-y-auto border-t border-neutral-200 bg-neutral-50 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900">
+              <PlanPieceSummary pieces={pieces} ledStripLengthMm={ledStripLengthMm} profiles={DEMO_PROFILES} />
+              <PlanStockComparisonTable comparisons={stockComparisons} />
+            </div>
+          </div>
+        )}
       </div>
 
       {isBuilding3D && (
@@ -312,130 +643,26 @@ export default function PlanEditorDebugPage() {
         </div>
       )}
 
-      {preview3DOpen && pieces && (
-        <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/60 p-4">
-          <div className="flex h-full w-full max-w-6xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl dark:bg-neutral-900">
-            <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3 dark:border-neutral-700">
-              <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-                {t('preview3D.title')}
-              </span>
-              <button
-                type="button"
-                onClick={() => setPreview3DOpen(false)}
-                className="rounded px-3 py-1 text-sm text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-              >
-                {t('preview3D.closeButton')}
-              </button>
-            </div>
-            {buildResult.roofWarning && (
-              <p className="border-b border-amber-300 bg-amber-50 px-4 py-2 text-xs text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
-                {buildResult.roofWarning}
-              </p>
-            )}
-            <div className="min-h-0 flex-1">
-              <PergolaCutPieceViewer
-                pieces={pieces}
-                profiles={DEMO_PROFILES}
-                colorHex={params.colorHex}
-              />
-            </div>
-            <div className="max-h-56 shrink-0 overflow-y-auto border-t border-neutral-200 bg-neutral-50 px-4 py-3 dark:border-neutral-700 dark:bg-neutral-900">
-              <PieceSummary pieces={pieces} ledStripLengthMm={ledStripLengthMm} t={t} />
-              <StockComparisonTable comparisons={stockComparisons} t={t} />
-            </div>
-          </div>
-        </div>
-      )}
-
       {drawingOpen && pieces && (
-        <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/60 p-4">
-          <div className="flex h-full w-full max-w-6xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl dark:bg-neutral-900">
-            <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3 dark:border-neutral-700">
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => setDrawingSheet('plan')}
-                  className={
-                    drawingSheet === 'plan'
-                      ? 'rounded bg-neutral-900 px-3 py-1 text-sm font-semibold text-white dark:bg-neutral-100 dark:text-neutral-900'
-                      : 'rounded px-3 py-1 text-sm text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800'
-                  }
-                >
-                  {t('drawing.sheetPlan')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDrawingSheet('lamellaLayout')}
-                  className={
-                    drawingSheet === 'lamellaLayout'
-                      ? 'rounded bg-neutral-900 px-3 py-1 text-sm font-semibold text-white dark:bg-neutral-100 dark:text-neutral-900'
-                      : 'rounded px-3 py-1 text-sm text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800'
-                  }
-                >
-                  {t('drawing.sheetLamellaLayout')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDrawingSheet('cellFrame')}
-                  className={
-                    drawingSheet === 'cellFrame'
-                      ? 'rounded bg-neutral-900 px-3 py-1 text-sm font-semibold text-white dark:bg-neutral-100 dark:text-neutral-900'
-                      : 'rounded px-3 py-1 text-sm text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800'
-                  }
-                >
-                  {t('drawing.sheetCellFrame')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDrawingSheet('orderCutting')}
-                  className={
-                    drawingSheet === 'orderCutting'
-                      ? 'rounded bg-neutral-900 px-3 py-1 text-sm font-semibold text-white dark:bg-neutral-100 dark:text-neutral-900'
-                      : 'rounded px-3 py-1 text-sm text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800'
-                  }
-                >
-                  {t('drawing.sheetOrderCutting')}
-                </button>
-              </div>
-              <button
-                type="button"
-                onClick={() => setDrawingOpen(false)}
-                className="rounded px-3 py-1 text-sm text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-              >
-                {t('preview3D.closeButton')}
-              </button>
-            </div>
-            <div className="min-h-0 flex-1 bg-white dark:bg-neutral-900">
-              {drawingSheet === 'plan' && (
-                <TopPlanSheet
-                  pieces={pieces}
-                  profiles={DEMO_PROFILES}
-                  isOrthogonal={isOrthogonal}
-                  nonOrthogonalWarningText={t('drawing.nonOrthogonalWarning')}
-                />
-              )}
-              {drawingSheet === 'lamellaLayout' && (
-                <LamellaLayoutSheet pieces={pieces} profiles={DEMO_PROFILES} lamellaOnEdge={params.lamellaOnEdge} />
-              )}
-              {drawingSheet === 'cellFrame' && (
-                <CellFrameSheet
-                  pieces={pieces}
-                  profiles={DEMO_PROFILES}
-                  lamellaOnEdge={params.lamellaOnEdge}
-                  lengthReductionTotalMm={params.visturMode ? DEFAULT_VISTUR_TOLERANCES.lamellaLengthReductionMm : 0}
-                />
-              )}
-              {drawingSheet === 'orderCutting' && (
-                <OrderAndCuttingPanel
-                  pieces={pieces}
-                  profiles={DEMO_PROFILES}
-                  isOrthogonal={isOrthogonal}
-                  nonOrthogonalWarningText={t('drawing.nonOrthogonalWarning')}
-                />
-              )}
-            </div>
-          </div>
-        </div>
+        <PlanDrawingSheetsModal
+          open={drawingOpen}
+          onClose={() => setDrawingOpen(false)}
+          pieces={pieces}
+          profiles={DEMO_PROFILES}
+          isOrthogonal={isOrthogonal}
+          lamellaOnEdge={params.lamellaOnEdge}
+          visturMode={params.visturMode}
+          planContour={(lastPolygonMm ?? []).map((p): Point2D => [p.x, p.y])}
+          wallEdgeIndices={lastWallEdgeIndices}
+          constructionParams={params}
+          lamellaDirectionDeg={params.lamellaDirectionDeg}
+          initialSheet="plan"
+          exportBlocked={saveStatus === 'error'}
+          beforePrint={async () => flushPlan()}
+          onReplaceProfile={(field, profileId) => {
+            setParams((prev) => ({ ...prev, [field]: profileId }))
+          }}
+        />
       )}
     </div>
   )
@@ -487,12 +714,33 @@ function ParamsDrawer({ open, onClose, t, children }: ParamsDrawerProps) {
   )
 }
 
+function contourMismatch(
+  contourMm: Array<{ x: number; y: number }> | null,
+  wallEdgeIndices: number[],
+  params: ConstructionParams,
+): boolean {
+  if (!contourMm || contourMm.length < 3) return false
+  const width = beamPlanWidthForDrawing(PERGOLA_CONSTRUCTION_PROFILES, params.beamProfileId).planWidthMm
+  return contourAxesMatchEnteredOuters({
+    contour: contourMm.map((point): Point2D => [point.x, point.y]),
+    measuredOuterLengthMmByEdgeIndex: params.measuredOuterLengthMmByEdgeIndex,
+    defaultBeamPlanWidthMm: width,
+    planWidthForEdge: (edgeIndex) => contourSideWidthMm(PERGOLA_CONSTRUCTION_PROFILES, edgeIndex, {
+      wallEdgeIndices,
+      beamProfileId: params.beamProfileId,
+      wallProfileId: params.wallProfileId,
+      wallBeamWidthVersion: params.wallBeamWidthVersion,
+    }),
+  }) === 'mismatch'
+}
+
 interface ConstructionParamsPanelProps {
   params: ConstructionParams
   onChange: (params: ConstructionParams) => void
   t: ReturnType<typeof useTranslations>
   contourMm: Point[] | null
   wallEdgeIndices: number[]
+  longDivider?: boolean
 }
 
 /**
@@ -507,7 +755,14 @@ interface ConstructionParamsPanelProps {
  * Раскладка вертикальная (flex-col) — панель теперь живёт в боковом
  * выдвижном drawer (ParamsDrawer), не в горизонтальной полосе над холстом.
  */
-function ConstructionParamsPanel({ params, onChange, t, contourMm, wallEdgeIndices }: ConstructionParamsPanelProps) {
+function ConstructionParamsPanel({
+  params,
+  onChange,
+  t,
+  contourMm,
+  wallEdgeIndices,
+  longDivider = false,
+}: ConstructionParamsPanelProps) {
   function patch(p: Partial<ConstructionParams>) {
     onChange({ ...params, ...p })
   }
@@ -515,6 +770,7 @@ function ConstructionParamsPanel({ params, onChange, t, contourMm, wallEdgeIndic
   const selectClass =
     'rounded border border-neutral-300 bg-white px-2 py-1 text-sm text-neutral-900 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100'
   const labelClass = 'flex flex-col gap-1 text-xs text-neutral-500 dark:text-neutral-400'
+  const contourBuiltForOtherBeamWidth = contourMismatch(contourMm, wallEdgeIndices, params)
 
   return (
     <div className="flex flex-col gap-4">
@@ -592,9 +848,27 @@ function ConstructionParamsPanel({ params, onChange, t, contourMm, wallEdgeIndic
         <select
           className={selectClass}
           value={params.beamProfileId}
-          onChange={(e) => patch({ beamProfileId: e.target.value })}
+          onChange={(e) => patch(beamProfileChangePatch(e.target.value))}
         >
           {BEAM_PROFILE_IDS.map((id) => (
+            <option key={id} value={id}>
+              {formatProfileOption(id)}
+            </option>
+          ))}
+        </select>
+        {contourBuiltForOtherBeamWidth && (
+          <span className="text-amber-800 dark:text-amber-200">{t('drawing.contourBeamWidth')}</span>
+        )}
+      </label>
+
+      <label className={labelClass}>
+        {t('paramsPanel.wallBeamProfileLabel')}
+        <select
+          className={selectClass}
+          value={params.wallProfileId ?? 'f10040'}
+          onChange={(e) => patch({ wallProfileId: e.target.value, wallBeamWidthVersion: 1 })}
+        >
+          {WALL_BEAM_PROFILE_IDS.map((id) => (
             <option key={id} value={id}>
               {formatProfileOption(id)}
             </option>
@@ -610,12 +884,101 @@ function ConstructionParamsPanel({ params, onChange, t, contourMm, wallEdgeIndic
           onChange={(e) => patch({ purlinProfileId: e.target.value })}
         >
           <option value={NO_PURLIN}>{t('paramsPanel.purlinProfileNone')}</option>
-          {PURLIN_PROFILE_IDS.map((id) => (
+          {(isRetiredProfileId(params.purlinProfileId) && !PURLIN_PROFILE_IDS.includes(params.purlinProfileId)
+            ? [params.purlinProfileId, ...PURLIN_PROFILE_IDS]
+            : PURLIN_PROFILE_IDS
+          ).map((id) => (
+            <option key={id} value={id}>
+              {formatProfileOption(id)}{isRetiredProfileId(id) ? ' · ישן' : ''}
+            </option>
+          ))}
+        </select>
+        {params.purlinProfileId !== '' && !DEMO_PROFILES.has(params.purlinProfileId) && (
+          <ReplaceProfileNotice
+            message={t('drawing.profileRetired', { profile: params.purlinProfileId })}
+            replaceLabel={t('drawing.replaceProfile')}
+            title={t('drawing.replaceProfileTitle')}
+            confirmLabel={t('drawing.replaceProfile')}
+            options={PURLIN_PROFILE_IDS.filter((id) => !isRetiredProfileId(id)).map((id) => ({
+              id,
+              label: formatProfileOption(id),
+            }))}
+            onChoose={(profileId) => patch({ purlinProfileId: profileId })}
+          />
+        )}
+      </label>
+
+      <label className={labelClass} title={t('paramsPanel.purlinMaxSpanHint')}>
+        {t('paramsPanel.purlinMaxSpanLabel')}
+        <input
+          type="number"
+          min={1}
+          step={100}
+          className={selectClass}
+          value={params.purlinMaxSpanMm ?? ''}
+          placeholder="—"
+          onChange={(e) => {
+            const raw = e.target.value.trim()
+            if (raw === '') {
+              const next = { ...params }
+              delete next.purlinMaxSpanMm
+              onChange(next)
+              return
+            }
+            const v = parseFloat(raw)
+            if (Number.isFinite(v) && v > 0) patch({ purlinMaxSpanMm: v })
+          }}
+        />
+        <span className="text-[11px] leading-snug text-neutral-400 dark:text-neutral-500">
+          {t('paramsPanel.purlinMaxSpanHint')}
+        </span>
+        {longDivider && (
+          <span className="font-medium text-amber-800 dark:text-amber-300">
+            {t('drawing.longDividerNoSupport')}
+          </span>
+        )}
+      </label>
+
+      <label className={labelClass}>
+        {t('paramsPanel.wingShelfProfileLabel')}
+        <select
+          data-testid="support-profile"
+          className={selectClass}
+          value={params.wingShelfProfileId ?? ''}
+          onChange={(e) => {
+            if (e.target.value === '') {
+              const next = { ...params }
+              delete next.wingShelfProfileId
+              onChange(next)
+              return
+            }
+            patch({ wingShelfProfileId: e.target.value })
+          }}
+        >
+          {!params.wingShelfProfileId && <option value="">—</option>}
+          {supportProfileNeedsChoice(params.wingShelfProfileId) && params.wingShelfProfileId && (
+            <option value={params.wingShelfProfileId}>{params.wingShelfProfileId}</option>
+          )}
+          {supportProfileOptions.map((id) => (
             <option key={id} value={id}>
               {formatProfileOption(id)}
             </option>
           ))}
         </select>
+        {supportProfileNeedsChoice(params.wingShelfProfileId) && params.wingShelfProfileId && (
+          <ReplaceProfileNotice
+            message={
+              isRetiredProfileId(params.wingShelfProfileId)
+                ? t('drawing.profileRetired', { profile: params.wingShelfProfileId })
+                : t('drawing.supportProfileBlocked', { profile: params.wingShelfProfileId })
+            }
+            replaceLabel={t('drawing.replaceProfile')}
+            title={t('drawing.replaceProfileTitle')}
+            confirmLabel={t('drawing.replaceProfile')}
+            options={supportProfileOptions.map((id) => ({ id, label: formatProfileOption(id) }))}
+            onChoose={(profileId) => patch({ wingShelfProfileId: profileId })}
+          />
+        )}
       </label>
 
       <label className={labelClass}>
@@ -740,137 +1103,3 @@ function formatProfileOption(profileId: string): string {
   return traits.length > 0 ? `${base} — ${traits.join(', ')}` : base
 }
 
-interface PieceSummaryProps {
-  pieces: CutPiece[]
-  ledStripLengthMm: number
-  t: ReturnType<typeof useTranslations>
-}
-
-/** id → qty, e.g. {"f7020": 40, "f4020": 34, "f2020": 35} — one entry per DISTINCT profileId among the given pieces, not just per role (see mixed lamella pattern below). */
-function countByProfile(pieces: CutPiece[]): Record<string, number> {
-  const counts: Record<string, number> = {}
-  for (const p of pieces) counts[p.profileId] = (counts[p.profileId] ?? 0) + 1
-  return counts
-}
-
-/** Разбивка CutPiece[] по ролям + суммарная длина LED-ленты — то, что диагностика шага 0 просила выводить, плюс новая цифра по LED (промпт «подсветка встроена в профиль прогона»). */
-function PieceSummary({ pieces, ledStripLengthMm, t }: PieceSummaryProps) {
-  const counts = countByRole(pieces)
-
-  // Смешанная раскладка ламелей (промпт «в статистике... появились отдельные
-  // группы по каждому профилю») — распадается на >1 profileId только когда
-  // выбран смешанный пресет; для однородной раскладки это ровно 1 запись, и
-  // строка ниже не показывается (не дублирует roleCount выше без причины).
-  const lamellaProfileCounts = countByProfile(pieces.filter((p) => p.role === 'lamella'))
-  const lamellaProfileIds = Object.keys(lamellaProfileCounts)
-
-  return (
-    <div className="mb-3 flex flex-col gap-1 text-xs text-neutral-600 dark:text-neutral-300">
-      <div className="flex flex-wrap items-center gap-4">
-        {(Object.keys(ROLE_LABELS) as Array<CutPiece['role']>)
-          .filter((role) => counts[role] > 0)
-          .map((role) => (
-            <span key={role}>
-              {t('preview3D.roleCount', { role: t(`preview3D.role.${role}`), count: counts[role] })}
-            </span>
-          ))}
-        {ledStripLengthMm > 0 && (
-          <span className="font-medium text-amber-600 dark:text-amber-400">
-            {t('preview3D.ledStripLength', { meters: (ledStripLengthMm / 1000).toFixed(1) })}
-          </span>
-        )}
-      </div>
-      {lamellaProfileIds.length > 1 && (
-        <div className="flex flex-wrap items-center gap-3 text-neutral-500 dark:text-neutral-400">
-          <span>{t('preview3D.lamellaBreakdownLabel')}</span>
-          {lamellaProfileIds.map((profileId) => (
-            <span key={profileId}>
-              {t('preview3D.profileCount', { profile: formatProfileOption(profileId), count: lamellaProfileCounts[profileId] })}
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-interface ProfileStockComparison {
-  profileId: string
-  comparison: ReturnType<typeof compareStockLengthOptions>
-}
-
-/** Группирует pieces по profileId и сравнивает варианты длины закупки для каждого профиля, у которого задан availableStockLengthsMm (см. промпт 3.1). */
-function computeStockComparisons(
-  pieces: CutPiece[],
-  profiles: Map<string, ProfileDimensions>,
-): ProfileStockComparison[] {
-  const byProfile = new Map<string, CutPiece[]>()
-  for (const piece of pieces) {
-    const list = byProfile.get(piece.profileId) ?? []
-    list.push(piece)
-    byProfile.set(piece.profileId, list)
-  }
-
-  const result: ProfileStockComparison[] = []
-  for (const [profileId, profilePieces] of byProfile) {
-    const availableStockLengthsMm = profiles.get(profileId)?.availableStockLengthsMm
-    if (!availableStockLengthsMm || availableStockLengthsMm.length === 0) continue
-    result.push({
-      profileId,
-      comparison: compareStockLengthOptions(profilePieces, availableStockLengthsMm),
-    })
-  }
-  return result
-}
-
-interface StockComparisonTableProps {
-  comparisons: ProfileStockComparison[]
-  t: ReturnType<typeof useTranslations>
-}
-
-/** Сравнение длин хлыстов по каждому использованному профилю — сколько хлыстов и сколько отхода на каждой доступной длине закупки (промпт 3.1: "пользователь должен видеть цифру до заказа"). */
-function StockComparisonTable({ comparisons, t }: StockComparisonTableProps) {
-  if (comparisons.length === 0) return null
-
-  return (
-    <div className="flex flex-col gap-2">
-      <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-        {t('preview3D.stockComparisonTitle')}
-      </span>
-      <div className="flex flex-wrap gap-4">
-        {comparisons.map(({ profileId, comparison }) => (
-          <table key={profileId} className="text-xs">
-            <caption className="mb-1 text-left font-mono text-neutral-500 dark:text-neutral-400">
-              {profileId}
-            </caption>
-            <thead>
-              <tr className="text-neutral-500 dark:text-neutral-400">
-                <th className="pr-3 text-left font-normal">{t('preview3D.stockLengthHeader')}</th>
-                <th className="pr-3 text-left font-normal">{t('preview3D.barsHeader')}</th>
-                <th className="text-left font-normal">{t('preview3D.wasteHeader')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {comparison.options.map((opt) => (
-                <tr
-                  key={opt.stockLengthMm}
-                  className={
-                    opt.stockLengthMm === comparison.bestStockLengthMm
-                      ? 'font-semibold text-emerald-600 dark:text-emerald-400'
-                      : 'text-neutral-700 dark:text-neutral-300'
-                  }
-                >
-                  <td className="pr-3">{(opt.stockLengthMm / 1000).toFixed(1)} м</td>
-                  <td className="pr-3">{opt.barsUsed}</td>
-                  <td>
-                    {(opt.wasteMm / 1000).toFixed(2)} м ({opt.wastePercent.toFixed(1)}%)
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ))}
-      </div>
-    </div>
-  )
-}

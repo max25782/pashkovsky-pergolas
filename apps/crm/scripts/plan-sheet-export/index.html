@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+<meta charset="utf-8"/>
+<title>Production</title>
+<style>
+  @page land { size: A4 landscape; margin: 8mm; }
+  @page port { size: A4 portrait; margin: 10mm; }
+  html, body { margin: 0; background: #fff; color: #111; }
+  html[lang="he"] { font-family: "Arial Hebrew", "Noto Sans Hebrew", David, Arial, sans-serif; }
+  .land { page: land; width: 281mm; height: 194mm; overflow: hidden; break-after: page; display: flex; direction: ltr; background: #fff; }
+  .port { page: port; width: 190mm; min-height: 270mm; overflow: hidden; break-after: page; background: #fff; }
+  .plan-slot { flex: 1; min-width: 0; height: 194mm; }
+  .plan-slot > div { height: 100%; width: 100%; display: flex; flex-direction: column; }
+  .plan-slot svg { width: 100%; height: 100%; flex: 1; display: block; }
+  .layout-slot, .layout-slot svg, .sections-slot, .sections-slot svg { width: 281mm; height: 194mm; display: block; }
+  aside { width: 58mm; flex: none; border-inline-start: 0.3mm solid #e5e5e5; padding: 4mm; font: 11pt sans-serif; box-sizing: border-box; }
+  html[lang="he"] aside { font-family: "Arial Hebrew", "Noto Sans Hebrew", David, Arial, sans-serif; }
+  aside p { margin: 0 0 1mm; }
+  aside .label { font-weight: 700; margin-top: 3mm; }
+  aside ul { margin: 0; padding: 0; list-style: none; }
+  h1 { margin: 0 0 3mm; font: 700 12pt sans-serif; height: 8mm; line-height: 8mm; }
+  .row { min-height: 8mm; line-height: 8mm; font: 10pt ui-monospace, monospace; direction: ltr; }
+  .row .mark { vertical-align: middle; margin-inline-end: 1.5mm; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border-bottom: 0.2mm solid #ddd; padding: 1mm 2mm; font: 11pt sans-serif; }
+  .ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; }
+  .note { font: 10pt sans-serif; margin: 0 0 3mm; }
+  .cut-page { font-size: 10pt; }
+  .profile-head { display: flex; gap: 4mm; align-items: center; margin: 0 0 4mm; }
+  .profile-head img, .profile-head .schematic { width: 32mm; height: 24mm; object-fit: contain; border: 0.2mm solid #d6d3d1; background: #fff; flex: none; }
+  .profile-head p { margin: 1mm 0 0; font-size: 10pt; }
+  .profile-head strong { font-size: 14pt; }
+  .bar-row { display: flex; align-items: center; gap: 3mm; margin: 0 0 3mm; }
+  .times { width: 14mm; font: 700 12pt sans-serif; direction: ltr; flex: none; }
+  .legend { font-size: 10pt; border-top: 0.3mm solid #111; margin-top: 3mm; padding-top: 2mm; }
+  .legend p { margin: 0 0 1mm; }
+</style>
+</head>
+<body>
+<section class="land">
+  <div class="plan-slot" id="plan"></div>
+  <aside id="aside"></aside>
+</section>
+<section class="land"><div class="layout-slot" id="layout"></div></section>
+<div id="sections"></div>
+<div id="cutting"></div>
+<section class="port" id="order"></section>
+<script type="module" src="/main.tsx"></script>
+</body>
+</html>

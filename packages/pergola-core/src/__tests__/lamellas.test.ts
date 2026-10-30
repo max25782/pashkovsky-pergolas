@@ -603,7 +603,8 @@ describe('mixed pattern + computePurlins — patternMaxLamellaSpanMm uses the SM
     ['wide', WIDE], ['thin', THIN], ['purlin-1', PURLIN],
   ])
   // Span 4000mm along dir (+X): with only WIDE (3000mm span) → 2 spans → 1 purlin.
-  // With the mix (thin governs at 1000mm span) → 4 spans → 3 purlins.
+  // With the mix (thin governs at 1000mm span) Max equal-clear needs 5 spans
+  // (4 purlins) so the end cut stays ≤ 1000.
   const contour: Point2D[] = [[0, 0], [4000, 0], [4000, 2000], [0, 2000]]
 
   it('single wide profile alone (no thin in the pattern): 1 purlin (4000/3000 → 2 spans)', () => {
@@ -612,13 +613,13 @@ describe('mixed pattern + computePurlins — patternMaxLamellaSpanMm uses the SM
     expect(purlins).toHaveLength(1)
   })
 
-  it('mixed pattern [wide, thin]: purlin count follows the THIN profile\'s smaller span (4000/1000 → 4 spans → 3 purlins)', () => {
+  it('mixed pattern [wide, thin]: purlin count follows the THIN profile\'s smaller span', () => {
     const spec = baseSpec({
       contour, lamellaGapMm: 20, lamellaProfileId: 'wide',
       lamellaPattern: ['wide', 'thin'], purlinProfileId: 'purlin-1',
     })
     const purlins = computePurlins(spec, PROFILES)
-    expect(purlins).toHaveLength(3)
+    expect(purlins).toHaveLength(4)
   })
 
   it('computeLamellas segments at the SAME crossings computePurlins used for the mixed pattern', () => {
@@ -627,7 +628,7 @@ describe('mixed pattern + computePurlins — patternMaxLamellaSpanMm uses the SM
       lamellaPattern: ['wide', 'thin'], purlinProfileId: 'purlin-1',
     })
     const purlinXs = computePurlins(spec, PROFILES).map(p => Math.round(p.position[0])).sort((a, b) => a - b)
-    expect(purlinXs).toEqual([1000, 2000, 3000])
+    expect(purlinXs).toEqual([812, 1604, 2396, 3188])
 
     const pieces = computeLamellas(spec, PROFILES)
     const rows = new Map<number, typeof pieces>()
@@ -636,8 +637,8 @@ describe('mixed pattern + computePurlins — patternMaxLamellaSpanMm uses the SM
       rows.set(key, [...(rows.get(key) ?? []), p])
     })
     for (const rowPieces of rows.values()) {
-      expect(rowPieces).toHaveLength(4) // 4 spans between/around the 3 purlins
-      rowPieces.forEach(p => near(p.lengthAxisMm, 1000, 0.5))
+      expect(rowPieces).toHaveLength(5)
+      rowPieces.forEach(p => expect(p.lengthAxisMm).toBeLessThanOrEqual(1000 + 0.5))
     }
   })
 })
@@ -650,15 +651,15 @@ describe('purlins — placement and lamella segmentation', () => {
   const PURLIN_NON_INTERRUPTING: ProfileDimensions = { widthMm: 60, heightMm: 100, interruptsLamella: false }
 
   // Simple 6000×3000 rectangle, lamellas along +X → span along dir = 6000mm.
-  // maxLamellaSpanMm=1500 → nSpans=ceil(6000/1500)=4 → 3 purlins at 1500/3000/4500,
-  // 4 lamella segments per row (matches the prompt's own worked example).
+  // maxLamellaSpanMm=1500 → Max equal-clear needs 5 spans (4 purlins) so the
+  // end cut stays ≤ 1500 (1212/2404/3596/4788 for 40 mm ends).
   const contour: Point2D[] = [[0, 0], [6000, 0], [6000, 3000], [0, 3000]]
 
   function makeProfiles(purlin: ProfileDimensions): Map<string, ProfileDimensions> {
     return new Map([['lam-70', LAMELLA], ['purlin-1', purlin]])
   }
 
-  it('interruptsLamella=true: 6000mm span / 1500mm max span → 4 segments per scan line, outer ends angled, inner ends straight', () => {
+  it('interruptsLamella=true: 6000mm span / 1500mm max span → 5 equal-clear segments, inner joints straight', () => {
     const spec = baseSpec({
       contour,
       lamellaGapMm: 30,
@@ -676,20 +677,26 @@ describe('purlins — placement and lamella segmentation', () => {
     expect(rows.size).toBeGreaterThan(0)
 
     for (const rowPieces of rows.values()) {
-      expect(rowPieces).toHaveLength(4)
+      expect(rowPieces).toHaveLength(5)
       const sorted = [...rowPieces].sort((a, b) => a.position[0] - b.position[0])
-      sorted.forEach(p => near(p.lengthAxisMm, 1500, 0.5))
+      near(sorted[0].lengthAxisMm, 1212, 0.5)
+      near(sorted[1].lengthAxisMm, 1192, 0.5)
+      near(sorted[2].lengthAxisMm, 1192, 0.5)
+      near(sorted[3].lengthAxisMm, 1192, 0.5)
+      near(sorted[4].lengthAxisMm, 1212, 0.5)
 
       // Outer ends (edge 3 = left, edge 1 = right of this axis-aligned rect) are straight too
       // (rectangle edges are ⊥ to the lamella direction) — the real signal here is that
       // INNER joints are ALWAYS straight regardless of contour shape.
-      near(sorted[0].cutMiterEndDeg, 0, 0.01)      // inner joint after segment 0
+      near(sorted[0].cutMiterEndDeg, 0, 0.01)
       expect(sorted[0].cutHandEnd).toBe('straight')
-      near(sorted[1].cutMiterStartDeg, 0, 0.01)     // inner joint before segment 1 (same cut)
-      near(sorted[1].cutMiterEndDeg, 0, 0.01)       // inner joint after segment 1
+      near(sorted[1].cutMiterStartDeg, 0, 0.01)
+      near(sorted[1].cutMiterEndDeg, 0, 0.01)
       near(sorted[2].cutMiterStartDeg, 0, 0.01)
       near(sorted[2].cutMiterEndDeg, 0, 0.01)
-      near(sorted[3].cutMiterStartDeg, 0, 0.01)     // inner joint before segment 3
+      near(sorted[3].cutMiterStartDeg, 0, 0.01)
+      near(sorted[3].cutMiterEndDeg, 0, 0.01)
+      near(sorted[4].cutMiterStartDeg, 0, 0.01)
     }
   })
 
@@ -717,7 +724,7 @@ describe('purlins — placement and lamella segmentation', () => {
     pieces.forEach(p => near(p.lengthAxisMm, 6000, 0.5))
   })
 
-  it('computePurlins: 3 purlins per crossing (nSpans-1), each spanning the full 3000mm width', () => {
+  it('computePurlins: 4 purlins per crossing (nSpans-1), each spanning the full 3000mm width', () => {
     const spec = baseSpec({
       contour,
       lamellaGapMm: 30,
@@ -725,7 +732,7 @@ describe('purlins — placement and lamella segmentation', () => {
       purlinProfileId: 'purlin-1',
     })
     const purlins = computePurlins(spec, makeProfiles(PURLIN_INTERRUPTING))
-    expect(purlins).toHaveLength(3)
+    expect(purlins).toHaveLength(4)
     purlins.forEach(p => {
       expect(p.role).toBe('purlin')
       near(p.lengthAxisMm, 3000, 0.5)
@@ -734,7 +741,7 @@ describe('purlins — placement and lamella segmentation', () => {
     })
   })
 
-  it('computePurlins: purlin x-positions are 1500, 3000, 4500', () => {
+  it('computePurlins: purlin x-positions are Max equal-clear 1212, 2404, 3596, 4788', () => {
     const spec = baseSpec({
       contour,
       lamellaGapMm: 30,
@@ -743,7 +750,7 @@ describe('purlins — placement and lamella segmentation', () => {
     })
     const purlins = computePurlins(spec, makeProfiles(PURLIN_INTERRUPTING))
     const xs = purlins.map(p => Math.round(p.position[0])).sort((a, b) => a - b)
-    expect(xs).toEqual([1500, 3000, 4500])
+    expect(xs).toEqual([1212, 2404, 3596, 4788])
   })
 
   it('computePurlins: no purlinProfileId → []', () => {
@@ -777,8 +784,8 @@ describe('purlins — placement and lamella segmentation', () => {
   it('computePurlins on an L-shape: the crossing through the notch clips shorter than the unclipped one', () => {
     // L-shape: outer 6000×6000 with a 3000×3000 notch removed from the top-right
     // (x:3000..6000, y:3000..6000 absent). dir=+X (lamellaDirectionDeg=0) → purlin
-    // crossings scan vertically at x=1500 (left leg, full 6000mm height — the notch
-    // doesn't touch x<3000) and x=4500 (right leg, ONLY the y<3000 strip remains —
+    // crossings scan vertically at x=1212 (left leg, full 6000mm height — the notch
+    // doesn't touch x<3000) and x=4788 (right leg, ONLY the y<3000 strip remains —
     // clipped to exactly 3000mm, half the unclipped length).
     const lShape: Point2D[] = [
       [0, 0], [6000, 0], [6000, 3000], [3000, 3000], [3000, 6000], [0, 6000],
@@ -792,8 +799,8 @@ describe('purlins — placement and lamella segmentation', () => {
     const purlins = computePurlins(spec, makeProfiles(PURLIN_INTERRUPTING))
     purlins.forEach(p => expect(p.lengthAxisMm).toBeLessThanOrEqual(6000 + 0.5))
 
-    const unclipped = purlins.filter(p => Math.abs(p.position[0] - 1500) < 1)
-    const clippedByNotch = purlins.filter(p => Math.abs(p.position[0] - 4500) < 1)
+    const unclipped = purlins.filter(p => Math.abs(p.position[0] - 1212) < 1)
+    const clippedByNotch = purlins.filter(p => Math.abs(p.position[0] - 4788) < 1)
     expect(unclipped.length).toBeGreaterThan(0)
     expect(clippedByNotch.length).toBeGreaterThan(0)
     unclipped.forEach(p => near(p.lengthAxisMm, 6000, 0.5))
@@ -858,7 +865,7 @@ describe('purlins — placement and lamella segmentation', () => {
     pieces.forEach((p) => near(p.lengthAxisMm, 6000 - 30, 0.5))
   })
 
-  it('4-segment interrupted row: only the 2 OUTER segments shrink (by reductionMm/2 each), inner segments stay exactly at maxLamellaSpanMm', () => {
+  it('5-segment interrupted row: only the 2 OUTER segments shrink (by reductionMm/2 each)', () => {
     const spec = baseSpec({
       contour, lamellaGapMm: 30, lamellaProfileId: 'lam-70', purlinProfileId: 'purlin-1',
       visturTolerances: { beamSegmentReductionMm: 15, lamellaLengthReductionMm: 30 },
@@ -873,11 +880,12 @@ describe('purlins — placement and lamella segmentation', () => {
 
     for (const rowPieces of rows.values()) {
       const sorted = [...rowPieces].sort((a, b) => a.position[0] - b.position[0])
-      expect(sorted).toHaveLength(4)
-      near(sorted[0].lengthAxisMm, 1500 - 15, 0.5) // outer segment: 1 real end retracted
-      near(sorted[1].lengthAxisMm, 1500, 0.5)       // inner segment: untouched
-      near(sorted[2].lengthAxisMm, 1500, 0.5)       // inner segment: untouched
-      near(sorted[3].lengthAxisMm, 1500 - 15, 0.5) // outer segment: 1 real end retracted
+      expect(sorted).toHaveLength(5)
+      near(sorted[0].lengthAxisMm, 1212 - 15, 0.5)
+      near(sorted[1].lengthAxisMm, 1192, 0.5)
+      near(sorted[2].lengthAxisMm, 1192, 0.5)
+      near(sorted[3].lengthAxisMm, 1192, 0.5)
+      near(sorted[4].lengthAxisMm, 1212 - 15, 0.5)
       // Whole-row total material removed is always exactly reductionMm,
       // regardless of how many purlins cut the row into pieces.
       const total = sorted.reduce((sum, p) => sum + p.lengthAxisMm, 0)

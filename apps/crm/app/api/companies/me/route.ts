@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { fetchWithTimeout, DEFAULT_SUPABASE_TIMEOUT_MS } from '@/lib/supabase/fetch-with-timeout'
+import { pdfLocaleFromCompanySettings } from '@/lib/pdf/company-pdf-locale'
+import { resolvePdfLocale, type PdfLocale } from '@/lib/pdf/pdf-locale'
 
 export const dynamic = 'force-dynamic'
 
@@ -108,6 +110,7 @@ export async function GET() {
       role: chosen.role,
       status: company.status,
       crm_intro_completed_at: chosen.crm_intro_completed_at ?? null,
+      language: await readCompanyLanguage(service, company.id),
     })
   } catch (error: unknown) {
     const e = error as Error & { stack?: string }
@@ -118,5 +121,71 @@ export async function GET() {
       { error: 'Internal Server Error' },
       { status: 500 }
     )
+  }
+}
+
+async function readCompanyLanguage(
+  service: ReturnType<typeof createServiceClient>,
+  companyId: string,
+): Promise<PdfLocale> {
+  try {
+    const { data, error } = await service.from('companies').select('settings').eq('id', companyId).maybeSingle()
+    if (error || !data) return 'he'
+    return pdfLocaleFromCompanySettings(data.settings) ?? 'he'
+  } catch {
+    return 'he'
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const supabase = createClient()
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    if (userError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const body = await request.json() as { language?: unknown }
+    if (typeof body.language !== 'string') {
+      return NextResponse.json({ error: 'language required' }, { status: 400 })
+    }
+    const language = resolvePdfLocale(body.language)
+    const service = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: { persistSession: false, autoRefreshToken: false },
+        global: { fetch: fetchWithTimeout(DEFAULT_SUPABASE_TIMEOUT_MS) },
+      },
+    )
+    const { data: membership, error: membershipError } = await service
+      .from('company_members')
+      .select('company_id')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+    if (membershipError || !membership?.company_id) {
+      return NextResponse.json({ error: 'Company not found' }, { status: 404 })
+    }
+    const { data: current } = await service
+      .from('companies')
+      .select('settings')
+      .eq('id', membership.company_id)
+      .maybeSingle()
+    const settings = current?.settings && typeof current.settings === 'object'
+      ? { ...(current.settings as Record<string, unknown>) }
+      : {}
+    settings.language = language
+    const { error: updateError } = await service
+      .from('companies')
+      .update({ settings })
+      .eq('id', membership.company_id)
+    if (updateError) {
+      return NextResponse.json({ error: 'Could not save language' }, { status: 500 })
+    }
+    return NextResponse.json({ language })
+  } catch (error: unknown) {
+    console.error('[companies/me] PATCH', error)
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }

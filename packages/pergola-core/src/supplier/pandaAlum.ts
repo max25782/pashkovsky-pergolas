@@ -17,8 +17,17 @@ function normSku(sku: string): string {
   return sku.replace(/\s+/g, '').toLowerCase()
 }
 
+/**
+ * Panda lists the 50/150 wall-4 frame as «1197 pa». The project calls it pa1197
+ * (same pattern as pa1162, pa1429). Construction id and lookups use the project code.
+ */
+const PANDA_SKU_PROJECT_CODES: Record<string, string> = {
+  '1197pa': 'pa1197',
+}
+
 export function findPandaAlumBySku(sku: string): PandaAlumProfile | undefined {
-  const want = normSku(sku)
+  const normalized = normSku(sku)
+  const want = Object.entries(PANDA_SKU_PROJECT_CODES).find(([, code]) => code === normalized)?.[0] ?? normalized
   return PANDA_ALUM_PROFILES.find((p) => p.sku != null && normSku(p.sku) === want)
 }
 
@@ -60,6 +69,16 @@ const DOUBLE_T_FLANGE_MM: Record<number, number> = {
   142: 70,
 }
 
+/**
+ * Plain T purlin named with only the web. Flange is the plan width.
+ * טי 80 → 40×80, טי 100 → 40×100, טי 120 → 40×120. Other single sizes stay unassumed.
+ */
+const PLAIN_T_FLANGE_MM: Record<number, number> = {
+  80: 40,
+  100: 40,
+  120: 40,
+}
+
 function parseDoubleTDims(nameHe: string): ParsedCatalogDims | null {
   if (!nameHe.includes('דאבל טי')) return null
   const first = nameHe.match(/(\d+(?:\.\d+)?)/)
@@ -96,13 +115,15 @@ export function parseCatalogNameDims(
   if (single && (slot === 'purlin' || slot === 'purlin-led' || slot === 'beam')) {
     const n = Number(single[1])
     if (!Number.isFinite(n) || n <= 0) return null
+    const flange = slot === 'purlin' ? PLAIN_T_FLANGE_MM[n] : undefined
+    if (flange != null) return { widthMm: flange, heightMm: n, widthAssumed: false }
     return { widthMm: n, heightMm: n, widthAssumed: true }
   }
   return null
 }
 
 export function catalogConstructionId(row: PandaAlumProfile): string {
-  if (row.sku && row.sku.trim()) return row.sku
+  if (row.sku && row.sku.trim()) return PANDA_SKU_PROJECT_CODES[normSku(row.sku)] ?? row.sku
   const dims = row.nameHe.match(/(\d+)\s*\/\s*(\d+)/)
   if (dims) return `square-${dims[1]}`
   return `unnamed-${row.nameHe}`

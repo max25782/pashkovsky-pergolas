@@ -77,7 +77,7 @@ export function SceneBackdrop({ preset = 'classic', groundSize }: SceneBackdropP
         shadow-camera-top={20}
         shadow-camera-bottom={-20}
       />
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.002, 0]} receiveShadow>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.002, 0]} receiveShadow raycast={() => {}}>
         <planeGeometry args={[groundSize, groundSize]} />
         <meshStandardMaterial color={scene.ground} roughness={0.92} metalness={0} />
       </mesh>

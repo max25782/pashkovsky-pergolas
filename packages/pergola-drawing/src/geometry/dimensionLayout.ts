@@ -96,7 +96,9 @@ export function buildDimensionLineLayout(
       toPoint: p.point,
       fromOffsetPoint,
       toOffsetPoint,
-      lengthMm: p.distanceFromStartMm - prev.distanceFromStartMm,
+      lengthMm:
+        chain.segmentsMm[i] ??
+        p.distanceFromStartMm - prev.distanceFromStartMm,
       labelAnchor: midpoint(fromOffsetPoint, toOffsetPoint),
     }
   })

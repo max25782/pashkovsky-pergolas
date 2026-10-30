@@ -24,6 +24,8 @@ describeIfLocalSupabase('Multi-Tenant Data Isolation', () => {
   let userB_id: string
   let dealA_id: string
   let dealB_id: string
+  let offerA_id: string
+  let offerB_id: string
 
   beforeAll(async () => {
     // Create test companies
@@ -92,10 +94,33 @@ describeIfLocalSupabase('Multi-Tenant Data Isolation', () => {
       .select()
       .single()
     dealB_id = dealB!.id
+
+    const { data: offerA } = await supabase
+      .from('offers')
+      .insert({
+        deal_id: dealA_id,
+        company_id: companyA_id,
+        customer_name: 'Offer A',
+      })
+      .select('id')
+      .single()
+    offerA_id = offerA!.id
+
+    const { data: offerB } = await supabase
+      .from('offers')
+      .insert({
+        deal_id: dealB_id,
+        company_id: companyB_id,
+        customer_name: 'Offer B',
+      })
+      .select('id')
+      .single()
+    offerB_id = offerB!.id
   })
 
   afterAll(async () => {
     // Cleanup test data
+    await supabase.from('offers').delete().in('id', [offerA_id, offerB_id])
     await supabase.from('deals').delete().in('id', [dealA_id, dealB_id])
     await supabase.from('company_members').delete().in('user_id', [userA_id, userB_id])
     await supabase.from('users').delete().in('id', [userA_id, userB_id])
@@ -126,6 +151,57 @@ describeIfLocalSupabase('Multi-Tenant Data Isolation', () => {
     expect(dealsB!.length).toBe(1)
     expect(dealsB![0].id).toBe(dealB_id)
     expect(dealsB!.find(d => d.id === dealA_id)).toBeUndefined()
+  })
+
+  it('RLS: authenticated user A sees only own deals without company_id filter', async () => {
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (!anonKey) {
+      console.warn('[multi-tenant] skip RLS deals: NEXT_PUBLIC_SUPABASE_ANON_KEY not set')
+      return
+    }
+    const client = createClient(integrationEnv!.url, anonKey)
+    const { error: signInError } = await client.auth.signInWithPassword({
+      email: 'test-a@example.com',
+      password: 'password123',
+    })
+    expect(signInError).toBeNull()
+
+    const { data: deals, error } = await client
+      .from('deals')
+      .select('id, company_id')
+      .limit(1000)
+
+    expect(error).toBeNull()
+    expect(deals?.length).toBeGreaterThan(0)
+    expect(deals!.every((d) => d.company_id === companyA_id)).toBe(true)
+    expect(deals!.some((d) => d.id === dealB_id)).toBe(false)
+
+    await client.auth.signOut()
+  })
+
+  it('RLS: authenticated user A sees only own offers without company_id filter', async () => {
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (!anonKey) {
+      console.warn('[multi-tenant] skip RLS offers: NEXT_PUBLIC_SUPABASE_ANON_KEY not set')
+      return
+    }
+    const client = createClient(integrationEnv!.url, anonKey)
+    const { error: signInError } = await client.auth.signInWithPassword({
+      email: 'test-a@example.com',
+      password: 'password123',
+    })
+    expect(signInError).toBeNull()
+
+    const { data: offers, error } = await client
+      .from('offers')
+      .select('id, company_id')
+      .limit(1000)
+
+    expect(error).toBeNull()
+    expect(offers!.every((o) => o.company_id === companyA_id)).toBe(true)
+    expect(offers!.some((o) => o.id === offerB_id)).toBe(false)
+
+    await client.auth.signOut()
   })
 
   it('User A belongs only to Company A', async () => {

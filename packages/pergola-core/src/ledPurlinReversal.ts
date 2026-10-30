@@ -4,6 +4,8 @@ import { scanLineClip, cutAtEdge, longPointOffset } from './lamellas'
 import { computeSpanDivisionPointsMm } from './lamellaSpans'
 import { resolveLamellaPattern, patternMaxLamellaSpanMm, patternMaxVerticalThicknessMm } from './lamellaPattern'
 import { computePurlins } from './purlins'
+import { computeFrame } from './frame'
+import { collectFrameBeamTrimSegments, trimDividerAxisSegmentsForFrame } from './dividerFrameTrim'
 import { effectiveKerfMm } from './packProfile'
 import { findJointCandidates, planBoundaries, segmentReserveMm } from './beamSegmentation'
 import { sanitizeContour } from './contourSanitize'
@@ -116,9 +118,14 @@ export function segmentLedPurlinsForStock(
 
   const plane = roof ?? roofPlane(spec)
   const sloped = !isHorizontalPlane(plane)
+  const frameBeams =
+    crossingPieces.filter((p) => p.role === 'beam').length > 0
+      ? crossingPieces.filter((p) => p.role === 'beam')
+      : computeFrame(spec, profiles).beams
+  const purlinOpts = { frameBeams }
 
   const fallback = (): LedPurlinReversalResult => ({
-    purlins: computePurlins(spec, profiles, plane),
+    purlins: computePurlins(spec, profiles, plane, purlinOpts),
     dividers: [],
     issues: [],
     reversed: false,
@@ -264,7 +271,7 @@ export function segmentLedPurlinsForStock(
 
   if (capacityMm <= MIN_SEGMENT_MM) {
     return {
-      purlins: computePurlins(spec, profiles, plane),
+      purlins: computePurlins(spec, profiles, plane, purlinOpts),
       dividers: [],
       issues: [{
         code: 'led-purlin-exceeds-stock-no-joint',
@@ -285,7 +292,7 @@ export function segmentLedPurlinsForStock(
 
   if (!plan) {
     return {
-      purlins: computePurlins(spec, profiles, plane),
+      purlins: computePurlins(spec, profiles, plane, purlinOpts),
       dividers: [],
       issues: [{
         code: 'led-purlin-exceeds-stock-no-joint',
@@ -308,6 +315,7 @@ export function segmentLedPurlinsForStock(
 
   const dividerPerps = plan.boundaries.map((b) => widestH0S + b)
   const sectionBoundsPerp = [widestH0S, ...dividerPerps, widestH0S + widestDepthMm]
+  const beamTrim = collectFrameBeamTrimSegments(frameBeams, profiles)
 
   // ── Dividers: plain crossing beams running along `dir` (like a lamella —
   // same scanLineClip convention, dir/perp swapped relative to the purlin
@@ -320,34 +328,49 @@ export function segmentLedPurlinsForStock(
     for (let k = 0; k + 1 < hits.length; k += 2) {
       const h0 = hits[k]
       const h1 = hits[k + 1]
-      const lengthAxisMm = h1.s - h0.s
-      if (lengthAxisMm < MIN_SEGMENT_MM) continue
+      const clipLen = h1.s - h0.s
+      if (clipLen < MIN_SEGMENT_MM) continue
+
+      const clipStart: Point2D = [anchor[0] + h0.s * dir[0], anchor[1] + h0.s * dir[1]]
+      const clipEnd: Point2D = [anchor[0] + h1.s * dir[0], anchor[1] + h1.s * dir[1]]
+      const trimmed = trimDividerAxisSegmentsForFrame({
+        start: clipStart,
+        end: clipEnd,
+        beams: beamTrim,
+        minLengthMm: MIN_SEGMENT_MM,
+        ignoreBeamsBehindEnds: true,
+      })
+      if (trimmed.length === 0) continue
 
       const { cutMiterDeg: cms, cutHand: chs } = cutAtEdge(dir, pts, h0.edgeIndex)
       const { cutMiterDeg: cme, cutHand: che } = cutAtEdge(dir, pts, h1.edgeIndex)
       const δStart = longPointOffset(cms, dividerProfile.widthMm)
       const δEnd = longPointOffset(cme, dividerProfile.widthMm)
-      const startPt: Point2D = [anchor[0] + h0.s * dir[0], anchor[1] + h0.s * dir[1]]
-      const endPt: Point2D = [anchor[0] + h1.s * dir[0], anchor[1] + h1.s * dir[1]]
-      const seated = seatOnRoof(startPt, endPt, lengthAxisMm, δStart, δEnd, [0, -θ, 0])
 
-      dividers.push({
-        id: `led-divider-${divId++}`,
-        role: 'purlin', // structurally a crossing member, like a purlin — see LedPurlinReversalResult doc.
-        profileId: dividerProfileId,
-        lengthAxisMm: seated.axisMm,
-        lengthLongMm: seated.longMm,
-        lengthShortMm: seated.shortMm,
-        cutMiterStartDeg: cms,
-        cutBevelStartDeg: 0,
-        cutHandStart: chs,
-        cutMiterEndDeg: cme,
-        cutBevelEndDeg: 0,
-        cutHandEnd: che,
-        position: seated.position,
-        rotation: seated.rotation,
-        color,
-      })
+      for (const seg of trimmed) {
+        const startPt = seg.start
+        const endPt = seg.end
+        const lengthAxisMm = seg.lengthAxisMm
+        const seated = seatOnRoof(startPt, endPt, lengthAxisMm, δStart, δEnd, [0, -θ, 0])
+
+        dividers.push({
+          id: `led-divider-${divId++}`,
+          role: 'purlin',
+          profileId: dividerProfileId,
+          lengthAxisMm: seated.axisMm,
+          lengthLongMm: seated.longMm,
+          lengthShortMm: seated.shortMm,
+          cutMiterStartDeg: cms,
+          cutBevelStartDeg: 0,
+          cutHandStart: chs,
+          cutMiterEndDeg: cme,
+          cutBevelEndDeg: 0,
+          cutHandEnd: che,
+          position: seated.position,
+          rotation: seated.rotation,
+          color,
+        })
+      }
     }
   }
 
@@ -372,8 +395,12 @@ export function segmentLedPurlinsForStock(
       if (h1.s - h0.s < MIN_SEGMENT_MM) continue
 
       for (let s = 0; s + 1 < sectionBoundsPerp.length; s++) {
-        const pStart = sectionBoundsPerp[s]
-        const pEnd = sectionBoundsPerp[s + 1]
+        // sectionBoundsPerp are in s-space at widestT; anchor shifts along dir by
+        // (t − widestT), which shifts perp-coordinate of the same physical cut by
+        // dot(dir, perp) × (widestT − t) in local s.
+        const anchorShiftS = dot2(dir, perp) * (widestT - t)
+        const pStart = sectionBoundsPerp[s] + anchorShiftS
+        const pEnd = sectionBoundsPerp[s + 1] + anchorShiftS
         const effStart = Math.max(h0.s, pStart)
         const effEnd = Math.min(h1.s, pEnd)
         const lengthAxisMm = effEnd - effStart

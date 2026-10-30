@@ -4,7 +4,8 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import type { MonthlyReport, MonthlyReportRow } from '@/types/workers'
+import type { MonthlyReport } from '@/types/workers'
+import { buildMoneyMonthReport, buildPaymentsByDeal, type RevenueDeal } from '@/lib/deals/revenue'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -13,7 +14,8 @@ const supabase = SUPABASE_URL && SERVICE_KEY
   ? createClient(SUPABASE_URL, SERVICE_KEY, { db: { schema: 'public' } })
   : undefined
 
-// GET - Monthly report
+const DEAL_COLS = 'id, customer_name, customer_type, stage, price, my_cost, installation_date, order_date, created_at'
+
 export async function GET(req: NextRequest) {
   if (!supabase) {
     return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
@@ -23,22 +25,20 @@ export async function GET(req: NextRequest) {
   const month = searchParams.get('month') // YYYY-MM
 
   try {
-
     if (!month || !/^\d{4}-\d{2}$/.test(month)) {
       return NextResponse.json(
         { error: 'month parameter is required in YYYY-MM format' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
     const [year, monthNum] = month.split('-').map(Number)
     const startDate = `${year}-${String(monthNum).padStart(2, '0')}-01`
-    const endDate = new Date(year, monthNum, 0).toISOString().split('T')[0] // Last day of month
+    const endDate = new Date(year, monthNum, 0).toISOString().split('T')[0]
 
-    // Get completed deals by installation_date (revenue attribution by installation month)
-    const { data: dealsData, error: dealsError } = await supabase
+    const { data: doneDeals, error: dealsError } = await supabase
       .from('deals')
-      .select('id, customer_name, installation_date, price, final_amount, total_amount')
+      .select(DEAL_COLS)
       .eq('stage', 'done')
       .not('installation_date', 'is', null)
       .gte('installation_date', `${startDate}T00:00:00.000Z`)
@@ -46,125 +46,50 @@ export async function GET(req: NextRequest) {
 
     if (dealsError) {
       console.error('Error fetching deals:', dealsError)
-      return NextResponse.json({ 
-        error: 'Failed to fetch deals', 
-        details: dealsError.message 
+      return NextResponse.json({
+        error: 'Failed to fetch deals',
+        details: dealsError.message,
       }, { status: 500 })
     }
 
-    // Get all work shifts for these projects in this month
-    const dealIds = (dealsData || []).map((d: any) => d.id)
-    
-    let workShiftsData: any[] = []
-    if (dealIds.length > 0) {
-      const { data: shiftsData, error: shiftsError } = await supabase
-        .from('work_shifts')
-        .select('project_id, daily_rate_snapshot, date')
-        .in('project_id', dealIds)
-        .gte('date', startDate)
-        .lte('date', endDate)
+    const { data: contractorDeals, error: contractorError } = await supabase
+      .from('deals')
+      .select(DEAL_COLS)
+      .eq('customer_type', 'contractor')
+      .lte('created_at', '9999-12-31T23:59:59.000Z')
 
-      if (shiftsError) {
-        console.error('Error fetching work shifts:', shiftsError)
-        return NextResponse.json({ 
-          error: 'Failed to fetch work shifts',
-          details: shiftsError.message 
-        }, { status: 500 })
-      }
-
-      workShiftsData = shiftsData || []
+    if (contractorError) {
+      console.error('Error fetching contractor deals:', contractorError)
+      return NextResponse.json({
+        error: 'Failed to fetch deals',
+        details: contractorError.message,
+      }, { status: 500 })
     }
 
-    // Get offers for these deals (deal_id is TEXT, so we need to convert deal.id to string)
-    const dealIdStrings = dealIds.map(id => String(id))
-    let offersData: any[] = []
-    
-    if (dealIdStrings.length > 0) {
-      const { data: offers, error: offersError } = await supabase
-        .from('offers')
-        .select('deal_id, final_price, created_at')
-        .in('deal_id', dealIdStrings)
-        .gte('created_at', `${startDate}T00:00:00.000Z`)
-        .lte('created_at', `${endDate}T23:59:59.999Z`)
+    const { data: payments, error: paymentsError } = await supabase
+      .from('deal_payments')
+      .select('deal_id, amount, paid_at')
+      .gte('paid_at', `${startDate}T00:00:00.000Z`)
+      .lte('paid_at', `${endDate}T23:59:59.999Z`)
 
-      if (offersError) {
-        console.error('Error fetching offers:', offersError)
-        // Don't fail - just log and continue without offers
-        console.warn('Continuing without offers data')
-      } else {
-        offersData = offers || []
-      }
+    if (paymentsError) {
+      console.error('Error fetching payments:', paymentsError)
+      return NextResponse.json({
+        error: 'Failed to fetch payments',
+        details: paymentsError.message,
+      }, { status: 500 })
     }
 
-    // Calculate totals per project
-    const projectMap = new Map<string, MonthlyReportRow>()
-
-    // Process deals and offers
-    for (const deal of dealsData || []) {
-      const dealId = deal.id
-      const dealIdString = String(dealId)
-      
-      // Find offers for this deal
-      const dealOffers = offersData.filter((o: any) => String(o.deal_id) === dealIdString)
-      
-      // Get final price from latest offer or highest final_price
-      let revenue = 0
-      if (dealOffers.length > 0) {
-        const validOffers = dealOffers.filter((o: any) => o.final_price != null && o.final_price !== '')
-        if (validOffers.length > 0) {
-          revenue = Math.max(...validOffers.map((o: any) => parseFloat(String(o.final_price)) || 0))
-        }
-      }
-      
-      // Also check deal.price if no offers
-      if (revenue === 0) {
-        // Try deal.price field
-        if ((deal as any).price) {
-          revenue = parseFloat(String((deal as any).price)) || 0
-        }
-        // Try deal.final_amount
-        if (revenue === 0 && (deal as any).final_amount) {
-          revenue = parseFloat(String((deal as any).final_amount)) || 0
-        }
-        // Try deal.total_amount
-        if (revenue === 0 && (deal as any).total_amount) {
-          revenue = parseFloat(String((deal as any).total_amount)) || 0
-        }
-      }
-
-      // Calculate labor cost for this project
-      const projectShifts = workShiftsData.filter((s: any) => s.project_id === dealId)
-      const laborCost = projectShifts.reduce((sum: number, shift: any) => {
-        return sum + parseFloat(shift.daily_rate_snapshot)
-      }, 0)
-
-      const profit = revenue - laborCost
-
-      projectMap.set(dealId, {
-        projectId: dealId,
-        projectName: `Deal ${dealId.slice(0, 8)}`,
-        customerName: deal.customer_name || 'Without name',
-        revenue,
-        laborCost,
-        profit,
-      })
+    const byId = new Map<string, RevenueDeal>()
+    for (const deal of [...(doneDeals ?? []), ...(contractorDeals ?? [])]) {
+      byId.set(deal.id, deal as RevenueDeal)
     }
 
-    // Calculate totals
-    const projects = Array.from(projectMap.values())
-    const totalRevenue = projects.reduce((sum, p) => sum + p.revenue, 0)
-    const totalLaborCost = projects.reduce((sum, p) => sum + p.laborCost, 0)
-    const totalProfit = totalRevenue - totalLaborCost
-
-    const report: MonthlyReport = {
+    const report: MonthlyReport = buildMoneyMonthReport(
+      Array.from(byId.values()),
       month,
-      totalRevenue,
-      totalLaborCost,
-      totalProfit,
-      projects: projects.sort((a, b) => b.revenue - a.revenue), // Sort by revenue descending
-    }
-
-    // Log summary for debugging
+      buildPaymentsByDeal(payments ?? []),
+    )
 
     return NextResponse.json({ report })
   } catch (error: unknown) {
@@ -175,15 +100,12 @@ export async function GET(req: NextRequest) {
       month,
     })
     return NextResponse.json(
-      { 
-        error: 'Internal server error', 
+      {
+        error: 'Internal server error',
         details: e?.message ?? String(error),
         month,
       },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }
-
-
-

@@ -36,6 +36,7 @@ const mockDeals = [
     id: 'deal-1',
     stage: 'done',
     price: '50000',
+    installation_date: '2024-01-15T10:00:00Z',
     created_at: '2024-01-15T10:00:00Z',
     updated_at: '2024-01-20T10:00:00Z',
   },
@@ -43,6 +44,7 @@ const mockDeals = [
     id: 'deal-2',
     stage: 'done',
     price: '30000',
+    installation_date: '2024-01-16T10:00:00Z',
     created_at: '2024-01-16T10:00:00Z',
     updated_at: '2024-01-25T10:00:00Z',
   },
@@ -247,13 +249,13 @@ describe('Analytics Aggregators - Calculations', () => {
       mockSupabase.in.mockReturnValue(mockSupabase)
       mockSupabase.not.mockReturnValue(mockSupabase)
 
-      // First call returns deals, second returns shifts
+      // 1 done deals, 2 contractors, 3 payments, 4 shifts
       let callCount = 0
       mockSupabase.lte.mockImplementation(() => {
         callCount++
-        if (callCount === 1) {
-          return Promise.resolve(dealsQuery)
-        }
+        if (callCount === 1) return Promise.resolve(dealsQuery)
+        if (callCount === 2) return Promise.resolve({ data: [], error: null })
+        if (callCount === 3) return Promise.resolve({ data: [], error: null })
         return Promise.resolve(shiftsQuery)
       })
 
@@ -288,9 +290,9 @@ describe('Analytics Aggregators - Calculations', () => {
       let callCount = 0
       mockSupabase.lte.mockImplementation(() => {
         callCount++
-        if (callCount === 1) {
-          return Promise.resolve(dealsQuery)
-        }
+        if (callCount === 1) return Promise.resolve(dealsQuery)
+        if (callCount === 2) return Promise.resolve({ data: [], error: null })
+        if (callCount === 3) return Promise.resolve({ data: [], error: null })
         return Promise.resolve(shiftsQuery)
       })
 
@@ -311,6 +313,7 @@ describe('Analytics Aggregators - Calculations', () => {
           id: 'deal-1',
           stage: 'done',
           price: '1000',
+          installation_date: '2024-01-15T10:00:00Z',
           created_at: '2024-01-15T10:00:00Z',
         },
       ]
@@ -338,9 +341,9 @@ describe('Analytics Aggregators - Calculations', () => {
       let callCount = 0
       mockSupabase.lte.mockImplementation(() => {
         callCount++
-        if (callCount === 1) {
-          return Promise.resolve(dealsQuery)
-        }
+        if (callCount === 1) return Promise.resolve(dealsQuery)
+        if (callCount === 2) return Promise.resolve({ data: [], error: null })
+        if (callCount === 3) return Promise.resolve({ data: [], error: null })
         return Promise.resolve(shiftsQuery)
       })
 

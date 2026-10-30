@@ -3,6 +3,7 @@ import { mergeNestSettings } from './defaults'
 import { buildParts } from './buildParts'
 import { fasteners } from './fasteners'
 import { nest } from './nest'
+import type { PieceWarning } from '../types'
 import type {
   AluminumLine,
   BomModel,
@@ -24,6 +25,7 @@ export function buildBom(
   settings?: Partial<NestSettings>,
   rules?: FastenerRule[],
   prices?: BomPrices,
+  extra?: { warnings?: PieceWarning[] },
 ): BomResult {
   const cfg = mergeNestSettings(settings)
   const parts = buildParts(model, cfg)
@@ -100,6 +102,7 @@ export function buildBom(
     aluminum,
     hardware,
     fasteners: fastenerLines,
+    warnings: extra?.warnings ?? [],
     totals: {
       weightKg,
       wastePct: nestResult.totalWastePct,

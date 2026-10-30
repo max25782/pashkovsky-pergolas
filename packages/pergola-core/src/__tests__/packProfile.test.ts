@@ -50,6 +50,18 @@ describe('packProfile — rectangle regression (straight cuts)', () => {
     expect(plan.totalWasteMm).toBe(585 + 3390)
   })
 
+  it('gathers offcuts onto fewer bars when first-fit leaves a bar it does not need', () => {
+    const lengths = [600, 600, 600, 500, 500, 400]
+    const mixed = lengths.map((len, i) => makePiece({ id: `m${i}`, lengthAxisMm: len }))
+    const plan = packProfile(mixed, 1000, 0)
+    const sum = lengths.reduce((total, len) => total + len, 0)
+    expect(plan.totalBars).toBe(Math.ceil(sum / 1000))
+    expect(plan.totalBars).toBe(4)
+    const longest = Math.max(...plan.bars.map((bar) => bar.wasteMm))
+    expect(longest).toBeGreaterThan(0)
+    expect(plan.bars.filter((bar) => bar.wasteMm > 1).length).toBeLessThan(4)
+  })
+
   it('agrees with the existing flat-kerf packPiecesIntoBars when all cuts are straight', () => {
     const plan = packProfile(pieces, 6000, 5)
     const legacy = packPiecesIntoBars(lengths, 6000, 5)

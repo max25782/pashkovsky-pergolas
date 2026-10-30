@@ -1,9 +1,12 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useContext, useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
-import { useBoundPlanEditorStore, MIN_EDGE_LENGTH_MM } from '../model/store'
+import { useBoundPlanEditorStore, MIN_EDGE_LENGTH_MM, PlanEditorStoreContext } from '../model/store'
+import { usePlanEditorConstruction } from '../model/constructionContext'
 import { mmToLengthUnit, lengthUnitToMm } from '../input/dynamicInputBuffer'
+import { axisLengthFromUserInputMm, edgeDisplayLengthMm } from './edgeOuterLength'
+import { commitOuterLengthMm } from './commitOuterLength'
 import type { FixedEdge, LengthUnit } from '../geometry/types'
 
 export interface SizesPanelLabels {
@@ -104,7 +107,12 @@ interface EdgeSizeRowProps {
 }
 
 function EdgeSizeRow({ edge, designation, inputUnit, wallCheckboxTitle }: EdgeSizeRowProps) {
+  const construction = usePlanEditorConstruction()
+  const storeApi = useContext(PlanEditorStoreContext)
+  const { displayLengthMm, outerDeltaMm, usesOuterLength } = edgeDisplayLengthMm(edge, construction)
   const updateEdgeLength = useBoundPlanEditorStore((s) => s.updateEdgeLength)
+  const applyOuterLengths = useBoundPlanEditorStore((s) => s.applyOuterLengths)
+  const getFixedEdges = () => storeApi?.getState().fixedEdges ?? []
   const updateEdgeAngle = useBoundPlanEditorStore((s) => s.updateEdgeAngle)
   const setEdgeAttachedToWall = useBoundPlanEditorStore((s) => s.setEdgeAttachedToWall)
   const hoveredEdgeId = useBoundPlanEditorStore((s) => s.hoveredEdgeId)
@@ -120,12 +128,12 @@ function EdgeSizeRow({ edge, designation, inputUnit, wallCheckboxTitle }: EdgeSi
   const lengthFocusedRef = useRef(false)
   const angleFocusedRef = useRef(false)
 
-  const [lengthText, setLengthText] = useState(() => formatNumber(mmToLengthUnit(edge.lengthMm, inputUnit)))
+  const [lengthText, setLengthText] = useState(() => formatNumber(mmToLengthUnit(displayLengthMm, inputUnit)))
   const [angleText, setAngleText] = useState(() => formatNumber(edge.angleDeg))
 
   useEffect(() => {
-    if (!lengthFocusedRef.current) setLengthText(formatNumber(mmToLengthUnit(edge.lengthMm, inputUnit)))
-  }, [edge.lengthMm, inputUnit])
+    if (!lengthFocusedRef.current) setLengthText(formatNumber(mmToLengthUnit(displayLengthMm, inputUnit)))
+  }, [displayLengthMm, inputUnit])
 
   useEffect(() => {
     if (!angleFocusedRef.current) setAngleText(formatNumber(edge.angleDeg))
@@ -137,7 +145,17 @@ function EdgeSizeRow({ edge, designation, inputUnit, wallCheckboxTitle }: EdgeSi
     // MIN_EDGE_LENGTH_MM (model/store.ts): числовой ввод длины стороны минует
     // MIN_COMMIT_LENGTH_PX и раньше мог напечатать почти-дубль вершину прямо
     // на живом контуре.
-    if (Number.isFinite(mm) && mm >= MIN_EDGE_LENGTH_MM) updateEdgeLength(edge.id, mm)
+    if (usesOuterLength && construction?.overlayForFixedEdges) {
+      commitOuterLengthMm(mm, edge.id, {
+        overlayForFixedEdges: construction.overlayForFixedEdges,
+        getFixedEdges,
+        applyOuterLengths: (outerLengthsMm, updatedEdgeIndex) =>
+          applyOuterLengths(outerLengthsMm, updatedEdgeIndex, construction.beamPlanWidthMm, construction.planWidthForEdge),
+      })
+      return
+    }
+    const axisMm = axisLengthFromUserInputMm(mm, outerDeltaMm, usesOuterLength)
+    if (Number.isFinite(axisMm) && axisMm >= MIN_EDGE_LENGTH_MM) updateEdgeLength(edge.id, axisMm)
   }
 
   function commitAngle() {
@@ -214,9 +232,10 @@ function formatNumber(n: number): string {
 const panelStyle: CSSProperties = {
   position: 'absolute',
   top: 16,
-  right: 16,
+  left: 16,
   bottom: 16,
   width: 260,
+  maxWidth: 'min(260px, calc(100% - 200px))',
   display: 'flex',
   flexDirection: 'column',
   gap: 10,

@@ -23,8 +23,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CutPiece, ProfileDimensions, Point2D } from '@pashkovsky/pergola-core'
-import { computeFitToScreenViewport, worldToScreen } from '@pashkovsky/plan-editor'
-import type { Viewport, Point, CanvasSize, WorldBounds } from '@pashkovsky/plan-editor'
+import { computeFitToScreenViewport, worldToScreen } from './viewport'
+import type { Viewport, Point, CanvasSize, WorldBounds } from './viewport'
 import { lamellaFootprintCorners } from './geometry/footprints'
 import { buildDimensionLineLayout } from './geometry/dimensionLayout'
 import { buildCellFrameGeometry, pickRepresentativeLamella } from './geometry/cellFrame'

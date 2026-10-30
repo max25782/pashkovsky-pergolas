@@ -91,3 +91,33 @@ export function groupBeamsIntoGeometricSides(beams: CutPiece[]): GeometricSide[]
 
   return sides
 }
+
+/**
+ * Point where two stock pieces of one straight side meet.
+ * A corner is not a splice: the direction has to stay the same.
+ */
+export function beamSplicePoints(beams: CutPiece[]): Point2D[] {
+  const points: Point2D[] = []
+  let runEnd: Point2D | null = null
+  let runDir: Point2D | null = null
+
+  for (const beam of beams) {
+    const { start, end } = pieceAxis(beam)
+    const segLenMm = len(sub(end, start))
+    const dir: Point2D = segLenMm > 1e-6 ? [(end[0] - start[0]) / segLenMm, (end[1] - start[1]) / segLenMm] : [1, 0]
+    const continuesRun =
+      runEnd != null &&
+      runDir != null &&
+      len(sub(start, runEnd)) <= JOINT_EPS_MM &&
+      Math.abs(dir[0] - runDir[0]) <= DIR_EPS &&
+      Math.abs(dir[1] - runDir[1]) <= DIR_EPS
+    if (continuesRun && runEnd) {
+      points.push(runEnd)
+      runEnd = end
+    } else {
+      runEnd = end
+      runDir = dir
+    }
+  }
+  return points
+}

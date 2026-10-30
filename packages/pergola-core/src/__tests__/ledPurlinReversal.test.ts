@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import { computePurlins } from '../purlins'
 import { segmentLedPurlinsForStock } from '../ledPurlinReversal'
+import { buildPiecesFromPlan } from '../buildPieces'
+import { PERGOLA_CONSTRUCTION_PROFILES } from '../pergolaProfiles'
+import { DEFAULT_PLAN_CONSTRUCTION_PARAMS } from '../planDefaults'
 import { packProfile, DEFAULT_KERF_MM, effectiveKerfMm } from '../packProfile'
 import type { PergolaSpec, ProfileDimensions, Point2D } from '../types'
 
@@ -81,7 +84,7 @@ describe('segmentLedPurlinsForStock — Rule B (90° reversal for an LED purlin 
     // long — proves this test exercises the bug, not an already-fine case.
     const naive = computePurlins(spec, profiles)
     expect(naive.length).toBeGreaterThan(0)
-    expect(naive[0].lengthAxisMm).toBeCloseTo(8000, 1)
+    expect(naive[0].lengthAxisMm).toBeCloseTo(7960, 1)
 
     const result = segmentLedPurlinsForStock(spec, profiles, [], [], DEFAULT_KERF_MM)
     expect(result.reversed).toBe(true)
@@ -90,7 +93,7 @@ describe('segmentLedPurlinsForStock — Rule B (90° reversal for an LED purlin 
     // One divider, splitting 8000mm into 2×4000mm — the uniform fallback
     // (no existing posts/crossing pieces given) — running along X at y=4000.
     expect(result.dividers).toHaveLength(1)
-    expect(result.dividers[0].lengthAxisMm).toBeCloseTo(4000, 1)
+    expect(result.dividers[0].lengthAxisMm).toBeCloseTo(3960, 1)
     expect(result.dividers[0].position[2]).toBeCloseTo(4000, 1) // Y (plan) → world Z
     expect(result.dividers[0].profileId).toBe('beam-1') // ledDividerProfileId unset ⇒ falls back to beamProfileId
 
@@ -194,13 +197,37 @@ describe('segmentLedPurlinsForStock — Rule B dividers on an L-shape respect ea
     const inShortWing = result.dividers.find((d) => d.position[0] > 5000 + 1)
     expect(inShortWing).toBeDefined()
     expect(inShortWing!.position[0]).toBeCloseTo(6000, 1)
-    expect(inShortWing!.lengthAxisMm).toBeCloseTo(4054, 1) // clipped at the step — NOT 8500
+    expect(inShortWing!.lengthAxisMm).toBeCloseTo(4014, 1)
   })
 
   it('the divider landing INSIDE the tall wing (x=3000, i.e. x<5000) legitimately spans the full 8500mm — real geometry, both wings coincide there', () => {
     const inTallWing = result.dividers.find((d) => d.position[0] <= 5000 + 1)
     expect(inTallWing).toBeDefined()
     expect(inTallWing!.position[0]).toBeCloseTo(3000, 1)
-    expect(inTallWing!.lengthAxisMm).toBeCloseTo(8500, 1)
+    expect(inTallWing!.lengthAxisMm).toBeCloseTo(8460, 1)
+  })
+})
+
+describe('segmentLedPurlinsForStock — G-shape + PA3022 (regression: bogus multi-km stock error at dir=0)', () => {
+  const gContour: Point2D[] = [[0, 0], [0, 9996], [13002, 9996], [13002, 4622]]
+
+  it('buildPiecesFromPlan does not report impossible LED purlin lengths', () => {
+    const params = {
+      ...DEFAULT_PLAN_CONSTRUCTION_PARAMS,
+      lamellaDirectionDeg: 90,
+      purlinProfileId: 'PA3022',
+    }
+    expect(() =>
+      buildPiecesFromPlan({ contour: gContour, wallEdgeIndices: [], params }, PERGOLA_CONSTRUCTION_PROFILES),
+    ).not.toThrow()
+    const built = buildPiecesFromPlan(
+      { contour: gContour, wallEdgeIndices: [], params },
+      PERGOLA_CONSTRUCTION_PROFILES,
+    )
+    const led = built.pieces.filter((p) => p.role === 'purlin' && p.profileId === 'PA3022')
+    expect(led.length).toBeGreaterThan(0)
+    for (const p of led) {
+      expect(p.lengthAxisMm).toBeLessThan(20_000)
+    }
   })
 })

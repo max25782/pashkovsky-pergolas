@@ -1,5 +1,7 @@
 /** Linear dimensions in centimetres unless noted. */
 
+import type { PieceWarning } from '../types'
+
 export type PartKind = 'frame' | 'division' | 'shade' | 'angle' | 'hardware'
 
 export type FrameMethod = 'builtin_kant' | 'plain_plus_angle'
@@ -140,6 +142,8 @@ export interface BomResult {
   aluminum: AluminumLine[]
   hardware: BomPart[]
   fasteners: FastenerLine[]
+  /** Kernel span warnings (manual divider placement). Empty when unmarked. */
+  warnings: PieceWarning[]
   totals: {
     weightKg: number
     wastePct: number

@@ -1,10 +1,24 @@
 import type { Point2D, Vector2D, CutPiece, PergolaSpec, ProfileDimensions } from './types'
 import { isCCW } from './miter'
 import { scanLineClip, cutAtEdge, longPointOffset } from './lamellas'
-import { computeSpanDivisionPointsMm } from './lamellaSpans'
+import { resolveContourPurlinPositions } from './lamellaSpans'
 import { resolveLamellaPattern, patternMaxLamellaSpanMm, patternMaxVerticalThicknessMm } from './lamellaPattern'
 import { sanitizeContour } from './contourSanitize'
 import { isHorizontalPlane, offsetAlongNormal, placeOnRoof, roofPlane, type RoofPlane } from './roof'
+import { computeFrame } from './frame'
+import { beamPlanWidthForDrawing, wingShelfFlushBandMm } from './beamPlanWidth'
+import { placeWingShelfFlushBand } from './wingShelfSpan'
+import {
+  collectFrameBeamTrimSegments,
+  measuredOutersForCcwContour,
+  trimDividerAxisSegmentsForFrame,
+} from './dividerFrameTrim'
+import {
+  resolveWingShelfSupport,
+  WING_SHELF_SPAN_DIVIDER_ID,
+} from './planEditorDimensions'
+import { DEFAULT_PLAN_CONSTRUCTION_PARAMS } from './planDefaults'
+import { isRetiredProfileId } from './pergolaProfiles'
 
 const RAD = Math.PI / 180
 const HALF_PI = Math.PI / 2
@@ -14,13 +28,70 @@ function dot2(a: Vector2D, b: Vector2D): number { return a[0] * b[0] + a[1] * b[
 /** Segments shorter than this (mm) are discarded as degenerate — same threshold as lamellas.ts. */
 const MIN_SEGMENT_MM = 1.0
 
+const SQUARE_END = { cutMiterDeg: 0, cutHand: 'straight' as const }
+
+function distPointToSeg(point: Point2D, a: Point2D, b: Point2D): number {
+  const abx = b[0] - a[0]
+  const aby = b[1] - a[1]
+  const len2 = abx * abx + aby * aby
+  if (len2 < 1e-9) return Math.hypot(point[0] - a[0], point[1] - a[1])
+  const t = Math.max(0, Math.min(1, ((point[0] - a[0]) * abx + (point[1] - a[1]) * aby) / len2))
+  return Math.hypot(point[0] - (a[0] + abx * t), point[1] - (a[1] + aby * t))
+}
+
+/** Miter where a shelf end meets a frame side. A side parallel to the shelf is the notch beam, not the cut. */
+function shelfEndCut(
+  point: Point2D,
+  shelfDir: Vector2D,
+  contour: Point2D[],
+): { cutMiterDeg: number; cutHand: 'L' | 'R' | 'straight' } {
+  let best = -1
+  let bestDist = 80
+  const n = contour.length
+  for (let i = 0; i < n; i++) {
+    const a = contour[i]
+    const b = contour[(i + 1) % n]
+    const dx = b[0] - a[0]
+    const dy = b[1] - a[1]
+    const edgeLen = Math.hypot(dx, dy)
+    if (edgeLen < 1) continue
+    if (Math.abs((dx * shelfDir[0] + dy * shelfDir[1]) / edgeLen) > 0.98) continue
+    const dist = distPointToSeg(point, a, b)
+    if (dist < bestDist) {
+      bestDist = dist
+      best = i
+    }
+  }
+  if (best < 0) return SQUARE_END
+  const cut = cutAtEdge(shelfDir, contour, best)
+  if (cut.cutMiterDeg < 3) return SQUARE_END
+  return cut
+}
+
+/**
+ * Contour miter only when this end of a trimmed piece is still the clip end.
+ * A shelf or notch split leaves the other end square (90° to the axis).
+ */
+function cutAtDividerEnd(
+  point: Point2D,
+  clipEnd: Point2D,
+  otherClipEnd: Point2D,
+  contourCut: () => { cutMiterDeg: number; cutHand: 'L' | 'R' | 'straight' },
+): { cutMiterDeg: number; cutHand: 'L' | 'R' | 'straight' } {
+  const near = Math.hypot(point[0] - clipEnd[0], point[1] - clipEnd[1])
+  const far = Math.hypot(point[0] - otherClipEnd[0], point[1] - otherClipEnd[1])
+  const span = Math.hypot(otherClipEnd[0] - clipEnd[0], otherClipEnd[1] - clipEnd[1])
+  if (near + 1 < far && near < Math.max(180, span * 0.35)) return contourCut()
+  return SQUARE_END
+}
+
 /**
  * Compute all purlin (intermediate rafter) CutPieces for one pergola.
  *
- * A purlin runs PERPENDICULAR to the lamellas, at evenly-spaced positions
+ * A purlin runs PERPENDICULAR to the lamellas, at Max equal-clear positions
  * along the lamella direction, one crossing line whenever the unsupported
  * span of a lamella would otherwise exceed lamellaProfile.maxLamellaSpanMm
- * (see computeSpanDivisionPointsMm — same helper, and the same crossing
+ * (see resolvePurlinPositionsMm — same helper, and the same crossing
  * points, that computeLamellas uses to segment lamellas when the purlin
  * profile has interruptsLamella: true, so a purlin and a lamella segment
  * boundary always agree).
@@ -73,6 +144,7 @@ export function computePurlins(
   spec: PergolaSpec,
   profiles: Map<string, ProfileDimensions>,
   roof?: RoofPlane,
+  options?: { frameBeams?: CutPiece[] },
 ): CutPiece[] {
   const { contour, lamellaDirectionDeg, heightMm, color, purlinProfileId } = spec
 
@@ -97,6 +169,7 @@ export function computePurlins(
   // contourSanitize.ts) — computePurlins is called independently of both.
   const cleanContour = sanitizeContour(contour)
   const pts: Point2D[] = isCCW(cleanContour) ? cleanContour : [...cleanContour].reverse()
+  const measuredCcw = measuredOutersForCcwContour(cleanContour, spec.measuredOuterLengthMmByEdgeIndex)
 
   const θ = lamellaDirectionDeg * RAD
   // Purlin length axis runs along `perp` (⊥ to the lamellas); its own scan
@@ -104,72 +177,198 @@ export function computePurlins(
   const dir: Vector2D  = [Math.cos(θ), Math.sin(θ)]
   const perp: Vector2D = [-Math.sin(θ), Math.cos(θ)]
 
-  const dirProjections = pts.map(p => dot2(p, dir))
-  const dirMin = Math.min(...dirProjections)
-  const dirMax = Math.max(...dirProjections)
+  const divisionPoints = resolveContourPurlinPositions({
+    contour: pts,
+    lamellaDirectionDeg: spec.lamellaDirectionDeg,
+    maxSpanMm: maxLamellaSpanMm,
+    mode: spec.purlinDividers?.mode,
+    lines: spec.purlinDividers?.lines,
+    profiles,
+    beamProfileId: spec.beamProfileId,
+    wallProfileId: spec.wallProfileId,
+    wallEdgeIndices: spec.wallEdgeIndices,
+    wallBeamWidthVersion: spec.wallBeamWidthVersion,
+    measuredOuterLengthMmByEdgeIndex: spec.measuredOuterLengthMmByEdgeIndex,
+    layoutVersion: spec.purlinClearLayoutVersion === 1 ? 1 : undefined,
+  })
 
-  const divisionPointsMm = computeSpanDivisionPointsMm(dirMin, dirMax, maxLamellaSpanMm)
+  const frameBeams =
+    options?.frameBeams ??
+    (profiles.get(spec.beamProfileId) != null
+      ? computeFrame(spec, profiles).beams
+      : [])
+  const beamTrim = collectFrameBeamTrimSegments(frameBeams, profiles)
+  const wingSupport = resolveWingShelfSupport({
+    contour: cleanContour,
+    params: {
+      ...DEFAULT_PLAN_CONSTRUCTION_PARAMS,
+      lamellaDirectionDeg: spec.lamellaDirectionDeg,
+      beamProfileId: spec.beamProfileId,
+      purlinProfileId: spec.purlinProfileId ?? DEFAULT_PLAN_CONSTRUCTION_PARAMS.purlinProfileId,
+      purlinDividers: spec.purlinDividers ?? { mode: 'auto' },
+      measuredOuterLengthMmByEdgeIndex: spec.measuredOuterLengthMmByEdgeIndex,
+      purlinClearLayoutVersion: spec.purlinClearLayoutVersion,
+      purlinMaxSpanMm: spec.purlinMaxSpanMm,
+      postMaxSpanMm: spec.postMaxSpanMm,
+      wingShelfProfileId: spec.wingShelfProfileId,
+      wallProfileId: spec.wallProfileId,
+      wallBeamWidthVersion: spec.wallBeamWidthVersion,
+    },
+    profiles,
+    beams: frameBeams,
+    wallEdgeIndices: spec.wallEdgeIndices,
+  })
+  // The shelf stays on the notch centerline. The flush band is only for a
+  // wall that is narrower than the free beam. A wall profile with no wall
+  // edge does not move the shelf.
+  const hasWallEdge = (spec.wallEdgeIndices?.length ?? 0) > 0
+  const flushBandMm = hasWallEdge
+    ? wingShelfFlushBandMm(
+        profiles,
+        spec.beamProfileId,
+        spec.wallProfileId,
+        spec.wallBeamWidthVersion,
+      )
+    : null
+  const flushBand = wingSupport && flushBandMm != null
+    ? placeWingShelfFlushBand(wingSupport, cleanContour, flushBandMm)
+    : null
+  const shelfHalfWidthMm = wingSupport
+    ? beamPlanWidthForDrawing(profiles, wingSupport.profileId).planWidthMm / 2
+    : undefined
+  const wingShelfClip =
+    wingSupport != null && wingSupport.lengthMm >= MIN_SEGMENT_MM
+      ? flushBand != null
+        ? {
+            start: flushBand.clipStart,
+            end: flushBand.clipEnd,
+            lengthMm: wingSupport.lengthMm,
+            halfWidthMm: shelfHalfWidthMm,
+          }
+        : { start: wingSupport.start, end: wingSupport.end, lengthMm: wingSupport.lengthMm, halfWidthMm: shelfHalfWidthMm }
+      : undefined
 
   const pieces: CutPiece[] = []
   let id = 0
 
-  for (const t of divisionPointsMm) {
+  for (const { id: dividerId, positionMm: t } of divisionPoints) {
     const anchor: Point2D = [dir[0] * t, dir[1] * t]
     const hits = scanLineClip(perp, dir, t, anchor, pts)
 
     for (let k = 0; k + 1 < hits.length; k += 2) {
       const h0 = hits[k]
       const h1 = hits[k + 1]
-      const lengthAxisMm = h1.s - h0.s
-      if (lengthAxisMm < MIN_SEGMENT_MM) continue
+      const clipLen = h1.s - h0.s
+      if (clipLen < MIN_SEGMENT_MM) continue
 
-      const startPt: Point2D = [
+      const clipStart: Point2D = [
         anchor[0] + h0.s * perp[0],
         anchor[1] + h0.s * perp[1],
       ]
-      const endPt: Point2D = [
+      const clipEnd: Point2D = [
         anchor[0] + h1.s * perp[0],
         anchor[1] + h1.s * perp[1],
       ]
 
-      const { cutMiterDeg: cms, cutHand: chs } = cutAtEdge(perp, pts, h0.edgeIndex)
-      const { cutMiterDeg: cme, cutHand: che } = cutAtEdge(perp, pts, h1.edgeIndex)
-
-      const δStart = longPointOffset(cms, purlinProfile.widthMm)
-      const δEnd   = longPointOffset(cme, purlinProfile.widthMm)
-      const placed = sloped ? placeOnRoof(startPt, endPt, plane) : null
-      const axisMm = placed?.axisMm ?? lengthAxisMm
-
-      pieces.push({
-        id:       `purlin-${id++}`,
-        role:     'purlin',
-        profileId: purlinProfileId,
-
-        lengthAxisMm: axisMm,
-        lengthLongMm:  axisMm + δStart + δEnd,
-        lengthShortMm: axisMm - δStart - δEnd,
-
-        cutMiterStartDeg: cms,
-        cutBevelStartDeg: 0,
-        cutHandStart:     chs,
-
-        cutMiterEndDeg: cme,
-        cutBevelEndDeg: 0,
-        cutHandEnd:     che,
-
-        // plan (x, y) → world (x, baseYmm, y); Y is up in Three.js. baseYmm
-        // is heightMm (flush with lamella/beam bottom) when this purlin
-        // interrupts the lamella, or the lamella's own top face when it
-        // doesn't — see VERTICAL SEATING RULE above.
-        position: placed
-          ? offsetAlongNormal(placed.position, plane, aboveLamellaMm)
-          : [startPt[0], baseYmm, startPt[1]],
-        // Purlin's own length axis points along `perp`, i.e. at angle θ+90°
-        // from +X — rotation[1] follows the same −angle convention as beams.
-        rotation: placed?.rotation ?? [0, -(θ + HALF_PI), 0],
-        color,
+      const trimmed = trimDividerAxisSegmentsForFrame({
+        start: clipStart,
+        end: clipEnd,
+        beams: beamTrim,
+        minLengthMm: MIN_SEGMENT_MM,
+        wingShelfClip: wingShelfClip,
+        contour: pts,
+        measuredOuterLengthMmByEdgeIndex: measuredCcw,
+        ignoreBeamsBehindEnds: true,
       })
+
+      for (const seg of trimmed) {
+        const startPt = seg.start
+        const endPt = seg.end
+        const lengthAxisMm = seg.lengthAxisMm
+
+        // A shelf split keeps the contour miter only on the end that still
+        // meets that edge. The end on the shelf is a square cut.
+        const startCut = cutAtDividerEnd(startPt, clipStart, clipEnd, () => cutAtEdge(perp, pts, h0.edgeIndex))
+        const endCut = cutAtDividerEnd(endPt, clipEnd, clipStart, () => cutAtEdge(perp, pts, h1.edgeIndex))
+        const cms = startCut.cutMiterDeg
+        const chs = startCut.cutHand
+        const cme = endCut.cutMiterDeg
+        const che = endCut.cutHand
+
+        const δStart = longPointOffset(cms, purlinProfile.widthMm)
+        const δEnd = longPointOffset(cme, purlinProfile.widthMm)
+        const placed = sloped ? placeOnRoof(startPt, endPt, plane) : null
+        const axisMm = placed?.axisMm ?? lengthAxisMm
+
+        pieces.push({
+          id: `purlin-${id++}`,
+          role: 'purlin',
+          dividerId,
+          clipPlanStart: clipStart,
+          clipPlanEnd: clipEnd,
+          profileId: purlinProfileId,
+
+          lengthAxisMm: axisMm,
+          lengthLongMm: axisMm + δStart + δEnd,
+          lengthShortMm: axisMm - δStart - δEnd,
+
+          cutMiterStartDeg: cms,
+          cutBevelStartDeg: 0,
+          cutHandStart: chs,
+
+          cutMiterEndDeg: cme,
+          cutBevelEndDeg: 0,
+          cutHandEnd: che,
+
+          position: placed
+            ? offsetAlongNormal(placed.position, plane, aboveLamellaMm)
+            : [startPt[0], baseYmm, startPt[1]],
+          rotation: placed?.rotation ?? [0, -(θ + HALF_PI), 0],
+          color,
+        })
+      }
     }
+  }
+
+  if (wingSupport && wingSupport.lengthMm >= MIN_SEGMENT_MM && profiles.has(wingSupport.profileId)) {
+    const shelfProfileId = wingSupport.profileId
+    const startPt = flushBand?.axisStart ?? wingSupport.start
+    const endPt = flushBand?.axisEnd ?? wingSupport.end
+    const lengthAxisMm = wingSupport.lengthMm
+    const placed = sloped ? placeOnRoof(startPt, endPt, plane) : null
+    const axisMm = placed?.axisMm ?? lengthAxisMm
+    const shelfDx = endPt[0] - startPt[0]
+    const shelfDy = endPt[1] - startPt[1]
+    const shelfLen = Math.hypot(shelfDx, shelfDy) || 1
+    const shelfDir: Vector2D = [shelfDx / shelfLen, shelfDy / shelfLen]
+    const shelfθ = Math.atan2(shelfDy, shelfDx)
+    const cutShelfEnd = !isRetiredProfileId(shelfProfileId)
+    const startCut = cutShelfEnd ? shelfEndCut(startPt, shelfDir, pts) : SQUARE_END
+    const endCut = cutShelfEnd ? shelfEndCut(endPt, shelfDir, pts) : SQUARE_END
+    const shelfWidth = profiles.get(shelfProfileId)?.widthMm ?? 40
+    const shelfLong = longPointOffset(startCut.cutMiterDeg, shelfWidth) + longPointOffset(endCut.cutMiterDeg, shelfWidth)
+    pieces.push({
+      id: `purlin-${id++}`,
+      role: 'purlin',
+      dividerId: WING_SHELF_SPAN_DIVIDER_ID,
+      clipPlanStart: startPt,
+      clipPlanEnd: endPt,
+      profileId: shelfProfileId,
+      lengthAxisMm: axisMm,
+      lengthLongMm: axisMm + shelfLong,
+      lengthShortMm: axisMm - shelfLong,
+      cutMiterStartDeg: startCut.cutMiterDeg,
+      cutBevelStartDeg: 0,
+      cutHandStart: startCut.cutHand,
+      cutMiterEndDeg: endCut.cutMiterDeg,
+      cutBevelEndDeg: 0,
+      cutHandEnd: endCut.cutHand,
+      position: placed
+        ? offsetAlongNormal(placed.position, plane, 0)
+        : [startPt[0], heightMm, startPt[1]],
+      rotation: placed?.rotation ?? [0, -shelfθ, 0],
+      color,
+    })
   }
 
   return pieces

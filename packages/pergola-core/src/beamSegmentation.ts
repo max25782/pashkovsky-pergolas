@@ -46,10 +46,53 @@ export interface BeamSegmentationIssue {
   maxStockMm: number
 }
 
+export interface StockJoint {
+  position: Point2D
+  profileId: string
+  pieceRole: CutPiece['role']
+}
+
 export interface SegmentBeamsForStockResult {
   beams: CutPiece[]
   posts: CutPiece[]
   issues: BeamSegmentationIssue[]
+  joints: StockJoint[]
+}
+
+/** Length packProfile reserves: long point plus the larger end kerf. */
+function orderedSlotMm(
+  lengthLongMm: number,
+  kerfMm: number,
+  miterStartDeg: number,
+  bevelStartDeg: number,
+  miterEndDeg: number,
+  bevelEndDeg: number,
+): number {
+  return lengthLongMm + Math.max(
+    effectiveKerfMm(kerfMm, miterStartDeg, bevelStartDeg),
+    effectiveKerfMm(kerfMm, miterEndDeg, bevelEndDeg),
+  )
+}
+
+/**
+ * planBoundaries sizes windows from the axis. A measured long point can
+ * still exceed the bar after kerf while the axis fits the capacity, and
+ * an empty boundary list then keeps a piece no stock length can hold.
+ * One retry with a shorter capacity splits that piece.
+ */
+function planStockBoundaries(
+  lengthMm: number,
+  capacityMm: number,
+  candidates: JointCandidate[],
+  canAddNewPost: boolean,
+  slotMm: number,
+  maxStockMm: number,
+): { boundaries: number[]; newPostDistances: number[] } | null {
+  const plan = planBoundaries(lengthMm, capacityMm, candidates, canAddNewPost)
+  if (!plan || plan.boundaries.length > 0 || slotMm <= maxStockMm + EPS_MM) return plan
+  const forced = Math.min(capacityMm, lengthMm - EPS_MM - 1)
+  if (!(forced > MIN_SEGMENT_MM)) return plan
+  return planBoundaries(lengthMm, forced, candidates, canAddNewPost)
 }
 
 function dist2(a: Point2D, b: Point2D): number {
@@ -148,8 +191,12 @@ export function findJointCandidates(
 
   for (const other of allOtherRunPieces) {
     if (other.id === beam.id) continue
-    const { start, end } = pieceAxis(other)
-    for (const pt of [start, end]) {
+    const axis = pieceAxis(other)
+    const pts =
+      other.clipPlanStart != null && other.clipPlanEnd != null
+        ? [other.clipPlanStart, other.clipPlanEnd]
+        : [axis.start, axis.end]
+    for (const pt of pts) {
       const d = projectOntoAxis(beamStart, beamDir, pt)
       if (d != null) add(d, false)
     }
@@ -474,6 +521,7 @@ export function segmentBeamsForStock(
   // own candidate too (e.g. two collinear beams sharing a line) — grown as
   // we go, starting from the real post grid.
   const crossingPool = [...frame.beams, ...crossingPieces]
+  const joints: StockJoint[] = []
 
   for (const beam of frame.beams) {
     const profile = profiles.get(beam.profileId)
@@ -505,7 +553,20 @@ export function segmentBeamsForStock(
         hasRealStart,
         hasRealEnd,
       )
-      if (wingLenMm + wingReserveMm <= maxStockMm + EPS_MM) continue
+      const measuredSlotMm = hasRealStart && hasRealEnd
+        ? orderedSlotMm(
+          beam.lengthLongMm,
+          kerfMm,
+          beam.cutMiterStartDeg,
+          beam.cutBevelStartDeg,
+          beam.cutMiterEndDeg,
+          beam.cutBevelEndDeg,
+        )
+        : wingLenMm + wingReserveMm
+      if (
+        wingLenMm + wingReserveMm <= maxStockMm + EPS_MM
+        && measuredSlotMm <= maxStockMm + EPS_MM
+      ) continue
 
       // Conservative single capacity used for every stock window inside
       // this wing. Shape boundaries are immutable: candidates are filtered
@@ -539,7 +600,14 @@ export function segmentBeamsForStock(
           distMm: candidate.distMm - wingStartMm,
           hasPost: candidate.hasPost,
         }))
-      const wingPlan = planBoundaries(wingLenMm, capacityMm, wingCandidates, canAddNewPost)
+      const wingPlan = planStockBoundaries(
+        wingLenMm,
+        capacityMm,
+        wingCandidates,
+        canAddNewPost,
+        measuredSlotMm,
+        maxStockMm,
+      )
 
       if (!wingPlan) {
         issues.push({
@@ -655,8 +723,158 @@ export function segmentBeamsForStock(
       const already = outputPosts.some((p) => dist2(pieceAxis(p).start, pos) <= EPS_MM)
       if (already) continue
       outputPosts.push(makePost(spec, pos, nextPostId, frame.roof))
+      joints.push({ position: pos, profileId: beam.profileId, pieceRole: beam.role })
     }
   }
 
-  return { beams: outputBeams, posts: outputPosts, issues }
+  return { beams: outputBeams, posts: outputPosts, issues, joints }
+}
+
+export interface SegmentRunPiecesForStockResult {
+  pieces: CutPiece[]
+  posts: CutPiece[]
+  joints: StockJoint[]
+}
+
+/**
+ * Splice any long run (LED purlin, ordinary purlin, extra beam) onto stock.
+ * Same joint priority as perimeter beams: existing post → nearby post within
+ * snap tolerance → new post under the splice. No maximum compound length.
+ */
+export function segmentRunPiecesForStock(
+  spec: PergolaSpec,
+  pieces: CutPiece[],
+  existingPosts: CutPiece[],
+  crossingPieces: CutPiece[],
+  profiles: Map<string, ProfileDimensions>,
+  kerfMm = 0,
+  snapToleranceMm = DEFAULT_SNAP_TOLERANCE_MM,
+  roof?: RoofPlane,
+): SegmentRunPiecesForStockResult {
+  const canAddNewPost = (spec.supportType ?? 'posts') !== 'hanging'
+  const outputPieces: CutPiece[] = []
+  const outputPosts: CutPiece[] = [...existingPosts]
+  const joints: StockJoint[] = []
+  let newPostSeq = 0
+  const nextPostId = () => `post-run-${newPostSeq++}`
+  const crossingPool = [...crossingPieces]
+
+  for (const piece of pieces) {
+    const profile = profiles.get(piece.profileId)
+    const stockLengths = profile?.availableStockLengthsMm
+    const maxStockMm = stockLengths && stockLengths.length > 0 ? Math.max(...stockLengths) : undefined
+    const { start, end } = pieceAxis(piece)
+    const totalLenMm = piece.lengthAxisMm
+    if (totalLenMm < MIN_SEGMENT_MM || maxStockMm == null || profile == null) {
+      outputPieces.push(piece)
+      continue
+    }
+    const dir: Point2D = [(end[0] - start[0]) / totalLenMm, (end[1] - start[1]) / totalLenMm]
+    const allCandidates = findJointCandidates(piece, start, dir, totalLenMm, outputPosts, crossingPool)
+    const reserveWhole = segmentReserveMm(piece, profile.widthMm, kerfMm, true, true)
+    const slotMm = orderedSlotMm(
+      piece.lengthLongMm,
+      kerfMm,
+      piece.cutMiterStartDeg,
+      piece.cutBevelStartDeg,
+      piece.cutMiterEndDeg,
+      piece.cutBevelEndDeg,
+    )
+    if (totalLenMm + reserveWhole <= maxStockMm + EPS_MM && slotMm <= maxStockMm + EPS_MM) {
+      outputPieces.push(piece)
+      continue
+    }
+
+    const reserveFirstMm = segmentReserveMm(piece, profile.widthMm, kerfMm, true, false)
+    const reserveInternalMm = segmentReserveMm(piece, profile.widthMm, kerfMm, false, false)
+    const reserveLastMm = segmentReserveMm(piece, profile.widthMm, kerfMm, false, true)
+    const capacityMm = maxStockMm - Math.max(reserveFirstMm, reserveInternalMm, reserveLastMm)
+    if (capacityMm <= MIN_SEGMENT_MM) {
+      outputPieces.push(piece)
+      continue
+    }
+
+    const plan = planStockBoundaries(totalLenMm, capacityMm, allCandidates, canAddNewPost, slotMm, maxStockMm)
+    if (!plan) {
+      outputPieces.push(piece)
+      continue
+    }
+
+    const newPostSet = new Set(plan.newPostDistances)
+    const snappedBoundaries = plan.boundaries.map((distanceMm, index) => {
+      if (!newPostSet.has(distanceMm)) return distanceMm
+      const prevMm = index === 0 ? 0 : plan.boundaries[index - 1]
+      const nextMm = index + 1 < plan.boundaries.length ? plan.boundaries[index + 1] : totalLenMm
+      const snappedMm = snapBoundaryToExistingPost(
+        distanceMm,
+        prevMm,
+        nextMm,
+        index === 0,
+        index === plan.boundaries.length - 1,
+        allCandidates,
+        piece,
+        profile.widthMm,
+        kerfMm,
+        maxStockMm,
+        snapToleranceMm,
+      )
+      if (Math.abs(snappedMm - distanceMm) > EPS_MM) newPostSet.delete(distanceMm)
+      return snappedMm
+    })
+
+    const cutPoints = snappedBoundaries
+      .sort((a, b) => a - b)
+      .filter((distanceMm, index, sorted) =>
+        index === 0 || Math.abs(distanceMm - sorted[index - 1]) > EPS_MM)
+    const boundaries = [0, ...cutPoints, totalLenMm]
+    let segIdx = 0
+    for (let seg = 0; seg + 1 < boundaries.length; seg++) {
+      const isFirst = seg === 0
+      const isLast = seg === boundaries.length - 2
+      const segStartMm = boundaries[seg]
+      const segEndMm = boundaries[seg + 1]
+      const segLenMm = segEndMm - segStartMm
+      if (segLenMm < MIN_SEGMENT_MM) continue
+      const segCms = isFirst ? piece.cutMiterStartDeg : 0
+      const segChs = isFirst ? piece.cutHandStart : ('straight' as const)
+      const segCme = isLast ? piece.cutMiterEndDeg : 0
+      const segChe = isLast ? piece.cutHandEnd : ('straight' as const)
+      const segCbs = isFirst ? piece.cutBevelStartDeg : 0
+      const segCbe = isLast ? piece.cutBevelEndDeg : 0
+      const δStart = longPointOffset(segCms, profile.widthMm)
+      const δEnd = longPointOffset(segCme, profile.widthMm)
+      const segStartPt: Point2D = [start[0] + segStartMm * dir[0], start[1] + segStartMm * dir[1]]
+      outputPieces.push({
+        ...piece,
+        id: `${piece.id}-seg${segIdx++}`,
+        lengthAxisMm: segLenMm,
+        lengthLongMm: segLenMm + δStart + δEnd,
+        lengthShortMm: segLenMm - δStart - δEnd,
+        cutMiterStartDeg: segCms,
+        cutBevelStartDeg: segCbs,
+        cutHandStart: segChs,
+        cutMiterEndDeg: segCme,
+        cutBevelEndDeg: segCbe,
+        cutHandEnd: segChe,
+        position: [segStartPt[0], piece.position[1], segStartPt[1]],
+      })
+    }
+
+    for (const distMm of newPostSet) {
+      if (!canAddNewPost) continue
+      const pos: Point2D = [start[0] + distMm * dir[0], start[1] + distMm * dir[1]]
+      const already = outputPosts.some((p) => dist2(pieceAxis(p).start, pos) <= EPS_MM)
+      if (already) continue
+      outputPosts.push(makePost(spec, pos, nextPostId, roof))
+      joints.push({ position: pos, profileId: piece.profileId, pieceRole: piece.role })
+    }
+    for (const distMm of cutPoints) {
+      if (newPostSet.has(distMm)) continue
+      const pos: Point2D = [start[0] + distMm * dir[0], start[1] + distMm * dir[1]]
+      if (joints.some((j) => dist2(j.position, pos) <= EPS_MM)) continue
+      joints.push({ position: pos, profileId: piece.profileId, pieceRole: piece.role })
+    }
+  }
+
+  return { pieces: outputPieces, posts: outputPosts, joints }
 }

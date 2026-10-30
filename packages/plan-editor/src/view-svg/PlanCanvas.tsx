@@ -5,6 +5,7 @@ import { useBoundPlanEditorStore } from '../model/store'
 import { usePlanEditorInput } from '../input/usePlanEditorInput'
 import { currentAnchor } from '../geometry/chain'
 import { closureGap } from '../geometry/closure'
+import { effectiveClosureGapMmForDisplay } from '../geometry/outerInputClosure'
 import { DEFAULT_SNAP_CONFIG } from '../geometry/types'
 import { StartPoint } from './StartPoint'
 import { RubberEdge } from './RubberEdge'
@@ -12,6 +13,8 @@ import { FixedEdges } from './FixedEdges'
 import { ClosureGapIndicator } from './ClosureGapIndicator'
 import { DynamicInputBadge } from './DynamicInputBadge'
 import { Grid } from './Grid'
+import type { PlanEditorOverlayModel } from '@pashkovsky/pergola-core'
+import { PlanEditorCanvasOverlay } from '@pashkovsky/pergola-drawing'
 
 export interface PlanCanvasLabels {
   /** Тултип у стартовой вершины в зоне магнита замыкания — «клик замкнёт контур». */
@@ -20,6 +23,9 @@ export interface PlanCanvasLabels {
 
 interface PlanCanvasProps {
   labels: PlanCanvasLabels
+  constructionOverlay?: PlanEditorOverlayModel | null
+  selectedDividerId?: string | null
+  onSelectDivider?: (id: string | null) => void
 }
 
 /**
@@ -28,7 +34,12 @@ interface PlanCanvasProps {
  * (нужно для fit-to-screen — реальный размер холста известен только после mount).
  * Вся геометрия и вся модель — в geometry/ и model/.
  */
-export function PlanCanvas({ labels }: PlanCanvasProps) {
+export function PlanCanvas({
+  labels,
+  constructionOverlay,
+  selectedDividerId,
+  onSelectDivider,
+}: PlanCanvasProps) {
   const svgRef = useRef<SVGSVGElement>(null)
   const [canvasPx, setCanvasPx] = useState({ widthPx: 0, heightPx: 0 })
 
@@ -67,7 +78,15 @@ export function PlanCanvas({ labels }: PlanCanvasProps) {
 
   // Невязка — чистая функция от текущих сторон, пересчитывается на каждое
   // изменение fixedEdges (commit, правка длины/угла), а не только при закрытии.
-  const gap = useMemo(() => closureGap(fixedEdges), [fixedEdges])
+  const gap = useMemo(
+    () =>
+      effectiveClosureGapMmForDisplay(fixedEdges, {
+        usesOuterLengths: constructionOverlay != null,
+        outerLengthMm: (edge) =>
+          constructionOverlay?.sides.find((s) => s.edgeId === edge.id)?.outerLengthMm,
+      }),
+    [fixedEdges, constructionOverlay],
+  )
 
   // Якорь следующей резиновой линии — конец последней зафиксированной стороны,
   // либо startPoint, если цепочка ещё пуста. Считаем через useMemo (не через
@@ -116,6 +135,12 @@ export function PlanCanvas({ labels }: PlanCanvasProps) {
   const ambiguousEdgeIds = ambiguousCandidates.map((i) => fixedEdges[i]?.id).filter((id): id is string => id != null)
 
   const lastFixedPoint = fixedEdges.length > 0 ? fixedEdges[fixedEdges.length - 1].to : null
+  const showOuterOverlay = constructionOverlay != null && isClosed
+
+  const contourForOverlay = useMemo(
+    () => fixedEdges.map((e) => e.from),
+    [fixedEdges],
+  )
 
   return (
     <svg
@@ -140,9 +165,19 @@ export function PlanCanvas({ labels }: PlanCanvasProps) {
         hoveredEdgeId={hoveredEdgeId}
         worstEdgeId={worstEdgeId}
         ambiguousEdgeIds={ambiguousEdgeIds}
+        hideAxisLengthLabels={showOuterOverlay}
       />
+      {showOuterOverlay && (
+        <PlanEditorCanvasOverlay
+          model={constructionOverlay}
+          contour={contourForOverlay}
+          viewport={viewport}
+          selectedDividerId={selectedDividerId}
+          onSelectDivider={onSelectDivider}
+        />
+      )}
       {isClosed && lastFixedPoint && (
-        <ClosureGapIndicator lastPoint={lastFixedPoint} startPoint={startPoint} gapDistMm={gap.distMm} viewport={viewport} />
+        <ClosureGapIndicator lastPoint={lastFixedPoint} startPoint={startPoint} gapDistMm={gap} viewport={viewport} />
       )}
       {draftEdge && <RubberEdge edge={draftEdge} viewport={viewport} />}
       {draftEdge && canDraw && (

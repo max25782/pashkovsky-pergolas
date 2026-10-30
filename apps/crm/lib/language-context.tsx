@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { NextIntlClientProvider } from 'next-intl'
-import { defaultCrmLanguageForCompany } from '@/lib/company-default-language'
 import { fetchWithTimeout, DEFAULT_SUPABASE_TIMEOUT_MS } from '@/lib/supabase/fetch-with-timeout'
 import heMessages from '../messages/he.json'
 import ruMessages from '../messages/ru.json'
@@ -41,8 +40,8 @@ function applyDocumentLocale(lang: Language) {
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [intl, setIntl] = useState<IntlState>({
-    locale: 'en',
-    messages: enMessages as Record<string, unknown>,
+    locale: 'he',
+    messages: heMessages as Record<string, unknown>,
   })
 
   useEffect(() => {
@@ -54,29 +53,14 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       setIntl({ locale: lang, messages: loadMessages(lang) })
     }
 
-    const saved = localStorage.getItem('crm_language') as Language | null
-    if (saved && ['he', 'ru', 'en', 'sr'].includes(saved)) {
-      apply(saved)
-      return () => {
-        cancelled = true
-      }
-    }
-
-    // Bounded (see fetch-with-timeout.ts) — same "companies/me" call chain
-    // that hung ~18 minutes server-side on a stalled Supabase connection;
-    // a stalled connection on THIS leg would otherwise leave the language
-    // provider stuck on its initial 'en' default indefinitely too.
     fetchWithTimeout(DEFAULT_SUPABASE_TIMEOUT_MS)('/api/companies/me', { credentials: 'same-origin' })
-      .then((res) => {
-        if (!res.ok) return defaultCrmLanguageForCompany(null)
-        return res.json().then((data: { company_name?: string }) =>
-          defaultCrmLanguageForCompany(data.company_name),
-        )
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { language?: string } | null) => {
+        const raw = data?.language
+        const lang: Language = raw === 'ru' || raw === 'en' || raw === 'sr' || raw === 'he' ? raw : 'he'
+        apply(lang)
       })
-      .catch(() => defaultCrmLanguageForCompany(null))
-      .then((initial) => {
-        apply(initial as Language)
-      })
+      .catch(() => apply('he'))
 
     return () => {
       cancelled = true
@@ -84,9 +68,16 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const setLanguage = (lang: Language) => {
-    localStorage.setItem('crm_language', lang)
     applyDocumentLocale(lang)
     setIntl({ locale: lang, messages: loadMessages(lang) })
+    void fetchWithTimeout(DEFAULT_SUPABASE_TIMEOUT_MS)('/api/companies/me', {
+      method: 'PATCH',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ language: lang }),
+    }).catch(() => {
+      /* The screen already shows the chosen language. The next load reads the saved setting. */
+    })
   }
 
   return (

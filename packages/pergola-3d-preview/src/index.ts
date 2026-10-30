@@ -11,7 +11,7 @@ export {
 } from './geometryBuilder'
 
 export { PergolaCutPieceScene } from './PergolaCutPieceScene'
-export type { PergolaCutPieceSceneProps } from './PergolaCutPieceScene'
+export type { PergolaCutPieceSceneProps, DividerEditProps } from './PergolaCutPieceScene'
 
 export { PergolaCutPieceViewer } from './PergolaCutPieceViewer'
 export type { PergolaCutPieceViewerProps } from './PergolaCutPieceViewer'

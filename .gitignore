@@ -49,3 +49,6 @@ next-env.d.ts
 
 # CDK output (large generated assets)
 infrastructure/cdk.out/
+
+# Snapshot written only by scripts/replace-purlin-led-6040.ts --apply
+apps/crm/scripts/.purlin-led-6040-rollback.json

@@ -77,4 +77,33 @@ describe('LamellaLayoutSheet', () => {
     const { container } = render(<LamellaLayoutSheet pieces={[]} profiles={PROFILES} />)
     expect(container.querySelector('svg')).not.toBeNull()
   })
+
+  it('factory sections draw one rectangle per section with W×H, not per-row labels', () => {
+    const sections = [
+      {
+        id: 'sec-0',
+        widthMm: 1271.7,
+        heightMm: 3370,
+        clearWMm: 1286.7,
+        clearHMm: 3400,
+        lamellaCount: 37,
+        pitchMm: 90,
+        minX: 0,
+        maxX: 1271.7,
+        minY: 0,
+        maxY: 3370,
+        faceX0: 'frame' as const,
+        faceX1: 'purlin' as const,
+        faceY0: 'frame' as const,
+        faceY1: 'frame' as const,
+      },
+    ]
+    const { container } = render(
+      <LamellaLayoutSheet pieces={[]} profiles={PROFILES} sections={sections} />,
+    )
+    expect(container.querySelectorAll('polygon')).toHaveLength(1)
+    expect(container.textContent).toContain('A')
+    expect(container.textContent).not.toContain('1271.7×3370')
+    expect(container.textContent).not.toContain('37 × 90')
+  })
 })

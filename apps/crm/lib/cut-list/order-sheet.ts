@@ -1,4 +1,4 @@
-import type { CutPiece, ProfileDimensions, StockPlan } from '@pashkovsky/pergola-core'
+import type { CutPiece, ProfileDimensions, StockBar, StockPlan } from '@pashkovsky/pergola-core'
 import { groupCutPiecesByBundle, packProfile, DEFAULT_KERF_MM } from '@pashkovsky/pergola-core'
 
 /**
@@ -69,6 +69,11 @@ export interface ProfileBundlePlan {
   options: StockLengthOption[]
   /** Fewest bars wins, ties broken by least waste — same rule as compareStockLengthOptions. null iff options is empty. */
   recommendedStockLengthMm: number | null
+  /**
+   * Longest lamella in this bundle that does not fit the longest bar.
+   * A warning, not a splice: lamellas are never joined automatically.
+   */
+  lamellaOversizeMm: number | null
 }
 
 /**
@@ -82,6 +87,23 @@ export interface ProfileBundlePlan {
  *                   weightKgPerMeter come from one consistent source.
  * @param kerfMm   Saw kerf, mm. Default DEFAULT_KERF_MM.
  */
+/** Edge index of a contour beam, including a stock segment `beam-4-seg0`. */
+export function contourBeamEdgeIndex(pieceId: string): number | null {
+  const match = /^beam-(\d+)(?:-seg\d+)?$/.exec(pieceId)
+  return match ? Number(match[1]) : null
+}
+
+/** Wall beams stay on the plan. They are not ordered and not cut. */
+export function piecesForCutting(pieces: CutPiece[], wallEdgeIndices: readonly number[]): CutPiece[] {
+  const walls = new Set(wallEdgeIndices)
+  if (walls.size === 0) return pieces
+  return pieces.filter((piece) => {
+    if (piece.role !== 'beam') return true
+    const edge = contourBeamEdgeIndex(piece.id)
+    return edge == null || !walls.has(edge)
+  })
+}
+
 export function buildProfileBundlePlans(
   pieces: CutPiece[],
   profiles: Map<string, ProfileDimensions>,
@@ -115,11 +137,23 @@ export function buildProfileBundlePlans(
         }
       })
 
+    const longestStock = availableStockLengthsMm.reduce((max, length) => Math.max(max, length), 0)
+    const lamellaOversizeMm = bundlePieces.reduce((max, piece) => {
+      if (piece.role !== 'lamella' || !(longestStock > 0) || piece.lengthLongMm <= longestStock + 0.5) return max
+      return Math.max(max, piece.lengthLongMm)
+    }, 0)
+
     const best = options.reduce<StockLengthOption | null>((acc, opt) => {
       if (opt.plan == null) return acc
       if (!acc || acc.plan == null) return opt
+      if (opt.plan.totalWasteMm < acc.plan.totalWasteMm - 1) return opt
+      if (acc.plan.totalWasteMm < opt.plan.totalWasteMm - 1) return acc
       if (opt.plan.totalBars < acc.plan.totalBars) return opt
-      if (opt.plan.totalBars === acc.plan.totalBars && opt.plan.totalWasteMm < acc.plan.totalWasteMm) return opt
+      if (opt.plan.totalBars === acc.plan.totalBars) {
+        const optLongest = Math.max(0, ...opt.plan.bars.map((bar) => bar.wasteMm))
+        const accLongest = Math.max(0, ...acc.plan.bars.map((bar) => bar.wasteMm))
+        if (optLongest > accLongest + 1) return opt
+      }
       return acc
     }, null)
 
@@ -134,6 +168,7 @@ export function buildProfileBundlePlans(
       weightKgPerMeter: profile?.weightKgPerMeter,
       options,
       recommendedStockLengthMm: best?.stockLengthMm ?? null,
+      lamellaOversizeMm: lamellaOversizeMm > 0 ? lamellaOversizeMm : null,
     })
   }
 
@@ -156,9 +191,123 @@ export function getChosenPlan(
   return bundle.options.find((o) => o.stockLengthMm === chosenLen)?.plan ?? null
 }
 
+/**
+ * Stock length shared by the order sheet and the cutting sheet.
+ * An explicit choice is kept only when that length fits this bundle;
+ * otherwise both sheets fall back to the same recommended length.
+ */
+export function chosenStockLengthMm(
+  bundle: ProfileBundlePlan,
+  chosenLengths: ReadonlyMap<string, number>,
+): number | null {
+  const fitting = fittingStockOptions(bundle)
+  const stored = chosenLengths.get(bundle.bundleKey)
+  if (stored != null && fitting.some((option) => option.stockLengthMm === stored)) return stored
+  return bundle.recommendedStockLengthMm
+}
+
+export interface CuttingLayoutCut {
+  count: number
+  lengthMm: number
+  /** Angle of each end. 90 is a square cut. Any other value is degrees off square. */
+  cutStartDeg: number
+  cutEndDeg: number
+  /** Length is the long point because at least one end is not square. */
+  longPoint: boolean
+  /** Set when the cut is one stock piece of a spliced beam. */
+  beamPart?: { part: number; total: number }
+  /** 1-based beam number, same as the plan mark. Only on a spliced part. */
+  beamIndex?: number
+}
+
+/** Square cut is stored as 0° off perpendicular and shown as 90°. */
+export function displayCutDeg(miterFromSquareDeg: number): number {
+  if (!(miterFromSquareDeg > 0.05)) return 90
+  return Math.round(miterFromSquareDeg * 100) / 100
+}
+
+export function formatCutDeg(deg: number): string {
+  return Number.isInteger(deg) ? String(deg) : String(deg)
+}
+
+export interface CuttingLayoutLine {
+  count: number
+  stockLengthMm: number
+  cuts: CuttingLayoutCut[]
+  wasteMm: number
+}
+
+/** `beam-3-seg0` is part 1 of however many `-seg` pieces share that beam. */
+export function beamSegmentPart(
+  pieceId: string,
+  role: string,
+  pieceIds: readonly string[],
+): { part: number; total: number } | null {
+  const match = pieceId.match(/^(.*)-seg(\d+)$/)
+  if (!match || role !== 'beam') return null
+  const prefix = `${match[1]}-seg`
+  const total = pieceIds.filter((id) => id.startsWith(prefix)).length
+  if (total < 2) return null
+  return { part: Number(match[2]) + 1, total }
+}
+
+function beamNumber(pieceId: string): number | null {
+  const match = /^beam-(\d+)/.exec(pieceId)
+  return match ? Number(match[1]) + 1 : null
+}
+
+/** Identical bar layouts become one line. A layout that occurs once stays its own line. */
+export function groupCuttingLayouts(bars: StockBar[]): CuttingLayoutLine[] {
+  const groups: CuttingLayoutLine[] = []
+  const index = new Map<string, number>()
+  const pieceIds = bars.flatMap((bar) => bar.pieces.map((piece) => piece.pieceId))
+  for (const bar of bars) {
+    const lengths = new Map<string, CuttingLayoutCut>()
+    for (const piece of bar.pieces) {
+      const lengthMm = Math.round(piece.lengthLongMm)
+      const cutStartDeg = displayCutDeg(piece.cutMiterStartDeg)
+      const cutEndDeg = displayCutDeg(piece.cutMiterEndDeg)
+      const longPoint = cutStartDeg !== 90 || cutEndDeg !== 90
+      const beamPart = beamSegmentPart(piece.pieceId, piece.role, pieceIds)
+      const beamIndex = beamPart ? beamNumber(piece.pieceId) : null
+      const slot = `${lengthMm}|${cutStartDeg}|${cutEndDeg}|${beamPart?.part ?? ''}|${beamPart?.total ?? ''}|${beamIndex ?? ''}`
+      const found = lengths.get(slot)
+      if (found) found.count += 1
+      else {
+        lengths.set(slot, {
+          lengthMm,
+          count: 1,
+          cutStartDeg,
+          cutEndDeg,
+          longPoint,
+          ...(beamPart ? { beamPart } : {}),
+          ...(beamIndex != null ? { beamIndex } : {}),
+        })
+      }
+    }
+    const cuts = [...lengths.values()].sort((a, b) => b.lengthMm - a.lengthMm || (a.beamPart?.part ?? 0) - (b.beamPart?.part ?? 0))
+    const wasteMm = Math.round(bar.wasteMm)
+    const key = `${bar.stockLengthMm}|${wasteMm}|${cuts.map((cut) => `${cut.count}x${cut.lengthMm}@${cut.cutStartDeg}/${cut.cutEndDeg}${cut.beamPart ? `p${cut.beamIndex ?? ''}:${cut.beamPart.part}/${cut.beamPart.total}` : ''}`).join('+')}`
+    const found = index.get(key)
+    if (found != null) groups[found].count += 1
+    else {
+      index.set(key, groups.length)
+      groups.push({ count: 1, stockLengthMm: bar.stockLengthMm, cuts, wasteMm })
+    }
+  }
+  return groups
+}
+
+/** Stock lengths that can actually hold every piece in the bundle. Shorter bars are omitted from the order sheet and from the order PDF. */
+export function fittingStockOptions(bundle: ProfileBundlePlan): StockLengthOption[] {
+  return bundle.options.filter((option) => option.plan != null)
+}
+
 export interface OrderSheetTotalRow {
   profileId: string
   totalBars: number
+  /** Ordered metres: bars × chosen stock length. */
+  totalMeters: number
   /**
    * null when ANY bundle of this profile is missing weightKgPerMeter or has
    * no resolved plan — a partial sum would look complete but silently
@@ -175,18 +324,19 @@ export function buildOrderSheetTotals(
   plans: ProfileBundlePlan[],
   chosenLengths: ReadonlyMap<string, number>,
 ): OrderSheetTotalRow[] {
-  interface Acc { totalBars: number; totalWeightKg: number; weightKnown: boolean }
+  interface Acc { totalBars: number; totalMeters: number; totalWeightKg: number; weightKnown: boolean }
   const byProfile = new Map<string, Acc>()
 
   for (const bundle of plans) {
     const plan = getChosenPlan(bundle, chosenLengths)
-    const chosenStockLengthMm = chosenLengths.get(bundle.bundleKey) ?? bundle.recommendedStockLengthMm
+    const chosenStock = chosenLengths.get(bundle.bundleKey) ?? bundle.recommendedStockLengthMm
 
-    const acc = byProfile.get(bundle.profileId) ?? { totalBars: 0, totalWeightKg: 0, weightKnown: true }
+    const acc = byProfile.get(bundle.profileId) ?? { totalBars: 0, totalMeters: 0, totalWeightKg: 0, weightKnown: true }
+    const orderedMeters = plan != null && chosenStock != null ? (plan.totalBars * chosenStock) / 1000 : 0
     acc.totalBars += plan?.totalBars ?? 0
+    acc.totalMeters += orderedMeters
 
-    if (plan != null && chosenStockLengthMm != null && bundle.weightKgPerMeter != null) {
-      const orderedMeters = (plan.totalBars * chosenStockLengthMm) / 1000
+    if (plan != null && chosenStock != null && bundle.weightKgPerMeter != null) {
       acc.totalWeightKg += orderedMeters * bundle.weightKgPerMeter
     } else {
       // Once any bundle of this profile can't contribute a real weight,
@@ -202,6 +352,7 @@ export function buildOrderSheetTotals(
   return Array.from(byProfile.entries()).map(([profileId, acc]) => ({
     profileId,
     totalBars: acc.totalBars,
+    totalMeters: acc.totalMeters,
     totalWeightKg: acc.weightKnown ? acc.totalWeightKg : null,
   }))
 }

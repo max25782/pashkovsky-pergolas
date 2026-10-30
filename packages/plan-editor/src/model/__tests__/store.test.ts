@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { createPlanEditorStore } from '../store'
 import type { DraftEdge } from '../../geometry/types'
+import { closureGap } from '../../geometry/closure'
 
 /** Каждый тест получает свой экземпляр стора — без общего счётчика id между тестами. */
 function freshStore() {
@@ -128,6 +129,24 @@ describe('updateEdgeLength', () => {
     expect(edge.lengthMm).toBe(580)
     expect(edge.to.x).toBeCloseTo(580, 10)
     expect(edge.to.y).toBeCloseTo(0, 10)
+  })
+
+  it('closed square: changing one side length sets that length and re-closes the contour', () => {
+    const store = freshStore()
+    store.getState().hydrateContour(
+      [
+        { x: 0, y: 0 },
+        { x: 6000, y: 0 },
+        { x: 6000, y: 6000 },
+        { x: 0, y: 6000 },
+      ],
+      [],
+    )
+    const id = store.getState().fixedEdges[0].id
+    store.getState().updateEdgeLength(id, 5000)
+    const edges = store.getState().fixedEdges
+    expect(edges[0].lengthMm).toBeCloseTo(5000, 0)
+    expect(closureGap(edges).distMm).toBeLessThan(1)
   })
 
   it('typing a number is exactly what makes a side "measured" for adjustContour — sets measuredLengthMm', () => {

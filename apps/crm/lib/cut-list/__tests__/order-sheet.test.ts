@@ -1,4 +1,5 @@
-import { buildProfileBundlePlans, buildOrderSheetTotals, getChosenPlan, DEFAULT_KERF_MM } from '../order-sheet'
+import { describe, expect, it } from 'vitest'
+import { buildProfileBundlePlans, buildOrderSheetTotals, chosenStockLengthMm, getChosenPlan, groupCuttingLayouts, beamSegmentPart, DEFAULT_KERF_MM } from '../order-sheet'
 import type { CutPiece, ProfileDimensions } from '@pashkovsky/pergola-core'
 
 function makePiece(overrides: Partial<CutPiece> & { id: string; lengthAxisMm: number }): CutPiece {
@@ -234,5 +235,55 @@ describe('buildOrderSheetTotals', () => {
     expect(f10040Total.totalWeightKg).toBeNull()
     // Bars from the resolvable bundle are still counted — only weight is withheld.
     expect(f10040Total.totalBars).toBeGreaterThan(0)
+  })
+})
+
+describe('chosenStockLengthMm', () => {
+  const profiles: Map<string, ProfileDimensions> = new Map([
+    ['f7020', { widthMm: 20, heightMm: 70, availableStockLengthsMm: [6000, 6500, 7000] }],
+  ])
+  const pieces = [makePiece({ id: 'l1', lengthAxisMm: 1359, profileId: 'f7020', role: 'lamella' })]
+  const [bundle] = buildProfileBundlePlans(pieces, profiles)
+
+  it('keeps a stored length that fits and ignores one that does not', () => {
+    expect(chosenStockLengthMm(bundle, new Map([[bundle.bundleKey, 6500]]))).toBe(6500)
+    expect(chosenStockLengthMm(bundle, new Map([[bundle.bundleKey, 5000]]))).toBe(bundle.recommendedStockLengthMm)
+  })
+})
+
+describe('groupCuttingLayouts', () => {
+  it('collapses identical bars and keeps a unique layout on its own line', () => {
+    const lines = groupCuttingLayouts([
+      { stockLengthMm: 7000, usedMm: 6821, wasteMm: 179, pieces: Array.from({ length: 5 }, () => ({ pieceId: 'lamella-1', role: 'lamella' as const, lengthLongMm: 1359.3, lengthAxisMm: 1359.3, cutMiterStartDeg: 0, cutBevelStartDeg: 0, cutHandStart: 'straight' as const, cutMiterEndDeg: 0, cutBevelEndDeg: 0, cutHandEnd: 'straight' as const })) },
+      { stockLengthMm: 7000, usedMm: 6821, wasteMm: 179, pieces: Array.from({ length: 5 }, () => ({ pieceId: 'lamella-2', role: 'lamella' as const, lengthLongMm: 1359.4, lengthAxisMm: 1359.4, cutMiterStartDeg: 0, cutBevelStartDeg: 0, cutHandStart: 'straight' as const, cutMiterEndDeg: 0, cutBevelEndDeg: 0, cutHandEnd: 'straight' as const })) },
+      { stockLengthMm: 7000, usedMm: 4000, wasteMm: 3000, pieces: [{ pieceId: 'beam-1', role: 'beam' as const, lengthLongMm: 4000, lengthAxisMm: 4000, cutMiterStartDeg: 45, cutBevelStartDeg: 0, cutHandStart: 'L' as const, cutMiterEndDeg: 45, cutBevelEndDeg: 0, cutHandEnd: 'R' as const }] },
+    ])
+    expect(lines).toEqual([
+      { count: 2, stockLengthMm: 7000, wasteMm: 179, cuts: [{ count: 5, lengthMm: 1359, cutStartDeg: 90, cutEndDeg: 90, longPoint: false }] },
+      { count: 1, stockLengthMm: 7000, wasteMm: 3000, cuts: [{ count: 1, lengthMm: 4000, cutStartDeg: 45, cutEndDeg: 45, longPoint: true }] },
+    ])
+  })
+
+  it('labels the two stock pieces of one beam as part 1/2', () => {
+    const lines = groupCuttingLayouts([
+      {
+        stockLengthMm: 6500,
+        usedMm: 6336,
+        wasteMm: 164,
+        pieces: [{ pieceId: 'beam-0-seg0', role: 'beam', lengthLongMm: 6336, lengthAxisMm: 6336, cutMiterStartDeg: 45, cutBevelStartDeg: 0, cutHandStart: 'L', cutMiterEndDeg: 0, cutBevelEndDeg: 0, cutHandEnd: 'straight' }],
+      },
+      {
+        stockLengthMm: 6500,
+        usedMm: 5290,
+        wasteMm: 1210,
+        pieces: [{ pieceId: 'beam-0-seg1', role: 'beam', lengthLongMm: 5290, lengthAxisMm: 5290, cutMiterStartDeg: 0, cutBevelStartDeg: 0, cutHandStart: 'straight', cutMiterEndDeg: 45, cutBevelEndDeg: 0, cutHandEnd: 'R' }],
+      },
+    ])
+    expect(beamSegmentPart('beam-0-seg0', 'beam', ['beam-0-seg0', 'beam-0-seg1'])).toEqual({ part: 1, total: 2 })
+    expect(lines.map((line) => line.cuts[0].beamPart)).toEqual([
+      { part: 1, total: 2 },
+      { part: 2, total: 2 },
+    ])
+    expect(lines.map((line) => line.cuts[0].beamIndex)).toEqual([1, 1])
   })
 })

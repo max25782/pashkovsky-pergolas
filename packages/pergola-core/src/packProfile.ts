@@ -196,9 +196,50 @@ export function packProfile(
     }
   }
 
+  const optimal = packFewestBars(withSlot, stockLengthMm)
+  const firstFit = packFirstFit(withSlot, stockLengthMm)
+  const around = packAroundDominant(withSlot, stockLengthMm)
+  const heuristic = fewerBars(optimal ?? firstFit, optimal ? null : around)
+  const packed = withSlot.length <= 25
+    ? packExact(withSlot, stockLengthMm, heuristic)
+    : consolidateRemnants(heuristic, stockLengthMm, kerfMm)
+  return finishPlan(profileId, stockLengthMm, packed)
+}
+
+/** ceil((sum of piece slots, kerf included) / stock). The packer must not go under this. */
+export function barPackLowerBound(slotMm: number[], stockLengthMm: number): number {
+  if (!(stockLengthMm > 0) || slotMm.length === 0) return 0
+  const sum = slotMm.reduce((total, slot) => total + slot, 0)
+  return Math.max(1, Math.ceil((sum - 1e-6) / stockLengthMm))
+}
+
+function packScore(bars: StockBar[]): [number, number, number] {
+  let remnantBars = 0
+  let longestRemnant = 0
+  for (const bar of bars) {
+    if (bar.wasteMm > 1) remnantBars += 1
+    if (bar.wasteMm > longestRemnant) longestRemnant = bar.wasteMm
+  }
+  return [bars.length, remnantBars, -longestRemnant]
+}
+
+function betterBars(candidate: StockBar[] | null, current: StockBar[]): boolean {
+  if (!candidate || candidate.length === 0) return false
+  const next = packScore(candidate.filter((bar) => bar.pieces.length > 0))
+  const prev = packScore(current)
+  for (let i = 0; i < 3; i++) {
+    if (next[i] < prev[i] - 1e-4) return true
+    if (next[i] > prev[i] + 1e-4) return false
+  }
+  return false
+}
+
+function packFirstFit(
+  withSlot: Array<{ ref: PackedPieceRef; slotMm: number }>,
+  stockLengthMm: number,
+): StockBar[] {
   const sorted = [...withSlot].sort((a, b) => b.slotMm - a.slotMm)
   const bars: StockBar[] = []
-
   for (const { ref, slotMm } of sorted) {
     const fitBar = bars.find((b) => b.usedMm + slotMm <= b.stockLengthMm)
     if (fitBar) {
@@ -209,13 +250,325 @@ export function packProfile(
       bars.push({ stockLengthMm, pieces: [ref], usedMm: slotMm, wasteMm: stockLengthMm - slotMm })
     }
   }
+  return bars
+}
 
+function fewerBars(current: StockBar[], candidate: StockBar[] | null): StockBar[] {
+  return betterBars(candidate, current) ? candidate! : current
+}
+
+/**
+ * Up to 25 pieces: branch-and-bound. Minimum bars, then waste gathered onto
+ * as few bars as possible, then the longest single offcut is maximised.
+ * The seed packing is kept when nothing scores better, so a first-fit
+ * layout that is already best does not get reshuffled.
+ */
+function packExact(
+  items: Array<{ ref: PackedPieceRef; slotMm: number }>,
+  stockLengthMm: number,
+  seed: StockBar[],
+): StockBar[] {
+  const ordered = [...items].sort((a, b) => b.slotMm - a.slotMm)
+  const slots = ordered.map((item) => item.slotMm)
+  const total = slots.reduce((sum, slot) => sum + slot, 0)
+  const lower = barPackLowerBound(slots, stockLengthMm)
+  const suffix = new Array<number>(slots.length + 1).fill(0)
+  for (let i = slots.length - 1; i >= 0; i--) suffix[i] = suffix[i + 1] + slots[i]
+
+  let bestScore = packScore(seed)
+  let bestAssign: number[] | null = null
+  const used: number[] = []
+  const assign = new Array<number>(ordered.length).fill(-1)
+  let nodes = 0
+
+  function consider() {
+    const score: [number, number, number] = [used.length, 0, 0]
+    let longest = 0
+    let remnants = 0
+    for (const amount of used) {
+      const waste = stockLengthMm - amount
+      if (waste > 1) remnants += 1
+      if (waste > longest) longest = waste
+    }
+    score[1] = remnants
+    score[2] = -longest
+    for (let i = 0; i < 3; i++) {
+      if (score[i] > bestScore[i] + 1e-4) return
+      if (score[i] < bestScore[i] - 1e-4) {
+        bestScore = score
+        bestAssign = assign.slice()
+        return
+      }
+    }
+  }
+
+  function dfs(index: number): void {
+    if (nodes > 200_000) return
+    nodes += 1
+    if (index === ordered.length) {
+      consider()
+      return
+    }
+    const rest = suffix[index]
+    const free = used.reduce((sum, amount) => sum + (stockLengthMm - amount), 0)
+    const extra = Math.max(0, Math.ceil((rest - free - 1e-6) / stockLengthMm))
+    if (used.length + extra > bestScore[0]) return
+    if (used.length > lower && used.length >= bestScore[0] && extra > 0 && used.length + extra > lower) {
+      // Still allowed when it can tie the best bar count.
+    }
+
+    const slot = slots[index]
+    const seen = new Set<number>()
+    for (let bin = 0; bin < used.length; bin++) {
+      if (used[bin] + slot > stockLengthMm + 1e-6) continue
+      const signature = Math.round(used[bin])
+      if (seen.has(signature)) continue
+      seen.add(signature)
+      used[bin] += slot
+      assign[index] = bin
+      dfs(index + 1)
+      used[bin] -= slot
+      if (nodes > 200_000) return
+    }
+    if (used.length < bestScore[0]) {
+      used.push(slot)
+      assign[index] = used.length - 1
+      dfs(index + 1)
+      used.pop()
+    }
+  }
+
+  dfs(0)
+  if (!bestAssign) return seed
+  const groups = new Map<number, PackedPieceRef[]>()
+  bestAssign.forEach((bin, index) => {
+    const list = groups.get(bin) ?? []
+    list.push(ordered[index].ref)
+    groups.set(bin, list)
+  })
+  return [...groups.values()].map((pieces) => {
+    const sorted = [...pieces].sort((a, b) => b.lengthLongMm - a.lengthLongMm)
+    const usedMm = sorted.reduce((sum, piece) => {
+      const slot = ordered.find((item) => item.ref === piece)?.slotMm ?? piece.lengthLongMm
+      return sum + slot
+    }, 0)
+    return { stockLengthMm, pieces: sorted, usedMm, wasteMm: stockLengthMm - usedMm }
+  })
+}
+
+/** Move pieces between bars when that uses fewer bars or gathers the offcut. */
+function consolidateRemnants(seed: StockBar[], stockLengthMm: number, kerfMm: number): StockBar[] {
+  let current = seed.map((bar) => ({ ...bar, pieces: [...bar.pieces] }))
+  const slotOf = (piece: PackedPieceRef) => piece.lengthLongMm + pieceKerfMm(piece, kerfMm)
+  const materialise = (bars: StockBar[]): StockBar[] => bars
+    .filter((bar) => bar.pieces.length > 0)
+    .map((bar) => {
+      const usedMm = bar.pieces.reduce((sum, piece) => sum + slotOf(piece), 0)
+      return { ...bar, stockLengthMm, usedMm, wasteMm: stockLengthMm - usedMm }
+    })
+
+  for (let pass = 0; pass < 24; pass++) {
+    let changed = false
+    for (let from = 0; from < current.length && !changed; from++) {
+      for (let pieceIndex = 0; pieceIndex < current[from].pieces.length && !changed; pieceIndex++) {
+        const piece = current[from].pieces[pieceIndex]
+        const need = slotOf(piece)
+        for (let to = 0; to < current.length; to++) {
+          if (from === to || current[to].usedMm + need > stockLengthMm + 1e-6) continue
+          const next = current.map((bar) => ({ ...bar, pieces: [...bar.pieces] }))
+          next[from].pieces.splice(pieceIndex, 1)
+          next[to].pieces.push(piece)
+          const packed = materialise(next)
+          if (!betterBars(packed, current)) continue
+          current = packed
+          changed = true
+          break
+        }
+      }
+    }
+    if (!changed) break
+  }
+  return current
+}
+
+/**
+ * When one length dominates, fill each bar with as many of those as still
+ * leave room for the offcuts. First-fit puts one long offcut beside three
+ * 1393.2 mm lamellas and opens a new bar for the next, even when two shorts
+ * (3×1393.2 + 2×897 + kerf ≤ 6000) fit together. Two equal lengths stay on
+ * the exact solver above; this only replaces first-fit when it uses fewer bars.
+ */
+function packAroundDominant(
+  withSlot: Array<{ ref: PackedPieceRef; slotMm: number }>,
+  stockLengthMm: number,
+): StockBar[] | null {
+  const groups: Array<{ slotMm: number; items: PackedPieceRef[] }> = []
+  for (const item of withSlot) {
+    const found = groups.find((group) => Math.abs(group.slotMm - item.slotMm) < 0.05)
+    if (found) found.items.push(item.ref)
+    else groups.push({ slotMm: item.slotMm, items: [item.ref] })
+  }
+  if (groups.length < 2) return null
+  groups.sort((a, b) => b.items.length - a.items.length)
+  const dominant = groups[0]
+  if (dominant.items.length < groups[1].items.length * 2 || dominant.items.length < 4) return null
+  const maxPerBar = Math.floor((stockLengthMm + 1e-6) / dominant.slotMm)
+  if (maxPerBar < 2) return null
+
+  const extras = groups
+    .slice(1)
+    .flatMap((group) => group.items.map((ref) => ({ ref, slotMm: group.slotMm })))
+    .sort((a, b) => b.slotMm - a.slotMm)
+  const shelves: Array<{ dominants: number; used: number; extras: typeof extras }> = []
+  for (const extra of extras) {
+    let best: (typeof shelves)[number] | null = null
+    for (const shelf of shelves) {
+      if (shelf.used + extra.slotMm > stockLengthMm + 1e-6) continue
+      if (best == null || shelf.dominants > best.dominants) best = shelf
+    }
+    if (best) {
+      best.extras.push(extra)
+      best.used += extra.slotMm
+      continue
+    }
+    let reserved = maxPerBar
+    while (reserved > 0 && reserved * dominant.slotMm + extra.slotMm > stockLengthMm + 1e-6) reserved -= 1
+    if (reserved * dominant.slotMm + extra.slotMm > stockLengthMm + 1e-6) return null
+    shelves.push({
+      dominants: reserved,
+      used: reserved * dominant.slotMm + extra.slotMm,
+      extras: [extra],
+    })
+  }
+
+  let left = dominant.items.length
+  let cursor = 0
+  const bars: StockBar[] = []
+  for (const shelf of shelves) {
+    const take = Math.min(shelf.dominants, left)
+    const pieces = [...dominant.items.slice(cursor, cursor + take), ...shelf.extras.map((extra) => extra.ref)]
+    cursor += take
+    left -= take
+    const used = take * dominant.slotMm + shelf.extras.reduce((sum, extra) => sum + extra.slotMm, 0)
+    if (used > stockLengthMm + 1e-6) return null
+    bars.push({ stockLengthMm, pieces, usedMm: used, wasteMm: stockLengthMm - used })
+  }
+  while (left > 0) {
+    const take = Math.min(maxPerBar, left)
+    const pieces = dominant.items.slice(cursor, cursor + take)
+    cursor += take
+    left -= take
+    const used = take * dominant.slotMm
+    bars.push({ stockLengthMm, pieces, usedMm: used, wasteMm: stockLengthMm - used })
+  }
+  const packed = bars.reduce((sum, bar) => sum + bar.pieces.length, 0)
+  if (cursor !== dominant.items.length || packed !== withSlot.length) return null
+  return bars
+}
+
+function finishPlan(profileId: string, stockLengthMm: number, bars: StockBar[]): StockPlan {
   const totalBars = bars.length
   const totalWasteMm = bars.reduce((sum, b) => sum + b.wasteMm, 0)
   const totalStockMm = totalBars * stockLengthMm
   const wastePct = totalStockMm > 0 ? (totalWasteMm / totalStockMm) * 100 : 0
-
   return { profileId, stockLengthMm, bars, totalBars, totalWasteMm, wastePct }
+}
+
+/**
+ * Exact fewest-bars packing when there are one or two cut lengths.
+ * First-fit leaves a gap on the 10000 plan (4×1359 fills a bar, and the
+ * 632 mm offcuts need bars of their own). Falls back to null when the
+ * lengths are too mixed for the state table.
+ */
+function packFewestBars(
+  withSlot: Array<{ ref: PackedPieceRef; slotMm: number }>,
+  stockLengthMm: number,
+): StockBar[] | null {
+  const groups: Array<{ slotMm: number; items: PackedPieceRef[] }> = []
+  for (const item of withSlot) {
+    const found = groups.find((group) => Math.abs(group.slotMm - item.slotMm) < 0.05)
+    if (found) found.items.push(item.ref)
+    else groups.push({ slotMm: item.slotMm, items: [item.ref] })
+  }
+  if (groups.length === 0 || groups.length > 2) return null
+  const aCount = groups[0].items.length
+  const bCount = groups[1]?.items.length ?? 0
+  if ((aCount + 1) * (bCount + 1) > 2_000_000) return null
+
+  const patterns: Array<{ a: number; b: number; used: number }> = []
+  const maxA = Math.min(aCount, Math.floor(stockLengthMm / groups[0].slotMm))
+  const maxB = groups[1] ? Math.min(bCount, Math.floor(stockLengthMm / groups[1].slotMm)) : 0
+  for (let a = 0; a <= maxA; a++) {
+    for (let b = 0; b <= maxB; b++) {
+      if (a + b === 0) continue
+      const used = a * groups[0].slotMm + b * (groups[1]?.slotMm ?? 0)
+      if (used <= stockLengthMm + 1e-6) patterns.push({ a, b, used })
+    }
+  }
+
+  const cols = bCount + 1
+  const size = (aCount + 1) * cols
+  const barsAt = new Float64Array(size).fill(Infinity)
+  const wasteAt = new Float64Array(size).fill(Infinity)
+  const prev = new Int32Array(size).fill(-1)
+  const patternAt = new Int32Array(size).fill(-1)
+  barsAt[0] = 0
+  wasteAt[0] = 0
+
+  for (let a = 0; a <= aCount; a++) {
+    for (let b = 0; b <= bCount; b++) {
+      const state = a * cols + b
+      if (!Number.isFinite(barsAt[state])) continue
+      for (let p = 0; p < patterns.length; p++) {
+        const pattern = patterns[p]
+        const na = a + pattern.a
+        const nb = b + pattern.b
+        if (na > aCount || nb > bCount) continue
+        const next = na * cols + nb
+        const nextBars = barsAt[state] + 1
+        const nextWaste = wasteAt[state] + (stockLengthMm - pattern.used)
+        if (nextBars < barsAt[next] || (nextBars === barsAt[next] && nextWaste < wasteAt[next])) {
+          barsAt[next] = nextBars
+          wasteAt[next] = nextWaste
+          prev[next] = state
+          patternAt[next] = p
+        }
+      }
+    }
+  }
+
+  const goal = aCount * cols + bCount
+  if (!Number.isFinite(barsAt[goal])) return null
+
+  const takenA: number[] = []
+  const takenB: number[] = []
+  let cursor = goal
+  while (cursor > 0) {
+    const pattern = patterns[patternAt[cursor]]
+    takenA.push(pattern.a)
+    takenB.push(pattern.b)
+    cursor = prev[cursor]
+  }
+
+  let ai = 0
+  let bi = 0
+  const bars: StockBar[] = []
+  for (let i = takenA.length - 1; i >= 0; i--) {
+    const pieces = [
+      ...groups[0].items.slice(ai, ai + takenA[i]),
+      ...(groups[1] ? groups[1].items.slice(bi, bi + takenB[i]) : []),
+    ]
+    ai += takenA[i]
+    bi += takenB[i]
+    const used = takenA[i] * groups[0].slotMm + takenB[i] * (groups[1]?.slotMm ?? 0)
+    bars.push({
+      stockLengthMm,
+      pieces,
+      usedMm: used,
+      wasteMm: stockLengthMm - used,
+    })
+  }
+  return bars
 }
 
 /**

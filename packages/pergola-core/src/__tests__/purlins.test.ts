@@ -66,8 +66,8 @@ describe('computePurlins — L-shape: horizontal division row clipped at the win
     const rowsAboveStep = purlins.filter((p) => p.position[2] > 4054 + 1)
     expect(rowsAboveStep.length).toBeGreaterThan(0)
     for (const row of rowsAboveStep) {
-      expect(row.lengthAxisMm).toBeCloseTo(5000, 1) // 0..5000, not 0..9000
-      expect(row.position[0]).toBeCloseTo(5000, 1) // starts exactly at the step, the real wing boundary
+      expect(row.lengthAxisMm).toBeCloseTo(4960, 1) // inner faces of end beams (−40 mm)
+      expect(row.position[0]).toBeCloseTo(4980, 1) // inner face at the step beam
     }
   })
 
@@ -75,8 +75,8 @@ describe('computePurlins — L-shape: horizontal division row clipped at the win
     const rowsBelowStep = purlins.filter((p) => p.position[2] <= 4054 + 1)
     expect(rowsBelowStep.length).toBeGreaterThan(0)
     for (const row of rowsBelowStep) {
-      expect(row.lengthAxisMm).toBeCloseTo(9000, 1)
-      expect(row.position[0]).toBeCloseTo(9000, 1) // starts at the real right outer wall
+      expect(row.lengthAxisMm).toBeCloseTo(8960, 1)
+      expect(row.position[0]).toBeCloseTo(8980, 1)
     }
   })
 })
@@ -90,8 +90,8 @@ describe('computePurlins — plain rectangle regression: no step to clip against
   it('every row spans the full 9000mm width, starting at the real outer wall', () => {
     expect(purlins.length).toBeGreaterThan(0)
     for (const row of purlins) {
-      expect(row.lengthAxisMm).toBeCloseTo(9000, 1)
-      expect(row.position[0]).toBeCloseTo(9000, 1)
+      expect(row.lengthAxisMm).toBeCloseTo(8960, 1)
+      expect(row.position[0]).toBeCloseTo(8980, 1)
     }
   })
 })
@@ -121,9 +121,9 @@ describe('computePurlins — U-shape: rows above the bridge appear as two separa
     for (const [, rowsAtThisY] of byY) {
       expect(rowsAtThisY).toHaveLength(2)
       const lengths = rowsAtThisY.map((r) => Math.round(r.lengthAxisMm)).sort((a, b) => a - b)
-      expect(lengths).toEqual([3000, 3000]) // left tower width, right tower width — never 9000
+      expect(lengths).toEqual([2960, 2960]) // inner faces of tower side beams
       const xs = rowsAtThisY.map((r) => Math.round(r.position[0])).sort((a, b) => a - b)
-      expect(xs).toEqual([3000, 9000]) // each piece starts exactly at ITS OWN tower's outer wall
+      expect(xs).toEqual([2980, 8980])
     }
   })
 
@@ -131,7 +131,7 @@ describe('computePurlins — U-shape: rows above the bridge appear as two separa
     const rowsInBridge = purlins.filter((p) => p.position[2] <= 3000 + 1)
     expect(rowsInBridge.length).toBeGreaterThan(0)
     for (const row of rowsInBridge) {
-      expect(row.lengthAxisMm).toBeCloseTo(9000, 1)
+      expect(row.lengthAxisMm).toBeCloseTo(8960, 1)
     }
   })
 })

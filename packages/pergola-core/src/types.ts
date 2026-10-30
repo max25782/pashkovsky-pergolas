@@ -6,6 +6,38 @@ export type Point2D  = [number, number]
 export type Vector2D = [number, number]
 export type PieceRole = 'post' | 'beam' | 'lamella' | 'hanger' | 'purlin'
 
+export type PurlinDividerMode = 'auto' | 'manual'
+
+/** One crossing line, persisted on `Pergola.plan.params.purlinDividers`. */
+export interface PlanPurlinDividerLine {
+  id: string
+  /** Absolute mm along the lamella direction (same frame as computeSpanDivisionPointsMm). */
+  positionMm: number
+}
+
+export interface PlanPurlinDividers {
+  mode: PurlinDividerMode
+  /** Used when mode === 'manual'. Empty = no crossing lines. */
+  lines?: PlanPurlinDividerLine[]
+}
+
+export type PieceWarningType = 'lamella-span-exceeds-max'
+
+/** Non-fatal structural note. Only emitted in purlinDividers.mode === 'manual'. */
+export interface PieceWarning {
+  type: PieceWarningType
+  message: string
+  pieceId: string
+  profileId: string
+  spanMm: number
+  maxSpanMm: number
+  /** Bounding divider of the span; null = contour edge. */
+  startDividerId: string | null
+  endDividerId: string | null
+  spanStartMm: number
+  spanEndMm: number
+}
+
 /**
  * A single manufactured piece ready for cutting.
  *
@@ -80,6 +112,15 @@ export interface CutPiece {
   rotation: [number, number, number]
   /** RAL hex colour string */
   color: string
+  /**
+   * Shared id of one purlin crossing line. Every clipped segment of that
+   * line (after contour clip) carries the same `dividerId`. Only set on
+   * `role: 'purlin'` pieces from computePurlins.
+   */
+  dividerId?: string
+  /** Contour clip endpoints before frame-beam trim; joint detection only. */
+  clipPlanStart?: Point2D
+  clipPlanEnd?: Point2D
 }
 
 /**
@@ -179,6 +220,47 @@ export interface PergolaSpec {
   purlinProfileId?: string
 
   /**
+   * Purlin crossing-line placement. `auto` (default / unset) uses the
+   * even-span grid from maxLamellaSpanMm. `manual` uses `lines` as-is —
+   * a span over maxLamellaSpanMm then becomes a warning, not a throw.
+   */
+  purlinDividers?: PlanPurlinDividers
+  /**
+   * `1` = equal-clear from entered L_outer. Unset = legacy axis inset.
+   * Copied from plan.params; do not invent a default in specFromPlan.
+   */
+  purlinClearLayoutVersion?: 1
+  /**
+   * `1` = factory lamella sections (W = clear−15, H = clear−30).
+   * Unset = legacy continuous scan-line rows. Copied from plan.params;
+   * do not invent a default in specFromPlan.
+   */
+  lamellaSectionLayoutVersion?: 1
+  /**
+   * `1` = wall sides are 100×40 or 120×40, plan width 40 mm, even when the
+   * free beam is double-T 70. Unset on saved plans ⇒ one width for every side.
+   */
+  wallBeamWidthVersion?: 1
+  /**
+   * `1` = end cuts from wall flags (free/free and wall/wall miter on the
+   * outer edge; a free beam runs to a wall at 90°; a wall beam between
+   * free sides is 90° and shorter by those widths). Unset ⇒ every corner
+   * stays a bisector miter. Do not invent this in specFromPlan.
+   */
+  frameJointVersion?: 1
+  /**
+   * `1` = skew cell ends are trapezoids; each lamella length is the
+   * narrowest clearance in that row, minus 15, floored to
+   * `lamellaLengthStepMm`. Unset ⇒ one rectangle width. Do not invent
+   * this in specFromPlan.
+   */
+  skewSectionVersion?: 1
+  /** Floor step for trapezoid lamella cuts, mm. Unset ⇒ 1. */
+  lamellaLengthStepMm?: number
+  /** Site-measured outer face per contour edge — L_outer for equal-clear. */
+  measuredOuterLengthMmByEdgeIndex?: Array<number | null>
+
+  /**
    * Profile ID for the non-LED divider beam Rule B introduces (see
    * segmentLedPurlinsForStock in ledPurlinReversal.ts) when an LED purlin's
    * own span is longer than any available stock length — LED profiles
@@ -250,6 +332,20 @@ export interface PergolaSpec {
    *     computeLamellas VISTUR ASSEMBLY CLEARANCE comment).
    */
   visturTolerances?: VisturTolerances
+
+  /**
+   * Max unsupported distance between posts on a frame edge, mm.
+   * Unset on saved plans ⇒ computeFrame uses the beam profile's maxSpanMm
+   * (legacy 4500–5000). New plans set 4000 via PlanConstructionParams.postMaxSpanMm.
+   */
+  postMaxSpanMm?: number
+  /**
+   * Auto wing-shelf when a divider free span exceeds this, mm.
+   * Unset ⇒ no auto shelf (legacy saved plans).
+   */
+  purlinMaxSpanMm?: number
+  /** Plain (non-LED) profile for the auto wing-shelf support. */
+  wingShelfProfileId?: string
 }
 
 /**
@@ -280,9 +376,21 @@ export interface PergolaSpec {
  * time (see computeLamellas) — the catalog value itself still always means
  * "flat/default" orientation as defined above.
  */
+/** How `planWidthMm` was chosen for top-plan frame dimensions (beams only). */
+export type BeamPlanWidthSource = 'rule-min' | 'override-70' | 'fallback-40'
+
 export interface ProfileDimensions {
   widthMm: number
   heightMm: number
+  /**
+   * Width in the top plan for **drawing dimension chains** on frame beams
+   * (min section side or Max double-T override). Independent of `widthMm`
+   * used for 3D footprints / BOM.
+   */
+  planWidthMm?: number
+  planWidthSource?: BeamPlanWidthSource
+  /** Set when plan width fell back to 40 mm (missing parse data). */
+  planWidthWarning?: string
   /**
    * Maximum recommended unsupported span for this profile, mm.
    * Used by computeFrame to insert intermediate posts.
@@ -317,6 +425,9 @@ export interface ProfileDimensions {
    * Only relevant for purlin profiles.
    */
   hasLedChannel?: boolean
+
+  /** Kept so saved plans still build. Hidden from pickers for new plans. */
+  deprecated?: boolean
 
   /**
    * Maximum spacing between adjacent LED purlins along the lamella

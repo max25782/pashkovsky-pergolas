@@ -9,7 +9,7 @@ export function resolvePdfLocale(raw: string | null | undefined): PdfLocale {
 }
 
 export function pdfHtmlDir(locale: PdfLocale): 'rtl' | 'ltr' {
-  return locale === 'he' || locale === 'ru' ? 'rtl' : 'ltr'
+  return locale === 'he' ? 'rtl' : 'ltr'
 }
 
 export function pdfBcp47Locale(locale: PdfLocale): string {

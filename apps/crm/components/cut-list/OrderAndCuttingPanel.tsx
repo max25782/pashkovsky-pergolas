@@ -9,6 +9,7 @@
  */
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import type { CutPiece, ProfileDimensions } from '@pashkovsky/pergola-core'
 import { OrderSheet } from './OrderSheet'
 import { CuttingSheet } from './CuttingSheet'
@@ -25,20 +26,33 @@ export interface OrderAndCuttingPanelProps {
    * approximate because the underlying shape isn't axis-aligned.
    */
   isOrthogonal?: boolean
+  /** When set, replaces the isOrthogonal check. False once every purlin meets the frame. */
+  approximate?: boolean
   nonOrthogonalWarningText?: string
+  chosenLengths?: Map<string, number>
+  onChooseLength?: (bundleKey: string, stockLengthMm: number) => void
 }
 
 export function OrderAndCuttingPanel({
   pieces,
   profiles,
   isOrthogonal,
+  approximate,
   nonOrthogonalWarningText,
+  chosenLengths: chosenLengthsProp,
+  onChooseLength,
 }: OrderAndCuttingPanelProps) {
+  const t = useTranslations('planEditor.drawing')
   const [subTab, setSubTab] = useState<'order' | 'cutting'>('order')
-  const [chosenLengths, setChosenLengths] = useState<Map<string, number>>(new Map())
-  const showWarning = isOrthogonal === false && !!nonOrthogonalWarningText
+  const [chosenLengthsState, setChosenLengths] = useState<Map<string, number>>(new Map())
+  const chosenLengths = chosenLengthsProp ?? chosenLengthsState
+  const showWarning = (approximate ?? isOrthogonal === false) && !!nonOrthogonalWarningText
 
   function handleChooseLength(bundleKey: string, stockLengthMm: number) {
+    if (onChooseLength) {
+      onChooseLength(bundleKey, stockLengthMm)
+      return
+    }
     setChosenLengths((prev) => {
       const next = new Map(prev)
       next.set(bundleKey, stockLengthMm)
@@ -66,7 +80,7 @@ export function OrderAndCuttingPanel({
               : 'rounded px-3 py-1 text-xs text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800'
           }
         >
-          Лист заказа
+          {t('orderTab')}
         </button>
         <button
           type="button"
@@ -77,7 +91,7 @@ export function OrderAndCuttingPanel({
               : 'rounded px-3 py-1 text-xs text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800'
           }
         >
-          Лист порезки
+          {t('cuttingTab')}
         </button>
       </div>
       <div className="min-h-0 flex-1">

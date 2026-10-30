@@ -1942,7 +1942,7 @@ export function CreateOfferModal({ dealId, customerName, customerPhone, customer
               </div>
             ) : null}
             {configuratorUrls?.edit && createdOffer ? (
-              <div className="flex min-h-[700px] flex-1 basis-0 flex-col overflow-hidden rounded-xl border border-white/15 bg-black/40 p-2 sm:p-3">
+              <div className="flex min-h-[700px] flex-1 basis-0 flex-col overflow-y-auto rounded-xl border border-white/15 bg-black/40 p-2 sm:p-3">
                 <OfferPlanConfiguratorEmbed
                   offerId={createdOffer.id}
                   locale={locale}

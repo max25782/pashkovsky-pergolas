@@ -15,7 +15,7 @@
 --             Table has no RLS and no policies at all.
 --             FIX: enable RLS + service-role-only policies (safe default).
 --
--- 3. WARNING - pergola_configurator.rw_project_margins
+-- 3. WARNING - pergola_configurator.vw_project_margins
 --             "Security Definer View"
 --             View runs as its owner, bypassing RLS for callers.
 --             FIX: ALTER VIEW … SET (security_invoker = on)
@@ -78,7 +78,7 @@ CREATE POLICY "uploads_service_role_all"
 DO $$
 DECLARE
   v_schema text := 'pergola_configurator';
-  v_view   text := 'rw_project_margins';
+  v_view   text := 'vw_project_margins';
 BEGIN
   IF EXISTS (
     SELECT 1

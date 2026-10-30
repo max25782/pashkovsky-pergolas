@@ -156,7 +156,7 @@ export default function MonthlyReportPage() {
         {/* Header */}
         <div className="mb-6">
           <h2 className="text-3xl font-bold mb-2">דוח חודשי</h2>
-          <p className="text-white/60">סיכום הכנסות, עלויות עובדים ורווח</p>
+          <p className="text-white/60">סיכום הכנסות, הוצאות ורווח (כמו סטטיסטיקת «כסף»)</p>
         </div>
 
         {/* Month Selector */}
@@ -190,7 +190,7 @@ export default function MonthlyReportPage() {
 
               {/* Total Labor Cost */}
               <div className="bg-gradient-to-br from-orange-900/30 to-orange-800/20 rounded-lg p-6 border border-orange-500/20">
-                <div className="text-white/60 text-sm mb-2">סה״כ עלות עובדים</div>
+                <div className="text-white/60 text-sm mb-2">סה״כ הוצאות</div>
                 <div className="text-3xl font-bold text-orange-400">
                   {formatCurrencyILS(report.totalLaborCost)}
                 </div>
@@ -252,7 +252,7 @@ export default function MonthlyReportPage() {
                           הכנסות
                         </th>
                         <th className="px-4 py-3 text-right text-sm font-semibold text-white/80">
-                          עלות עובדים
+                          הוצאות
                         </th>
                         <th className="px-4 py-3 text-right text-sm font-semibold text-white/80">
                           רווח נקי
