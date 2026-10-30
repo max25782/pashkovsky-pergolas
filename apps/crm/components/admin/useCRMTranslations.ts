@@ -83,8 +83,6 @@ export function useCRMTranslations() {
       lighting: deals('lighting'),
       manager: deals('manager'),
       notes: deals('notes'),
-      sketch: deals('sketch'),
-      openSketch: deals('openSketch'),
       btnCreateOffer2: deals('btnCreateOffer2'),
       offersTitle: deals('offersTitle'),
       loadingOffers: deals('loadingOffers'),

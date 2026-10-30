@@ -3,8 +3,7 @@ import { useEffect, useState } from "react"
 import dynamic from "next/dynamic"
 import type { Deal } from './deal-types'
 import { getStages } from './deal-types'
-import { SketchModal } from './SketchModal'
-import { FileImage, FileText, Loader2 } from 'lucide-react'
+import { FileText, Loader2 } from 'lucide-react'
 import { useCRMTranslations } from './useCRMTranslations'
 import { useToast } from '@/components/ui/toast'
 import { WorkLogSection } from '../workers/WorkLogSection'
@@ -77,7 +76,6 @@ export function DealModal({
   const stages = getStages(t.deals)
   const [localDeal, setLocalDeal] = useState(deal)
   const [saving, setSaving] = useState(false)
-  const [showSketchModal, setShowSketchModal] = useState(false)
   const [showOfferModal, setShowOfferModal] = useState(false)
   const [showLaundryClosetModal, setShowLaundryClosetModal] = useState(false)
   const [offersRefreshTrigger, setOffersRefreshTrigger] = useState(0)
@@ -101,7 +99,6 @@ export function DealModal({
   }
 
   const showPergolaDims = productLines.some((l) => l === 'pergola' || l === 'gates' || l === 'facade')
-  const showSketchButton = showPergolaDims
 
   function railingsGlazingFromRow(g: string | null | undefined): RailingsFormValue['glazing_system'] {
     return g === 'aluminum_glass' || g === 'wet_glazing' || g === 'dry_glazing' ? g : ''
@@ -908,17 +905,8 @@ export function DealModal({
           </div>
           </CollapsibleSection>
 
-          {/* Sketch & Offers Buttons */}
-          <div className="pt-4 border-t border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {showSketchButton && (
-              <button
-                onClick={() => setShowSketchModal(true)}
-                className="px-4 py-2 rounded-lg bg-amber-600/20 hover:bg-amber-600/30 text-amber-200 font-medium flex items-center justify-center gap-2"
-              >
-                <FileImage className="w-4 h-4" />
-                {t.deals.openSketch}
-              </button>
-            )}
+          {/* Offers Button */}
+          <div className="pt-4 border-t border-white/10 grid grid-cols-1 gap-3">
             <button
               onClick={() => setShowOfferModal(true)}
               className="px-4 py-2 rounded-lg bg-green-600/20 hover:bg-green-600/30 text-green-200 font-medium flex items-center justify-center gap-2"
@@ -1030,48 +1018,6 @@ export function DealModal({
           </div>
         </div>
       </div>
-
-      {/* Sketch Modal */}
-      {showSketchModal && (
-        <SketchModal
-          dealId={deal.id}
-          existingImageUrl={localDeal.sketch_image_url}
-          existingJson={localDeal.sketch_json}
-          onClose={() => setShowSketchModal(false)}
-          onSave={async (imageBlob: Blob, jsonData: any) => {
-            const formData = new FormData()
-            formData.append('dealId', deal.id)
-            formData.append('image', imageBlob, 'sketch.png')
-            formData.append('sketchJson', JSON.stringify(jsonData))
-
-            // Use authFetch to automatically add JWT token from Supabase session
-            const response = await authFetch('/admin-api/deals/sketch', {
-              method: 'POST',
-              body: formData,
-            })
-
-            if (!response.ok) {
-              const errorText = await response.text()
-              console.error('[DealModal] Sketch save error:', response.status, errorText)
-              throw new Error(`Failed to save sketch: ${response.status} ${errorText}`)
-            }
-
-            const result = await response.json()
-            
-            setLocalDeal(prev => ({
-              ...prev,
-              sketch_image_url: result.imageUrl,
-              sketch_json: jsonData,
-            }))
-
-            await onUpdate({
-              sketch_image_url: result.imageUrl,
-              sketch_json: jsonData,
-            })
-          }}
-          adminToken={adminToken}
-        />
-      )}
 
       {/* Offer Modal */}
       {showOfferModal && localDeal.customer_name && (

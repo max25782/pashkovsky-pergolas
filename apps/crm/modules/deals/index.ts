@@ -90,7 +90,6 @@ export { KanbanBoard } from '@/components/admin/KanbanBoard'
 export { KanbanColumn } from '@/components/admin/KanbanColumn'
 export { DealPaymentsWidget } from '@/components/admin/DealPaymentsWidget'
 export { MaterialOrdersList } from '@/components/admin/MaterialOrdersList'
-export { SketchModal } from '@/components/admin/SketchModal'
 export { LaundryClosetModal } from '@/components/admin/LaundryClosetModal'
 export { RailingsFormFields } from '@/components/admin/RailingsFormFields'
 
