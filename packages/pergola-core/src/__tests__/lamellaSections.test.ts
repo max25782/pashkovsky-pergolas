@@ -151,11 +151,24 @@ describe('lamella factory sections', () => {
     }
     expect([...byLen.entries()].sort((x, y) => Number(y[0]) - Number(x[0]))).toEqual([['1271.7', 397], ['1241.7', 32]])
 
-    // Columns close on the typed outers: left 50 + 50 + 2950 + 40 + 3410 = 6500,
-    // right 50 (top) + 40 (wall) + 3410 = 3500.
+    // Columns close on the typed outers with tolerance 0.
+    // Left: 50 + 50 + 2950 + 40 + 3410 = 6500.
+    // Right: 50 (top beam) + 40 (wall) + 3410 = 3500.
     const cols = columnHeightChecksums(sections, spec, PERGOLA_CONSTRUCTION_PROFILES)
-    for (const col of cols) expect(col.closes, `${col.id} sum=${col.sumMm} outer=${col.measuredOuterMm}`).toBe(true)
-    expect(cols.some((c) => Math.abs(c.measuredOuterMm - 3500) < 1 && Math.abs(c.sumMm - 3500) < 0.6)).toBe(true)
+    const left = cols.filter((col) => col.measuredOuterMm === 6500)
+    const right = cols.filter((col) => col.measuredOuterMm === 3500)
+    expect(left).toHaveLength(3)
+    expect(right).toHaveLength(6)
+    for (const col of left) {
+      expect(col.parts.map((part) => part.mm)).toEqual([50, 50, 2950, 40, 3410])
+      expect(col.sumMm).toBe(6500)
+      expect(col.sumMm - col.measuredOuterMm).toBe(0)
+    }
+    for (const col of right) {
+      expect(col.parts.map((part) => part.mm)).toEqual([40, 50, 3410])
+      expect(col.sumMm).toBe(3500)
+      expect(col.sumMm - col.measuredOuterMm).toBe(0)
+    }
   })
 
   it('label equals drawn W×H within 0.5 mm', () => {
@@ -179,13 +192,34 @@ describe('lamella factory sections', () => {
     const spec = specFromPlan({ contour, wallEdgeIndices: [], params: liveParams })
     const sections = buildLamellaSections(spec, PERGOLA_CONSTRUCTION_PROFILES)
     const cols = columnHeightChecksums(sections, spec, PERGOLA_CONSTRUCTION_PROFILES)
-    expect(cols.length).toBeGreaterThanOrEqual(2)
+    expect(cols).toHaveLength(9)
     for (const col of cols) {
-      expect(col.closes, `${col.id} sum=${col.sumMm} outer=${col.measuredOuterMm}`).toBe(true)
+      expect(col.sumMm, `${col.id} parts=${col.parts.map((part) => part.mm).join('+')}`).toBe(col.measuredOuterMm)
+      expect(col.sumMm - col.measuredOuterMm).toBe(0)
+      expect(col.closes).toBe(true)
     }
-    // Left wing: 50 + 50 + 2955 + 40 + 3405 = 6500. Right wing: 50 + 50 + 3400 = 3500.
-    expect(cols.filter((c) => Math.abs(c.sumMm - 6500) < 0.6).length).toBeGreaterThanOrEqual(1)
-    expect(cols.filter((c) => Math.abs(c.sumMm - 3500) < 0.6).length).toBeGreaterThanOrEqual(1)
+    // Shelf columns: 50 + 50 + 2955 + 40 + 3405 = 6500.
+    // The bay that straddles the shelf step stays one cell and takes the
+    // smaller clear, so that column is 50 + 50 + 2955 + 45 + 3400 = 6500.
+    // Right wing: 50 + 50 + 3400 = 3500.
+    const shelf = cols.filter((col) => col.parts.some((part) => part.label === 'support' && part.mm === 40))
+    const step = cols.filter((col) => col.parts.some((part) => part.label === 'support' && part.mm === 45))
+    const right = cols.filter((col) => col.parts.length === 3)
+    expect(shelf).toHaveLength(2)
+    expect(step).toHaveLength(1)
+    expect(right).toHaveLength(6)
+    for (const col of shelf) {
+      expect(col.parts.map((part) => part.mm)).toEqual([50, 50, 2955, 40, 3405])
+      expect(col.sumMm).toBe(6500)
+    }
+    for (const col of step) {
+      expect(col.parts.map((part) => part.mm)).toEqual([50, 50, 2955, 45, 3400])
+      expect(col.sumMm).toBe(6500)
+    }
+    for (const col of right) {
+      expect(col.parts.map((part) => part.mm)).toEqual([50, 50, 3400])
+      expect(col.sumMm).toBe(3500)
+    }
   })
 
   it('report lists clear / factory / faces for every cell', () => {
