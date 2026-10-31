@@ -128,7 +128,7 @@ export function LamellaLayoutSheet({
   useEffect(() => {
     const svg = svgRef.current
     if (!svg) return
-    function measure() {
+    const measure = () => {
       const parent = svg.parentElement?.getBoundingClientRect()
       const rect = svg.getBoundingClientRect()
       const widthPx = Math.max(rect.width, parent?.width ?? 0)

@@ -115,14 +115,16 @@ function parseParams(raw: unknown): PlanConstructionParams {
     delete base.purlinMaxSpanMm
   }
   if (typeof o.wingShelfProfileId === 'string' && o.wingShelfProfileId.length > 0) {
-    base.wingShelfProfileId = o.wingShelfProfileId
+    base.wingShelfProfileId = canonicalProfileId(o.wingShelfProfileId)
   } else {
     delete base.wingShelfProfileId
   }
   if (o.wallBeamWidthVersion === 1) {
     base.wallBeamWidthVersion = 1
-    if (o.wallProfileId === 'f10040' || o.wallProfileId === 'pa1162') {
-      base.wallProfileId = o.wallProfileId
+    // Read-time alias only (f12040 -> pa1162); the stored plan is not rewritten.
+    const wallId = typeof o.wallProfileId === 'string' ? canonicalProfileId(o.wallProfileId) : o.wallProfileId
+    if (wallId === 'f10040' || wallId === 'pa1162') {
+      base.wallProfileId = wallId
     } else {
       base.wallProfileId = 'f10040'
     }

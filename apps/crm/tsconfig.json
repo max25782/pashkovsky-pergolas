@@ -20,6 +20,9 @@
     "paths": {
       "@/*": [
         "./*"
+      ],
+      "three": [
+        "./node_modules/@types/three"
       ]
     },
     "incremental": true,
@@ -37,6 +40,7 @@
   ],
   "exclude": [
     "node_modules",
-    "tests"
+    "tests",
+    "scripts/plan-sheet-export"
   ]
 }

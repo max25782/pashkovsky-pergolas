@@ -867,7 +867,10 @@ function ConstructionParamsPanel({
           value={params.beamProfileId}
           onChange={(e) => patch(beamProfileChangePatch(e.target.value))}
         >
-          {BEAM_PROFILE_IDS.map((id) => (
+          {(isRetiredProfileId(params.beamProfileId) && !BEAM_PROFILE_IDS.includes(params.beamProfileId)
+            ? [params.beamProfileId, ...BEAM_PROFILE_IDS]
+            : BEAM_PROFILE_IDS
+          ).map((id) => (
             <option key={id} value={id}>
               {formatProfileOption(id)}
             </option>

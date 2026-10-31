@@ -28,6 +28,20 @@ const LIVE_L: Point2D[] = [
 ]
 const LIVE_L_MEASURED = [4000, 3000, 8000, 3500, 12000, 6500]
 
+const round1 = (value: number) => Math.round(value * 10) / 10
+
+/** The contour rebuilt from the typed outers, so entered size = outer size. */
+function enteredLiveL(wallEdges: number[]): Point2D[] {
+  const contour = rebuildContourForEnteredOuters({
+    contour: LIVE_L,
+    measuredOuterLengthMmByEdgeIndex: LIVE_L_MEASURED,
+    defaultBeamPlanWidthMm: 50,
+    planWidthForEdge: (edgeIndex) => (wallEdges.includes(edgeIndex) ? 40 : 50),
+  })
+  expect(contour).not.toBeNull()
+  return contour!
+}
+
 const liveParams = {
   ...DEFAULT_PLAN_CONSTRUCTION_PARAMS,
   beamProfileId: 'F20050',
@@ -47,101 +61,105 @@ describe('lamella factory sections', () => {
     expect(LAMELLA_SECTION_CLEARANCE_H_MM).toBe(30)
   })
 
-  // The saved LIVE L contour was drawn for 40 mm beams (axis 6460 for a typed
-  // 6500, 3460 for 3500). liveParams puts a 50 mm frame on it. AD keeps such a
-  // contour as saved and cuts the cells from the drawn beam faces, so each
-  // column is 2 × (50 − 40) / 2 = 10 mm taller than the typed outer. The
-  // checksum test below pins that 10 mm; a contour rebuilt for 50 mm closes.
-  it('LIVE L (40 mm contour, 50 mm frame): 12 cells, 6 over the beam 3380, 3 over the shelf 3385, 3 lower 2925', () => {
-    const spec = specFromPlan({ contour: LIVE_L, wallEdgeIndices: [], params: liveParams })
+  // Fixtures use a contour rebuilt from the typed outers (4000 / 3000 / 8000 /
+  // 3500 / 12000 / 6500) and the real beam widths, so the entered size is the
+  // outer size on every side. Rule: a bay is the distance between the two
+  // faces it sits between (cutter between faces), the section is that minus 30.
+  //   right wing  3500 = 50 frame + 3400 clear + 50 frame          -> 3370
+  //   lower left  clear 2955 (3000 axis: 25 frame face .. 20 shelf face) -> 2925
+  //   upper left  6500 - 50 - 50 - 40 shelf - 2955 = 3405 clear    -> 3375
+  it('LIVE L (entered = outer, 50 mm frame): 12 cells, 7 over the beam 3370, 2 over the shelf 3375, 3 lower 2925', () => {
+    const spec = specFromPlan({ contour: enteredLiveL([]), wallEdgeIndices: [], params: liveParams })
     const sections = buildLamellaSections(spec, PERGOLA_CONSTRUCTION_PROFILES)
     expect(sections).toHaveLength(12)
 
     const heights = [...new Set(sections.map((s) => Math.round(s.heightMm)))].sort((a, b) => b - a)
-    // Before AD every upper cell was 3370 and every lower cell 2920 (typed
-    // outer 6500 split by a 50 mm band). Now: beam band 50 → 3380 (+10, stale
-    // contour); left wing with a 40 mm shelf and no beam under it → 3385 / 2925
-    // (band 40 instead of 50 gives +5 above and +5 below the shelf).
-    expect(heights).toEqual([3385, 3380, 2925])
+    // Rule: 3375 / 3370 / 2925. The old stale-contour fixture (40 mm contour
+    // under a 50 mm frame) gave 3385 / 3380 / 2925: +10 on both upper values,
+    // the typed outer exceeded by 2 × (50 - 40) / 2.
+    expect(heights).toEqual([3375, 3370, 2925])
 
-    const overBeam = sections.filter((s) => Math.abs(s.heightMm - 3380) < 0.6)
-    const overShelf = sections.filter((s) => Math.abs(s.heightMm - 3385) < 0.6)
-    expect(overBeam).toHaveLength(6)
-    expect(overShelf).toHaveLength(3)
+    const overBeam = sections.filter((s) => Math.abs(s.heightMm - 3370) < 0.6)
+    const overShelf = sections.filter((s) => Math.abs(s.heightMm - 3375) < 0.6)
+    // The bay over x = 3950 sits half on the shelf (clear 3405) and half on the
+    // beam (clear 3400); a lamella runs the whole bay, so it takes the smaller
+    // 3400 and is counted with the beam cells: 6 + 1 = 7.
+    expect(overBeam).toHaveLength(7)
+    expect(overShelf).toHaveLength(2)
     for (const s of overBeam) {
       expect(s.widthMm).toBeCloseTo(1271.7, 1)
       expect(s.clearWMm).toBeCloseTo(1286.7, 1)
-      expect(s.clearHMm).toBeCloseTo(3410, 1)
-      expect(formatLamellaSectionSizeMm(s.widthMm, s.heightMm)).toBe('1271.7×3380')
+      expect(s.clearHMm).toBeCloseTo(3400, 1)
+      expect(formatLamellaSectionSizeMm(s.widthMm, s.heightMm)).toBe('1271.7×3370')
     }
-    for (const s of overShelf) expect(s.clearHMm).toBeCloseTo(3415, 1)
+    for (const s of overShelf) expect(s.clearHMm).toBeCloseTo(3405, 1)
 
     const lower = sections.filter((s) => s.maxY < 3000)
     expect(lower).toHaveLength(3)
     for (const s of lower) {
       expect(s.clearHMm).toBeCloseTo(2955, 1)
       expect(s.heightMm).toBeCloseTo(2925, 1)
-      expect(s.widthMm).toBeCloseTo(1271.7, 1)
     }
+    expect(lower.map((s) => round1(s.widthMm)).sort((x, y) => y - x)).toEqual([1271.7, 1271.7, 1231.7])
   })
 
-  it('LIVE L walls on the cutout: 6 upper 3390 over the walls, 3 upper 3385 over the shelf, lower 3 × 2925', () => {
+  // Walls on edges 1 and 2 are 40 mm, the rest 50. Rule:
+  //   right wing  3500 = 50 frame + 3410 clear + 40 wall           -> 3380
+  //   upper left  6500 - 50 - 50 - 40 shelf - 2950 = 3410 clear    -> 3380
+  //   lower left  clear 2950 (2995 axis: 25 frame face .. 20 shelf face) -> 2920
+  it('LIVE L walls on the cutout (entered = outer): 9 upper 3380, lower 3 × 2920', () => {
     const params = {
       ...liveParams,
       wallBeamWidthVersion: 1 as const,
       wallProfileId: 'f10040',
     }
-    const spec = specFromPlan({ contour: LIVE_L, wallEdgeIndices: [1, 2], params })
+    const spec = specFromPlan({ contour: enteredLiveL([1, 2]), wallEdgeIndices: [1, 2], params })
     const sections = buildLamellaSections(spec, PERGOLA_CONSTRUCTION_PROFILES)
     expect(sections).toHaveLength(12)
 
     const upper = sections.filter((s) => s.minY > 3000)
     expect(upper).toHaveLength(9)
-    // Was 9 × 3380 (a 40 mm wall on top gives 3370 + 10). Now the contour is not
-    // rewritten for the 50 mm frame, so the 6 cells on the wall side are
-    // 3380 + 10 = 3390, and the 3 cells over the 40 mm shelf with no beam under
-    // it are 3380 + 5 = 3385 (band 40 instead of 50).
-    const overWalls = upper.filter((s) => s.minX > 4000)
-    const overShelf = upper.filter((s) => s.minX < 4000)
-    expect(overWalls).toHaveLength(6)
-    expect(overShelf).toHaveLength(3)
-    for (const s of overWalls) {
+    // Old stale-contour fixture: 6 × 3390 over the walls and 3 × 3385 over the
+    // shelf, lower 2925. Rule: 3380 everywhere above (clear 3410) and 2920
+    // below (clear 2950): -10 over the walls, -5 over the shelf, -5 below.
+    // The wall edge cut the upper bay at its centre + 15 instead of its own
+    // face + 20, which was 5 mm too tall on a contour that already matches.
+    for (const s of upper) {
       expect(s.widthMm).toBeCloseTo(1271.7, 1)
-      expect(s.heightMm).toBeCloseTo(3390, 0)
-      expect(s.clearHMm).toBeCloseTo(3420, 0)
-      expect(s.lamellaCount).toBe(37)
-    }
-    for (const s of overShelf) {
-      expect(s.widthMm).toBeCloseTo(1271.7, 1)
-      expect(s.heightMm).toBeCloseTo(3385, 0)
-      expect(s.clearHMm).toBeCloseTo(3415, 0)
+      expect(s.heightMm).toBeCloseTo(3380, 1)
+      expect(s.clearHMm).toBeCloseTo(3410, 1)
       expect(s.lamellaCount).toBe(37)
     }
 
     const lower = sections.filter((s) => s.maxY < 3000)
     expect(lower).toHaveLength(3)
-    // Was 2920. The shelf band is 40, not 50: +5 below the shelf.
     for (const s of lower) {
-      expect(s.heightMm).toBeCloseTo(2925, 0)
-      // Was a notch-clipped 1266.7 × 32. The span now runs to the drawn beam
-      // face (axis 4000 − 25 = 3975), so all three bays are the equal 1271.7.
-      expect(s.widthMm).toBeCloseTo(1271.7, 1)
+      expect(s.heightMm).toBeCloseTo(2920, 1)
+      expect(s.clearHMm).toBeCloseTo(2950, 1)
       expect(s.lamellaCount).toBe(32)
     }
+    // The lower notch bay ends on the wall face (axis 3955 - 20): 1241.7 wide.
+    expect(lower.map((s) => round1(s.widthMm)).sort((x, y) => y - x)).toEqual([1271.7, 1271.7, 1241.7])
 
+    // 9 × 37 + 3 × 32 = 429: 397 at 1271.7 and 32 at 1241.7.
     const pieces = computeLamellas(spec, PERGOLA_CONSTRUCTION_PROFILES)
+    expect(pieces).toHaveLength(429)
     const byLen = new Map<string, number>()
     for (const p of pieces) {
       const key = (Math.round(p.lengthAxisMm * 10) / 10).toFixed(1)
       byLen.set(key, (byLen.get(key) ?? 0) + 1)
     }
-    // 9 × 37 + 3 × 32 = 429, all 1271.7 (was 397 × 1271.7 + 32 × 1266.7).
-    expect(pieces).toHaveLength(429)
-    expect(byLen.get('1271.7')).toBe(429)
+    expect([...byLen.entries()].sort((x, y) => Number(y[0]) - Number(x[0]))).toEqual([['1271.7', 397], ['1241.7', 32]])
+
+    // Columns close on the typed outers: left 50 + 50 + 2950 + 40 + 3410 = 6500,
+    // right 50 (top) + 40 (wall) + 3410 = 3500.
+    const cols = columnHeightChecksums(sections, spec, PERGOLA_CONSTRUCTION_PROFILES)
+    for (const col of cols) expect(col.closes, `${col.id} sum=${col.sumMm} outer=${col.measuredOuterMm}`).toBe(true)
+    expect(cols.some((c) => Math.abs(c.measuredOuterMm - 3500) < 1 && Math.abs(c.sumMm - 3500) < 0.6)).toBe(true)
   })
 
   it('label equals drawn W×H within 0.5 mm', () => {
-    const spec = specFromPlan({ contour: LIVE_L, wallEdgeIndices: [], params: liveParams })
+    const spec = specFromPlan({ contour: enteredLiveL([]), wallEdgeIndices: [], params: liveParams })
     const sections = buildLamellaSections(spec, PERGOLA_CONSTRUCTION_PROFILES)
     for (const s of sections) {
       expect(sectionLabelMatchesDrawn(s)).toBe(true)
@@ -153,40 +171,12 @@ describe('lamella factory sections', () => {
     }
   })
 
-  it('column checksum: a 40 mm contour under a 50 mm frame is 10 mm over the typed outer in every column', () => {
-    const spec = specFromPlan({ contour: LIVE_L, wallEdgeIndices: [], params: liveParams })
-    const sections = buildLamellaSections(spec, PERGOLA_CONSTRUCTION_PROFILES)
-    const cols = columnHeightChecksums(sections, spec, PERGOLA_CONSTRUCTION_PROFILES)
-    expect(cols.length).toBeGreaterThanOrEqual(2)
-    // Right wing: 50 + 50 + (3380 + 30) = 3510 against 3500.
-    // Left wing: 50 + 50 + (2925 + 30) + 40 shelf + (3385 + 30) = 6510 against 6500.
-    // The 10 is (50 - 40): the contour was drawn for a 40 mm beam.
-    for (const col of cols) {
-      expect(col.closes).toBe(false)
-      expect(col.sumMm - col.measuredOuterMm).toBeCloseTo(10, 0)
-    }
-    const left = cols.filter((c) => Math.abs(c.measuredOuterMm - 6500) < 1)
-    const right = cols.filter((c) => Math.abs(c.measuredOuterMm - 3500) < 1)
-    expect(left.length).toBeGreaterThanOrEqual(1)
-    expect(right.length).toBeGreaterThanOrEqual(1)
-    for (const col of left) {
-      expect(col.sumMm).toBeCloseTo(6510, 0)
-      expect(col.parts.find((part) => part.label === 'support')?.mm).toBeCloseTo(40, 0)
-    }
-    for (const col of right) expect(col.sumMm).toBeCloseTo(3510, 0)
-  })
-
-  it('column checksum: a contour rebuilt for the 50 mm frame closes on every column', () => {
-    const contour = rebuildContourForEnteredOuters({
-      contour: LIVE_L,
-      measuredOuterLengthMmByEdgeIndex: LIVE_L_MEASURED,
-      defaultBeamPlanWidthMm: 50,
-    })
-    expect(contour).not.toBeNull()
-    expect(contour!.map((p) => p.map((v) => Math.round(v)))).toEqual([
+  it('column checksum: entered = outer closes on every column', () => {
+    const contour = enteredLiveL([])
+    expect(contour.map((p) => p.map((v) => Math.round(v)))).toEqual([
       [0, 0], [3950, 0], [3950, 3000], [11950, 3000], [11950, 6450], [0, 6450],
     ])
-    const spec = specFromPlan({ contour: contour!, wallEdgeIndices: [], params: liveParams })
+    const spec = specFromPlan({ contour, wallEdgeIndices: [], params: liveParams })
     const sections = buildLamellaSections(spec, PERGOLA_CONSTRUCTION_PROFILES)
     const cols = columnHeightChecksums(sections, spec, PERGOLA_CONSTRUCTION_PROFILES)
     expect(cols.length).toBeGreaterThanOrEqual(2)
@@ -199,7 +189,7 @@ describe('lamella factory sections', () => {
   })
 
   it('report lists clear / factory / faces for every cell', () => {
-    const spec = specFromPlan({ contour: LIVE_L, wallEdgeIndices: [], params: liveParams })
+    const spec = specFromPlan({ contour: enteredLiveL([]), wallEdgeIndices: [], params: liveParams })
     const rows = reportLamellaSections(buildLamellaSections(spec, PERGOLA_CONSTRUCTION_PROFILES))
     expect(rows).toHaveLength(12)
     for (const row of rows) {
@@ -211,15 +201,18 @@ describe('lamella factory sections', () => {
 
   it('unset version keeps legacy scan-line; version 1 uses section W', () => {
     const legacySpec = specFromPlan({
-      contour: LIVE_L,
+      contour: enteredLiveL([]),
       wallEdgeIndices: [],
       params: { ...liveParams, lamellaSectionLayoutVersion: undefined },
     })
     delete (legacySpec as { lamellaSectionLayoutVersion?: number }).lamellaSectionLayoutVersion
-    const v1Spec = specFromPlan({ contour: LIVE_L, wallEdgeIndices: [], params: liveParams })
+    const v1Spec = specFromPlan({ contour: enteredLiveL([]), wallEdgeIndices: [], params: liveParams })
     const legacy = computeLamellas(legacySpec, PERGOLA_CONSTRUCTION_PROFILES)
     const next = computeLamellas(v1Spec, PERGOLA_CONSTRUCTION_PROFILES)
-    expect(legacy.length).toBe(483)
+    // The stale 40 mm contour gave 483: 39 × 1341.7 + 72 × 1331.7 + 339 × 1326.7
+    // + 33 slivers of 15 mm at the notch end. On the rebuilt contour those 33
+    // slivers are gone: 111 × 1331.7 + 306 × 1326.7 + 33 × 1291.7 = 450.
+    expect(legacy.length).toBe(450)
     expect(next.length).toBeGreaterThan(0)
     const nextLengths = new Set(next.map((p) => Math.round(p.lengthAxisMm * 10) / 10))
     expect([...nextLengths].some((len) => Math.abs(len - 1271.7) < 0.2)).toBe(true)
@@ -233,9 +226,8 @@ describe('lamella factory sections', () => {
     }
     expect(legacy.length).not.toBe(next.length)
     expect(next.length).toBe(429)
-    // Was 397 × 1271.7 + 32 × 1256.7. The notch bay is no longer clipped to the
-    // typed outer: the saved 40 mm contour is cut at the drawn 50 mm beam
-    // face (4000 − 25), so all 429 lamellas are the equal 1271.7.
-    expect(byLen(next)).toEqual([['1271.7', 429]])
+    // 9 × 37 upper + 3 × 32 lower: 397 at 1271.7 and 32 in the notch bay at
+    // 1231.7 (its right end is the notch beam face, 3950 + 25).
+    expect(byLen(next)).toEqual([['1271.7', 397], ['1231.7', 32]])
   })
 })

@@ -16,8 +16,13 @@ export const LAMELLA_40_09_ID = 'HS002'
 export const LAMELLA_70_16_ID = 'pa 1121'
 /** Aluminum density for a closed-tube check against the catalog kg/m. */
 export const ALUMINUM_DENSITY_KG_PER_M3 = 2700
+/**
+ * Old catalog id of the shaped double-T 142x70 (profiles.json). Old plans still
+ * open and print. It is not bound to PA268 or R242: no SKU, no weight.
+ */
+export const LEGACY_DOUBLE_T_120_ID = 'דאבל-טי-מעוצב-120-300x229'
 /** Deprecated profiles. Saved plans still resolve the id; new-plan pickers omit them. */
-export const RETIRED_PROFILE_IDS = ['purlin-led-6040', 'purlin-plain-5030'] as const
+export const RETIRED_PROFILE_IDS = ['purlin-led-6040', 'purlin-plain-5030', LEGACY_DOUBLE_T_120_ID] as const
 /** Plain purlin and wing shelf: 60×40, plan width 40. No silent default. */
 export const PLAIN_PURLIN_PROFILE_IDS = ['F4060', 'PA1296'] as const
 /** Lighting purlin for new plans: טי תאורה 120/40. */
@@ -138,6 +143,12 @@ export function buildPergolaConstructionProfiles(): Map<string, ProfileDimension
       availableStockLengthsMm: [6000, 6500, 7000],
       wallThicknessMm: 2,
     })],
+    [LEGACY_DOUBLE_T_120_ID, attachBeamPlanWidth({
+      widthMm: 70, heightMm: 142, maxSpanMm: 5000,
+      availableStockLengthsMm: [6000, 6500, 7000],
+      labelHe: 'דאבל טי מעוצב 120 · ישן',
+      deprecated: true,
+    }, 'דאבל טי מעוצב 120', null)],
     ['purlin-plain-5030', {
       widthMm: 30, heightMm: 50, maxSpanMm: 3000, interruptsLamella: false,
       availableStockLengthsMm: [6000],
@@ -188,6 +199,8 @@ export function buildPergolaConstructionProfiles(): Map<string, ProfileDimension
 export const PROFILE_ID_ALIASES: Readonly<Record<string, string>> = {
   f20050: 'F20050',
   '1197 pa': 'pa1197',
+  // 120/40 rectangle: the same profile as pa1162. Read-time only, not applied in the database.
+  f12040: 'pa1162',
 }
 
 /** Current construction id for a stored id; unknown ids come back unchanged. */

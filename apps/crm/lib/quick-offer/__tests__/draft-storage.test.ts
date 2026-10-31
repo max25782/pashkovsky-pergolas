@@ -129,6 +129,7 @@ describe('quick offer draft storage', () => {
       normalizedPergolas: edited.pergolas ?? [],
       serverCalc: calcAfter,
       quickOfferExtra: null,
+      customerName: 'Test customer',
     })
     expect(row.pergola_price_per_sqm).toBe(900)
     expect(row.pergola_total).toBe(calcAfter.pergolaTotal)
@@ -146,6 +147,7 @@ describe('quick offer draft storage', () => {
       normalizedPergolas: draft.pergolas ?? [],
       serverCalc: calc,
       quickOfferExtra: null,
+      customerName: 'Test customer',
     })
     expect(row).not.toHaveProperty('configurator_meta')
     expect(JSON.stringify(row)).not.toContain('planPolygon')

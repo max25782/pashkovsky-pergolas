@@ -228,6 +228,7 @@ describe('buildOrderSheetTotals', () => {
       weightKgPerMeter: 1.8,
       options: [],
       recommendedStockLengthMm: null,
+      lamellaOversizeMm: null,
     })
 
     const totals = buildOrderSheetTotals(plans, new Map())

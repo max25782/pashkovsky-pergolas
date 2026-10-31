@@ -276,7 +276,8 @@ function packExact(
   for (let i = slots.length - 1; i >= 0; i--) suffix[i] = suffix[i + 1] + slots[i]
 
   let bestScore = packScore(seed)
-  let bestAssign: number[] | null = null
+  // dfs() assigns this from a closure, so state the type here or TS narrows it to null.
+  let bestAssign = null as number[] | null
   const used: number[] = []
   const assign = new Array<number>(ordered.length).fill(-1)
   let nodes = 0

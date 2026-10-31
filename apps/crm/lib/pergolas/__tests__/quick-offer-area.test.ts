@@ -79,6 +79,7 @@ describe('quick-offer area from plan', () => {
       normalizedPergolas: [pergola],
       serverCalc: calc,
       quickOfferExtra: null,
+      customerName: 'Test customer',
     })
     expect(row.pergola_width).toBeNull()
     expect(row.pergola_length).toBeNull()

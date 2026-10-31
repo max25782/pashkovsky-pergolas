@@ -121,15 +121,20 @@ describe.each(FRAMES)('frame beam $id (50 mm in plan)', (frame) => {
     })
     expect(built.pieces.filter((piece) => piece.role === 'beam').every((piece) => piece.profileId === frame.id)).toBe(true)
     expect(built.pieces.filter((piece) => piece.role === 'purlin')).toHaveLength(11)
-    expect(sections).toHaveLength(13)
-    expect(angles).toHaveLength(26)
+    // 13 before: the upper bay at the shelf / frame step also had a 40 mm wide
+    // sliver (37 lamellas 40 mm long) beside a 1246.7 cell, 3400 vs 3405 clear.
+    // They are one bay of 1286.7 (clear 3400), so 12 sections and 2 angles each.
+    expect(sections).toHaveLength(12)
+    expect(angles).toHaveLength(24)
     const beam = chosenOf(plans, frame.id)
     expect(beam.stock).toBe(frame.l12.stock)
     expect(beam.plan?.totalBars).toBe(frame.l12.bars)
     expect(Number((beam.plan!.totalBars * beam.stock! / 1000 * frame.kgPerM).toFixed(1))).toBe(frame.l12.kg)
     const angle = chosenOf(plans, 'p1034')
     expect(angle.stock).toBe(6000)
-    expect(angle.plan?.totalBars).toBe(23)
+    // An angle is as long as its section height (about 3400): 26 -> 24 pieces
+    // (the sliver had its own pair), 23 -> 21 bars of 6000.
+    expect(angle.plan?.totalBars).toBe(21)
   })
 
   it('11204: cutting, order stock with the least waste, angle p1034 and weight', () => {

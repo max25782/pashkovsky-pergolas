@@ -77,9 +77,12 @@ describe('skewed centerline plan — section from the purlin opening', () => {
 
   it('sizes A and B from the shortest overlapping purlin minus 30', () => {
     const full = sections.filter((section) => section.clearWMm > 1000)
-    // 11 before AD. The upper bay that straddles the beam / shelf change is now
-    // two partial cells (523.1 + 885.1 = 1408.2), so 10 full cells remain.
-    expect(full).toHaveLength(10)
+    // 11 before AD and 11 now. The upper bay over x = 78.5 has the shelf face
+    // (half 15) on its left and the beam face (half 20) on its right, a 5 mm
+    // step. A lamella runs from purlin to purlin, so the bay stays one cell and
+    // takes the smaller clear 3686.5 (the first cut made it 523.1 + 885.1 with a
+    // lamella joint over nothing: 12 -> 13 cells, 536 -> 576 lamellas).
+    expect(full).toHaveLength(11)
     const gap = computeEqualPurlinClearMm({
       outerLengthMm: 11625.4883698941,
       leftEndWidthMm: 40,
@@ -93,10 +96,11 @@ describe('skewed centerline plan — section from the purlin opening', () => {
     }
     const upper = full.filter((section) => section.clearHMm < 4000)
     const lower = full.filter((section) => section.clearHMm > 4000)
-    expect(upper).toHaveLength(7)
+    expect(upper).toHaveLength(8)
     expect(lower).toHaveLength(3)
-    // 4 over the notch beam keep 3686.5, 3 over the 30 mm shelf are 5 mm taller.
-    expect(upper.filter((section) => Math.abs(section.clearHMm - 3686.5) < 0.2)).toHaveLength(4)
+    // 5 touch the notch beam (4 whole bays + the bay that straddles the change)
+    // keep 3686.5; the 3 bays wholly over the 30 mm shelf are 5 mm taller.
+    expect(upper.filter((section) => Math.abs(section.clearHMm - 3686.5) < 0.2)).toHaveLength(5)
     expect(upper.filter((section) => Math.abs(section.clearHMm - 3691.5) < 0.2)).toHaveLength(3)
     for (const section of upper) {
       expect(section.heightMm).toBeCloseTo(section.clearHMm - 30, 1)
@@ -107,28 +111,23 @@ describe('skewed centerline plan — section from the purlin opening', () => {
       expect(section.heightMm).toBeCloseTo(4889.2 - 30, 0)
       expect(section.lamellaCount).toBe(54)
     }
-    // Before: A 8 × 1393.2×3656.5, B 3 × 1393.2×4854.2, C 1 trapezoid, 536 lamellas.
-    // Now the 3 left upper cells (3661.5), the 870.1 partial above the shelf, and
-    // the 508.1 partial on the beam are their own types: 4 + 3 + 1 + 1 + 3 + 1 = 13
-    // cells, 536 + 40 = 576 lamellas.
+    // Before: A 8 × 1393.2×3656.5, B 3 × 1393.2×4854.2, trapezoid 1, 536 lamellas.
+    // Now the 3 upper cells wholly over the shelf are 5 mm taller (3661.5, own
+    // type C) and the 3 lower ones likewise (4859.2). Still 12 cells, 536 lamellas.
     expect(schedule.types.map((type) => [type.typeId, type.count, type.sizeLabel, type.lamellasPerSection])).toEqual([
-      ['A', 4, '1393.2×3656.5', 40],
+      ['A', 5, '1393.2×3656.5', 40],
       ['B', 3, '1393.2×4859.2', 54],
       ['C', 3, '1393.2×3661.5', 40],
       ['D', 1, '765.4 / 974.6×4859.2', 54],
-      ['E', 1, '870.1×3661.5', 40],
-      ['F', 1, '508.1×3656.5', 40],
     ])
-    expect(schedule.totalLamellas).toBe(576)
+    expect(schedule.totalLamellas).toBe(536)
   })
 
   it('sizes C as the notch remainder minus 15', () => {
     const partial = sections.filter((section) => section.clearWMm < 1000)
-    // The lower notch remainder, plus the upper bay cut at the beam / shelf
-    // change into 885.1 (over the shelf) and 523.1 (over the beam).
-    expect(partial).toHaveLength(3)
-    expect(partial.map((section) => round1(section.clearWMm)).sort((x, y) => x - y)).toEqual([523.1, 885.1, 885.1])
-    expect(523.1 + 885.1).toBeCloseTo(1408.2, 1)
+    // Only the lower notch remainder is narrower than a bay.
+    expect(partial).toHaveLength(1)
+    expect(partial.map((section) => round1(section.clearWMm))).toEqual([885.1])
     const cell = partial.find((section) => section.trapezoid)!
     // Last equal bay on the lower wing ends on a purlin face. The notch is
     // the next face. That remainder is the section clear; width = clear − 15.
@@ -153,12 +152,10 @@ describe('skewed centerline plan — section from the purlin opening', () => {
     const frame = computeFrame(spec, PERGOLA_CONSTRUCTION_PROFILES)
     const rows = sectionCellRows(sections, bars, frame.beams)
     const byType = (typeId: string) => rows.filter((row) => row.typeId === typeId)
-    expect(byType('A')).toHaveLength(4)
+    expect(byType('A')).toHaveLength(5)
     expect(byType('B')).toHaveLength(3)
     expect(byType('C')).toHaveLength(3)
     expect(byType('D')).toHaveLength(1)
-    expect(byType('E')).toHaveLength(1)
-    expect(byType('F')).toHaveLength(1)
     for (const row of byType('B')) {
       expect(row.widthMm).toBeCloseTo(1393.2, 1)
       expect(row.heightMm).toBeCloseTo(4859.2, 1)
@@ -171,9 +168,9 @@ describe('skewed centerline plan — section from the purlin opening', () => {
     expect(cellD.purlinLengthMm).toBeCloseTo(4889.2, 0)
     expect(cellD.faces).toContain('notch')
     expect(cellD.beams).toContain('beam-5')
-    expect(rows).toHaveLength(13)
+    expect(rows).toHaveLength(12)
     expect(rows.map((row) => [row.typeId, row.widthMm, row.heightMm, row.faces])).toEqual([
-      ['F', 508.1, 3656.5, 'frame/purlin/notch/frame'],
+      ['A', 1393.2, 3656.5, 'purlin/purlin/notch/frame'],
       ['A', 1393.2, 3656.5, 'purlin/purlin/notch/frame'],
       ['A', 1393.2, 3656.5, 'purlin/purlin/notch/frame'],
       ['A', 1393.2, 3656.5, 'purlin/purlin/notch/frame'],
@@ -181,7 +178,6 @@ describe('skewed centerline plan — section from the purlin opening', () => {
       ['C', 1393.2, 3661.5, 'frame/purlin/support/frame'],
       ['C', 1393.2, 3661.5, 'purlin/purlin/support/frame'],
       ['C', 1393.2, 3661.5, 'purlin/purlin/support/frame'],
-      ['E', 870.1, 3661.5, 'purlin/notch/support/frame'],
       ['B', 1393.2, 4859.2, 'frame/purlin/frame/support'],
       ['B', 1393.2, 4859.2, 'purlin/purlin/frame/support'],
       ['B', 1393.2, 4859.2, 'purlin/purlin/frame/support'],
@@ -220,12 +216,12 @@ describe('skewed centerline plan — section from the purlin opening', () => {
       6000,
       DEFAULT_KERF_MM,
     )
-    // 128 bars before AD (waste 46818 / 46912). The upper bay split adds 40
-    // lamellas but 508.1 + 870.1 pack tighter than 40 × 1393.2: 126 bars.
-    expect(before.totalBars).toBe(126)
-    expect(Math.round(before.totalWasteMm)).toBe(35218)
-    expect(after.totalBars).toBe(126)
-    expect(Math.round(after.totalWasteMm)).toBe(35312)
+    // Same 536 lamellas as before AD, so the same 128 bars and the same waste
+    // (46818 legacy, 46912 with the skew rule, as before AD).
+    expect(before.totalBars).toBe(128)
+    expect(Math.round(before.totalWasteMm)).toBe(46818)
+    expect(after.totalBars).toBe(128)
+    expect(Math.round(after.totalWasteMm)).toBe(46912)
     const cuts = after.bars.flatMap((bar) => bar.pieces.map((piece) => piece.lengthLongMm))
     expect(cuts.filter((length) => length === 766)).toHaveLength(1)
     expect(cuts.filter((length) => length === 971)).toHaveLength(1)
@@ -279,18 +275,16 @@ describe('skewed centerline plan — section from the purlin opening', () => {
       PERGOLA_CONSTRUCTION_PROFILES,
     ))
     // Widths are still the rectangle widths. Heights split by 5 mm (beam vs
-    // shelf under the notch) and the straddling bay into 870.1 + 508.1.
+    // shelf under the notch); the straddling bay stays one cell.
     expect(legacy.types.map((type) => type.sizeLabel)).toEqual([
       '1393.2×3656.5',
       '1393.2×4859.2',
       '1393.2×3661.5',
       '870.1×4859.2',
-      '870.1×3661.5',
-      '508.1×3656.5',
     ])
   })
 
-  it('packs the longer lamellas on 126 bars of 6000', () => {
+  it('packs the same 536 lamellas on 128 bars of 6000', () => {
     const pieces = sections.flatMap((section, index) =>
       Array.from({ length: section.lamellaCount }, (_, row) => ({
         id: `lam-${index}-${row}`,
@@ -324,15 +318,15 @@ describe('skewed centerline plan — section from the purlin opening', () => {
       if (found) found.count += 1
       else patterns.set(key, { count: 1, waste: Math.round(bar.wasteMm) })
     }
-    // Before AD: 482 × 1393 + 54 × 870 on 128 bars (98 × 4×1393, 6 × 3×1393+1×870,
-    // 24 × 3×1393+2×870). Now 442 × 1393 + 94 × 870 + 40 × 508 = 576 pieces
-    // (one extra cell of 40) on 126 bars: 65 + 47 + 13 + 1. Check: 65×4 + 47×3 +
-    // 13×3 + 2 = 442; 47×2 = 94; 13×3 + 1 = 40.
-    expect(plan.totalBars).toBe(126)
-    expect(patterns.get('4×1393')?.count).toBe(65)
-    expect(patterns.get('3×1393+2×870')?.count).toBe(47)
-    expect(patterns.get('3×1393+3×508')?.count).toBe(13)
-    expect(patterns.get('2×1393+1×508')?.count).toBe(1)
+    // Same pieces as before AD: 482 × 1393 + 54 × 870 = 536 on 128 bars.
+    // Check: 100×4 + 25×3 + 3 + 2×1 + 2 = 482 and 25×2 + 1 + 3 = 54.
+    expect(plan.totalBars).toBe(128)
+    expect(patterns.get('4×1393')?.count).toBe(100)
+    expect(patterns.get('3×1393+2×870')?.count).toBe(25)
+    expect(patterns.get('3×1393+1×870')?.count).toBe(1)
+    expect(patterns.get('2×1393+3×870')?.count).toBe(1)
+    expect(patterns.get('2×1393')?.count).toBe(1)
+    expect(Math.round(plan.totalWasteMm)).toBe(46818)
     expect(round1(plan.bars[0].wasteMm)).toBeGreaterThan(0)
   })
 })

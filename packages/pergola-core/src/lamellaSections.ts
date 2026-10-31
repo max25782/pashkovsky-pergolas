@@ -358,6 +358,51 @@ function mergeAdjacentRects(rects: Rectangle[]): Rectangle[] {
 }
 
 /**
+ * Largest step between two touching cells that still counts as one bay, mm.
+ * A 30 mm shelf face and a 40 mm beam face on the same axis differ by 5 mm.
+ */
+const BAY_STEP_TOLERANCE_MM = 10
+
+/**
+ * One bay between two purlins is one cell. When the boundary of a bay steps by
+ * a few millimetres (shelf face next to beam face) the rectangle subtraction
+ * returns two rectangles that touch along the lamella direction. A lamella
+ * runs from purlin to purlin, so cutting it there would put a joint over
+ * nothing. Join the two and keep the smaller clear, which fits both sides.
+ */
+function mergeSteppedBays(cells: Rectangle[], alongX: boolean): Rectangle[] {
+  const cur = [...cells]
+  let merged = true
+  while (merged) {
+    merged = false
+    outer: for (let i = 0; i < cur.length; i++) {
+      for (let j = i + 1; j < cur.length; j++) {
+        const a = cur[i]
+        const b = cur[j]
+        const touch = alongX
+          ? Math.abs(a.maxX - b.minX) <= EPS || Math.abs(b.maxX - a.minX) <= EPS
+          : Math.abs(a.maxY - b.minY) <= EPS || Math.abs(b.maxY - a.minY) <= EPS
+        if (!touch) continue
+        const across = alongX
+          ? Math.abs(a.minY - b.minY) <= BAY_STEP_TOLERANCE_MM && Math.abs(a.maxY - b.maxY) <= BAY_STEP_TOLERANCE_MM
+          : Math.abs(a.minX - b.minX) <= BAY_STEP_TOLERANCE_MM && Math.abs(a.maxX - b.maxX) <= BAY_STEP_TOLERANCE_MM
+        if (!across) continue
+        cur.splice(j, 1)
+        cur[i] = {
+          minX: alongX ? Math.min(a.minX, b.minX) : Math.max(a.minX, b.minX),
+          maxX: alongX ? Math.max(a.maxX, b.maxX) : Math.min(a.maxX, b.maxX),
+          minY: alongX ? Math.max(a.minY, b.minY) : Math.min(a.minY, b.minY),
+          maxY: alongX ? Math.min(a.maxY, b.maxY) : Math.max(a.maxY, b.maxY),
+        }
+        merged = true
+        break outer
+      }
+    }
+  }
+  return cur
+}
+
+/**
  * In-plan thickness of the wing-shelf *profile* (catalog).
  * purlin-plain-5030 is 30 × 50: widthMm=30 is the plan footprint; heightMm=50
  * is vertical. This is NOT the subtracted support band — see
@@ -891,12 +936,10 @@ function pullNarrowWallNotchIntoUpperBay(
     if (!(wallW > 0) || wallW + 0.5 >= beamW) continue
     const gap = cut.maxY - y
     if (Math.abs(gap - beamW / 2) > 2) continue
-    // 50 vs 40: give the saved 10 mm to the upper bay (3500 − 50 − 40 − 30 = 3380).
-    // Wider free beam (double-T 70 vs wall 40): sit on the wall's own top face
-    // so the band of wallW below it is the notch-side face, not the free-beam half.
-    next.maxY = beamW - wallW <= 15
-      ? y + beamW / 2 - (beamW - wallW)
-      : y + wallW / 2
+    // The upper bay starts on the wall's own top face, y + wallW / 2, so the
+    // clear is (outer − free beam − wall) and the section is 30 less
+    // (3500 − 50 − 40 − 30 = 3380 for a contour rebuilt for these widths).
+    next.maxY = y + wallW / 2
   }
   return next
 }
@@ -1427,7 +1470,7 @@ export function buildLamellaSections(
   )
 
   const afterSupport = mergeAdjacentRects(subtractAll(field, supportObstacles))
-  const cells = subtractAll(afterSupport, purlinObstacles)
+  const cells = mergeSteppedBays(subtractAll(afterSupport, purlinObstacles), alongX)
   const pitchMm = representativePitchMm(pattern, spec.lamellaGapMm)
   const sections: LamellaSection[] = []
   let id = 0
@@ -1696,6 +1739,15 @@ export function columnHeightChecksums(
   const beamW = beamPlanWidthForDrawing(profiles, spec.beamProfileId).planWidthMm
   const supportW = supportLineObstacleWidthMm(profiles, spec.beamProfileId)
   const pts = sanitizeContour(spec.contour)
+  const ccw: Point2D[] = isCCW(pts) ? pts : [...pts].reverse()
+  const sideWidthInput = {
+    wallEdgeIndices: spec.wallEdgeIndices,
+    beamProfileId: spec.beamProfileId,
+    wallProfileId: spec.wallProfileId,
+    wallBeamWidthVersion: spec.wallBeamWidthVersion,
+  }
+  const widthAt = (edgeIndex: number) =>
+    spec.wallBeamWidthVersion === 1 ? contourSideWidthMm(profiles, edgeIndex, sideWidthInput) : beamW
   const outerY =
     measuredOuterAlongLamellas(pts, spec.lamellaDirectionDeg + 90, spec.measuredOuterLengthMmByEdgeIndex)
     ?? (Math.max(...pts.map((p) => p[1])) - Math.min(...pts.map((p) => p[1])))
@@ -1737,11 +1789,32 @@ export function columnHeightChecksums(
       measured = Math.max(...acrossOuterByX.values())
     }
 
+    // The beam under / over the column is the contour edge that lies just
+    // outside it: a wall edge is its own (narrower) profile, not the free beam.
+    const maxClearY = Math.max(...stack.map((s) => s.maxY + (s.clearHMm - s.heightMm) / 2))
+    const edgeWidthNear = (y: number): number => {
+      let best = beamW
+      let bestDist = Infinity
+      for (let i = 0; i < ccw.length; i++) {
+        const a = ccw[i]
+        const b = ccw[(i + 1) % ccw.length]
+        if (Math.abs(a[1] - b[1]) > 2) continue
+        if (midX < Math.min(a[0], b[0]) - EPS || midX > Math.max(a[0], b[0]) + EPS) continue
+        const dist = Math.abs((a[1] + b[1]) / 2 - y)
+        if (dist < bestDist && dist <= beamW) {
+          bestDist = dist
+          best = widthAt(i)
+        }
+      }
+      return best
+    }
+    const bottomW = edgeWidthNear(minClearY)
+    const topW = edgeWidthNear(maxClearY)
     const parts: Array<{ label: string; mm: number }> = [
-      { label: 'frame-bottom', mm: beamW },
-      { label: 'frame-top', mm: beamW },
+      { label: 'frame-bottom', mm: bottomW },
+      { label: 'frame-top', mm: topW },
     ]
-    let sum = 2 * beamW
+    let sum = bottomW + topW
     const sorted = [...stack].sort((a, b) => a.minY - b.minY)
     for (let i = 0; i < sorted.length; i++) {
       const s = sorted[i]

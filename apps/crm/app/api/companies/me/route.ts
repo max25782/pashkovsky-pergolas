@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { createClient as createServiceClient, type SupabaseClient } from '@supabase/supabase-js'
 import { fetchWithTimeout, DEFAULT_SUPABASE_TIMEOUT_MS } from '@/lib/supabase/fetch-with-timeout'
 import { pdfLocaleFromCompanySettings } from '@/lib/pdf/company-pdf-locale'
 import { resolvePdfLocale, type PdfLocale } from '@/lib/pdf/pdf-locale'
@@ -125,7 +125,7 @@ export async function GET() {
 }
 
 async function readCompanyLanguage(
-  service: ReturnType<typeof createServiceClient>,
+  service: SupabaseClient,
   companyId: string,
 ): Promise<PdfLocale> {
   try {
