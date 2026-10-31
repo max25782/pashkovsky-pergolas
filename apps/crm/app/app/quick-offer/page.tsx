@@ -32,7 +32,23 @@ import {
   PERGOLA_TYPE_DEFAULT_PRICES,
   type Offer,
 } from '@/types/offer'
-import { calculateOffer, quickOfferRailingsFenceAreaSqm } from '@/lib/offer-calculator'
+import {
+  calculateOffer,
+  parseDiscountPercent,
+  pergolaUnitPriceIsBillable,
+  quickOfferRailingsFenceAreaSqm,
+} from '@/lib/offer-calculator'
+import {
+  buildOfferPricingSnapshot,
+  customerOfferMessage,
+  formatEnteredPercent,
+} from '@/lib/offers/offer-pricing-snapshot'
+import type { OfferPricingLineKind, OfferPricingSnapshot } from '@/types/offer'
+
+function summaryLineLabel(kind: OfferPricingLineKind, quantity: number, label: string): string {
+  if (kind === 'pergola') return `${label} (${quantity.toFixed(2)} מ״ר)`
+  return label
+}
 import {
   hasAnyQuickOfferProduct,
   primaryQuickProduct,
@@ -41,7 +57,7 @@ import {
 import { fenceVariantChangePatch } from '@/lib/quick-offer-fence-defaults'
 import { usePriceFormatter } from '@/lib/use-price-formatter'
 import { polygonAreaM2 } from '@pashkovsky/pergola-core'
-import { lineAmountFromBillableArea, roundBillableAreaSqm } from '@/lib/pergolas/pergola-area-sqm'
+import { roundBillableAreaSqm } from '@/lib/pergolas/pergola-area-sqm'
 import { pergolaAreaSqm } from '@/lib/pergolas/pergola-area-sqm'
 import { applyPlanGeometry, type PlanGeometryInput } from '@/lib/pergolas/apply-plan-geometry'
 import { authFetch } from '@/lib/api/auth-fetch'
@@ -78,39 +94,6 @@ import type { OfferAiOutputLanguage } from '@/lib/ai/offer-text-output-languages
 function uiLanguageToAiDefault(lang: Language): OfferAiOutputLanguage {
   if (lang === 'en' || lang === 'ru' || lang === 'he' || lang === 'sr') return lang
   return 'en'
-}
-
-interface PriceSummaryRow {
-  label: string
-  value: number
-}
-
-// Gate prices are part of "before VAT" but not of the fence line, so the
-// summary needs its own rows: one per gate, plus a subtotal when there are
-// several (the label contains סה״כ, which the live summary renders as a subtotal).
-function buildGateSummaryRows(
-  gateLineTotals: number[][] | undefined,
-  gatesLabel: string
-): PriceSummaryRow[] {
-  const sections = gateLineTotals ?? []
-  const gates = sections.flatMap((section, sectionIdx) =>
-    section.map((value, gateIdx) => ({ value, gateIdx, sectionIdx }))
-  )
-  const priced = gates.filter((g) => g.value > 0)
-  if (priced.length === 0) return []
-
-  const rows = priced.map((g): PriceSummaryRow => {
-    const gateName = priced.length > 1 ? `שער ${g.gateIdx + 1}` : 'שער'
-    const sectionSuffix = sections.length > 1 ? ` (גדר ${g.sectionIdx + 1})` : ''
-    return { label: `${gateName}${sectionSuffix}`, value: g.value }
-  })
-  if (priced.length > 1) {
-    rows.push({
-      label: `${gatesLabel} סה״כ`,
-      value: priced.reduce((sum, g) => sum + g.value, 0),
-    })
-  }
-  return rows
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -318,17 +301,16 @@ function SaveToCrmModal({
 
 function WhatsAppModal({
   offerId,
-  finalPrice,
+  snapshot,
   onClose,
 }: {
   offerId: string
-  finalPrice: number
+  snapshot: OfferPricingSnapshot
   onClose: () => void
 }) {
   const t = useTranslations('quickOffer')
   const tCommon = useTranslations('common')
   const { can } = useSubscriptionPlan()
-  const fmt = usePriceFormatter()
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [saving, setSaving] = useState(false)
@@ -359,7 +341,7 @@ function WhatsAppModal({
       const offerUrl = `${baseUrl}/he/offers/${offerId}/approve`
       const formattedPhone = formatPhoneForWhatsApp(phone)
       const message = encodeURIComponent(
-        `שלום ${name},\n\nהצעת המחיר שלך מוכנה!\n\nלצפייה בהצעה:\n${offerUrl}\n\n💰 סכום: ${fmt(finalPrice)}\n\nבברכה,\nPashkovsky Group`,
+        customerOfferMessage({ customerName: name, offerUrl, snapshot }),
       )
       window.open(`https://wa.me/${formattedPhone}?text=${message}`, '_blank')
       onClose()
@@ -692,45 +674,23 @@ function ResultScreen({
   }
 
   const resultPergolas = draft.pergolas?.length ? draft.pergolas : []
-
-  const pergolaRows: Array<{ label: string; value: number }> =
-    resultIncludes.pergola && resultPergolas.length > 0
-      ? resultPergolas.flatMap((p, i) => {
-          const area = pergolaAreaSqm(p)
-          if (area === null) return []
-          const price = lineAmountFromBillableArea(area, p.pricePerSqm)
-          if (price <= 0) return []
-          const label =
-            resultPergolas.length > 1
-              ? `${t('labelPergola')} #${i + 1} (${area.toFixed(2)} מ״ר)`
-              : `${t('labelPergola')} (${area.toFixed(2)} מ״ר)`
-          return [{ label, value: price }]
-        })
-      : []
-
-  const priceRows = [
-    ...(pergolaRows.length > 0
-      ? pergolaRows
-      : calculation.pergolaTotal != null && calculation.pergolaTotal > 0
-        ? [{ label: t('labelPergola'), value: calculation.pergolaTotal }]
-        : []),
-    calculation.railingsLineTotal != null &&
-      calculation.railingsLineTotal > 0 && {
-        label: tDeals('workTypes.railings'),
-        value: calculation.railingsLineTotal,
-      },
-    calculation.fenceLineTotal != null &&
-      calculation.fenceLineTotal > 0 && {
-        label: tDeals('workTypes.fence'),
-        value: calculation.fenceLineTotal,
-      },
-    ...buildGateSummaryRows(calculation.fenceGateLineTotals, tDeals('workTypes.gates')),
-    calculation.santafTotal > 0 && { label: t('labelSantaf'), value: calculation.santafTotal },
-    calculation.zipScreenTotal > 0 && { label: t('labelZipScreen'), value: calculation.zipScreenTotal },
-    calculation.lightingTotal > 0 && { label: t('labelLighting'), value: calculation.lightingTotal },
-    calculation.drainageTotal > 0 && { label: t('labelDrainage'), value: calculation.drainageTotal },
-    calculation.winterClosureTotal > 0 && { label: t('labelWinterClosure'), value: calculation.winterClosureTotal },
-  ].filter(Boolean) as Array<{ label: string; value: number }>
+  const pricingSnapshot = useMemo(
+    () => buildOfferPricingSnapshot(draft, calculation),
+    [draft, calculation],
+  )
+  const priceRows = pricingSnapshot.lines.map((line) => {
+    const label =
+      line.kind === 'pergola' ? t('labelPergola')
+      : line.kind === 'santaf' || line.kind === 'santaf-structure' ? t('labelSantaf')
+      : line.kind === 'zip' ? t('labelZipScreen')
+      : line.kind === 'lighting' ? t('labelLighting')
+      : line.kind === 'drainage' ? t('labelDrainage')
+      : line.kind === 'winter' ? t('labelWinterClosure')
+      : line.kind === 'railings' ? tDeals('workTypes.railings')
+      : line.kind === 'fence' ? tDeals('workTypes.fence')
+      : tDeals('workTypes.gates')
+    return { label: summaryLineLabel(line.kind, line.quantity, label), value: line.lineTotal }
+  })
 
   const plannedPergolas = resultPergolas.filter((p) => p.plan && p.plan.polygon.length >= 3)
 
@@ -789,23 +749,23 @@ function ResultScreen({
             ))}
             <div className="border-t border-white/10 pt-2 flex justify-between text-xs">
               <span className="text-white/60">{t('beforeVat')}</span>
-              <span className="text-white">{fmt(calculation.totalBeforeVat)}</span>
+              <span className="text-white">{fmt(pricingSnapshot.totals.totalBeforeVat)}</span>
             </div>
             <div className="flex justify-between text-xs">
               <span className="text-white/60">
-                {t('vatPercentLabel', { pct: calculation.vatPercent })}
+                {t('vatPercentLabel', { pct: pricingSnapshot.totals.vatPercent })}
               </span>
-              <span className="text-white">{fmt(calculation.vatAmount)}</span>
+              <span className="text-white">{fmt(pricingSnapshot.totals.vatAmount)}</span>
             </div>
-            {calculation.discountAmount > 0 && (
+            {pricingSnapshot.totals.discountAmount > 0 && (
               <div className="flex justify-between text-xs">
-                <span className="text-white/60">{t('discount', { pct: calculation.discountPercent })}</span>
-                <span className="text-red-400">−{fmt(calculation.discountAmount)}</span>
+                <span className="text-white/60">{t('discount', { pct: pricingSnapshot.discountPercent })}</span>
+                <span className="text-red-400">−{fmt(pricingSnapshot.totals.discountAmount)}</span>
               </div>
             )}
             <div className="border-t border-white/10 pt-2 flex justify-between font-bold">
               <span className="text-white text-sm">{t('grandTotal')}</span>
-              <span className="text-green-400 text-sm">{fmt(calculation.finalPrice)}</span>
+              <span className="text-green-400 text-sm">{fmt(pricingSnapshot.totals.finalPrice)}</span>
             </div>
           </div>
 
@@ -914,7 +874,7 @@ function ResultScreen({
       {showWhatsApp && (
         <WhatsAppModal
           offerId={result.offerId}
-          finalPrice={calculation.finalPrice}
+          snapshot={pricingSnapshot}
           onClose={() => setShowWhatsApp(false)}
         />
       )}
@@ -968,6 +928,12 @@ export default function QuickOfferPage() {
   const fmt = usePriceFormatter()
   const [step, setStep] = useState<Step>('form')
   const [draft, setDraft] = useState<OfferDraft>(buildDefaultDraft)
+  const discountInputRef = useRef<HTMLInputElement>(null)
+  const [discountText, setDiscountText] = useState('0')
+  useEffect(() => {
+    if (discountInputRef.current && document.activeElement === discountInputRef.current) return
+    setDiscountText(formatEnteredPercent(draft.discountPercent))
+  }, [draft.discountPercent])
   const [result, setResult] = useState<QuickOfferResult | null>(null)
   const [editingOfferId, setEditingOfferId] = useState<string | null>(null)
   const [companyId, setCompanyId] = useState<string | null>(null)
@@ -1102,6 +1068,10 @@ export default function QuickOfferPage() {
   }, [uiLanguage])
 
   const calculation = useMemo(() => calculateOffer(draft), [draft])
+  const pricingSnapshot = useMemo(
+    () => buildOfferPricingSnapshot(draft, calculation),
+    [draft, calculation],
+  )
 
   const includes = useMemo(() => resolveQuickOfferIncludes(draft), [draft])
 
@@ -1125,23 +1095,21 @@ export default function QuickOfferPage() {
     })
   }
 
-  const pergolaRows: Array<{ label: string; value: number }> = useMemo(() => {
-    if (!includes.pergola || pergolas.length === 0) return []
-    return pergolas.flatMap((p, i) => {
-      const area = pergolaAreaSqm(p)
-      const prefix = pergolas.length > 1 ? `פרגולה #${i + 1}` : 'פרגולה'
-      if (area === null) {
-        return [{ label: `${prefix} — ${t('noDrawing')}`, value: 0 }]
-      }
-      const price = lineAmountFromBillableArea(area, p.pricePerSqm)
-      if (price <= 0) return []
+  const formPriceRows = useMemo(() => {
+    return pricingSnapshot.lines.map((line) => {
       const label =
-        pergolas.length > 1
-          ? `פרגולה #${i + 1} (${area.toFixed(2)} מ״ר)`
-          : `פרגולה (${area.toFixed(2)} מ״ר)`
-      return [{ label, value: price }]
+        line.kind === 'pergola' ? t('labelPergola')
+        : line.kind === 'santaf' || line.kind === 'santaf-structure' ? t('labelSantaf')
+        : line.kind === 'zip' ? t('labelZipScreen')
+        : line.kind === 'lighting' ? t('labelLighting')
+        : line.kind === 'drainage' ? t('labelDrainage')
+        : line.kind === 'winter' ? t('labelWinterClosure')
+        : line.kind === 'railings' ? tDeals('workTypes.railings')
+        : line.kind === 'fence' ? tDeals('workTypes.fence')
+        : tDeals('workTypes.gates')
+      return { label: summaryLineLabel(line.kind, line.quantity, label), value: line.lineTotal }
     })
-  }, [includes.pergola, pergolas, t])
+  }, [pricingSnapshot.lines, t, tDeals])
 
   const planDrawingConfirmModal = useMemo(() => {
     if (planDrawingConfirmIndex === null) return null
@@ -1930,8 +1898,13 @@ export default function QuickOfferPage() {
                         type="number"
                         className={inputCls}
                         disabled={pergola.plan?.confirmed !== true}
-                        value={pergola.pricePerSqm}
-                        onChange={(e) => updatePergola(index, { pricePerSqm: Number(e.target.value) || 0 })}
+                        value={pergolaUnitPriceIsBillable(pergola.pricePerSqm) ? pergola.pricePerSqm : ''}
+                        onChange={(e) => {
+                          const raw = e.target.value.trim()
+                          updatePergola(index, {
+                            pricePerSqm: raw === '' ? 0 : Number(raw.replace(',', '.')),
+                          })
+                        }}
                       />
                     </Field>
 
@@ -2991,21 +2964,7 @@ export default function QuickOfferPage() {
 
               {/* Full line-item breakdown */}
               {(() => {
-                const rows: Array<{ label: string; value: number }> = []
-                if (pergolaRows.length === 1) {
-                  rows.push(...pergolaRows)
-                } else if (pergolaRows.length > 1) {
-                  rows.push(...pergolaRows)
-                  rows.push({ label: `${t('labelPergola')} סה״כ`, value: pergolaRows.reduce((s, r) => s + r.value, 0) })
-                }
-                if (calculation.santafTotal > 0) rows.push({ label: t('labelSantaf'), value: calculation.santafTotal })
-                if (calculation.zipScreenTotal > 0) rows.push({ label: t('labelZipScreen'), value: calculation.zipScreenTotal })
-                if (calculation.lightingTotal > 0) rows.push({ label: t('labelLighting'), value: calculation.lightingTotal })
-                if (calculation.drainageTotal > 0) rows.push({ label: t('labelDrainage'), value: calculation.drainageTotal })
-                if (calculation.winterClosureTotal > 0) rows.push({ label: t('labelWinterClosure'), value: calculation.winterClosureTotal })
-                if (calculation.railingsLineTotal != null && calculation.railingsLineTotal > 0) rows.push({ label: tDeals('workTypes.railings'), value: calculation.railingsLineTotal })
-                if (calculation.fenceLineTotal != null && calculation.fenceLineTotal > 0) rows.push({ label: tDeals('workTypes.fence'), value: calculation.fenceLineTotal })
-                rows.push(...buildGateSummaryRows(calculation.fenceGateLineTotals, tDeals('workTypes.gates')))
+                const rows = formPriceRows
                 if (rows.length === 0) return null
                 return (
                   <div className="space-y-1 border-b border-white/10 pb-2">
@@ -3024,7 +2983,7 @@ export default function QuickOfferPage() {
 
               <div className="flex justify-between text-sm text-white/70">
                 <span>{t('beforeVat')}</span>
-                <span className="text-white tabular-nums">{fmt(calculation.totalBeforeVat)}</span>
+                <span className="text-white tabular-nums">{fmt(pricingSnapshot.totals.totalBeforeVat)}</span>
               </div>
               <div className="flex justify-between items-center gap-2 text-sm">
                 <span className="text-white/70 shrink-0">{t('fieldVatPercent')}</span>
@@ -3048,34 +3007,37 @@ export default function QuickOfferPage() {
                     }}
                   />
                   <span className="text-white tabular-nums whitespace-nowrap">
-                    +{fmt(calculation.vatAmount)}
+                    +{fmt(pricingSnapshot.totals.vatAmount)}
                   </span>
                 </div>
               </div>
               <div className="flex justify-between text-sm text-white/80">
                 <span>{t('afterVat')}</span>
                 <span className="text-white tabular-nums font-medium">
-                  {fmt(calculation.priceWithVat)}
+                  {fmt(pricingSnapshot.totals.priceWithVat)}
                 </span>
               </div>
               <div className="flex justify-between items-center gap-2 text-sm">
                 <span className="text-white/70 shrink-0">{t('fieldDiscount')}</span>
                 <div className="flex items-center gap-2 shrink-0">
                   <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    step={0.5}
+                    ref={discountInputRef}
+                    type="text"
+                    inputMode="decimal"
                     dir="ltr"
                     className={`${inputCls} w-[5.5rem] py-1.5 text-center`}
-                    value={draft.discountPercent}
-                    onChange={(e) =>
-                      setDraft((d) => ({ ...d, discountPercent: Number(e.target.value) || 0 }))
-                    }
+                    value={discountText}
+                    onChange={(e) => {
+                      const raw = e.target.value
+                      if (raw !== '' && !/^\d*([.,]\d*)?$/.test(raw)) return
+                      setDiscountText(raw)
+                      setDraft((d) => ({ ...d, discountPercent: parseDiscountPercent(raw) }))
+                    }}
+                    onBlur={() => setDiscountText(formatEnteredPercent(draft.discountPercent))}
                   />
                   {draft.discountPercent > 0 ? (
                     <span className="text-red-400 tabular-nums whitespace-nowrap">
-                      −{fmt(calculation.discountAmount)}
+                      −{fmt(pricingSnapshot.totals.discountAmount)}
                     </span>
                   ) : null}
                 </div>
@@ -3083,12 +3045,12 @@ export default function QuickOfferPage() {
               <div className="border-t border-white/10 pt-3 flex justify-between items-center gap-2">
                 <span className="text-white/80 font-medium">{t('totalToPay')}</span>
                 <span className="text-2xl font-bold text-green-400 tabular-nums">
-                  {fmt(calculation.finalPrice)}
+                  {fmt(pricingSnapshot.totals.finalPrice)}
                 </span>
               </div>
-              {calculation.discountAmount > 0 ? (
+              {pricingSnapshot.totals.discountAmount > 0 ? (
                 <p className="text-xs text-white/40 text-left">
-                  {t('beforeDiscount', { price: fmt(calculation.priceWithVat) })}
+                  {t('beforeDiscount', { price: fmt(pricingSnapshot.totals.priceWithVat) })}
                 </p>
               ) : null}
             </div>

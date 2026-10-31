@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sendEmail, generateOfferEmailHTML } from '@/lib/email'
+import { isOfferPricingSnapshot, snapshotShareLines } from '@/lib/offers/offer-pricing-snapshot'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -38,22 +39,41 @@ export async function POST(
     const defaultLocale = 'he' // Default locale for public offer links
     const finalOfferUrl = offerUrl || `${baseUrl}/${defaultLocale}/offers/${params.id}/approve`
 
-    // Fetch offer to get AI text
+    // Fetch offer to get AI text and the saved total (snapshot wins over a plan recalculation).
     let aiText: string | null = null
+    let saved: {
+      finalPrice: number
+      discountPercent: number
+      lines?: { label: string; amount: number }[]
+    } | null = null
     if (supabase) {
       const { data: offerData } = await supabase
         .from('offers')
-        .select('options_notes, final_price')
+        .select('options_notes, final_price, discount_percent, quick_offer_extra')
         .eq('id', params.id)
         .single()
-      
+
       if (offerData?.options_notes) {
         aiText = offerData.options_notes
       }
+      const extra = offerData?.quick_offer_extra as { pricingSnapshot?: unknown } | null
+      const snapshot = extra?.pricingSnapshot
+      if (isOfferPricingSnapshot(snapshot) && snapshot.totals.finalPrice != null) {
+        saved = {
+          finalPrice: Number(snapshot.totals.finalPrice),
+          discountPercent: Number(snapshot.discountPercent) || 0,
+          lines: snapshotShareLines(snapshot),
+        }
+      } else if (offerData?.final_price != null) {
+        saved = {
+          finalPrice: Number(offerData.final_price),
+          discountPercent: Number(offerData.discount_percent) || 0,
+        }
+      }
     }
 
-    // Generate HTML email with AI text
-    const html = generateOfferEmailHTML(finalOfferUrl, customerName || 'לקוח יקר', aiText)
+    // Generate HTML email with AI text and the saved total
+    const html = generateOfferEmailHTML(finalOfferUrl, customerName || 'לקוח יקר', aiText, saved)
 
     // Send email
     await sendEmail({

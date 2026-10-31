@@ -1,3 +1,4 @@
+import { applyVatAndDiscount } from '@/lib/offer-calculator'
 import type { Offer } from '@/types/offer'
 
 export class OfferPdfTotalsMismatchError extends Error {
@@ -42,12 +43,18 @@ export function assertPdfSubtotalMatchesStored(
   }
 }
 
+/**
+ * Legacy PDF summary for offers that have no pricing snapshot.
+ * VAT comes from `applyVatAndDiscount` (the same formula as the screen).
+ * Cents are rounded per step so an old PDF stays byte-for-byte with the previous printer.
+ */
 export function pdfTotalsFromLineSubtotal(
   subtotalBeforeVat: number,
   vatPercent: number,
 ): OfferPdfTotalsFromLines {
   const sub = roundMoney(subtotalBeforeVat)
-  const vatAmount = roundMoney(sub * (vatPercent / 100))
+  const priced = applyVatAndDiscount(sub, vatPercent, 0)
+  const vatAmount = roundMoney(priced.vatAmount)
   const priceWithVat = roundMoney(sub + vatAmount)
   return { subtotalBeforeVat: sub, vatAmount, priceWithVat }
 }

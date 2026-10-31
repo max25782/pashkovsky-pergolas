@@ -1,5 +1,7 @@
 import { STANDARD_INSTALLATION_PAYMENT_TERMS } from '@/lib/commercial/standard-installation-terms'
-import type { OfferDraft, Pergola, PergolaShape } from '@/types/offer'
+import { parseDiscountPercent } from '@/lib/offer-calculator'
+import { buildOfferPricingSnapshot } from '@/lib/offers/offer-pricing-snapshot'
+import type { OfferDraft, OfferPricingSnapshot, Pergola, PergolaShape } from '@/types/offer'
 import type { OfferCalculation } from '@/types/offer'
 import type { QuickOfferExtraPersisted } from '@/types/offer'
 import { pergolaPlanBboxMeters } from '@/lib/pergolas/pergola-plan-bbox'
@@ -30,6 +32,7 @@ export function buildQuickOfferInsertRow(params: {
   normalizedPergolas: Pergola[]
   serverCalc: OfferCalculation
   quickOfferExtra: QuickOfferExtraPersisted | null
+  pricingSnapshot?: OfferPricingSnapshot
   customerName: string
 }): Record<string, unknown> {
   const {
@@ -40,6 +43,7 @@ export function buildQuickOfferInsertRow(params: {
     normalizedPergolas,
     serverCalc,
     quickOfferExtra,
+    pricingSnapshot,
     customerName,
   } = params
 
@@ -67,7 +71,7 @@ export function buildQuickOfferInsertRow(params: {
     pergola_length: legacyCols.pergola_length,
     pergola_height: includes.pergola ? firstPergola?.height ?? null : null,
     pergola_location: includes.pergola ? firstPergola?.location ?? null : null,
-    pergola_price_per_sqm: firstPergola?.pricePerSqm ?? 750,
+    pergola_price_per_sqm: firstPergola ? Number(firstPergola.pricePerSqm) || 0 : 750,
 
     color_type: color?.type ?? 'white',
     color_ral_code: color?.ralCode ?? null,
@@ -79,7 +83,7 @@ export function buildQuickOfferInsertRow(params: {
     finish_type: draft.finishType ?? null,
     finish_value: draft.finishValue ?? null,
     options_notes: options?.notes ?? null,
-    discount_percent: Number(draft.discountPercent) || 0,
+    discount_percent: parseDiscountPercent(draft.discountPercent),
 
     santaf_enabled: Boolean(santaf?.enabled),
     santaf_with_structure: Boolean(santaf?.withStructure),
@@ -113,7 +117,17 @@ export function buildQuickOfferInsertRow(params: {
           : !includes.pergola && serverCalc.fenceLineTotal != null
             ? serverCalc.fenceLineTotal
             : 0,
-    quick_offer_extra: quickOfferExtra,
+    quick_offer_extra: {
+      ...(quickOfferExtra ?? {
+        quickProduct: includes.pergola ? 'pergola' : includes.railings ? 'railings' : 'fence',
+        includePergola: includes.pergola,
+        includeRailings: includes.railings,
+        includeFence: includes.fence,
+      }),
+      pricingSnapshot:
+        pricingSnapshot ??
+        buildOfferPricingSnapshot(draft as OfferDraft, serverCalc),
+    },
     santaf_total: serverCalc.santafTotal,
     zip_screen_total: serverCalc.zipScreenTotal,
     lighting_total: serverCalc.lightingTotal,

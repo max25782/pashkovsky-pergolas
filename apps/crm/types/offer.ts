@@ -283,6 +283,37 @@ export interface QuickOfferFenceDraft {
   gates?: FenceGate[]
 }
 
+/** Frozen price lines. Version 1 is the marker that the offer must not be repriced from the plan. */
+export const OFFER_PRICING_SNAPSHOT_VERSION = 1
+
+export type OfferPricingLineKind =
+  | 'pergola'
+  | 'santaf'
+  | 'santaf-structure'
+  | 'zip'
+  | 'lighting'
+  | 'drainage'
+  | 'winter'
+  | 'railings'
+  | 'fence'
+  | 'gate'
+
+export interface OfferPricingLine {
+  kind: OfferPricingLineKind
+  quantity: number
+  unitPrice: number
+  lineTotal: number
+  unit: 'sqm' | 'rm' | 'pc'
+}
+
+export interface OfferPricingSnapshot {
+  version: typeof OFFER_PRICING_SNAPSHOT_VERSION
+  lines: OfferPricingLine[]
+  /** Entered percent, including a fraction (27.5). Not rounded to an integer. */
+  discountPercent: number
+  totals: OfferCalculation
+}
+
 /** Stored on offers.quick_offer_extra for PDF / round-trip. */
 export interface QuickOfferExtraPersisted {
   quickProduct: QuickOfferProductType
@@ -306,6 +337,11 @@ export interface QuickOfferExtraPersisted {
   fenceGateLineTotals?: number[][]
   /** Sum of all gate totals across all fence sections. */
   fenceGateTotal?: number
+  /**
+   * Lines, discount, and totals frozen at save.
+   * Absent on offers saved before this field: those still use the legacy plan recalculation.
+   */
+  pricingSnapshot?: OfferPricingSnapshot | null
 }
 
 export interface Pricing {

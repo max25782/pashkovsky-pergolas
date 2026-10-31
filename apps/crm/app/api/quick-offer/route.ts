@@ -11,6 +11,7 @@ import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { getCompanyIdAsync } from '@/lib/middleware/company-context'
 import type { OfferDraft, Pergola } from '@/types/offer'
 import { calculateOffer } from '@/lib/offer-calculator'
+import { buildOfferPricingSnapshot } from '@/lib/offers/offer-pricing-snapshot'
 import { prepareQuickOfferPergolas } from '@/lib/pergolas/prepare-quick-offer-pergolas'
 import { buildQuickOfferInsertRow } from '@/lib/quick-offer/build-quick-offer-row'
 import {
@@ -249,6 +250,7 @@ export async function POST(req: NextRequest) {
       normalizedPergolas,
       serverCalc,
       quickOfferExtra,
+      pricingSnapshot: buildOfferPricingSnapshot(calcDraft, serverCalc),
       customerName,
     }),
     offer_number: offerNumber,

@@ -196,14 +196,26 @@ function normalizeShape(raw: unknown): PergolaShape | null {
 }
 
 /**
+ * Unit price when reading a pergola.
+ * A missing key is the historical default (750) used only for old rows that never stored a price.
+ * Explicit empty, null, or 0 means the pergola has no price line. Do not invent 750.
+ */
+export function normalizePergolaUnitPrice(raw: unknown): number {
+  if (raw === undefined) return 750
+  if (raw === null || (typeof raw === 'string' && raw.trim() === '')) return 0
+  const n = Number(raw)
+  if (!Number.isFinite(n) || n < 0) return 0
+  return n
+}
+
+/**
  * Single boundary when reading `pergolas_data` or API payloads into `Pergola`.
  * Missing / broken `plan` → `plan: null`.
  */
 export function normalizePergola(raw: unknown): Pergola {
   const o = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {}
 
-  const priceRaw = Number(o.pricePerSqm)
-  const pricePerSqm = Number.isFinite(priceRaw) && priceRaw > 0 ? priceRaw : 750
+  const pricePerSqm = normalizePergolaUnitPrice(o.pricePerSqm)
 
   const heightRaw = o.height != null ? Number(o.height) : undefined
   const height =

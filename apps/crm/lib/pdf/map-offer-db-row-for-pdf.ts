@@ -1,4 +1,6 @@
 import type { Offer, QuickOfferExtraPersisted } from '@/types/offer'
+import { applyVatAndDiscount } from '@/lib/offer-calculator'
+import { applySnapshotToOffer } from '@/lib/offers/offer-pricing-snapshot'
 import { resolvePdfQuickOfferIncludes } from '@/lib/quick-offer-includes'
 import { legacyPergolaFromOfferColumns, normalizePergolas } from '@/lib/pergolas/normalize-pergola'
 
@@ -69,7 +71,7 @@ export function transformOfferFromDbRow(data: Record<string, unknown>): Offer {
   })
   const quickExtra = pf.quickOfferExtra
 
-  return {
+  const offer = {
     id: data.id as string,
     offerNumber: (data.offer_number as string | null | undefined) ?? null,
     termsSnapshot: (data.terms_snapshot as Offer['termsSnapshot']) ?? null,
@@ -187,6 +189,7 @@ export function transformOfferFromDbRow(data: Record<string, unknown>): Offer {
     createdAt: data.created_at as string,
     updatedAt: data.updated_at as string,
   } as Offer
+  return applySnapshotToOffer(offer)
 }
 
 /** CRM JSON API: same as PDF mapper plus list-only fields (e.g. quickFences). */
@@ -234,27 +237,22 @@ export function reconcileQuickOfferTotals(offer: Offer): Offer {
   if (Math.abs(storedBeforeVat - sumWithoutExtraProducts) >= 2) return offer
 
   const totalBeforeVat = storedBeforeVat + missingProductLines
-  const vatPct = offer.vatPercent ?? 18
-  const vatAmount = totalBeforeVat * (vatPct / 100)
-  const priceWithVat = totalBeforeVat + vatAmount
-  const discountPct = offer.discountPercent ?? 0
-  const discountAmount = priceWithVat * (discountPct / 100)
-  const finalPrice = priceWithVat - discountAmount
+  const priced = applyVatAndDiscount(totalBeforeVat, offer.vatPercent ?? 18, offer.discountPercent ?? 0)
 
   return {
     ...offer,
-    totalBeforeVat,
-    vatAmount,
-    priceWithVat,
-    discountAmount,
-    finalPrice,
+    totalBeforeVat: priced.totalBeforeVat,
+    vatAmount: priced.vatAmount,
+    priceWithVat: priced.priceWithVat,
+    discountAmount: priced.discountAmount,
+    finalPrice: priced.finalPrice,
     pricing: {
       ...offer.pricing,
-      totalBeforeVat,
-      vatAmount,
-      priceWithVat,
-      discountAmount,
-      finalPrice,
+      totalBeforeVat: priced.totalBeforeVat,
+      vatAmount: priced.vatAmount,
+      priceWithVat: priced.priceWithVat,
+      discountAmount: priced.discountAmount,
+      finalPrice: priced.finalPrice,
     },
   }
 }

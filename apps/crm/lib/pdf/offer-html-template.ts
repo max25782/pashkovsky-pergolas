@@ -17,6 +17,11 @@ import {
   pdfTotalsFromLineSubtotal,
   sumPdfLineTotals,
 } from '@/lib/pdf/offer-pdf-totals'
+import {
+  formatEnteredPercent,
+  readOfferPricingSnapshot,
+} from '@/lib/offers/offer-pricing-snapshot'
+import type { OfferPricingLine } from '@/types/offer'
 
 function fillTpl(s: string, vars: Record<string, string | number>): string {
   let out = s
@@ -151,7 +156,51 @@ function polygonBBoxMeters(polygon: Array<{ x: number; y: number }>): { width: n
   return { width: Math.round((wMm / 1000) * 100) / 100, length: Math.round((hMm / 1000) * 100) / 100 }
 }
 
+function snapshotLineDescription(line: OfferPricingLine, dict: PdfDict): string {
+  switch (line.kind) {
+    case 'pergola':
+      return dict.off_pergola_default
+    case 'santaf':
+      return dict.off_santaf_bh
+    case 'santaf-structure':
+      return dict.off_santaf_with_struct
+    case 'zip':
+      return dict.off_zip_screen
+    case 'lighting':
+      return dict.off_led_light
+    case 'drainage':
+      return dict.off_drainage
+    case 'winter':
+      return dict.off_winter_prefix
+    case 'railings':
+      return stripTrailingBullet(dict.off_rail_prefix)
+    case 'fence':
+      return stripTrailingBullet(dict.off_fence_prefix)
+    case 'gate':
+      return dict.off_gate_pedestrian
+    default:
+      return dict.off_pergola_default
+  }
+}
+
+function snapshotLineRows(lines: OfferPricingLine[], dict: PdfDict): LineRow[] {
+  return lines.map((line) => ({
+    description: snapshotLineDescription(line, dict),
+    unitLabel:
+      line.unit === 'rm' ? dict.off_unit_rm : line.unit === 'pc' ? dict.off_unit_pc : dict.off_unit_sqm,
+    quantity: line.quantity,
+    unitPrice: line.unitPrice,
+    lineTotal: line.lineTotal,
+  }))
+}
+
 export function collectOfferPdfLineRows(offer: Offer, dict: PdfDict): LineRow[] {
+  const snapshot = readOfferPricingSnapshot(offer)
+  if (snapshot) return snapshotLineRows(snapshot.lines, dict)
+  return collectLegacyOfferPdfLineRows(offer, dict)
+}
+
+function collectLegacyOfferPdfLineRows(offer: Offer, dict: PdfDict): LineRow[] {
   const rows: LineRow[] = []
   const area = offer.area > 0 ? offer.area : 1
   const inc = pdfQuickOfferIncludes(offer)
@@ -1029,11 +1078,23 @@ export async function renderOfferHtml(
   })
   const docDate = formatDateDdMmYyyy(offer.createdAt)
   const validUntil = formatDateDdMmYyyy(addDaysIso(offer.createdAt, 30))
+  const pricingSnapshot = readOfferPricingSnapshot(offer)
   const lineRows = collectOfferPdfLineRows(offer, dict)
   const linesSubtotal = sumPdfLineTotals(lineRows.map((r) => r.lineTotal))
-  assertPdfSubtotalMatchesStored(linesSubtotal, offer)
-  const vatPct = offer.vatPercent ?? 18
-  const pdfTotals = pdfTotalsFromLineSubtotal(linesSubtotal, vatPct)
+  assertPdfSubtotalMatchesStored(linesSubtotal, {
+    totalBeforeVat: pricingSnapshot?.totals.totalBeforeVat ?? offer.totalBeforeVat,
+  })
+  const vatPct = pricingSnapshot?.totals.vatPercent ?? offer.vatPercent ?? 18
+  const pdfTotals = pricingSnapshot
+    ? {
+        subtotalBeforeVat: pricingSnapshot.totals.totalBeforeVat,
+        vatAmount: pricingSnapshot.totals.vatAmount,
+        priceWithVat: pricingSnapshot.totals.priceWithVat,
+      }
+    : pdfTotalsFromLineSubtotal(linesSubtotal, vatPct)
+  const discountPercent = pricingSnapshot?.discountPercent ?? offer.discountPercent
+  const discountAmount = pricingSnapshot?.totals.discountAmount ?? offer.discountAmount
+  const finalPrice = pricingSnapshot?.totals.finalPrice ?? offer.finalPrice
   const pdfPk = pdfPrimaryProductKind(offer)
   const areaRowLabel =
     pdfPk === 'railings' || pdfPk === 'fence' ? dict.off_area_rail_fence : dict.off_area_total
@@ -1063,17 +1124,17 @@ export async function renderOfferHtml(
       : `<tr><td colspan="5" class="col-desc">${dict.off_no_lines}</td></tr>`
 
   const discountRow =
-    offer.discountAmount > 0
+    discountAmount > 0
       ? `
     <tr class="row-section">
       <td colspan="5">${dict.off_extra_products}</td>
     </tr>
     <tr>
-      <td class="col-desc">${dict.off_discount}${offer.discountPercent > 0 ? ` (${offer.discountPercent}%)` : ''}</td>
+      <td class="col-desc">${dict.off_discount}${discountPercent > 0 ? ` (${formatEnteredPercent(discountPercent)}%)` : ''}</td>
       <td class="col-unit">${dict.off_unit_pc}</td>
       <td class="col-num">1</td>
-      <td class="col-num">${formatPricePdf(-offer.discountAmount)}</td>
-      <td class="col-num">${formatPricePdf(-offer.discountAmount)}</td>
+      <td class="col-num">${formatPricePdf(-discountAmount)}</td>
+      <td class="col-num">${formatPricePdf(-discountAmount)}</td>
     </tr>`
       : ''
 
@@ -1384,8 +1445,8 @@ export async function renderOfferHtml(
     <tr><td>${escapeHtml(vatLineLabel)}</td><td>${formatPricePdf(pdfTotals.vatAmount)}</td></tr>
     <tr><td>${dict.off_vat_incl}</td><td>${formatPricePdf(pdfTotals.priceWithVat)}</td></tr>
     ${
-      offer.discountAmount > 0
-        ? `<tr><td>${dict.off_after_discount}</td><td>${formatPricePdf(offer.finalPrice)}</td></tr>`
+      discountAmount > 0
+        ? `<tr><td>${dict.off_after_discount}</td><td>${formatPricePdf(finalPrice)}</td></tr>`
         : ''
     }
   </table>

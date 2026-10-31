@@ -7,6 +7,7 @@ import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { getCompanyIdAsync } from '@/lib/middleware/company-context'
 import type { OfferDraft, Pergola } from '@/types/offer'
 import { calculateOffer } from '@/lib/offer-calculator'
+import { buildOfferPricingSnapshot } from '@/lib/offers/offer-pricing-snapshot'
 import {
   buildQuickOfferExtra,
   hasAnyQuickOfferProduct,
@@ -120,6 +121,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     normalizedPergolas,
     serverCalc,
     quickOfferExtra,
+    pricingSnapshot: buildOfferPricingSnapshot(calcDraft, serverCalc),
     customerName,
   })
 

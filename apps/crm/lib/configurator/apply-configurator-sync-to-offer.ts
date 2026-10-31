@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { OfferDraft, PergolaShape, RectangleShape } from '@/types/offer'
-import { calculateOffer } from '@/lib/offer-calculator'
+import { calculateOffer, parseDiscountPercent } from '@/lib/offer-calculator'
+import { buildOfferPricingSnapshot } from '@/lib/offers/offer-pricing-snapshot'
 import { trySyncDealPrice } from '@/lib/deals/deal-price-sync'
 import { legacyPergolaFromOfferColumns, normalizePergolas } from '@/lib/pergolas/normalize-pergola'
 
@@ -131,7 +132,7 @@ function rowToDraft(data: Record<string, unknown>): OfferDraft {
       const vp = Number(data.vat_percent)
       return Number.isFinite(vp) ? Math.min(100, Math.max(0, vp)) : 18
     })(),
-    discountPercent: Number(data.discount_percent) || 0,
+    discountPercent: parseDiscountPercent(data.discount_percent),
     images: (data.images as string[]) || undefined,
   }
 }
@@ -183,7 +184,7 @@ function mergeRectangleFromConfigurator(
     ...first,
     shape: { type: 'rectangle', width: w, length: len },
     height: h,
-    pricePerSqm: first.pricePerSqm ?? 750,
+    pricePerSqm: first.pricePerSqm ?? 0,
   }
   return { draft: { ...draft, pergolas: nextPergolas }, skippedNonRectangle: false }
 }
@@ -264,7 +265,7 @@ export async function applyConfiguratorSyncToOffer(
     pergola_shape_data: first?.shape ?? null,
     pergola_height: first?.height ?? null,
     pergola_location: first?.location ?? null,
-    pergola_price_per_sqm: first ? Number(first.pricePerSqm) || 750 : null,
+    pergola_price_per_sqm: first ? (Number.isFinite(Number(first.pricePerSqm)) ? Number(first.pricePerSqm) : 0) : null,
     pergola_width:
       first?.shape?.type === 'rectangle' ? (first.shape as RectangleShape).width : row.pergola_width,
     pergola_length:
@@ -280,7 +281,14 @@ export async function applyConfiguratorSyncToOffer(
     vat_percent: calc.vatPercent,
     vat_amount: calc.vatAmount,
     price_with_vat: calc.priceWithVat,
-    discount_percent: calc.discountPercent,
+    discount_percent: parseDiscountPercent(draft.discountPercent),
+    quick_offer_extra: {
+      ...((row.quick_offer_extra as Record<string, unknown> | null) ?? {
+        quickProduct: 'pergola',
+        includePergola: true,
+      }),
+      pricingSnapshot: buildOfferPricingSnapshot(draft, calc),
+    },
     discount_amount: calc.discountAmount,
     final_price: calc.finalPrice,
     images,

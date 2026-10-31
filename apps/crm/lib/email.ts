@@ -125,7 +125,16 @@ export function generateMagicLinkEmailHTML(magicLink: string, email: string) {
 }
 
 // Template for offer email
-export function generateOfferEmailHTML(offerUrl: string, customerName: string, aiText?: string | null) {
+export function generateOfferEmailHTML(
+  offerUrl: string,
+  customerName: string,
+  aiText?: string | null,
+  saved?: {
+    finalPrice: number
+    discountPercent: number
+    lines?: { label: string; amount: number }[]
+  } | null,
+) {
   // Escape HTML for AI text
   const escapeHtml = (text: string) => {
     return text
@@ -166,6 +175,18 @@ export function generateOfferEmailHTML(offerUrl: string, customerName: string, a
                   <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
                     הכנו עבורך הצעת מחיר מותאמת אישית עבור הפרגולה שלך.
                   </p>
+                  ${saved && Number.isFinite(saved.finalPrice) ? `
+                  ${(saved.lines ?? [])
+                    .map(
+                      (line) =>
+                        `<p style="color: #374151; font-size: 15px; margin: 0 0 4px 0;">${escapeHtml(line.label)}: ₪${line.amount.toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>`,
+                    )
+                    .join('')}
+                  <p style="color: #111827; font-size: 20px; font-weight: bold; margin: 12px 0 8px 0;">
+                    סה״כ לתשלום: ₪${saved.finalPrice.toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                  ${saved.discountPercent > 0 ? `<p style="color: #b91c1c; font-size: 14px; margin: 0 0 20px 0;">הנחה: ${saved.discountPercent}%</p>` : ''}
+                  ` : ''}
                   
                   ${formattedAiText ? `
                   <!-- AI Generated Description -->

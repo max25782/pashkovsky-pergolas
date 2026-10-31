@@ -26,10 +26,75 @@ function quickOfferLinePerSqmLegacy(
 
 const DEFAULT_VAT_PERCENT = 18
 
-function normalizeVatPercent(value: unknown): number {
+function clampPercent(n: number): number {
+  return Math.min(100, Math.max(0, n))
+}
+
+/**
+ * Discount percent as typed. Keeps 27.5. Does not round to an integer.
+ * `offers.discount_percent` is numeric(5,2) in schema_baseline (line 583),
+ * so a fractional percent fits the column.
+ */
+export function parseDiscountPercent(raw: unknown): number {
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim().replace(',', '.')
+    if (trimmed === '') return 0
+    const n = Number(trimmed)
+    if (!Number.isFinite(n)) return 0
+    return clampPercent(n)
+  }
+  const n = Number(raw)
+  if (!Number.isFinite(n)) return 0
+  return clampPercent(n)
+}
+
+export function normalizeVatPercent(value: unknown): number {
   const n = Number(value)
   if (!Number.isFinite(n)) return DEFAULT_VAT_PERCENT
-  return Math.min(100, Math.max(0, n))
+  return clampPercent(n)
+}
+
+/** True when a pergola ₪/m² should produce a price line. Empty, 0, and non-numeric do not. */
+export function pergolaUnitPriceIsBillable(price: unknown): boolean {
+  const n = Number(price)
+  return Number.isFinite(n) && n > 0
+}
+
+/**
+ * Single VAT + discount formula. Discount is a percent of the VAT-inclusive sum.
+ * Callers that print money round the results; this function does not.
+ */
+export function applyVatAndDiscount(
+  totalBeforeVat: number,
+  vatPercent: number,
+  discountPercent: number,
+): {
+  totalBeforeVat: number
+  vatPercent: number
+  vatAmount: number
+  priceWithVat: number
+  discountPercent: number
+  discountAmount: number
+  finalPrice: number
+} {
+  const vatAmount = totalBeforeVat * (vatPercent / 100)
+  const priceWithVat = totalBeforeVat + vatAmount
+  const discountAmount = (priceWithVat * discountPercent) / 100
+  const finalPrice = priceWithVat - discountAmount
+  return {
+    totalBeforeVat,
+    vatPercent,
+    vatAmount,
+    priceWithVat,
+    discountPercent,
+    discountAmount,
+    finalPrice,
+  }
+}
+
+/** Cents as shown on the Quick Offer screen and in the PDF (`toFixed(2)` / Intl). */
+export function displayedShekels(amount: number): number {
+  return Math.round(amount * 100) / 100
 }
 
 /** Resolve the list of fences: prefer quickFences array, fall back to legacy quickFence. */
@@ -106,7 +171,9 @@ export function calculateOffer(draft: OfferDraft): OfferCalculation {
       const singleArea = pergolaAreaSqm(pergola)
       if (singleArea === null || singleArea <= 0) continue
       pergolaArea += singleArea
-      pergolaTotal += lineAmountFromBillableArea(singleArea, pergola.pricePerSqm)
+      if (pergolaUnitPriceIsBillable(pergola.pricePerSqm)) {
+        pergolaTotal += lineAmountFromBillableArea(singleArea, Number(pergola.pricePerSqm))
+      }
     }
   }
   
@@ -224,19 +291,12 @@ export function calculateOffer(draft: OfferDraft): OfferCalculation {
   const totalBeforeVat =
     mainProductTotal + (fenceGateTotal ?? 0) + santafTotal + zipScreenTotal + lightingTotal + drainageTotal + winterClosureTotal
   
-  // 10. VAT (% of total before VAT)
-  const vatPct = normalizeVatPercent(draft.vatPercent)
-  const vatAmount = totalBeforeVat * (vatPct / 100)
-
-  // 11. Calculate price with VAT
-  const priceWithVat = totalBeforeVat + vatAmount
-  
-  // 12. Calculate discount (APPLIED AFTER VAT - IMPORTANT!)
-  const discountPercent = draft.discountPercent || 0
-  const discountAmount = (priceWithVat * discountPercent) / 100
-  
-  // 13. Calculate final price
-  const finalPrice = priceWithVat - discountAmount
+  // 10–13. VAT, then discount as a percent of the VAT-inclusive sum.
+  const priced = applyVatAndDiscount(
+    totalBeforeVat,
+    normalizeVatPercent(draft.vatPercent),
+    parseDiscountPercent(draft.discountPercent),
+  )
 
   // Summary quantity: m² (pergola roof area, or railings/fence face area for ZIP fallback / AI)
   const railFenceOnlySqm = railFenceSqmForZip(draft, inc)
@@ -260,13 +320,13 @@ export function calculateOffer(draft: OfferDraft): OfferCalculation {
     lightingTotal,
     drainageTotal,
     winterClosureTotal,
-    totalBeforeVat,
-    vatPercent: vatPct,
-    vatAmount,
-    priceWithVat,
-    discountPercent,
-    discountAmount,
-    finalPrice
+    totalBeforeVat: priced.totalBeforeVat,
+    vatPercent: priced.vatPercent,
+    vatAmount: priced.vatAmount,
+    priceWithVat: priced.priceWithVat,
+    discountPercent: priced.discountPercent,
+    discountAmount: priced.discountAmount,
+    finalPrice: priced.finalPrice,
   }
 }
 

@@ -2,6 +2,12 @@
  * Utilities for sharing offers via WhatsApp, Email, etc.
  */
 
+import {
+  customerOfferMessage,
+  formatEnteredPercent,
+  readOfferPricingSnapshot,
+  snapshotShareLines,
+} from '@/lib/offers/offer-pricing-snapshot'
 import type { Offer } from '@/types/offer'
 
 /**
@@ -34,24 +40,14 @@ export function sendOfferViaWhatsApp(offer: Offer): string {
 
   const phone = formatPhoneForWhatsApp(offer.customerPhone)
   const offerUrl = getOfferPublicUrl(offer.id)
-  
-  // Build message with AI-generated description if available
-  let messageText = `שלום ${offer.customerName},\n\n` +
-    `הצעת המחיר שלך מוכנה! 🎉\n\n`
-  
-  // Add AI-generated description if exists
-  if (offer.options?.notes && offer.options.notes.trim()) {
-    // Limit to ~300 chars to keep WhatsApp message reasonable
-    const shortDescription = offer.options.notes.length > 300
-      ? offer.options.notes.substring(0, 297) + '...'
-      : offer.options.notes
-    
-    messageText += `📋 תיאור:\n${shortDescription}\n\n`
-  }
-  
-  messageText += `לצפייה בהצעת מחיר מלאה ולחץ כאן:\n${offerUrl}\n\n` +
-    `💰 סכום: ₪${offer.finalPrice.toLocaleString('he-IL', { minimumFractionDigits: 2 })}\n\n` +
-    `בברכה,\nPashkovsky Group`
+  const snapshot = readOfferPricingSnapshot(offer)
+  const messageText = snapshot
+    ? customerOfferMessage({ customerName: offer.customerName, offerUrl, snapshot })
+    : `שלום ${offer.customerName},\n\n` +
+      `הצעת המחיר שלך מוכנה!\n\n` +
+      `לצפייה בהצעת מחיר מלאה:\n${offerUrl}\n\n` +
+      `סכום: ₪${offer.finalPrice.toLocaleString('he-IL', { minimumFractionDigits: 2 })}\n\n` +
+      `בברכה,\nPashkovsky Group`
   
   const message = encodeURIComponent(messageText)
 
@@ -78,6 +74,9 @@ export function getOfferEmailSubject(offer: Offer): string {
  */
 export function getOfferEmailBody(offer: Offer): string {
   const offerUrl = getOfferPublicUrl(offer.id)
+  const snapshot = readOfferPricingSnapshot(offer)
+  const finalPrice = snapshot?.totals.finalPrice ?? offer.finalPrice
+  const discountPercent = snapshot?.discountPercent ?? offer.discountPercent
   
   return `
 <!DOCTYPE html>
@@ -109,30 +108,33 @@ export function getOfferEmailBody(offer: Offer): string {
       
       <div class="details">
         ${(() => {
-          const pergolas = offer.pergolas || (offer.pergola ? [offer.pergola] : [])
-          if (pergolas.length === 0) {
-            return '<h3>ללא פרגולה</h3>'
+          if (snapshot) {
+            const lines = snapshotShareLines(snapshot)
+              .map((line) => `<li><strong>${line.label}:</strong> ₪${line.amount.toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</li>`)
+              .join('')
+            const discount =
+              discountPercent > 0
+                ? `<li><strong>הנחה:</strong> ${formatEnteredPercent(discountPercent)}%</li>`
+                : ''
+            return `<ul>${lines}${discount}</ul>`
           }
-          let html = '<h3>פרטי הפרגולות:</h3><ul>'
+          const pergolas = offer.pergolas || (offer.pergola ? [offer.pergola] : [])
+          if (pergolas.length === 0) return '<h3>ללא פרגולה</h3>'
+          let html = '<ul>'
           pergolas.forEach((pergola, index) => {
-            const prefix = pergolas.length > 1 ? `פרגולה ${index + 1}: ` : ''
-            const width = pergola.shape?.type === 'rectangle' ? pergola.shape.width : pergola.width || 0
-            const length = pergola.shape?.type === 'rectangle' ? pergola.shape.length : pergola.length || 0
-            html += `<li><strong>${prefix}גודל:</strong> ${width}m × ${length}m</li>`
-            if (pergola.height) {
-              html += `<li><strong>${prefix}גובה:</strong> ${pergola.height}m</li>`
-            }
+            if (!(pergola.pricePerSqm > 0)) return
+            const prefix = pergolas.length > 1 ? `פרגולה ${index + 1}: ` : 'פרגולה: '
+            html += `<li><strong>${prefix}</strong> ₪${pergola.pricePerSqm}</li>`
           })
-          html += `</ul><ul>`
+          html += `${offer.santaf?.enabled ? `<li><strong>סנטף:</strong> ${offer.santaf.withStructure ? 'עם קונסטרוקציה' : 'בסיסי'}</li>` : ''}`
+          html += `${discountPercent > 0 ? `<li><strong>הנחה:</strong> ${formatEnteredPercent(discountPercent)}%</li>` : ''}`
+          html += '</ul>'
           return html
         })()}
-          ${offer.santaf?.enabled ? `<li><strong>סנטף:</strong> ${offer.santaf.withStructure ? 'עם קונסטרוקציה' : 'בסיסי'}</li>` : ''}
-          ${offer.discountPercent > 0 ? `<li><strong>הנחה:</strong> ${offer.discountPercent}%</li>` : ''}
-        </ul>
       </div>
       
       <div class="price">
-        מחיר סופי: ₪${offer.finalPrice.toLocaleString('he-IL', { minimumFractionDigits: 2 })}
+        מחיר סופי: ₪${finalPrice.toLocaleString('he-IL', { minimumFractionDigits: 2 })}
       </div>
       
       <div style="text-align: center;">
