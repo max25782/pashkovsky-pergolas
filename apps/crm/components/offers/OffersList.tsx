@@ -37,6 +37,8 @@ interface OffersListProps {
   refreshTrigger?: number
   adminToken?: string
   onOffersChanged?: () => void
+  /** Quick Offer URL for this deal (empty-state CTA); defaults to a blank Quick Offer. */
+  quickOfferHref?: string
   /** Called after save-to-CRM so the parent can refresh deal `source` without refetch. */
   onDealPromotedToCrm?: () => void
 }
@@ -47,6 +49,7 @@ export function OffersList({
   refreshTrigger,
   adminToken,
   onOffersChanged,
+  quickOfferHref = '/app/quick-offer',
   onDealPromotedToCrm,
 }: OffersListProps) {
   const params = useParams()
@@ -336,7 +339,7 @@ export function OffersList({
           title={tOnboarding('emptyOffersTitle')}
           description={tOnboarding('emptyOffersDesc')}
           actionLabel={tOnboarding('emptyOffersCta')}
-          actionHref="/app/quick-offer"
+          actionHref={quickOfferHref}
         />
       </div>
     )
@@ -347,6 +350,7 @@ export function OffersList({
       {offers.map((offer) => (
         <div
           key={offer.id}
+          id={`offer-${offer.id}`}
           className="bg-white/5 rounded-lg p-4 border border-white/10 hover:border-white/20 transition-colors"
         >
           <div className="flex items-start justify-between mb-3">

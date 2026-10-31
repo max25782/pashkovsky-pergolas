@@ -10,6 +10,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { trySyncDealPrice } from '@/lib/deals/deal-price-sync'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { assertUserHasFeature } from '@/lib/subscription/require-feature-api'
 
@@ -86,6 +87,13 @@ export async function POST(
       })
       .eq('id', offerId)
 
+    // The deal is on the board now: give it the offer's amount.
+    await trySyncDealPrice(supabase, {
+      dealId: offerRow.deal_id,
+      companyId: offerRow.company_id,
+      context: `save-to-crm offer ${offerId}`,
+    })
+
     return NextResponse.json({ dealId: offerRow.deal_id, offerId })
   }
 
@@ -127,6 +135,12 @@ export async function POST(
     console.error('[save-to-crm] offer update error:', offerUpdateError)
     // Deal was created — still return success, the link can be repaired
   }
+
+  await trySyncDealPrice(supabase, {
+    dealId,
+    companyId: offerRow.company_id,
+    context: `save-to-crm offer ${offerId}`,
+  })
 
   return NextResponse.json({ dealId, offerId })
 }

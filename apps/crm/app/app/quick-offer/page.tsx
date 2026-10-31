@@ -68,6 +68,8 @@ import {
   shouldWarnQuickOfferCustomerRename,
 } from '@/lib/quick-offer/quick-offer-edit-session'
 import { isCustomerNameValid } from '@/lib/quick-offer/validate-customer-name'
+import { parseQuickOfferPrefill } from '@/lib/quick-offer/deal-prefill'
+import type { DealPriceSyncResult } from '@/lib/deals/deal-price-sync'
 import { useSubscriptionPlan } from '@/components/subscription/subscription-plan-context'
 import { minPlanForFeature } from '@/lib/subscription/plan-access'
 import { useLanguage, type Language } from '@/lib/language-context'
@@ -118,6 +120,8 @@ type Step = 'form' | 'result'
 interface QuickOfferResult {
   offerId: string
   dealId?: string
+  /** Set when the offer is bound to a board deal: what happened to the deal amount. */
+  dealPrice?: DealPriceSyncResult
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -527,6 +531,71 @@ function EmailModal({
   )
 }
 
+// ─── Deal amount notice (offer bound to a deal) ──────────────────────────────
+
+function DealAmountNotice({ dealId, dealPrice }: { dealId: string; dealPrice: DealPriceSyncResult }) {
+  const t = useTranslations('quickOffer')
+  const fmt = usePriceFormatter()
+  const [applied, setApplied] = useState<DealPriceSyncResult | null>(null)
+  const [applying, setApplying] = useState(false)
+  const [applyError, setApplyError] = useState<string | null>(null)
+
+  const shown = applied ?? dealPrice
+  const conflict = shown.status === 'conflict' ? shown.conflict : null
+
+  async function overwriteFromOffer() {
+    setApplying(true)
+    setApplyError(null)
+    try {
+      const res = await authFetch(`/api/deals/${dealId}/price-sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: true }),
+      })
+      if (!res.ok) throw new Error(t('dealAmountError'))
+      setApplied((await res.json()) as DealPriceSyncResult)
+    } catch (e) {
+      setApplyError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setApplying(false)
+    }
+  }
+
+  return (
+    <div
+      className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 space-y-2"
+      data-testid="deal-amount-notice"
+    >
+      {conflict ? (
+        <>
+          <p className="text-sm text-amber-200">
+            {t('dealAmountConflict', { current: fmt(conflict.current), proposed: fmt(conflict.proposed) })}
+          </p>
+          <button
+            type="button"
+            onClick={() => void overwriteFromOffer()}
+            disabled={applying}
+            className="rounded-lg bg-amber-500/20 px-3 py-2 text-sm font-medium text-amber-100 hover:bg-amber-500/30 disabled:opacity-50"
+          >
+            {t('dealAmountOverwrite', { proposed: fmt(conflict.proposed) })}
+          </button>
+          {applyError && <p className="text-sm text-red-300">{applyError}</p>}
+        </>
+      ) : (
+        <p className="text-sm text-emerald-200">
+          {t('dealAmountUpdated', { amount: shown.price != null ? fmt(shown.price) : '—' })}
+        </p>
+      )}
+      <Link
+        href={`/app/admin/deals?deal=${encodeURIComponent(dealId)}`}
+        className="inline-block text-sm text-emerald-300 underline hover:text-emerald-200"
+      >
+        {t('backToDeal')}
+      </Link>
+    </div>
+  )
+}
+
 // ─── Result Screen ────────────────────────────────────────────────────────────
 
 function ResultScreen({
@@ -809,6 +878,10 @@ function ResultScreen({
             </div>
           )}
 
+          {draft.dealId && result.dealPrice && (
+            <DealAmountNotice dealId={draft.dealId} dealPrice={result.dealPrice} />
+          )}
+
           <button
             type="button"
             onClick={onStartNewOffer}
@@ -927,9 +1000,26 @@ export default function QuickOfferPage() {
         const id = typeof data?.company_id === 'string' ? data.company_id : null
         if (cancelled) return
         setCompanyId(id)
-        if (id) {
-          const stored = parseQuickOfferDraft(localStorage.getItem(quickOfferDraftKey(id)))
-          if (stored) {
+        {
+          const stored = id ? parseQuickOfferDraft(localStorage.getItem(quickOfferDraftKey(id))) : null
+          // Opened from a deal (or lead): the URL wins over a stored draft, unless that draft is
+          // the unsent one for the very same deal.
+          const prefill = parseQuickOfferPrefill(window.location.search)
+          const storedIsSameDealDraft =
+            !!stored && !stored.offerId && !!prefill?.dealId && stored.draft.dealId === prefill.dealId
+          if (prefill && !storedIsSameDealDraft) {
+            setDraft({
+              ...buildDefaultDraft(),
+              dealId: prefill.dealId,
+              customerName: prefill.name,
+              customerPhone: prefill.phone || undefined,
+              customerCity: prefill.city || undefined,
+            })
+            setEditingOfferId(null)
+            setDraftRestored(false)
+            setEditSessionAcknowledged(true)
+            setBoundCustomerName(null)
+          } else if (stored) {
             setDraft(stored.draft)
             setEditingOfferId(stored.offerId)
             setDraftRestored(true)

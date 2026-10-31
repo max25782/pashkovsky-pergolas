@@ -1,6 +1,7 @@
 "use client"
 import { useEffect, useState } from "react"
 import dynamic from "next/dynamic"
+import { useRouter } from "next/navigation"
 import type { Deal } from './deal-types'
 import { getStages } from './deal-types'
 import { FileText, Loader2 } from 'lucide-react'
@@ -27,6 +28,8 @@ import { useLanguage } from '@/lib/language-context'
 import { FinanceBlock } from './deals/FinanceBlock'
 import { CollapsibleSection } from './deals/CollapsibleSection'
 import { DealQuickActions } from './deals/DealQuickActions'
+import { DealPriceSource } from './deals/DealPriceSource'
+import { buildQuickOfferHref } from '@/lib/quick-offer/deal-prefill'
 
 const PRODUCT_LINE_CHECKBOXES: DealProductLine[] = ['pergola', 'fence', 'railings', 'gates', 'facade']
 
@@ -45,11 +48,6 @@ const OffersList = dynamic(
     ssr: false,
     loading: () => <OffersListLoading />,
   },
-)
-
-const CreateOfferModal = dynamic(
-  () => import('../offers/CreateOfferModal').then((m) => ({ default: m.CreateOfferModal })),
-  { ssr: false, loading: () => null },
 )
 
 interface DealModalProps {
@@ -73,10 +71,10 @@ export function DealModal({
 }: DealModalProps) {
   const t = useCRMTranslations()
   const toast = useToast()
+  const router = useRouter()
   const stages = getStages(t.deals)
   const [localDeal, setLocalDeal] = useState(deal)
   const [saving, setSaving] = useState(false)
-  const [showOfferModal, setShowOfferModal] = useState(false)
   const [showLaundryClosetModal, setShowLaundryClosetModal] = useState(false)
   const [offersRefreshTrigger, setOffersRefreshTrigger] = useState(0)
   const [shiftsRefreshTrigger, setShiftsRefreshTrigger] = useState(0)
@@ -89,6 +87,14 @@ export function DealModal({
   const { language } = useLanguage()
 
   const derivedWorkType = deriveWorkTypeFromProductLines(productLines)
+
+  // Quick Offer opens for this deal with the customer's data; the offer is bound by dealId.
+  const quickOfferHref = buildQuickOfferHref({
+    dealId: deal.id,
+    name: localDeal.customer_name ?? undefined,
+    phone: localDeal.customer_phone ?? undefined,
+    city: localDeal.customer_city ?? undefined,
+  })
 
   function productLineCheckboxLabel(line: DealProductLine): string {
     if (line === 'pergola') return t.deals.workTypes.pergola
@@ -449,6 +455,14 @@ export function DealModal({
             clientPrice={localDeal.price}
             totalCosts={localDeal.my_cost}
             onClientPriceChange={(v) => updateField('price', v)}
+            priceExtra={
+              <DealPriceSource
+                dealId={deal.id}
+                refreshKey={offersRefreshTrigger}
+                formatCurrency={formatCurrency}
+                onServerPriceChange={(price) => updateField('price', price)}
+              />
+            }
             onTotalCostsChange={(v) => updateField('my_cost', v)}
             formatCurrency={formatCurrency}
             labels={{
@@ -908,7 +922,7 @@ export function DealModal({
           {/* Offers Button */}
           <div className="pt-4 border-t border-white/10 grid grid-cols-1 gap-3">
             <button
-              onClick={() => setShowOfferModal(true)}
+              onClick={() => router.push(quickOfferHref)}
               className="px-4 py-2 rounded-lg bg-green-600/20 hover:bg-green-600/30 text-green-200 font-medium flex items-center justify-center gap-2"
             >
               <FileText className="w-4 h-4" />
@@ -922,6 +936,7 @@ export function DealModal({
               <h3 className="mb-3 text-lg font-semibold">{t.deals.offersTitle}</h3>
               <OffersList
                 dealId={deal.id}
+                quickOfferHref={quickOfferHref}
                 dealSource={localDeal.source ?? null}
                 refreshTrigger={offersRefreshTrigger}
                 adminToken={adminToken}
@@ -1018,21 +1033,6 @@ export function DealModal({
           </div>
         </div>
       </div>
-
-      {/* Offer Modal */}
-      {showOfferModal && localDeal.customer_name && (
-        <CreateOfferModal
-          dealId={deal.id}
-          customerName={localDeal.customer_name}
-          customerPhone={localDeal.customer_phone || undefined}
-          customerCity={localDeal.customer_city || undefined}
-          isOpen={showOfferModal}
-          onClose={() => setShowOfferModal(false)}
-          onCreated={() => {
-            setOffersRefreshTrigger((prev) => prev + 1)
-          }}
-        />
-      )}
 
       {/* Laundry Closet Modal */}
       {showLaundryClosetModal && (

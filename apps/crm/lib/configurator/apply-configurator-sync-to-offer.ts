@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { OfferDraft, PergolaShape, RectangleShape } from '@/types/offer'
 import { calculateOffer } from '@/lib/offer-calculator'
+import { trySyncDealPrice } from '@/lib/deals/deal-price-sync'
 import { legacyPergolaFromOfferColumns, normalizePergolas } from '@/lib/pergolas/normalize-pergola'
 
 export interface PergolaParamsPayload {
@@ -291,6 +292,13 @@ export async function applyConfiguratorSyncToOffer(
   if (upErr) {
     throw new Error(upErr.message)
   }
+
+  // The recalculated total moves the deal amount too (best effort: the offer is saved).
+  await trySyncDealPrice(supabase, {
+    dealId: typeof row.deal_id === 'string' ? row.deal_id : null,
+    companyId: String(row.company_id),
+    context: `configurator sync offer ${offerId}`,
+  })
 
   return { skippedNonRectangle }
 }

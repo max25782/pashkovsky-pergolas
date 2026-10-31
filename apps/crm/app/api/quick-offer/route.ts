@@ -22,6 +22,7 @@ import {
 } from '@/lib/quick-offer-includes'
 import { validateQuickFence, validateQuickRailings } from '@/lib/quick-offer-product-validation'
 import { allocateOfferNumber } from '@/lib/offers/allocate-offer-number'
+import { syncDealPriceFromOffers } from '@/lib/deals/deal-price-sync'
 import { buildCurrentOfferTermsSnapshot } from '@/lib/offers/offer-terms-snapshot'
 import {
   CUSTOMER_NAME_REQUIRED_ERROR,
@@ -97,75 +98,118 @@ export async function POST(req: NextRequest) {
   const workType =
     productCount > 1 ? 'other' : quickProduct
 
-  // ── 1. Create a hidden deal (excluded from CRM board until saved) ──────────
-  const { data: deal, error: dealError } = await supabase
-    .from('deals')
-    .insert({
-      company_id: companyId,
-      customer_name: customerName,
-      customer_phone: '',
-      deal_status: 'in_progress',
-      work_type: workType,
-      project_type: projectType,
-      source: 'quick_offer',
-      currency: 'ILS',
-      // Who made the offer; shown on the board's "unsaved quick offers" tab.
-      created_by: auth.user.id,
-    })
-    .select('id')
-    .single()
+  // ── 1. Deal: bind to an existing one (opened from the deal card) or create a hidden one
+  //       (excluded from the CRM board until saved) ───────────────────────────────────
+  const requestedDealId = typeof draft.dealId === 'string' ? draft.dealId.trim() : ''
+  const boundToExistingDeal = requestedDealId !== ''
+  let dealId: string
 
-  if (dealError || !deal) {
-    console.error('[quick-offer] deal insert error:', dealError)
-    return NextResponse.json({ error: 'Failed to create deal' }, { status: 500 })
+  if (boundToExistingDeal) {
+    const { data: existingDeal, error: existingDealError } = await supabase
+      .from('deals')
+      .select('id')
+      .eq('id', requestedDealId)
+      .eq('company_id', companyId)
+      .maybeSingle()
+    if (existingDealError) {
+      console.error('[quick-offer] deal lookup error:', existingDealError)
+      return NextResponse.json({ error: 'Failed to load deal' }, { status: 500 })
+    }
+    if (!existingDeal) return NextResponse.json({ error: 'Deal not found' }, { status: 404 })
+    dealId = existingDeal.id as string
+  } else {
+    const { data: deal, error: dealError } = await supabase
+      .from('deals')
+      .insert({
+        company_id: companyId,
+        customer_name: customerName,
+        customer_phone: '',
+        deal_status: 'in_progress',
+        work_type: workType,
+        project_type: projectType,
+        source: 'quick_offer',
+        currency: 'ILS',
+        // Who made the offer; shown on the board's "unsaved quick offers" tab.
+        created_by: auth.user.id,
+      })
+      .select('id')
+      .single()
+
+    if (dealError || !deal) {
+      console.error('[quick-offer] deal insert error:', dealError)
+      return NextResponse.json({ error: 'Failed to create deal' }, { status: 500 })
+    }
+    dealId = deal.id as string
   }
 
-  const dealId = deal.id as string
-
+  /** Undo everything this request created. A pre-existing deal is never deleted. */
   async function rollbackDeal() {
+    if (boundToExistingDeal) return
     await supabase!.from('deals').delete().eq('id', dealId)
   }
 
-  if (includes.railings && draft.quickRailings) {
-    const qr = draft.quickRailings
-    const gsInsert = String(qr.glazingSystem).trim() as 'aluminum_glass' | 'wet_glazing' | 'dry_glazing'
-    const { error: railingsError } = await supabase.from('deal_railings_details').insert({
-      deal_id: dealId,
-      company_id: companyId,
-      meters_total: Number(qr.metersTotal),
-      height_cm: qr.heightCm != null ? Number(qr.heightCm) : null,
-      profile_type: String(qr.profileType).trim(),
-      color: String(qr.color).trim(),
-      location_type: String(qr.locationType).trim() as 'balcony' | 'stairs' | 'roof' | 'yard' | 'other',
-      glass_type: qr.glassType != null && String(qr.glassType).trim() !== '' ? String(qr.glassType).trim() : null,
-      glazing_system: gsInsert,
-      notes: qr.notes != null && String(qr.notes).trim() !== '' ? String(qr.notes).trim() : null,
-    })
-    if (railingsError) {
-      console.error('[quick-offer] railings insert error:', railingsError)
-      await rollbackDeal()
-      return NextResponse.json({ error: 'Failed to create railings details' }, { status: 500 })
+  /** New hidden deal: plain inserts. Existing deal: update the row if there is one (legacy behaviour). */
+  async function writeProductDetails(): Promise<string | null> {
+    if (includes.railings && draft.quickRailings) {
+      const qr = draft.quickRailings
+      const gsInsert = String(qr.glazingSystem).trim() as 'aluminum_glass' | 'wet_glazing' | 'dry_glazing'
+      const payload = {
+        deal_id: dealId,
+        company_id: companyId!,
+        meters_total: Number(qr.metersTotal),
+        height_cm: qr.heightCm != null ? Number(qr.heightCm) : null,
+        profile_type: String(qr.profileType).trim(),
+        color: String(qr.color).trim(),
+        location_type: String(qr.locationType).trim() as 'balcony' | 'stairs' | 'roof' | 'yard' | 'other',
+        glass_type: qr.glassType != null && String(qr.glassType).trim() !== '' ? String(qr.glassType).trim() : null,
+        glazing_system: gsInsert,
+        notes: qr.notes != null && String(qr.notes).trim() !== '' ? String(qr.notes).trim() : null,
+      }
+      const existingRow = boundToExistingDeal
+        ? (await supabase!.from('deal_railings_details').select('deal_id').eq('deal_id', dealId).maybeSingle()).data
+        : null
+      const { error } = existingRow
+        ? await supabase!.from('deal_railings_details').update(payload).eq('deal_id', dealId)
+        : await supabase!.from('deal_railings_details').insert(payload)
+      if (error) {
+        console.error('[quick-offer] railings write error:', error)
+        return 'Failed to create railings details'
+      }
     }
+
+    if (includes.fence) {
+      const fences = resolveQuickFencesFromDraft(draft)
+      if (fences.length > 0) {
+        const qf = fences[0]
+        const payload = {
+          deal_id: dealId,
+          company_id: companyId!,
+          meters_total: Number(qf.metersTotal),
+          height_cm: qf.heightCm != null ? Number(qf.heightCm) : null,
+          fence_variant: String(qf.fenceVariant).trim() as 'classic' | 'hitech' | 'hitech_angular',
+          color: String(qf.color).trim(),
+          notes: qf.notes != null && String(qf.notes).trim() !== '' ? String(qf.notes).trim() : null,
+        }
+        const existingRow = boundToExistingDeal
+          ? (await supabase!.from('deal_fence_details').select('deal_id').eq('deal_id', dealId).maybeSingle()).data
+          : null
+        const { error } = existingRow
+          ? await supabase!.from('deal_fence_details').update(payload).eq('deal_id', dealId)
+          : await supabase!.from('deal_fence_details').insert(payload)
+        if (error) {
+          console.error('[quick-offer] fence write error:', error)
+          return 'Failed to create fence details'
+        }
+      }
+    }
+    return null
   }
 
-  if (includes.fence) {
-    const fences = resolveQuickFencesFromDraft(draft)
-    if (fences.length > 0) {
-      const qf = fences[0]
-      const { error: fenceError } = await supabase.from('deal_fence_details').insert({
-        deal_id: dealId,
-        company_id: companyId,
-        meters_total: Number(qf.metersTotal),
-        height_cm: qf.heightCm != null ? Number(qf.heightCm) : null,
-        fence_variant: String(qf.fenceVariant).trim() as 'classic' | 'hitech' | 'hitech_angular',
-        color: String(qf.color).trim(),
-        notes: qf.notes != null && String(qf.notes).trim() !== '' ? String(qf.notes).trim() : null,
-      })
-      if (fenceError) {
-        console.error('[quick-offer] fence insert error:', fenceError)
-        await rollbackDeal()
-        return NextResponse.json({ error: 'Failed to create fence details' }, { status: 500 })
-      }
+  if (!boundToExistingDeal) {
+    const detailsError = await writeProductDetails()
+    if (detailsError) {
+      await rollbackDeal()
+      return NextResponse.json({ error: detailsError }, { status: 500 })
     }
   }
 
@@ -219,12 +263,36 @@ export async function POST(req: NextRequest) {
 
   if (offerError || !offer) {
     console.error('[quick-offer] offer insert error:', offerError)
-    await supabase.from('deals').delete().eq('id', dealId)
+    await rollbackDeal()
     return NextResponse.json({ error: 'Failed to create offer' }, { status: 500 })
   }
+  const offerId = offer.id as string
 
-  return NextResponse.json(
-    { offerId: offer.id as string, offerNumber },
-    { status: 201 },
-  )
+  /** Compensating rollback: Supabase has no multi-statement transaction without a DB function. */
+  async function rollbackOffer() {
+    const { error } = await supabase!.from('offers').delete().eq('id', offerId)
+    if (error) console.error('[quick-offer] offer rollback failed:', offerId, error)
+    await rollbackDeal()
+  }
+
+  if (boundToExistingDeal) {
+    const detailsError = await writeProductDetails()
+    if (detailsError) {
+      await rollbackOffer()
+      return NextResponse.json({ error: detailsError }, { status: 500 })
+    }
+
+    // Deal amount = this offer's client total, written in the same request. If it cannot be
+    // written the offer is removed again, so there is never an offer without the amount.
+    try {
+      const dealPrice = await syncDealPriceFromOffers(supabase, { dealId, companyId })
+      return NextResponse.json({ offerId, offerNumber, dealId, dealPrice }, { status: 201 })
+    } catch (e) {
+      console.error('[quick-offer] deal price sync failed, rolling back offer:', offerId, e)
+      await rollbackOffer()
+      return NextResponse.json({ error: 'Failed to update deal amount' }, { status: 500 })
+    }
+  }
+
+  return NextResponse.json({ offerId, offerNumber, dealId }, { status: 201 })
 }

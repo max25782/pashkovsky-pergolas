@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { transformOfferFromDbRowForApi } from '@/lib/pdf/map-offer-db-row-for-pdf'
 import { requireCompanyAccess } from '@/lib/auth'
+import { trySyncDealPrice } from '@/lib/deals/deal-price-sync'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -139,7 +140,7 @@ export async function DELETE(
     // 🔒 Security: Fetch offer first to verify ownership
     const { data: offer, error: fetchError } = await supabase
       .from('offers')
-      .select('company_id')
+      .select('company_id, deal_id')
       .eq('id', offerId)
       .single()
 
@@ -174,7 +175,14 @@ export async function DELETE(
       )
     }
 
-    return NextResponse.json({ success: true })
+    // Deleting is how an offer is cancelled: the deal amount moves to the previous offer.
+    const dealPrice = await trySyncDealPrice(supabase, {
+      dealId: offer.deal_id,
+      companyId: offer.company_id,
+      context: `delete offer ${offerId}`,
+    })
+
+    return NextResponse.json({ success: true, dealPrice })
   } catch (error: unknown) {
     console.error('Error in DELETE /api/offers/[id]:', error)
     return NextResponse.json(

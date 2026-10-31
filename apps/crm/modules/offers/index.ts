@@ -61,10 +61,4 @@ export {
 // Import directly from '@/lib/pdf/generate-offer-pdf' in server-side code only
 
 // UI Components
-export { CreateOfferModal } from '@/components/offers/CreateOfferModal'
 export { OffersList } from '@/components/offers/OffersList'
-export { PergolaShapeSelector } from '@/components/offers/PergolaShapeSelector'
-export { LShapeInput } from '@/components/offers/shapes/LShapeInput'
-export { RectangleShapeInput } from '@/components/offers/shapes/RectangleShapeInput'
-export { UShapeInput } from '@/components/offers/shapes/UShapeInput'
-export { XShapeInput } from '@/components/offers/shapes/XShapeInput'

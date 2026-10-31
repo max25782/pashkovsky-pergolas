@@ -9,6 +9,7 @@ import {
   mergeProjectConfigProductLines,
   resolveProductLinesForCreate,
 } from '@/lib/deals/deal-product-lines'
+import { manualPriceSource, readPriceSource, withPriceSource } from '@/lib/deals/deal-price-sync'
 
 function env(name: string): string {
   const v = process.env[name]
@@ -535,6 +536,37 @@ export async function PATCH(req: NextRequest) {
     }
   }
   
+  // Amount provenance: a hand-typed price is marked "manual" so offer syncs never overwrite
+  // it silently; a project_config sent by a stale client must not drop the stored source.
+  if (updates.price !== undefined || updates.project_config !== undefined) {
+    const { data: priceRow, error: priceRowError } = await supabase
+      .from('deals')
+      .select('price, project_config')
+      .eq('id', id)
+      .eq('company_id', companyId)
+      .single()
+    if (priceRowError || !priceRow) {
+      console.error('PATCH: price provenance lookup failed', priceRowError)
+      return new Response(JSON.stringify({ error: 'Deal not found', code: 'NOT_FOUND' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+    const baseConfig = updates.project_config !== undefined ? updates.project_config : priceRow.project_config
+    const previousPrice = Number(priceRow.price) || 0
+    const nextPrice = updates.price === undefined ? previousPrice : Number(updates.price) || 0
+    const priceChanged = updates.price !== undefined && nextPrice !== previousPrice
+
+    if (priceChanged) {
+      updates.project_config = withPriceSource(
+        baseConfig,
+        nextPrice > 0 ? manualPriceSource(nextPrice, new Date().toISOString()) : null,
+      )
+    } else if (updates.project_config !== undefined) {
+      updates.project_config = withPriceSource(baseConfig, readPriceSource(priceRow.project_config))
+    }
+  }
+
   const { data, error } = await supabase
     .from('deals')
     .update(Object.keys(updates).length > 0 ? updates : { updated_at: new Date().toISOString() })

@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import dynamic from "next/dynamic"
 import { useTranslations } from 'next-intl'
 import type { Deal } from './deal-types'
@@ -48,6 +48,17 @@ export function DealsTable() {
     page,
     limit: 500
   })
+
+  // /app/admin/deals?deal=<id> (e.g. "back to deal" from Quick Offer) opens that deal's card.
+  useEffect(() => {
+    if (loading || deals.length === 0) return
+    const dealId = new URLSearchParams(window.location.search).get('deal')
+    if (!dealId) return
+    const found = deals.find((d) => d.id === dealId)
+    if (!found) return
+    setSelectedDeal(found)
+    window.history.replaceState(null, '', window.location.pathname)
+  }, [deals, loading])
 
   const { create, patch, del } = useDealActions({
     onUpdate: async (updatedDeal) => {

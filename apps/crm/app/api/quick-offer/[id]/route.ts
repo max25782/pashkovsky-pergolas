@@ -22,6 +22,7 @@ import {
   normalizeCustomerNameInput,
 } from '@/lib/quick-offer/validate-customer-name'
 import { logAuditEvent } from '@/lib/audit/logger'
+import { syncDealPriceFromOffers } from '@/lib/deals/deal-price-sync'
 import {
   buildOfferPriceChangeAuditChanges,
   shouldLogOfferPriceChange,
@@ -57,7 +58,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const { data: existing, error: fetchErr } = await supabase
     .from('offers')
-    .select('id, deal_id, company_id, customer_name, final_price, offer_number')
+    .select('*')
     .eq('id', offerId)
     .eq('company_id', companyId)
     .maybeSingle()
@@ -131,11 +132,25 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const previousFinalPrice = Number(existing.final_price)
   const nextFinalPrice = serverCalc.finalPrice
 
+  const previousRow: Record<string, unknown> = { ...existing }
+  delete previousRow.id
   const { error: updateErr } = await supabase.from('offers').update(updateRow).eq('id', offerId)
 
   if (updateErr) {
     console.error('[quick-offer PATCH] update error:', updateErr)
     return NextResponse.json({ error: 'Failed to update offer' }, { status: 500 })
+  }
+
+  // Recalculation moves the deal amount too. If that fails, restore the previous offer row so
+  // the offer and the deal never disagree (no multi-statement transaction without a DB function).
+  let dealPrice: Awaited<ReturnType<typeof syncDealPriceFromOffers>>
+  try {
+    dealPrice = await syncDealPriceFromOffers(supabase, { dealId: String(existing.deal_id), companyId })
+  } catch (e) {
+    console.error('[quick-offer PATCH] deal price sync failed, restoring offer:', offerId, e)
+    const { error: restoreErr } = await supabase.from('offers').update(previousRow).eq('id', offerId)
+    if (restoreErr) console.error('[quick-offer PATCH] offer restore failed:', offerId, restoreErr)
+    return NextResponse.json({ error: 'Failed to update deal amount' }, { status: 500 })
   }
 
   if (shouldLogOfferPriceChange(previousFinalPrice, nextFinalPrice)) {
@@ -151,5 +166,5 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     })
   }
 
-  return NextResponse.json({ offerId, area: serverCalc.area, finalPrice: nextFinalPrice })
+  return NextResponse.json({ offerId, area: serverCalc.area, finalPrice: nextFinalPrice, dealPrice })
 }

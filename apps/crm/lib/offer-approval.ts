@@ -10,6 +10,7 @@
  * Failures are logged with context instead of being swallowed.
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { trySyncDealPrice } from '@/lib/deals/deal-price-sync'
 import { escapeHtml, notifyRecipients, resolveCompanyRecipients } from '@/lib/company-notify'
 
 export const OFFER_APPROVED_STAGE = 'offer_approved'
@@ -171,6 +172,13 @@ export async function handleOfferApproved(
         }
       }
     }
+
+    // A signed offer takes priority for the deal amount over the other offers.
+    await trySyncDealPrice(supabase, {
+      dealId: offer.deal_id,
+      companyId: offer.company_id,
+      context: `approval of offer ${offer.id}`,
+    })
   }
 
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || '').replace(/\/$/, '')

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import clsx from 'clsx'
 import { authFetch } from '@/lib/api/auth-fetch'
 
@@ -39,6 +39,8 @@ interface FinanceBlockProps {
   dealId?: string
   /** Increment when shifts or orders change so totals refetch. */
   breakdownRefreshKey?: number
+  /** Rendered under the client price input (e.g. where the amount came from). */
+  priceExtra?: ReactNode
 }
 
 function parseMoneyInput(raw: string): number | null {
@@ -59,6 +61,7 @@ export function FinanceBlock({
   className,
   dealId,
   breakdownRefreshKey = 0,
+  priceExtra,
 }: FinanceBlockProps) {
   const priceNum = clientPrice != null && Number.isFinite(clientPrice) ? clientPrice : null
   const costsNum = totalCosts != null && Number.isFinite(totalCosts) ? totalCosts : null
@@ -174,6 +177,7 @@ export function FinanceBlock({
             className={inputClass}
             placeholder={labels.placeholderPrice}
           />
+          {priceExtra}
         </div>
         <div>
           <label className="mb-1.5 block text-sm font-medium text-white/80">{labels.totalCosts}</label>
