@@ -286,20 +286,22 @@ describe('skewed centerline plan — section from the purlin opening', () => {
 
   it('packs the same 536 lamellas on 128 bars of 6000', () => {
     const pieces = sections.flatMap((section, index) =>
-      Array.from({ length: section.lamellaCount }, (_, row) => ({
+      Array.from({ length: section.lamellaCount }, (_, row): CutPiece => ({
         id: `lam-${index}-${row}`,
-        role: 'lamella' as const,
+        role: 'lamella',
         profileId: 'f7020',
         lengthLongMm: section.widthMm,
         lengthAxisMm: section.widthMm,
         lengthShortMm: section.widthMm,
         cutMiterStartDeg: 0,
         cutBevelStartDeg: 0,
-        cutHandStart: 'straight' as const,
+        cutHandStart: 'straight',
         cutMiterEndDeg: 0,
         cutBevelEndDeg: 0,
-        cutHandEnd: 'straight' as const,
-        position: [0, 0, 0] as [number, number, number],
+        cutHandEnd: 'straight',
+        position: [0, 0, 0],
+        rotation: [0, 0, 0],
+        color: '#9aa0a6',
       })),
     )
     const plan = packProfile(pieces, 6000, DEFAULT_KERF_MM)

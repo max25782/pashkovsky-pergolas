@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Point2D } from '../types'
 import { PERGOLA_CONSTRUCTION_PROFILES } from '../pergolaProfiles'
 import { buildPieces, specFromPlan } from '../buildPieces'
+import type { PlanConstructionParams } from '../planDefaults'
 import { longPointOffset } from '../lamellas'
 import { pieceAxis } from '../pieceAxis'
 import { computeEqualPurlinClearMm, resolveContourPurlinPositions } from '../lamellaSpans'
@@ -23,7 +24,7 @@ const CONTOUR: Point2D[] = [
   [-2324.9246987951806, -4277.608480798192],
 ]
 
-const params = {
+const params: PlanConstructionParams = {
   lamellaPatternId: 'all-70',
   lamellaGapMm: 20,
   lamellaDirectionDeg: 0,
