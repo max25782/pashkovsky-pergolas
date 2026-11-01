@@ -20,6 +20,7 @@ import { sanitizeContour } from './contourSanitize'
 import { DEFAULT_PLAN_CONSTRUCTION_PARAMS } from './planDefaults'
 import { isRetiredProfileId } from './pergolaProfiles'
 import {
+  chordInsidePolygonAlongDir,
   findConcaveLamellaParallelShelfRaw,
   offsetShelfToNotchFace,
   wingShelfInteriorPostFractions,
@@ -148,6 +149,22 @@ function edgeIsVertical(dx: number, dy: number): boolean {
   return Math.abs(angleDeg - 90) <= ANGLE_SNAP_DEG
 }
 
+/** Slack for the chord end against the left frame line (wobbled plans are off by hundredths of a mm). */
+const SHELF_CHORD_REACH_TOLERANCE_MM = 1
+
+/**
+ * True when the horizontal chord from `corner` to the left frame line lies inside the contour:
+ * the longest inside chord going left from the corner ends on the frame line, not on some
+ * other edge in front of it.
+ */
+function chordReachesLeftFrameInside(pts: Point2D[], corner: Point2D, leftOuterX: number): boolean {
+  if (corner[0] - leftOuterX < 1) return false
+  const chord = chordInsidePolygonAlongDir(pts, corner, [-1, 0])
+  if (!chord) return false
+  const reachX = Math.min(chord.start[0], chord.end[0])
+  return Math.abs(reachX - leftOuterX) <= SHELF_CHORD_REACH_TOLERANCE_MM
+}
+
 /**
  * Longest horizontal wing-shelf span for G/L roofs: bottom outer beam of the
  * upper wing (notch shelf), extended left to the left outer frame line.
@@ -176,11 +193,12 @@ export function findWingShelfSpanSegment(
     const outHoriz = edgeIsHorizontal(eOut[0], eOut[1])
 
     // Notch shelf: vertical frame leg meets sloped / non-horizontal closing wing (G-shape).
-    if (inVert && !outHoriz && !outVert) {
-      const shelfY = v[1]
-      return { start: [leftOuterX, shelfY], end: [v[0], shelfY] }
-    }
-    if (outVert && !inHoriz && !inVert) {
+    // The corner alone does not make a notch. Any shape with a vertical edge next to a sloped
+    // one has such a corner (a skew pentagon has it too), and the horizontal line through it
+    // can leave the contour. The shelf is drawn only when the chord from this corner to the
+    // left frame line runs inside the contour the whole way.
+    const isNotchCorner = (inVert && !outHoriz && !outVert) || (outVert && !inHoriz && !inVert)
+    if (isNotchCorner && chordReachesLeftFrameInside(pts, v, leftOuterX)) {
       const shelfY = v[1]
       return { start: [leftOuterX, shelfY], end: [v[0], shelfY] }
     }

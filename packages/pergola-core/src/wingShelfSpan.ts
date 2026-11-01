@@ -62,7 +62,7 @@ function intersectLineSegment(origin: Point2D, dir: Point2D, a: Point2D, b: Poin
 }
 
 /** Maximal chord along `dir` through `origin` that lies inside the polygon. */
-function chordInsidePolygonAlongDir(
+export function chordInsidePolygonAlongDir(
   contour: Point2D[],
   origin: Point2D,
   dir: Point2D,

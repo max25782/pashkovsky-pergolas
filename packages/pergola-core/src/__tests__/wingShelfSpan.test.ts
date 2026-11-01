@@ -271,3 +271,69 @@ describe('wing shelf — live L 12000/8000/4000/3000/6500/3500', () => {
     for (const len of lower) expect(len).toBeCloseTo(2960, 0)
   })
 })
+
+describe('findWingShelfSpanSegment: the notch corner needs a real chord inside the contour', () => {
+  // Skew pentagon A..E (drawing frame, counter-clockwise): vertical EA next to the sloped DE makes
+  // a "notch corner" at E, but the horizontal line through E only touches the roof there.
+  const PENTAGON_CCW: Point2D[] = [
+    [20, 20],
+    [889.81, 20],
+    [5877.298, 6884.61],
+    [6269.409, 9124.567],
+    [20, 9786.769],
+  ]
+  const mirror = (c: Point2D[]): Point2D[] => c.map(([x, y]) => [6289.409 - x, y])
+
+  it('G roof (vertical leg + sloped wing): the chord to the left frame is kept', () => {
+    const g: Point2D[] = [
+      [0, 0],
+      [0, 9996],
+      [13002, 9996],
+      [13002, 4622],
+    ]
+    const shelf = findWingShelfSpanSegment(g)
+    expect(shelf).not.toBeNull()
+    expect(shelf!.start[0]).toBe(0)
+    expect(shelf!.end[0]).toBeCloseTo(13002, 0)
+    expect(shelf!.start[1]).toBeCloseTo(4622, 0)
+  })
+
+  it('convex skew pentagon: no shelf, in either orientation', () => {
+    expect(findWingShelfSpanSegment(PENTAGON_CCW)).toBeNull()
+    expect(findWingShelfSpanSegment([...PENTAGON_CCW].reverse())).toBeNull()
+    expect(findWingShelfSpanSegment(mirror(PENTAGON_CCW))).toBeNull()
+    expect(findWingShelfSpanSegment([...mirror(PENTAGON_CCW)].reverse())).toBeNull()
+  })
+
+  it('a bay in front of the corner blocks the chord: no shelf instead of a chord across the bay', () => {
+    const withBay: Point2D[] = [
+      [0, 0],
+      [0, 3000],
+      [2000, 3500],
+      [2000, 5500],
+      [0, 6000],
+      [0, 9000],
+      [10000, 9000],
+      [10000, 4000],
+    ]
+    expect(findWingShelfSpanSegment(withBay)).toBeNull()
+  })
+
+  it('every shelf the detector returns lies inside the contour', () => {
+    const inside = (p: Point2D, poly: Point2D[]) => {
+      let c = false
+      for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        const [xi, yi] = poly[i]
+        const [xj, yj] = poly[j]
+        if (yi > p[1] !== yj > p[1] && p[0] < ((xj - xi) * (p[1] - yi)) / (yj - yi) + xi) c = !c
+      }
+      return c
+    }
+    for (const contour of [MAX_L_AXIS, CANONICAL_L, PENTAGON_CCW, mirror(PENTAGON_CCW)]) {
+      const shelf = findWingShelfSpanSegment(contour)
+      if (!shelf) continue
+      const mid: Point2D = [(shelf.start[0] + shelf.end[0]) / 2, (shelf.start[1] + shelf.end[1]) / 2]
+      expect(inside(mid, contour)).toBe(true)
+    }
+  })
+})

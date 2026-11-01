@@ -3,6 +3,7 @@ import {
   buildPieces,
   buildPlanEditorOverlayModel,
   DEFAULT_PLAN_CONSTRUCTION_PARAMS,
+  findWingShelfSpanSegment,
   outerVertexAtContourIndex,
   PERGOLA_CONSTRUCTION_PROFILES,
   pieceAxis,
@@ -266,22 +267,30 @@ describe(`${SKEW_PENTAGON_850_V2_ID}: auto wing shelf rule`, () => {
   })
   const shelves = withRule.built.pieces.filter((p) => p.dividerId === WING_SHELF_SPAN_DIVIDER_ID)
 
-  it('with purlinMaxSpanMm = 4000 (new-plan default) a crossbeam longer than 4000 triggers two 3114.7 mm shelf pieces', () => {
+  // The detector used to take the corner E (vertical EA next to the sloped DE) for a notch and
+  // put a horizontal chord through it, across the outside of the pentagon: two 5030 pieces of
+  // 3114.7 mm hanging outside the roof. The shelf is drawn now only when the chord from the
+  // corner to the left frame line lies inside the contour; a convex pentagon has no such chord.
+  it('with purlinMaxSpanMm = 4000 a crossbeam is longer than 4000, but a convex pentagon has no notch, so no shelf is drawn', () => {
     expect(Math.max(...purlinRows(withRule.built.pieces).map((p) => p.lengthAxisMm))).toBeGreaterThan(4000)
-    expect(shelves.map((p) => [p.profileId, Math.round(p.lengthAxisMm * 10) / 10])).toEqual([
-      ['purlin-plain-5030', 3114.7],
-      ['purlin-plain-5030', 3114.7],
-    ])
+    expect(findWingShelfSpanSegment(withRule.contour, withRule.params.lamellaDirectionDeg)).toBeNull()
+    expect(shelves).toHaveLength(0)
   })
 
-  // The shape test of the rule is meant for G / L roofs with a notch. Here it picks the corner E
-  // and puts the chord horizontally through E, which lies outside the pentagon. Plan data cannot
-  // change that; this documents the misfire so the detector can be fixed.
-  it.fails('the shelf lies inside the contour', () => {
+  it('the shelf lies inside the contour (any shelf piece the rule would place)', () => {
     shelves.forEach((p) => {
       const { start, end } = pieceAxis(p)
       expect(pointInPolygon([(start[0] + end[0]) / 2, (start[1] + end[1]) / 2], withRule.contour)).toBe(true)
     })
+  })
+
+  it('the same holds for the drawing-frame (counter-clockwise) orientation', () => {
+    const ccw = planFor(false, {
+      ...pentagonV2PlanParams(DEFAULT_PLAN_CONSTRUCTION_PARAMS),
+      purlinMaxSpanMm: 4000,
+    })
+    expect(findWingShelfSpanSegment(ccw.contour, ccw.params.lamellaDirectionDeg)).toBeNull()
+    expect(ccw.built.pieces.some((p) => p.dividerId === WING_SHELF_SPAN_DIVIDER_ID)).toBe(false)
   })
 
   it('the v2 plan leaves the rule off (purlinMaxSpanMm unset) and gets no shelf', () => {
@@ -290,7 +299,7 @@ describe(`${SKEW_PENTAGON_850_V2_ID}: auto wing shelf rule`, () => {
 })
 
 // ---------------------------------------------------------------------------
-// Known deviations of the program (documented with it.fails; turn into `it` once fixed).
+// Former deviations of the program, now regular tests (the fixes are in pergola-core).
 // ---------------------------------------------------------------------------
 describe(`${SKEW_PENTAGON_850_V2_ID}: known deviations`, () => {
   // buildTopPlanDimensionModel used to replace the clear chain with equal gaps whenever typed
