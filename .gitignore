@@ -52,3 +52,10 @@ infrastructure/cdk.out/
 
 # Snapshot written only by scripts/replace-purlin-led-6040.ts --apply
 apps/crm/scripts/.purlin-led-6040-rollback.json
+
+# Agent and screenshot artifacts (local only)
+.agents/
+.screenshots/
+*.orig
+tmp-*.png
+skills-lock.json
