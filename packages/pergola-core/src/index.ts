@@ -325,6 +325,8 @@ export type {
   ColumnHeightChecksum,
   LamellaSectionTypeGroup,
   LamellaSectionSchedule,
+  LamellaSectionSupportLine,
+  BuildLamellaSectionsOptions,
 } from './lamellaSections'
 export {
   LAMELLA_SECTION_CLEARANCE_W_MM,
@@ -354,6 +356,7 @@ export {
   buildLamellaSections,
   computeLamellasFromSections,
 } from './lamellaSections'
+
 
 export type { PlanConstructionParams } from './planDefaults'
 export {

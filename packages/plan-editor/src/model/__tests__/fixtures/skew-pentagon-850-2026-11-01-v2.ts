@@ -198,6 +198,34 @@ export function verticalHitOnOffsetEdge(edgeStart: Point2D, edgeEnd: Point2D, ce
   return py + t * d[1]
 }
 
+
+/**
+ * Beam as a support line for the section builder. Same axis and ends as `applyStraightBeam`,
+ * without writing supportBeams into the plan model. Width is the PA3022 plan width (40 mm);
+ * the section clear stops on the beam faces and then loses the usual 15 mm per side of the
+ * stack (same inset as a frame or shelf joint).
+ */
+export function pentagonV2SectionSupportLine(input: {
+  contour: Point2D[]
+  mirror: boolean
+  profiles: Map<string, ProfileDimensions>
+}): { start: Point2D; end: Point2D; widthMm: number } {
+  const { contour, mirror, profiles } = input
+  const beamWidthMm = beamPlanWidthForDrawing(profiles, V2_BEAM.profileId).planWidthMm
+  const frameHalf = beamPlanWidthForDrawing(profiles, V2_FRAME_PROFILE_ID).planWidthMm / 2
+  const xB = mirror ? V2_MIRROR_X_MM - V2_BEAM.axisFromEaOuterMm : V2_BEAM.axisFromEaOuterMm
+  const centroid: Point2D = [
+    contour.reduce((sum, p) => sum + p[0], 0) / contour.length,
+    contour.reduce((sum, p) => sum + p[1], 0) / contour.length,
+  ]
+  const endYInnerFaceMm = verticalHitOnOffsetEdge(contour[3], contour[4], centroid, frameHalf, xB)
+  return {
+    start: [xB, V2_BEAM.startYMm],
+    end: [xB, endYInnerFaceMm],
+    widthMm: beamWidthMm > 0 ? beamWidthMm : V2_BEAM_PLAN_WIDTH_MM,
+  }
+}
+
 export function applyStraightBeam(input: {
   pieces: CutPiece[]
   profiles: Map<string, ProfileDimensions>

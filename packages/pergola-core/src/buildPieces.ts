@@ -16,7 +16,7 @@ import type { SupportType } from './types'
 import type { RoofPlane } from './roof'
 import { postHeightMm } from './roof'
 import { resolveContourPurlinPositions } from './lamellaSpans'
-import { buildLamellaSections } from './lamellaSections'
+import { buildLamellaSections, type BuildLamellaSectionsOptions } from './lamellaSections'
 import { resolveLamellaPattern, patternMaxLamellaSpanMm } from './lamellaPattern'
 
 export interface BuiltPieces {
@@ -135,12 +135,14 @@ function summarizeStructuralIssues(issues: StructuralIssue[]): string {
 export function buildPieces(
   spec: PergolaSpec,
   profiles: Map<string, ProfileDimensions>,
-  options?: { kerfMm?: number },
+  options?: { kerfMm?: number } & BuildLamellaSectionsOptions,
 ): BuiltPieces {
   const kerfMm = options?.kerfMm ?? DEFAULT_KERF_MM
+  const sectionOptions: BuildLamellaSectionsOptions | undefined =
+    options?.supportLine !== undefined ? { supportLine: options.supportLine } : undefined
   const frame = computeFrame(spec, profiles)
   const roof = frame.roof
-  const lamellas = computeLamellas(spec, profiles, roof)
+  const lamellas = computeLamellas(spec, profiles, roof, sectionOptions)
   const structuralPurlins = computePurlins(spec, profiles, roof, { frameBeams: frame.beams })
   const wingShelfPosts = buildWingShelfSupportPosts(spec, profiles, frame.beams, frame.roof)
   const beamResult = segmentBeamsForStock(spec, frame, [...lamellas, ...structuralPurlins], profiles, kerfMm)
@@ -159,7 +161,7 @@ export function buildPieces(
   const structuralIssues = validateLamellaSpans(lamellas, profiles)
   const isManualDividers = spec.purlinDividers?.mode === 'manual'
   const trapezoidSections = spec.skewSectionVersion === 1
-    ? buildLamellaSections(spec, profiles).filter((section) => section.trapezoid != null)
+    ? buildLamellaSections(spec, profiles, sectionOptions).filter((section) => section.trapezoid != null)
     : []
   const blocksBuild = (issue: (typeof structuralIssues)[number]) => {
     const piece = lamellas.find((item) => item.id === issue.pieceId)
@@ -324,7 +326,7 @@ function buildWingShelfSupportPosts(
 export function buildPiecesFromPlan(
   input: SpecFromPlanInput,
   profiles: Map<string, ProfileDimensions>,
-  options?: { kerfMm?: number },
+  options?: { kerfMm?: number } & BuildLamellaSectionsOptions,
 ): BuiltPieces {
   return buildPieces(specFromPlan(input), profiles, options)
 }

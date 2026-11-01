@@ -73,6 +73,22 @@ export function isLamellaSectionLayoutV1(
 
 export type LamellaSectionFace = 'frame' | 'purlin' | 'support' | 'notch'
 
+/**
+ * Optional support line passed into the section builder from outside the plan model
+ * (a beam parallel to the lamellas that the editor cannot store). Same role as the
+ * auto wing shelf once it is resolved: it occupies its plan width and splits the
+ * stack of lamellas on its faces.
+ */
+export interface LamellaSectionSupportLine {
+  start: Point2D
+  end: Point2D
+  widthMm: number
+}
+
+export interface BuildLamellaSectionsOptions {
+  supportLine?: LamellaSectionSupportLine | null
+}
+
 export interface LamellaSection {
   id: string
   /** Factory width = inner clear − 15 (lamella cut length). */
@@ -1051,10 +1067,331 @@ function yOnOffsetEdge(edge: OffsetEdge, x: number): number | null {
 }
 
 /**
+ * Inner face of every side with the corners mitred: the polygon the lamellas
+ * actually fit in. `innerOffsetEdges` leaves each side's offset segment on its
+ * own, which overshoots at a corner; that is harmless at a corner on the stack
+ * limit, but wrong at a corner in the middle of the stack (a pentagon).
+ */
+function innerMitredPolygon(
+  pts: Point2D[],
+  widthAt: (edgeIndex: number) => number,
+): { edges: OffsetEdge[]; vertices: Point2D[] } | null {
+  const n = pts.length
+  const lines: Array<{ p: Point2D; d: Point2D }> = []
+  for (let i = 0; i < n; i++) {
+    const a = pts[i]
+    const b = pts[(i + 1) % n]
+    const inward = edgeInwardUnit(a, b)
+    if (!inward) return null
+    const half = widthAt(i) / 2
+    lines.push({ p: [a[0] + inward[0] * half, a[1] + inward[1] * half], d: [b[0] - a[0], b[1] - a[1]] })
+  }
+  const vertices: Point2D[] = []
+  for (let i = 0; i < n; i++) {
+    const prev = lines[(i + n - 1) % n]
+    const cur = lines[i]
+    const cross = prev.d[0] * cur.d[1] - prev.d[1] * cur.d[0]
+    if (Math.abs(cross) < 1e-9 * Math.hypot(...prev.d) * Math.hypot(...cur.d)) {
+      vertices.push(cur.p)
+      continue
+    }
+    const t = ((cur.p[0] - prev.p[0]) * cur.d[1] - (cur.p[1] - prev.p[1]) * cur.d[0]) / cross
+    vertices.push([prev.p[0] + t * prev.d[0], prev.p[1] + t * prev.d[1]])
+  }
+  const edges: OffsetEdge[] = vertices.map((a, i) => ({ a, b: vertices[(i + 1) % n] }))
+  return { edges, vertices }
+}
+
+interface BayCell {
+  band: { y0: number; y1: number }
+  leftBound: number | null
+  rightBound: number | null
+}
+
+const sameBound = (a: number | null, b: number | null): boolean =>
+  a == null ? b == null : b != null && Math.abs(a - b) < 0.5
+
+/** Slope of one side of the inner polygon across a band (mm along the lamella per mm of stack). */
+function spanSlope(edges: OffsetEdge[], band: { y0: number; y1: number }, side: 0 | 1): number | null {
+  const lo = innerXSpan(edges, band.y0 + 0.25)
+  const hi = innerXSpan(edges, band.y1 - 0.25)
+  if (!lo || !hi || band.y1 - band.y0 <= 0.6) return null
+  return (hi[side] - lo[side]) / (band.y1 - band.y0 - 0.5)
+}
+
+/**
+ * Join stack-neighbouring cells that have the same bounding purlins (or none) and whose
+ * open sides continue in one straight line. The strips come from cutting the whole field
+ * at every place a purlin meets a side; a bay that is not touched by that side would
+ * otherwise be chopped into pieces that the factory builds as one section.
+ */
+function mergeCollinearCells(cells: BayCell[], edges: OffsetEdge[]): BayCell[] {
+  const SLOPE_TOL = 5e-4
+  const out: BayCell[] = []
+  for (const cell of cells) {
+    let prev: BayCell | undefined
+    for (let i = out.length - 1; i >= 0; i--) {
+      const c = out[i]
+      if (
+        sameBound(c.leftBound, cell.leftBound) &&
+        sameBound(c.rightBound, cell.rightBound) &&
+        Math.abs(c.band.y1 - cell.band.y0) < 0.5
+      ) {
+        prev = c
+        break
+      }
+    }
+    const straight = (side: 0 | 1, bound: number | null) => {
+      if (bound != null) return true
+      const a = spanSlope(edges, prev!.band, side)
+      const b = spanSlope(edges, cell.band, side)
+      return a != null && b != null && Math.abs(a - b) <= SLOPE_TOL
+    }
+    if (prev && straight(0, cell.leftBound) && straight(1, cell.rightBound)) {
+      prev.band = { y0: prev.band.y0, y1: cell.band.y1 }
+      continue
+    }
+    out.push({ ...cell, band: { ...cell.band } })
+  }
+  return out
+}
+
+/**
  * Section cells when the contour is not a rectangle union (a real diagonal).
  * Bays are the inner faces split by the shelf and by purlins that cross the
  * bay. A side that is not vertical becomes the trapezoid end.
+ *
+ * `general` is set for the contour that has corners inside the stack (a skew
+ * pentagon, lamellas along the long side, reached through `transposed`). It then
+ * uses the mitred inner polygon, takes the stack limits from its extent when the
+ * contour has fewer than two sides along the lamellas, also cuts the strips at its
+ * corners, and joins collinear neighbours. Without it the result is the one every
+ * saved plan already has.
  */
+
+/**
+ * Tip remnants at a kinked contour (the 153.9° break between CD and DE on the
+ * skew pentagon). They are real short lamellas, but they are not a factory
+ * section of their own: fold them into the neighbouring section of the same bay
+ * so the schedule shows one section per bay side and the tip lengths stay in
+ * the cut list.
+ */
+function absorbContourTipSections(sections: LamellaSection[]): LamellaSection[] {
+  const isTip = (section: LamellaSection): boolean => {
+    if (section.trapezoid == null) return false
+    // A full-bay triangle that tapers to 0 (the A pieces on BC) is a real section:
+    // its stack height is a whole bay (~880 mm). The 153.9° kink leaves short
+    // remnants whose stack is only a few lamella rows and whose narrow end is
+    // about one lamella wide — those are tips, not lettered sections.
+    const rows = countedLamellaRows(section)
+    const narrow = Math.min(section.trapezoid.widthAtLowMm, section.trapezoid.widthAtHighMm)
+    if (narrow > 60) return false
+    return section.heightMm < 500 && rows <= 10
+  }
+  const tips = sections.filter(isTip)
+  if (tips.length === 0) return sections
+  const kept = sections.filter((section) => !isTip(section)).map((section) => {
+    const trap = section.trapezoid
+    if (!trap) return { ...section }
+    return {
+      ...section,
+      trapezoid: {
+        ...trap,
+        corners: [...trap.corners] as LamellaTrapezoid['corners'],
+        lamellaLengthsMm: [...trap.lamellaLengthsMm],
+        upperFromTopMm: [...(trap.upperFromTopMm ?? [])],
+      },
+    }
+  })
+  const overlap = (a0: number, a1: number, b0: number, b1: number, pad: number) =>
+    a0 < b1 + pad && b0 < a1 + pad
+  for (const tip of tips) {
+    const tipMidX = (tip.minX + tip.maxX) / 2
+    const tipMidY = (tip.minY + tip.maxY) / 2
+    let best: LamellaSection | null = null
+    let bestArea = 0
+    for (const candidate of kept) {
+      // Same bay: midpoints along the lamellas land between the same two crossbeams.
+      const cMidY = (candidate.minY + candidate.maxY) / 2
+      if (Math.abs(cMidY - tipMidY) > 500) continue
+      const area = (candidate.maxX - candidate.minX) * (candidate.maxY - candidate.minY)
+      const close =
+        Math.abs(candidate.maxX - tip.minX) < 250
+        || Math.abs(tip.maxX - candidate.minX) < 250
+        || overlap(candidate.minX, candidate.maxX, tip.minX, tip.maxX, 50)
+      if (!close) continue
+      if (area > bestArea) {
+        best = candidate
+        bestArea = area
+      }
+    }
+    if (best == null) {
+      kept.push(tip)
+      continue
+    }
+    const towardHighX = tipMidX >= (best.minX + best.maxX) / 2
+    best.minX = Math.min(best.minX, tip.minX)
+    best.maxX = Math.max(best.maxX, tip.maxX)
+    best.minY = Math.min(best.minY, tip.minY)
+    best.maxY = Math.max(best.maxY, tip.maxY)
+    best.clearHMm = Math.max(best.clearHMm, tip.clearHMm)
+    best.heightMm = Math.max(best.heightMm, tip.heightMm)
+    if (best.trapezoid && tip.trapezoid) {
+      if (towardHighX) {
+        best.trapezoid.lamellaLengthsMm = [...best.trapezoid.lamellaLengthsMm, ...tip.trapezoid.lamellaLengthsMm]
+        best.trapezoid.upperFromTopMm = [...(best.trapezoid.upperFromTopMm ?? []), ...(tip.trapezoid.upperFromTopMm ?? [])]
+        best.trapezoid.widthAtHighMm = tip.trapezoid.widthAtHighMm
+        best.trapezoid.corners = [
+          best.trapezoid.corners[0],
+          best.trapezoid.corners[1],
+          tip.trapezoid.corners[2],
+          tip.trapezoid.corners[3],
+        ]
+      } else {
+        best.trapezoid.lamellaLengthsMm = [...tip.trapezoid.lamellaLengthsMm, ...best.trapezoid.lamellaLengthsMm]
+        best.trapezoid.upperFromTopMm = [...(tip.trapezoid.upperFromTopMm ?? []), ...(best.trapezoid.upperFromTopMm ?? [])]
+        best.trapezoid.widthAtLowMm = tip.trapezoid.widthAtLowMm
+        best.trapezoid.corners = [
+          tip.trapezoid.corners[0],
+          tip.trapezoid.corners[1],
+          best.trapezoid.corners[2],
+          best.trapezoid.corners[3],
+        ]
+      }
+      best.widthMm = Math.max(best.trapezoid.widthAtLowMm, best.trapezoid.widthAtHighMm)
+      best.lamellaCount = best.trapezoid.lamellaLengthsMm.length
+    } else if (!best.trapezoid && tip.trapezoid) {
+      const lowW = towardHighX ? best.widthMm : tip.trapezoid.widthAtLowMm
+      const highW = towardHighX ? tip.trapezoid.widthAtHighMm : best.widthMm
+      const baseLengths = Array.from({ length: best.lamellaCount }, () => best.widthMm)
+      const lengths = towardHighX
+        ? [...baseLengths, ...tip.trapezoid.lamellaLengthsMm]
+        : [...tip.trapezoid.lamellaLengthsMm, ...baseLengths]
+      // Keep the tip's outer corners so the outline follows the slant, not an AABB.
+      const tipCorners = tip.trapezoid.corners
+      best.trapezoid = {
+        corners: towardHighX
+          ? [
+              [best.minX, best.minY],
+              [best.maxX, Math.min(best.minY, tipCorners[1][1])],
+              tipCorners[2],
+              tipCorners[3],
+            ]
+          : [
+              tipCorners[0],
+              tipCorners[1],
+              [best.maxX, best.maxY],
+              [best.minX, best.maxY],
+            ],
+        widthAtLowMm: lowW,
+        widthAtHighMm: highW,
+        lamellaLengthsMm: lengths,
+        upperFromTopMm: lengths.map(() => 0),
+      }
+      best.widthMm = Math.max(lowW, highW)
+      best.lamellaCount = lengths.length
+      best.clearWMm = Math.max(best.clearWMm, tip.clearWMm)
+      best.clearHMm = best.clearHMm + tip.clearHMm
+      best.heightMm = best.heightMm + tip.heightMm
+    } else {
+      best.lamellaCount += countedLamellaRows(tip)
+    }
+  }
+  kept.sort((a, b) => b.minY - a.minY || a.minX - b.minX)
+  return mergeRemainingShortTips(kept)
+}
+
+/**
+ * Second pass: any short trapezoid still left beside a neighbour in the same bay
+ * is folded in. Covers the case where the first pass saw the tip before its
+ * neighbour was cloned into `kept` with matching bounds.
+ */
+function mergeRemainingShortTips(sections: LamellaSection[]): LamellaSection[] {
+  const out = sections.map((section) => {
+    const trap = section.trapezoid
+    if (!trap) return { ...section }
+    return {
+      ...section,
+      trapezoid: {
+        ...trap,
+        corners: [...trap.corners] as LamellaTrapezoid['corners'],
+        lamellaLengthsMm: [...trap.lamellaLengthsMm],
+        upperFromTopMm: [...(trap.upperFromTopMm ?? [])],
+      },
+    }
+  })
+  let changed = true
+  while (changed) {
+    changed = false
+    for (let i = 0; i < out.length; i++) {
+      const tip = out[i]
+      if (tip.trapezoid == null) continue
+      const narrow = Math.min(tip.trapezoid.widthAtLowMm, tip.trapezoid.widthAtHighMm)
+      if (narrow > 60 || tip.heightMm >= 500) continue
+      const tipMidY = (tip.minY + tip.maxY) / 2
+      let bestJ = -1
+      let bestArea = 0
+      for (let j = 0; j < out.length; j++) {
+        if (i === j) continue
+        const candidate = out[j]
+        if (Math.abs((candidate.minY + candidate.maxY) / 2 - tipMidY) > 500) continue
+        const adjacent =
+          Math.abs(candidate.maxX - tip.minX) < 250
+          || Math.abs(tip.maxX - candidate.minX) < 250
+        if (!adjacent) continue
+        const area = (candidate.maxX - candidate.minX) * (candidate.maxY - candidate.minY)
+        if (area > bestArea) {
+          bestArea = area
+          bestJ = j
+        }
+      }
+      if (bestJ < 0) continue
+      const best = out[bestJ]
+      const towardHighX = (tip.minX + tip.maxX) / 2 >= (best.minX + best.maxX) / 2
+      const tipRows = tip.trapezoid.lamellaLengthsMm.filter((length) => length > 0)
+      if (best.trapezoid) {
+        if (towardHighX) {
+          best.trapezoid.lamellaLengthsMm = [...best.trapezoid.lamellaLengthsMm, ...tipRows]
+          best.trapezoid.widthAtHighMm = tip.trapezoid.widthAtHighMm
+        } else {
+          best.trapezoid.lamellaLengthsMm = [...tipRows, ...best.trapezoid.lamellaLengthsMm]
+          best.trapezoid.widthAtLowMm = tip.trapezoid.widthAtLowMm
+        }
+        best.lamellaCount = best.trapezoid.lamellaLengthsMm.length
+        best.widthMm = Math.max(best.trapezoid.widthAtLowMm, best.trapezoid.widthAtHighMm)
+      } else {
+        const base = Array.from({ length: best.lamellaCount }, () => best.widthMm)
+        const lengths = towardHighX ? [...base, ...tipRows] : [...tipRows, ...base]
+        best.trapezoid = {
+          corners: [
+            [Math.min(best.minX, tip.minX), Math.min(best.minY, tip.minY)],
+            [Math.max(best.maxX, tip.maxX), Math.min(best.minY, tip.minY)],
+            [Math.max(best.maxX, tip.maxX), Math.max(best.maxY, tip.maxY)],
+            [Math.min(best.minX, tip.minX), Math.max(best.maxY, tip.maxY)],
+          ],
+          widthAtLowMm: towardHighX ? best.widthMm : tip.trapezoid.widthAtLowMm,
+          widthAtHighMm: towardHighX ? tip.trapezoid.widthAtHighMm : best.widthMm,
+          lamellaLengthsMm: lengths,
+          upperFromTopMm: lengths.map(() => 0),
+        }
+        best.lamellaCount = lengths.length
+        best.widthMm = Math.max(best.trapezoid.widthAtLowMm, best.trapezoid.widthAtHighMm)
+      }
+      best.minX = Math.min(best.minX, tip.minX)
+      best.maxX = Math.max(best.maxX, tip.maxX)
+      best.minY = Math.min(best.minY, tip.minY)
+      best.maxY = Math.max(best.maxY, tip.maxY)
+      best.heightMm += tip.heightMm
+      best.clearHMm += tip.clearHMm
+      out.splice(i, 1)
+      changed = true
+      break
+    }
+  }
+  out.sort((a, b) => b.minY - a.minY || a.minX - b.minX)
+  return out.map((section, index) => ({ ...section, id: `sec-${index}` }))
+}
+
 function openSkewBaySections(input: {
   pts: Point2D[]
   spec: PergolaSpec
@@ -1063,12 +1400,17 @@ function openSkewBaySections(input: {
   positions: Array<{ positionMm: number }>
   support: { start: Point2D; end: Point2D; lengthMm: number } | null
   supportW: number
+  general?: boolean
+  /** Beam parallel to the lamellas: only the bays it crosses are split. */
+  spanLimited?: boolean
 }): LamellaSection[] {
   const θ = (input.spec.lamellaDirectionDeg * Math.PI) / 180
   const runX = Math.cos(θ)
   const runY = Math.sin(θ)
   if (Math.abs(runX) < Math.abs(runY)) return []
-  const edges = innerOffsetEdges(input.pts, input.widthAt)
+  const mitred = input.general === true ? innerMitredPolygon(input.pts, input.widthAt) : null
+  if (input.general === true && mitred == null) return []
+  const edges = mitred ? mitred.edges : innerOffsetEdges(input.pts, input.widthAt)
   const horizontalYs: number[] = []
   for (let i = 0; i < input.pts.length; i++) {
     const a = input.pts[i]
@@ -1078,21 +1420,33 @@ function openSkewBaySections(input: {
     if (!inward) continue
     horizontalYs.push((a[1] + b[1]) / 2 + inward[1] * (input.widthAt(i) / 2))
   }
-  if (horizontalYs.length < 2) return []
-  const yBottom = Math.min(...horizontalYs)
-  const yTop = Math.max(...horizontalYs)
+  if (horizontalYs.length < 2 && mitred == null) return []
+  const yBottom = horizontalYs.length >= 2 || mitred == null
+    ? Math.min(...horizontalYs)
+    : Math.min(...mitred.vertices.map((v) => v[1]))
+  const yTop = horizontalYs.length >= 2 || mitred == null
+    ? Math.max(...horizontalYs)
+    : Math.max(...mitred.vertices.map((v) => v[1]))
   const purlinHalf = DIVIDER_PLAN_CLEARANCE_WIDTH_MM / 2
   const sideInset = LAMELLA_SECTION_CLEARANCE_W_MM / 2
   const stackInset = LAMELLA_SECTION_CLEARANCE_H_MM / 2
   let bands: Array<{ y0: number; y1: number }> = [{ y0: yBottom, y1: yTop }]
+  // Horizontal support (wing shelf, or a beam parallel to the lamellas after the
+  // along-Y reflection). x0/x1 limit which bays the support splits: a short beam
+  // only cuts the rows it actually crosses.
   const shelf = input.support != null && input.support.lengthMm > 1 && input.supportW > 1
     && Math.abs(input.support.start[1] - input.support.end[1]) <= 2
     ? {
         y0: (input.support.start[1] + input.support.end[1]) / 2 - input.supportW / 2,
         y1: (input.support.start[1] + input.support.end[1]) / 2 + input.supportW / 2,
+        x0: Math.min(input.support.start[0], input.support.end[0]),
+        x1: Math.max(input.support.start[0], input.support.end[0]),
       }
     : null
-  if (shelf) {
+  const spanLimited = input.spanLimited === true
+  // Wing shelf (not span-limited): split every bay, same as before this change.
+  // External beam: leave bands whole; cells that overlap the beam are split later.
+  if (shelf && !spanLimited) {
     bands = bands.flatMap((band) => {
       const out: Array<{ y0: number; y1: number }> = []
       if (shelf.y0 - band.y0 > MIN_CELL_MM) out.push({ y0: band.y0, y1: Math.min(band.y1, shelf.y0) })
@@ -1109,6 +1463,11 @@ function openSkewBaySections(input: {
       cuts.push(y)
     }
   }
+  if (mitred) {
+    for (const v of mitred.vertices) {
+      if (v[1] > yBottom + 1 && v[1] < yTop - 1) cuts.push(v[1])
+    }
+  }
   for (const y of cuts) {
     bands = bands.flatMap((band) => {
       if (y <= band.y0 + MIN_CELL_MM || y >= band.y1 - MIN_CELL_MM) return [band]
@@ -1121,8 +1480,10 @@ function openSkewBaySections(input: {
   const pitchMm = representativePitchMm(input.pattern, input.spec.lamellaGapMm)
   const sections: LamellaSection[] = []
 
+  const cells: BayCell[] = []
   for (const band of bands) {
-    if (band.y1 - band.y0 <= LAMELLA_SECTION_CLEARANCE_H_MM + MIN_CELL_MM) continue
+    // The general route keeps thin strips so that their neighbours can still be joined.
+    if (mitred == null && band.y1 - band.y0 <= LAMELLA_SECTION_CLEARANCE_H_MM + MIN_CELL_MM) continue
     const y0 = band.y0 + 0.25
     const y1 = band.y1 - 0.25
     const span0 = innerXSpan(edges, y0)
@@ -1139,103 +1500,140 @@ function openSkewBaySections(input: {
       .sort((a, b) => a - b)
     const bounds: Array<number | null> = [null, ...splitters, null]
     for (let i = 0; i < bounds.length - 1; i++) {
-      const leftBound = bounds[i]
-      const rightBound = bounds[i + 1]
-      const leftAt = (span: [number, number]) => leftBound == null ? span[0] : leftBound + purlinHalf
-      const rightAt = (span: [number, number]) => rightBound == null ? span[1] : rightBound - purlinHalf
-      const faceLeft0 = leftAt(span0)
-      const faceRight0 = rightAt(span0)
-      const faceLeft1 = leftAt(span1)
-      const faceRight1 = rightAt(span1)
-      if (faceRight0 - faceLeft0 <= MIN_CELL_MM && faceRight1 - faceLeft1 <= MIN_CELL_MM) continue
-      const drawnY0 = band.y0 + stackInset
-      const drawnY1 = band.y1 - stackInset
-      const spanDrawn0 = innerXSpan(edges, drawnY0) ?? span0
-      const spanDrawn1 = innerXSpan(edges, drawnY1) ?? span1
-      const outline = (span: [number, number]) => {
-        const left = leftAt(span) + sideInset
-        const right = rightAt(span) - sideInset
-        return { left, right, width: right - left }
-      }
-      const finite = (edge: { left: number; right: number; width: number }) => {
-        if (edge.right >= edge.left) return edge
-        const mid = (edge.left + edge.right) / 2
-        return { left: mid, right: mid, width: 0 }
-      }
-      const low = finite(outline(spanDrawn0))
-      const high = finite(outline(spanDrawn1))
-      if (low.width <= MIN_CELL_MM && high.width <= MIN_CELL_MM) continue
-      const varies = Math.abs(low.width - high.width) > 1.5
-        || Math.abs(faceLeft0 - faceLeft1) > 1.5
-        || Math.abs(faceRight0 - faceRight1) > 1.5
-      const heightMm = drawnY1 - drawnY0
-      const widthMm = varies ? Math.max(low.width, high.width) : low.width
-      const clearW = Math.max(faceRight0 - faceLeft0, faceRight1 - faceLeft1)
-      const clearH = band.y1 - band.y0
-      const lamellaCount = countRowsInHeight(heightMm, input.pattern, input.spec.lamellaGapMm)
-      if (lamellaCount <= 0 || heightMm < MIN_CELL_MM) continue
-      const onShelf = (y: number) => shelf != null && (Math.abs(y - shelf.y0) < 1 || Math.abs(y - shelf.y1) < 1)
-      const faceX0: LamellaSectionFace = leftBound == null ? 'frame' : 'purlin'
-      const faceX1: LamellaSectionFace = rightBound == null ? (varies ? 'notch' : 'frame') : 'purlin'
-      const section: LamellaSection = {
-        id: `sec-${sections.length}`,
-        widthMm: varies ? high.width : widthMm,
-        heightMm,
-        clearWMm: clearW,
-        clearHMm: clearH,
-        lamellaCount,
-        pitchMm,
-        minX: Math.min(low.left, high.left),
-        maxX: Math.max(low.right, high.right),
-        minY: drawnY0,
-        maxY: drawnY1,
-        faceX0,
-        faceX1,
-        faceY0: onShelf(band.y0) ? 'support' : 'frame',
-        faceY1: onShelf(band.y1) ? 'support' : 'frame',
-      }
-      if (!varies) {
-        sections.push(section)
+      cells.push({ band, leftBound: bounds[i], rightBound: bounds[i + 1] })
+    }
+  }
+  // Without a span-limited beam, merge only when there is no shelf (old rule).
+  // With a span-limited beam, merge first, then cut the bays the beam crosses.
+  const merged = mitred != null && (shelf == null || spanLimited)
+    ? mergeCollinearCells(cells, edges)
+    : cells
+  const joined: BayCell[] = []
+  if (shelf && spanLimited) {
+    for (const cell of merged) {
+      const midY = (cell.band.y0 + cell.band.y1) / 2
+      const span = innerXSpan(edges, midY)
+      if (!span) {
+        joined.push(cell)
         continue
       }
-      const left = (span: [number, number]) => leftAt(span) + sideInset
-      const right = (span: [number, number]) => rightAt(span) - sideInset
-      const corners: LamellaTrapezoid['corners'] = [
-        [low.left, drawnY0],
-        [low.right, drawnY0],
-        [high.right, drawnY1],
-        [high.left, drawnY1],
-      ]
-      const lamellaLengthsMm: number[] = []
-      const upperFromTopMm: number[] = []
-      let scan = input.pattern[0].visibleWidthMm * 0.5
-      let index = 0
-      for (let row = 0; row < lamellaCount; row++) {
-        const entry = input.pattern[index % input.pattern.length]
-        const next = input.pattern[(index + 1) % input.pattern.length]
-        const half = entry.visibleWidthMm * 0.5
-        const band0 = drawnY0 + scan - half
-        const band1 = drawnY0 + scan + half
-        const spanA = innerXSpan(edges, band0) ?? spanDrawn0
-        const spanB = innerXSpan(edges, band1) ?? spanDrawn1
-        const w0 = Math.max(0, right(spanA) - left(spanA))
-        const w1 = Math.max(0, right(spanB) - left(spanB))
-        lamellaLengthsMm.push(floorLamellaLengthMm(Math.min(w0, w1), step))
-        upperFromTopMm.push(drawnY1 - band1)
-        scan += half + input.spec.lamellaGapMm + next.visibleWidthMm * 0.5
-        index += 1
+      const left = cell.leftBound == null ? span[0] : cell.leftBound + purlinHalf
+      const right = cell.rightBound == null ? span[1] : cell.rightBound - purlinHalf
+      const overlaps = right > shelf.x0 + 1 && left < shelf.x1 - 1
+      if (!overlaps) {
+        joined.push(cell)
+        continue
       }
-      sections.push({
-        ...section,
-        trapezoid: {
-          corners,
-          widthAtLowMm: low.width,
-          widthAtHighMm: high.width,
-          lamellaLengthsMm,
-          upperFromTopMm,
-        },
-      })
+      if (shelf.y0 - cell.band.y0 > MIN_CELL_MM) {
+        joined.push({ band: { y0: cell.band.y0, y1: Math.min(cell.band.y1, shelf.y0) }, leftBound: cell.leftBound, rightBound: cell.rightBound })
+      }
+      if (cell.band.y1 - shelf.y1 > MIN_CELL_MM) {
+        joined.push({ band: { y0: Math.max(cell.band.y0, shelf.y1), y1: cell.band.y1 }, leftBound: cell.leftBound, rightBound: cell.rightBound })
+      }
     }
+  } else {
+    joined.push(...merged)
+  }
+
+  for (const { band, leftBound, rightBound } of joined) {
+    if (band.y1 - band.y0 <= LAMELLA_SECTION_CLEARANCE_H_MM + MIN_CELL_MM) continue
+    const span0 = innerXSpan(edges, band.y0 + 0.25)
+    const span1 = innerXSpan(edges, band.y1 - 0.25)
+    if (!span0 || !span1) continue
+    const leftAt = (span: [number, number]) => leftBound == null ? span[0] : leftBound + purlinHalf
+    const rightAt = (span: [number, number]) => rightBound == null ? span[1] : rightBound - purlinHalf
+    const faceLeft0 = leftAt(span0)
+    const faceRight0 = rightAt(span0)
+    const faceLeft1 = leftAt(span1)
+    const faceRight1 = rightAt(span1)
+    if (faceRight0 - faceLeft0 <= MIN_CELL_MM && faceRight1 - faceLeft1 <= MIN_CELL_MM) continue
+    const drawnY0 = band.y0 + stackInset
+    const drawnY1 = band.y1 - stackInset
+    const spanDrawn0 = innerXSpan(edges, drawnY0) ?? span0
+    const spanDrawn1 = innerXSpan(edges, drawnY1) ?? span1
+    const outline = (span: [number, number]) => {
+      const left = leftAt(span) + sideInset
+      const right = rightAt(span) - sideInset
+      return { left, right, width: right - left }
+    }
+    const finite = (edge: { left: number; right: number; width: number }) => {
+      if (edge.right >= edge.left) return edge
+      const mid = (edge.left + edge.right) / 2
+      return { left: mid, right: mid, width: 0 }
+    }
+    const low = finite(outline(spanDrawn0))
+    const high = finite(outline(spanDrawn1))
+    if (low.width <= MIN_CELL_MM && high.width <= MIN_CELL_MM) continue
+    const varies = Math.abs(low.width - high.width) > 1.5
+      || Math.abs(faceLeft0 - faceLeft1) > 1.5
+      || Math.abs(faceRight0 - faceRight1) > 1.5
+    const heightMm = drawnY1 - drawnY0
+    const widthMm = varies ? Math.max(low.width, high.width) : low.width
+    const clearW = Math.max(faceRight0 - faceLeft0, faceRight1 - faceLeft1)
+    const clearH = band.y1 - band.y0
+    const lamellaCount = countRowsInHeight(heightMm, input.pattern, input.spec.lamellaGapMm)
+    if (lamellaCount <= 0 || heightMm < MIN_CELL_MM) continue
+    const onShelf = (y: number) => shelf != null && (Math.abs(y - shelf.y0) < 1 || Math.abs(y - shelf.y1) < 1)
+    const faceX0: LamellaSectionFace = leftBound == null ? 'frame' : 'purlin'
+    const faceX1: LamellaSectionFace = rightBound == null ? (varies ? 'notch' : 'frame') : 'purlin'
+    const section: LamellaSection = {
+      id: `sec-${sections.length}`,
+      widthMm: varies ? high.width : widthMm,
+      heightMm,
+      clearWMm: clearW,
+      clearHMm: clearH,
+      lamellaCount,
+      pitchMm,
+      minX: Math.min(low.left, high.left),
+      maxX: Math.max(low.right, high.right),
+      minY: drawnY0,
+      maxY: drawnY1,
+      faceX0,
+      faceX1,
+      faceY0: onShelf(band.y0) ? 'support' : 'frame',
+      faceY1: onShelf(band.y1) ? 'support' : 'frame',
+    }
+    if (!varies) {
+      sections.push(section)
+      continue
+    }
+    const left = (span: [number, number]) => leftAt(span) + sideInset
+    const right = (span: [number, number]) => rightAt(span) - sideInset
+    const corners: LamellaTrapezoid['corners'] = [
+      [low.left, drawnY0],
+      [low.right, drawnY0],
+      [high.right, drawnY1],
+      [high.left, drawnY1],
+    ]
+    const lamellaLengthsMm: number[] = []
+    const upperFromTopMm: number[] = []
+    let scan = input.pattern[0].visibleWidthMm * 0.5
+    let index = 0
+    for (let row = 0; row < lamellaCount; row++) {
+      const entry = input.pattern[index % input.pattern.length]
+      const next = input.pattern[(index + 1) % input.pattern.length]
+      const half = entry.visibleWidthMm * 0.5
+      const band0 = drawnY0 + scan - half
+      const band1 = drawnY0 + scan + half
+      const spanA = innerXSpan(edges, band0) ?? spanDrawn0
+      const spanB = innerXSpan(edges, band1) ?? spanDrawn1
+      const w0 = Math.max(0, right(spanA) - left(spanA))
+      const w1 = Math.max(0, right(spanB) - left(spanB))
+      lamellaLengthsMm.push(floorLamellaLengthMm(Math.min(w0, w1), step))
+      upperFromTopMm.push(drawnY1 - band1)
+      scan += half + input.spec.lamellaGapMm + next.visibleWidthMm * 0.5
+      index += 1
+    }
+    sections.push({
+      ...section,
+      trapezoid: {
+        corners,
+        widthAtLowMm: low.width,
+        widthAtHighMm: high.width,
+        lamellaLengthsMm,
+        upperFromTopMm,
+      },
+    })
   }
   sections.sort((a, b) => b.minY - a.minY || a.minX - b.minX)
   return sections.map((section, index) => ({ ...section, id: `sec-${index}` }))
@@ -1244,6 +1642,7 @@ function openSkewBaySections(input: {
 export function buildLamellaSections(
   spec: PergolaSpec,
   profiles: Map<string, ProfileDimensions>,
+  options?: BuildLamellaSectionsOptions,
 ): LamellaSection[] {
   const clean = sanitizeContour(spec.contour)
   if (clean.length < 3) return []
@@ -1278,29 +1677,41 @@ export function buildLamellaSections(
   const alongX = Math.abs(dir[0]) >= Math.abs(dir[1])
 
   const frame = computeFrame(spec, profiles)
-  const support = resolveWingShelfSupport({
-    contour: pts,
-    params: {
-      ...DEFAULT_PLAN_CONSTRUCTION_PARAMS,
-      lamellaDirectionDeg: spec.lamellaDirectionDeg,
-      beamProfileId: spec.beamProfileId,
-      postProfileId: spec.postProfileId,
-      purlinProfileId: spec.purlinProfileId ?? DEFAULT_PLAN_CONSTRUCTION_PARAMS.purlinProfileId,
-      purlinDividers: spec.purlinDividers ?? { mode: 'auto' },
-      measuredOuterLengthMmByEdgeIndex: outersCcw,
-      purlinClearLayoutVersion: spec.purlinClearLayoutVersion,
-      purlinMaxSpanMm: spec.purlinMaxSpanMm,
-      postMaxSpanMm: spec.postMaxSpanMm,
-      wingShelfProfileId: spec.wingShelfProfileId,
-      wallProfileId: spec.wallProfileId,
-      wallBeamWidthVersion: spec.wallBeamWidthVersion,
-    },
-    profiles,
-    beams: frame.beams,
-    wallEdgeIndices: wallsCcw,
-  })
-
-  const supportW = supportBandWidthMm(support, frame.beams, profiles, spec.beamProfileId, spec.wallBeamWidthVersion === 1)
+  const external = options?.supportLine
+  const wing = external == null
+    ? resolveWingShelfSupport({
+        contour: pts,
+        params: {
+          ...DEFAULT_PLAN_CONSTRUCTION_PARAMS,
+          lamellaDirectionDeg: spec.lamellaDirectionDeg,
+          beamProfileId: spec.beamProfileId,
+          postProfileId: spec.postProfileId,
+          purlinProfileId: spec.purlinProfileId ?? DEFAULT_PLAN_CONSTRUCTION_PARAMS.purlinProfileId,
+          purlinDividers: spec.purlinDividers ?? { mode: 'auto' },
+          measuredOuterLengthMmByEdgeIndex: outersCcw,
+          purlinClearLayoutVersion: spec.purlinClearLayoutVersion,
+          purlinMaxSpanMm: spec.purlinMaxSpanMm,
+          postMaxSpanMm: spec.postMaxSpanMm,
+          wingShelfProfileId: spec.wingShelfProfileId,
+          wallProfileId: spec.wallProfileId,
+          wallBeamWidthVersion: spec.wallBeamWidthVersion,
+        },
+        profiles,
+        beams: frame.beams,
+        wallEdgeIndices: wallsCcw,
+      })
+    : null
+  const support = external != null
+    ? {
+        start: external.start,
+        end: external.end,
+        lengthMm: Math.hypot(external.end[0] - external.start[0], external.end[1] - external.start[1]),
+        profileId: undefined as string | undefined,
+      }
+    : wing
+  const supportW = external != null
+    ? (external.widthMm > 0 ? external.widthMm : supportBandWidthMm(support, frame.beams, profiles, spec.beamProfileId, spec.wallBeamWidthVersion === 1))
+    : supportBandWidthMm(support, frame.beams, profiles, spec.beamProfileId, spec.wallBeamWidthVersion === 1)
   const supportHalf = supportW / 2
   // A wall notch narrower than the free beam was grown to the free-beam half.
   // Pull it back onto the wall's own face. 50 vs 40 keeps the live-L heights
@@ -1523,15 +1934,56 @@ export function buildLamellaSections(
   const numbered = sections.map((s, i) => ({ ...s, id: `sec-${i}` }))
   const skewed = applySkewSectionLengths(numbered, pts, spec, pattern, widthAt)
   if (skewed.length > 0 || spec.skewSectionVersion !== 1) return skewed
-  return openSkewBaySections({
-    pts,
-    spec,
-    pattern,
-    widthAt,
-    positions,
+  const open = { pts, spec, pattern, widthAt, positions, support, supportW, spanLimited: external != null }
+  const runsAlongY = Math.abs(dir[0]) < Math.abs(dir[1])
+  return runsAlongY ? openSkewBaySectionsAlongY(open) : openSkewBaySections(open)
+}
+
+type OpenSkewInput = Parameters<typeof openSkewBaySections>[0]
+
+/**
+ * Lamellas along Y (a skew pentagon with the lamellas along its long side). The builder
+ * above only knows lamellas along X, so the contour is reflected in the line y = x, built
+ * as lamellas along X, and every section is reflected back. The reflection turns the
+ * contour clockwise; reversing the vertex order restores counter-clockwise, which moves
+ * edge k to edge (n - 2 - k) mod n, so the side widths are looked up the same way.
+ * Faces follow the plan axes: along the lamella is Y here, so the end faces of a section
+ * are faceY0 / faceY1 and the row faces are faceX0 / faceX1.
+ */
+function openSkewBaySectionsAlongY(input: OpenSkewInput): LamellaSection[] {
+  const n = input.pts.length
+  const swap = (p: Point2D): Point2D => [p[1], p[0]]
+  const support = input.support
+    ? { ...input.support, start: swap(input.support.start), end: swap(input.support.end) }
+    : null
+  const transposed = openSkewBaySections({
+    ...input,
+    pts: input.pts.map(swap).reverse(),
+    widthAt: (edgeIndex) => input.widthAt((((n - 2 - edgeIndex) % n) + n) % n),
+    spec: { ...input.spec, lamellaDirectionDeg: 0 },
     support,
-    supportW,
+    general: true,
   })
+  const back = transposed.map((section): LamellaSection => {
+    const { trapezoid: reflected, ...rest } = section
+    const trapezoid = reflected
+      ? { ...reflected, corners: reflected.corners.map(swap) as LamellaTrapezoid['corners'] }
+      : undefined
+    return {
+      ...rest,
+      minX: section.minY,
+      maxX: section.maxY,
+      minY: section.minX,
+      maxY: section.maxX,
+      faceX0: section.faceY0,
+      faceX1: section.faceY1,
+      faceY0: section.faceX0,
+      faceY1: section.faceX1,
+      ...(trapezoid ? { trapezoid } : {}),
+    }
+  })
+  back.sort((a, b) => b.minY - a.minY || a.minX - b.minX)
+  return absorbContourTipSections(back).map((section, index) => ({ ...section, id: `sec-${index}` }))
 }
 
 interface SkewEndFace {

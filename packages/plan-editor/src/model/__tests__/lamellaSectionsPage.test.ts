@@ -24,6 +24,34 @@ const flowMarkup = (sections: ReturnType<typeof buildLamellaSections>) =>
 const screenMarkup = (sections: ReturnType<typeof buildLamellaSections>) =>
   renderToStaticMarkup(createElement(LamellaSectionsSheet, { sections, labels: LABELS }))
 
+describe('a shape the builder returns no sections for', () => {
+  // The builder returns nothing for a legacy saved plan (no skewSectionVersion) of a skew
+  // contour with lamellas along its long side. That is the case the page has to survive.
+  const legacy = (() => {
+    const { skewSectionVersion: _version, ...params } = pentagonV2PlanParams(DEFAULT_PLAN_CONSTRUCTION_PARAMS)
+    return buildLamellaSections(
+      specFromPlan({ contour: pentagonV2Contour(false), wallEdgeIndices: [], params }),
+      PERGOLA_CONSTRUCTION_PROFILES,
+    )
+  })()
+
+  it('has no sections', () => {
+    expect(legacy).toHaveLength(0)
+  })
+
+  it('prints no sections page in the production pack', () => {
+    const html = flowMarkup(legacy)
+    expect(html).toBe('')
+    expect(html).not.toContain('data-pdf-page')
+  })
+
+  it('says on the screen sheet why it is empty', () => {
+    const html = screenMarkup(legacy)
+    expect(html).toContain('data-sections-empty="1"')
+    expect(html).toContain('NO-SECTIONS-LINE')
+  })
+})
+
 describe.each([
   ['mirrored plan as shown in the editor (clockwise)', true],
   ['drawing frame (counter-clockwise)', false],
@@ -32,20 +60,13 @@ describe.each([
   const params = pentagonV2PlanParams(DEFAULT_PLAN_CONSTRUCTION_PARAMS)
   const sections = buildLamellaSections(specFromPlan({ contour, wallEdgeIndices: [], params }), PERGOLA_CONSTRUCTION_PROFILES)
 
-  it('has lamellas but no sections', () => {
-    expect(sections).toHaveLength(0)
-  })
-
-  it('prints no sections page in the production pack', () => {
+  it('builds sections and prints the page', () => {
+    expect(sections.length).toBeGreaterThan(0)
     const html = flowMarkup(sections)
-    expect(html).toBe('')
-    expect(html).not.toContain('data-pdf-page')
-  })
-
-  it('says on the screen sheet why it is empty', () => {
-    const html = screenMarkup(sections)
-    expect(html).toContain('data-sections-empty="1"')
-    expect(html).toContain('NO-SECTIONS-LINE')
+    expect(html).toContain('data-pdf-page')
+    expect(html).not.toContain('data-sections-empty')
+    expect(html).not.toContain('NO-SECTIONS-LINE')
+    expect(screenMarkup(sections)).not.toContain('data-sections-empty')
   })
 })
 

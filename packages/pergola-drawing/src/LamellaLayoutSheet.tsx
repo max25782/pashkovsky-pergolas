@@ -72,6 +72,73 @@ function outsideEdgePoint(a: Point2D, b: Point2D, interior: Point2D, offsetMm: n
   return [mx + nx * offsetMm, my + ny * offsetMm]
 }
 
+interface SectionDimensionLabel {
+  key: string
+  attr: 'data-layout-top' | 'data-layout-bottom' | 'data-layout-height'
+  text: string
+  x: number
+  y: number
+  anchor: 'start' | 'middle' | 'end'
+}
+
+const LABEL_FONT_PX = 12
+/** Approximate glyph width of a 12 px sans-serif digit, used only to detect collisions. */
+const LABEL_GLYPH_PX = 6.6
+
+function labelRect(label: SectionDimensionLabel) {
+  const width = label.text.length * LABEL_GLYPH_PX
+  const left = label.anchor === 'middle' ? label.x - width / 2 : label.anchor === 'end' ? label.x - width : label.x
+  return { left, right: left + width, top: label.y - LABEL_FONT_PX / 2, bottom: label.y + LABEL_FONT_PX / 2 }
+}
+
+function rectsOverlap(a: ReturnType<typeof labelRect>, b: ReturnType<typeof labelRect>): boolean {
+  return a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom
+}
+
+/**
+ * Dimension labels of the trapezoid sections, placed outside the edge they measure. A label whose
+ * spot falls inside another section is moved to the inside of its own section, and a label that
+ * would still collide with one already placed is dropped: the full W/H list is on the sections page,
+ * this sheet only has to show where each section sits and be readable.
+ */
+function buildSectionDimensionLabels(sections: LamellaSection[], viewport: Viewport): SectionDimensionLabel[] {
+  const polygons = sections.map((section) => ({ id: section.id, corners: sectionCorners(section) }))
+  const ordered = sections
+    .filter((section) => section.trapezoid != null)
+    .sort((a, b) => b.widthMm * b.heightMm - a.widthMm * a.heightMm)
+  const placed: ReturnType<typeof labelRect>[] = []
+  const labels: SectionDimensionLabel[] = []
+  for (const section of ordered) {
+    const trap = section.trapezoid!
+    const corners = trap.corners
+    const interior = corners.reduce<Point2D>(
+      (sum, point) => [sum[0] + point[0] / corners.length, sum[1] + point[1] / corners.length],
+      [0, 0],
+    )
+    const others = polygons.filter((other) => other.id !== section.id).map((other) => other.corners)
+    const specs: { attr: SectionDimensionLabel['attr']; text: string; a: Point2D; b: Point2D; offset: number; anchor: SectionDimensionLabel['anchor'] }[] = [
+      { attr: 'data-layout-top', text: formatPurlinClearLabelMm(trap.widthAtHighMm), a: corners[3], b: corners[2], offset: 260, anchor: 'middle' },
+      { attr: 'data-layout-bottom', text: formatPurlinClearLabelMm(trap.widthAtLowMm), a: corners[0], b: corners[1], offset: 240, anchor: 'middle' },
+      { attr: 'data-layout-height', text: formatPurlinClearLabelMm(section.heightMm), a: corners[1], b: corners[2], offset: 320, anchor: 'start' },
+    ]
+    for (const spec of specs) {
+      // A triangle apex (width 0) has no edge to measure; "0.0" would only be noise.
+      if (spec.text === formatPurlinClearLabelMm(0)) continue
+      let world = outsideEdgePoint(spec.a, spec.b, interior, spec.offset)
+      if (others.some((polygon) => pointInPolygon(world, polygon))) {
+        world = outsideEdgePoint(spec.a, spec.b, interior, -spec.offset * 0.5)
+      }
+      const screen = worldToScreen(toPoint(world), viewport)
+      const label: SectionDimensionLabel = { key: `${section.id}-${spec.attr}`, attr: spec.attr, text: spec.text, x: screen.x, y: screen.y, anchor: spec.anchor }
+      const rect = labelRect(label)
+      if (placed.some((other) => rectsOverlap(rect, other))) continue
+      placed.push(rect)
+      labels.push(label)
+    }
+  }
+  return labels
+}
+
 export interface LamellaLayoutSheetProps {
   pieces: CutPiece[]
   profiles: Map<string, ProfileDimensions>
@@ -240,6 +307,11 @@ export function LamellaLayoutSheet({
     [worldBounds, canvasPx],
   )
 
+  const sectionDimensionLabels = useMemo(
+    () => (sections && sections.length > 0 ? buildSectionDimensionLabels(sections, viewport) : []),
+    [sections, viewport],
+  )
+
   return (
     <svg
       ref={svgRef}
@@ -253,89 +325,49 @@ export function LamellaLayoutSheet({
       </defs>
 
       {sections && sections.length > 0 ? (
-        sections.map((section) => {
-          const corners: Point2D[] = section.trapezoid?.corners ?? [
-            [section.minX, section.minY],
-            [section.maxX, section.minY],
-            [section.maxX, section.maxY],
-            [section.minX, section.maxY],
-          ]
-          const topLeft = worldToScreen({ x: section.minX, y: section.maxY }, viewport)
-          const bottomRight = worldToScreen({ x: section.maxX, y: section.minY }, viewport)
-          const screenCorners = corners.map((p) => worldToScreen(toPoint(p), viewport))
-          const center = {
-            x: screenCorners.reduce((sum, p) => sum + p.x, 0) / screenCorners.length,
-            y: screenCorners.reduce((sum, p) => sum + p.y, 0) / screenCorners.length,
-          }
-          const trap = section.trapezoid
-          const box = Math.min(Math.abs(bottomRight.x - topLeft.x), Math.abs(bottomRight.y - topLeft.y))
-          const fontSize = Math.max(16, Math.min(42, box * 0.42))
-          return (
-            <g key={section.id}>
-              <polygon
-                data-section-trapezoid={trap ? '1' : undefined}
-                points={pointsToSvg(corners, viewport)}
-                fill="#e7e5e4"
-                stroke="#44403c"
-                strokeWidth={1.5}
-              />
-              {trap ? (() => {
-                const interior = corners.reduce<Point2D>(
-                  (sum, point) => [sum[0] + point[0] / corners.length, sum[1] + point[1] / corners.length],
-                  [0, 0],
-                )
-                const others = (sections ?? [])
-                  .filter((other) => other.id !== section.id)
-                  .map(sectionCorners)
-                let topPoint = outsideEdgePoint(corners[3], corners[2], interior, 260)
-                const heightPoint = outsideEdgePoint(corners[1], corners[2], interior, 320)
-                const bottomPoint = outsideEdgePoint(corners[0], corners[1], interior, 240)
-                if (others.some((polygon) => pointInPolygon(topPoint, polygon))) {
-                  topPoint = [heightPoint[0], corners[2][1] - 420]
-                }
-                const top = worldToScreen(toPoint(topPoint), viewport)
-                const bottom = worldToScreen(toPoint(bottomPoint), viewport)
-                const height = worldToScreen(toPoint(heightPoint), viewport)
-                return (
-                  <>
-                    <text
-                      data-layout-top={formatPurlinClearLabelMm(trap.widthAtHighMm)}
-                      x={top.x}
-                      y={top.y}
-                      textAnchor="middle"
-                      fontSize={12}
-                      fontFamily="sans-serif"
-                      fill="#111827"
-                    >
-                      {formatPurlinClearLabelMm(trap.widthAtHighMm)}
-                    </text>
-                    <text
-                      data-layout-bottom={formatPurlinClearLabelMm(trap.widthAtLowMm)}
-                      x={bottom.x}
-                      y={bottom.y}
-                      textAnchor="middle"
-                      fontSize={12}
-                      fontFamily="sans-serif"
-                      fill="#111827"
-                    >
-                      {formatPurlinClearLabelMm(trap.widthAtLowMm)}
-                    </text>
-                    <text
-                      data-layout-height={formatPurlinClearLabelMm(section.heightMm)}
-                      x={height.x}
-                      y={height.y}
-                      textAnchor="start"
-                      dominantBaseline="middle"
-                      fontSize={12}
-                      fontFamily="sans-serif"
-                      fill="#111827"
-                    >
-                      {formatPurlinClearLabelMm(section.heightMm)}
-                    </text>
-                  </>
-                )
-              })() : null}
+        <>
+          {sections.map((section) => (
+            <polygon
+              key={section.id}
+              data-section-trapezoid={section.trapezoid ? '1' : undefined}
+              points={pointsToSvg(sectionCorners(section), viewport)}
+              fill="#e7e5e4"
+              stroke="#44403c"
+              strokeWidth={1.5}
+            />
+          ))}
+          {/* Text goes after every polygon: a neighbouring section must never paint over a label. */}
+          {sectionDimensionLabels.map((label) => (
+            <text
+              key={label.key}
+              {...{ [label.attr]: label.text }}
+              x={label.x}
+              y={label.y}
+              textAnchor={label.anchor}
+              dominantBaseline="middle"
+              fontSize={12}
+              fontFamily="sans-serif"
+              fill="#111827"
+              stroke="#ffffff"
+              strokeWidth={3}
+              paintOrder="stroke"
+            >
+              {label.text}
+            </text>
+          ))}
+          {sections.map((section) => {
+            const screenCorners = sectionCorners(section).map((p) => worldToScreen(toPoint(p), viewport))
+            const xs = screenCorners.map((p) => p.x)
+            const ys = screenCorners.map((p) => p.y)
+            const center = {
+              x: screenCorners.reduce((sum, p) => sum + p.x, 0) / screenCorners.length,
+              y: screenCorners.reduce((sum, p) => sum + p.y, 0) / screenCorners.length,
+            }
+            const box = Math.min(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys))
+            const fontSize = Math.max(16, Math.min(42, box * 0.42))
+            return (
               <text
+                key={`type-${section.id}`}
                 x={center.x}
                 y={center.y}
                 textAnchor="middle"
@@ -350,9 +382,9 @@ export function LamellaLayoutSheet({
               >
                 {sectionTypeById.get(section.id) ?? ''}
               </text>
-            </g>
-          )
-        })
+            )
+          })}
+        </>
       ) : (
       footprints.map(({ piece, corners }) => (
         <polygon key={piece.id} points={pointsToSvg(corners, viewport)} fill="#d6d3d1" stroke="#57534e" strokeWidth={1} />

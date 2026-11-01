@@ -19,6 +19,7 @@ import {
   applyStraightBeam,
   pentagonV2Contour,
   pentagonV2PlanParams,
+  pentagonV2SectionSupportLine,
 } from '../../../../packages/plan-editor/src/model/__tests__/fixtures/skew-pentagon-850-2026-11-01-v2.ts'
 import {
   SKEW_PENTAGON_850_CENTERLINE_MM,
@@ -213,15 +214,20 @@ if (planId === 'diagonal') {
 
 const profiles = PERGOLA_CONSTRUCTION_PROFILES
 const spec = specFromPlan({ contour, wallEdgeIndices, params })
-const built = buildPieces(spec, profiles)
+const isPentagonV2 = planId === 'pentagon-v2' || planId === 'pentagon-v2-ccw'
+const pentagonMirror = planId === 'pentagon-v2'
+const supportLine = isPentagonV2
+  ? pentagonV2SectionSupportLine({ contour, mirror: pentagonMirror, profiles })
+  : null
+const built = buildPieces(spec, profiles, supportLine ? { supportLine } : undefined)
 let pieces = built.pieces
-if (planId === 'pentagon-v2' || planId === 'pentagon-v2-ccw') {
+if (isPentagonV2) {
   // The editor cannot store a beam parallel to the lamellas: assemble it after buildPieces.
-  const withBeam = applyStraightBeam({ pieces, profiles, contour, mirror: planId === 'pentagon-v2' })
+  const withBeam = applyStraightBeam({ pieces, profiles, contour, mirror: pentagonMirror })
   pieces = withBeam.pieces
   document.body.dataset.beam = JSON.stringify({ attachment: withBeam.attachment, parts: withBeam.parts })
 }
-const sections = buildLamellaSections(spec, profiles)
+const sections = buildLamellaSections(spec, profiles, supportLine ? { supportLine } : undefined)
 // Numbers of the frame and crossbeams for checking against the drawing (dev harness only).
 document.body.dataset.cutSummary = JSON.stringify({
   frame: pieces

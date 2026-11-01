@@ -4,7 +4,12 @@ import { resolveContourPurlinPositions } from './lamellaSpans'
 import { resolveLamellaPattern, patternMaxLamellaSpanMm, type LamellaPatternEntry } from './lamellaPattern'
 import { sanitizeContour } from './contourSanitize'
 import { isHorizontalPlane, placeOnRoof, roofPlane, type RoofPlane } from './roof'
-import { buildLamellaSections, computeLamellasFromSections, isLamellaSectionLayoutV1 } from './lamellaSections'
+import {
+  buildLamellaSections,
+  computeLamellasFromSections,
+  isLamellaSectionLayoutV1,
+  type BuildLamellaSectionsOptions,
+} from './lamellaSections'
 
 const DEG = 180 / Math.PI
 const RAD = Math.PI / 180
@@ -289,9 +294,10 @@ export function computeLamellas(
   spec: PergolaSpec,
   profiles: Map<string, ProfileDimensions>,
   roof?: RoofPlane,
+  options?: BuildLamellaSectionsOptions,
 ): CutPiece[] {
   if (isLamellaSectionLayoutV1(spec.lamellaSectionLayoutVersion)) {
-    const sections = buildLamellaSections(spec, profiles)
+    const sections = buildLamellaSections(spec, profiles, options)
     if (sections.length > 0) return computeLamellasFromSections(spec, profiles, sections, roof)
   }
 
