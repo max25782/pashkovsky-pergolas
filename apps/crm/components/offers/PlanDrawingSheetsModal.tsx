@@ -235,13 +235,16 @@ export function PlanDrawingSheetsModal({
     }
   }
 
-  const sections = useMemo(() => {
-    if (!isLamellaSectionLayoutV1(constructionParams?.lamellaSectionLayoutVersion)) return undefined
-    if (!planContour || planContour.length < 3 || !constructionParams) return undefined
+  const builtSections = useMemo(() => {
+    if (!isLamellaSectionLayoutV1(constructionParams?.lamellaSectionLayoutVersion)) return null
+    if (!planContour || planContour.length < 3 || !constructionParams) return null
     const spec = specFromPlan({ contour: planContour, wallEdgeIndices, params: constructionParams })
-    const built = buildLamellaSections(spec, profiles)
-    return built.length > 0 ? built : undefined
+    return buildLamellaSections(spec, profiles)
   }, [constructionParams, planContour, profiles, wallEdgeIndices])
+  const sections = builtSections != null && builtSections.length > 0 ? builtSections : undefined
+  // A shape the section builder returns nothing for still gets the production pack;
+  // only the sections page is left out of it.
+  const sectionsNotCalculated = builtSections != null && builtSections.length === 0
 
   const planLandscape = useMemo(() => {
     if (!planContour || planContour.length < 3) return true
@@ -262,6 +265,7 @@ export function PlanDrawingSheetsModal({
     categories: t('drawing.sectionCategories'),
     pieces: t('drawing.sectionPieces'),
     rowLengths: t('drawing.sectionRowLengths'),
+    noSections: t('drawing.sectionsEmpty'),
   }
   const profileLabels = {
     frame: t('drawing.profileFrame'),
@@ -520,7 +524,7 @@ export function PlanDrawingSheetsModal({
             />
           )}
         </div>
-        {sections && planContour && constructionParams && !profileBlocked && (
+        {(sections || sectionsNotCalculated) && planContour && constructionParams && !profileBlocked && (
           <div className="plan-print-pack" aria-hidden="true">
             <style>{`
               .plan-print-pack {
@@ -571,7 +575,7 @@ export function PlanDrawingSheetsModal({
                   fontFamily={labelFont}
                 />
               </section>
-              <LamellaSectionsSheet sections={sections} labels={sectionLabels} dir={dir} fontFamily={labelFont} flowPages />
+              <LamellaSectionsSheet sections={sections ?? []} labels={sectionLabels} dir={dir} fontFamily={labelFont} flowPages />
               <section data-pdf-page data-pdf-orient="land" className="land" style={{ width: '281mm', height: '194mm', background: '#fff' }}>
                 <div className="layout-slot" style={{ width: '281mm', height: '194mm' }}>
                   <LamellaLayoutSheet pieces={pieces} profiles={profiles} lamellaOnEdge={lamellaOnEdge} sections={sections} />

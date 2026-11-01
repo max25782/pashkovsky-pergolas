@@ -1239,6 +1239,7 @@
       "sectionLamellas": "Lamellas / section",
       "sectionLamellaLength": "Lamella length mm",
       "sectionRowLengths": "Row → lamella length",
+      "sectionsEmpty": "No sections are calculated for this shape, see the lamella cut list",
       "sectionTotal": "Sections",
       "sectionLamellaTotal": "Total lamellas",
       "grandTotal": "Total",

@@ -25,6 +25,8 @@ export interface LamellaSectionsSheetLabels {
   pieces: string
   /** Column heading for a trapezoid: row number, then that row's cut. */
   rowLengths: string
+  /** Shown instead of the schedule when the shape has no sections. */
+  noSections: string
 }
 
 const DEFAULT_LABELS: LamellaSectionsSheetLabels = {
@@ -39,6 +41,7 @@ const DEFAULT_LABELS: LamellaSectionsSheetLabels = {
   categories: 'Categories',
   pieces: 'pcs',
   rowLengths: 'Row → lamella length',
+  noSections: 'No sections are calculated for this shape, see the lamella cut list',
 }
 
 export interface SectionTypeCard {
@@ -334,6 +337,33 @@ export function LamellaSectionsSheet({
       : layoutSectionTypeCards(schedule.types, { x: 48, y: 88, width: 1504, height: 780 })),
     [bandCards, schedule],
   )
+  // No sections for this shape: the printed pack leaves the page out, the on-screen
+  // sheet says why it is empty. The section builder is not involved.
+  if (sections.length === 0) {
+    if (flowPages) return null
+    const emptyRtl = dir === 'rtl'
+    return (
+      <div className={className} style={{ display: 'flex', flexDirection: 'column' }}>
+        <svg viewBox={`0 0 ${SHEET_W} ${SHEET_H}`} style={{ background: '#ffffff', display: 'block', direction: 'ltr', unicodeBidi: 'isolate' }}>
+          <text x={emptyRtl ? SHEET_W - 88 : 48} y={52} textAnchor={emptyRtl ? 'end' : 'start'} direction={emptyRtl ? 'rtl' : 'ltr'} fontSize={32} fontWeight={700} fontFamily={fontFamily} fill="#111827">
+            {text.title}
+          </text>
+          <text
+            data-sections-empty="1"
+            x={emptyRtl ? SHEET_W - 88 : 48}
+            y={120}
+            textAnchor={emptyRtl ? 'end' : 'start'}
+            direction={emptyRtl ? 'rtl' : 'ltr'}
+            fontSize={28}
+            fontFamily={fontFamily}
+            fill="#44403c"
+          >
+            {text.noSections}
+          </text>
+        </svg>
+      </div>
+    )
+  }
   const cardBottom = cards.reduce((max, card) => Math.max(max, card.y + card.rectH + 120), 88)
   const tableTop = bandCards.length > 0 ? 540 : Math.max(540, cardBottom + 16)
   const rowH = 36

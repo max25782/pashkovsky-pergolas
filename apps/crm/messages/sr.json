@@ -1239,6 +1239,7 @@
       "sectionLamellas": "Lamela po sekciji",
       "sectionLamellaLength": "Dužina lamele mm",
       "sectionRowLengths": "Red → dužina lamele",
+      "sectionsEmpty": "Za ovaj oblik se sekcije ne računaju, pogledaj krojenje lamela",
       "sectionTotal": "Sekcija",
       "sectionLamellaTotal": "Ukupno lamela",
       "grandTotal": "Ukupno",

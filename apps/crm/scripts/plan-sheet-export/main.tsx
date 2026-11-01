@@ -312,6 +312,7 @@ createRoot(document.getElementById('sections')!).render(createElement(LamellaSec
     categories: text.sectionCategories,
     pieces: text.sectionPieces,
     rowLengths: text.sectionRowLengths,
+    noSections: text.sectionsEmpty,
   },
 }))
 createRoot(document.getElementById('layout')!).render(createElement(LamellaLayoutSheet, {

@@ -14,6 +14,8 @@
   .plan-slot > div { height: 100%; width: 100%; display: flex; flex-direction: column; }
   .plan-slot svg { width: 100%; height: 100%; flex: 1; display: block; }
   .layout-slot, .layout-slot svg, .sections-slot, .sections-slot svg { width: 281mm; height: 194mm; display: block; }
+  /* No sections page: an empty wrapper would still cut a default-size blank page. */
+  #sections:empty { display: none; }
   aside { width: 58mm; flex: none; border-inline-start: 0.3mm solid #e5e5e5; padding: 4mm; font: 11pt sans-serif; box-sizing: border-box; }
   html[lang="he"] aside { font-family: "Arial Hebrew", "Noto Sans Hebrew", David, Arial, sans-serif; }
   aside p { margin: 0 0 1mm; }

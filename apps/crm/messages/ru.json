@@ -1239,6 +1239,7 @@
       "sectionLamellas": "Ламелей в секции",
       "sectionLamellaLength": "Длина ламели мм",
       "sectionRowLengths": "Ряд → длина ламели",
+      "sectionsEmpty": "Секции для этой формы не рассчитываются, смотри раскрой ламелей",
       "sectionTotal": "Секций",
       "sectionLamellaTotal": "Всего ламелей",
       "grandTotal": "Итого",
