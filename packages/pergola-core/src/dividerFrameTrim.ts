@@ -1,7 +1,7 @@
 import type { CutPiece, Point2D, ProfileDimensions } from './types'
 import { beamPlanWidthForDrawing, DIVIDER_PLAN_CLEARANCE_WIDTH_MM } from './beamPlanWidth'
 import { pieceAxis } from './pieceAxis'
-import { isCCW } from './miter'
+import { edgeValuesInCcwOrder } from './miter'
 
 const MIN_FREE_MM = 1
 const PARALLEL_ANGLE_TOLERANCE_DEG = 0.5
@@ -331,16 +331,14 @@ function beamHalfUnderPoint(
 }
 
 /**
- * Measured outers follow the contour's edge order. A CCW copy reverses that order.
+ * Measured outers follow the contour's edge order. A CCW copy reverses that order
+ * (see `edgeValuesInCcwOrder` for the index rule).
  */
 export function measuredOutersForCcwContour(
   contour: Point2D[],
   measured: Array<number | null | undefined> | undefined,
 ): Array<number | null | undefined> | undefined {
-  if (!measured || measured.length !== contour.length) return measured
-  if (isCCW(contour)) return measured
-  const n = measured.length
-  return Array.from({ length: n }, (_, i) => measured[(n - 1 - i) % n])
+  return edgeValuesInCcwOrder(contour, measured)
 }
 
 export function trimDividerAxisSegmentsForFrame(input: {

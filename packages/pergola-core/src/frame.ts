@@ -1,5 +1,5 @@
 import type { Point2D, Vector2D, CutPiece, PergolaSpec, ProfileDimensions } from './types'
-import { isCCW, computeContourMiters } from './miter'
+import { isCCW, computeContourMiters, edgeValuesInCcwOrder } from './miter'
 import {
   decomposeIntoRectangles,
   findWingBoundariesAlongSegment,
@@ -263,6 +263,10 @@ export function computeFrame(
     ? cleanContour
     : [...cleanContour].reverse()
 
+  // Typed outers are listed in the contour's own edge order; `pts` may be the
+  // reversed copy, so re-index them to match `pts` before reading by edge.
+  const measuredOuters = edgeValuesInCcwOrder(cleanContour, spec.measuredOuterLengthMmByEdgeIndex)
+
   const n = pts.length
   const miters = computeContourMiters(pts)
 
@@ -448,7 +452,7 @@ export function computeFrame(
       if (startJoint.cutDeg === 0) chs = 'straight'
       if (endJoint.cutDeg === 0) che = 'straight'
       if (!segmentBeams) {
-        const outer = spec.measuredOuterLengthMmByEdgeIndex?.[i]
+        const outer = measuredOuters?.[i]
         const cut = beamCutLengths({
           outerMm: outer != null && outer > 0 ? outer : null,
           axisMm: edgeLen,

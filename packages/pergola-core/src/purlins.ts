@@ -188,7 +188,7 @@ export function computePurlins(
     wallProfileId: spec.wallProfileId,
     wallEdgeIndices: spec.wallEdgeIndices,
     wallBeamWidthVersion: spec.wallBeamWidthVersion,
-    measuredOuterLengthMmByEdgeIndex: spec.measuredOuterLengthMmByEdgeIndex,
+    measuredOuterLengthMmByEdgeIndex: measuredCcw,
     layoutVersion: spec.purlinClearLayoutVersion === 1 ? 1 : undefined,
   })
 

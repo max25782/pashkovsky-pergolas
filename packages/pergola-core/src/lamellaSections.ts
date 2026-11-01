@@ -32,7 +32,7 @@ import {
 } from './beamPlanWidth'
 import { decomposeIntoRectangles, type Rectangle } from './rectangleDecomposition'
 import { sanitizeContour } from './contourSanitize'
-import { isCCW } from './miter'
+import { edgeValuesInCcwOrder, isCCW } from './miter'
 import {
   formatPurlinClearLabelMm,
   measuredOuterAlongLamellas,
@@ -1248,6 +1248,11 @@ export function buildLamellaSections(
   const clean = sanitizeContour(spec.contour)
   if (clean.length < 3) return []
   const pts: Point2D[] = isCCW(clean) ? clean : [...clean].reverse()
+  // `pts` may be the reversed copy: typed outers must follow it, edge for edge.
+  const outersCcw = edgeValuesInCcwOrder(clean, spec.measuredOuterLengthMmByEdgeIndex)
+  const ccwSpec: PergolaSpec = outersCcw === spec.measuredOuterLengthMmByEdgeIndex
+    ? spec
+    : { ...spec, measuredOuterLengthMmByEdgeIndex: outersCcw }
 
   const beamW = beamPlanWidthForDrawing(profiles, spec.beamProfileId).planWidthMm
   const purlinW = DIVIDER_PLAN_CLEARANCE_WIDTH_MM
@@ -1263,7 +1268,7 @@ export function buildLamellaSections(
       ? contourSideWidthMm(profiles, edgeIndex, sideWidthInput)
       : beamW
 
-  let { field, aabb, cutouts } = buildInnerFieldRects(pts, spec, beamW, widthAt)
+  let { field, aabb, cutouts } = buildInnerFieldRects(pts, ccwSpec, beamW, widthAt)
   if (field.length === 0 && spec.skewSectionVersion !== 1) return []
 
   const θ = (spec.lamellaDirectionDeg * Math.PI) / 180
@@ -1280,7 +1285,7 @@ export function buildLamellaSections(
       postProfileId: spec.postProfileId,
       purlinProfileId: spec.purlinProfileId ?? DEFAULT_PLAN_CONSTRUCTION_PARAMS.purlinProfileId,
       purlinDividers: spec.purlinDividers ?? { mode: 'auto' },
-      measuredOuterLengthMmByEdgeIndex: spec.measuredOuterLengthMmByEdgeIndex,
+      measuredOuterLengthMmByEdgeIndex: outersCcw,
       purlinClearLayoutVersion: spec.purlinClearLayoutVersion,
       purlinMaxSpanMm: spec.purlinMaxSpanMm,
       postMaxSpanMm: spec.postMaxSpanMm,
@@ -1343,7 +1348,7 @@ export function buildLamellaSections(
           wallProfileId: spec.wallProfileId,
           wallEdgeIndices: spec.wallEdgeIndices,
           wallBeamWidthVersion: spec.wallBeamWidthVersion,
-          measuredOuterLengthMmByEdgeIndex: spec.measuredOuterLengthMmByEdgeIndex,
+          measuredOuterLengthMmByEdgeIndex: outersCcw,
           layoutVersion: spec.purlinClearLayoutVersion === 1 ? 1 : undefined,
         })
       : []

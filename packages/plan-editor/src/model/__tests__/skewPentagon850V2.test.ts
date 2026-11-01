@@ -302,8 +302,8 @@ describe(`${SKEW_PENTAGON_850_V2_ID}: known deviations`, () => {
     expect(gaps).toEqual([1212, 1212, 1212, 1212, 1212, 1212, 1087, 1087])
   })
 
-  // Clockwise plan: typed outers land on the wrong sides (index shift in measuredOutersForCcwContour),
-  // so the CD frame beam (2274 axis) is treated as an 8500 piece and spliced; 165 mm is the leftover.
+  // Clockwise plan: typed outers used to land on the wrong sides (index shift when the contour is
+  // reversed), so the CD frame beam (2274 axis) was treated as an 8500 piece and spliced 2134 + 165.
   const cdPieces = (mirror: boolean) => {
     const { contour, built } = planFor(mirror)
     const a = contour[2]
@@ -328,9 +328,10 @@ describe(`${SKEW_PENTAGON_850_V2_ID}: known deviations`, () => {
     expect(Math.round(pieces[0].lengthLongMm)).toBe(2300)
   })
 
-  it.fails('mirrored plan: the CD frame beam is one piece of 2274 axis / 2300 long (today it is split 2134 + 165)', () => {
+  it('mirrored plan: the CD frame beam is one piece of 2274 axis / 2300 long (was split 2134 + 165)', () => {
     const pieces = cdPieces(true)
     expect(pieces).toHaveLength(1)
+    expect(Math.round(pieces[0].lengthAxisMm)).toBe(2274)
     expect(Math.round(pieces[0].lengthLongMm)).toBe(2300)
   })
 })

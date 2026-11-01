@@ -69,6 +69,26 @@ export function isCCW(contour: Point2D[]): boolean {
   return signedArea(contour) > 0
 }
 
+/**
+ * Per-edge values (typed outers, ...) follow the contour's own edge order:
+ * value i belongs to the edge contour[i] -> contour[i + 1].
+ *
+ * Core code walks a counter-clockwise copy, `[...contour].reverse()`, when the
+ * contour is clockwise. Reversing the vertices [p0 .. p(n-1)] turns original
+ * edge k (pk -> pk+1) into reversed edge n - 2 - k (p(k+1) -> pk), so the values
+ * are re-indexed with `(n - 2 - i + n) % n`, not `(n - 1 - i) % n`. Every
+ * caller that pairs a CCW copy with these values goes through here.
+ *
+ * Returns the input unchanged when the contour is already CCW or the lengths
+ * disagree (nothing to align).
+ */
+export function edgeValuesInCcwOrder<T>(contour: Point2D[], values: T[] | undefined): T[] | undefined {
+  if (!values || values.length !== contour.length) return values
+  if (isCCW(contour)) return values
+  const n = values.length
+  return Array.from({ length: n }, (_, i) => values[(2 * n - 2 - i) % n])
+}
+
 // ── Miter at one vertex ───────────────────────────────────────────────────────
 
 /**

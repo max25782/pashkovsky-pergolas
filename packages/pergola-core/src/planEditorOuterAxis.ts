@@ -1,6 +1,6 @@
 import type { Point2D } from './types'
 import { sanitizeContour } from './contourSanitize'
-import { isCCW } from './miter'
+import { edgeValuesInCcwOrder, isCCW } from './miter'
 
 const CLOSURE_GAP_FOR_CLOSED_MM = 0.5
 
@@ -233,10 +233,7 @@ function contourWithMeasured(
 ): { pts: Point2D[]; measured: Array<number | null | undefined> | undefined } {
   const clean = sanitizeContour(contour)
   if (isCCW(clean)) return { pts: clean, measured }
-  const pts = [...clean].reverse()
-  if (!measured || measured.length !== clean.length) return { pts, measured }
-  const n = measured.length
-  return { pts, measured: Array.from({ length: n }, (_, i) => measured[(n - 1 - i) % n]) }
+  return { pts: [...clean].reverse(), measured: edgeValuesInCcwOrder(clean, measured) }
 }
 
 /**
