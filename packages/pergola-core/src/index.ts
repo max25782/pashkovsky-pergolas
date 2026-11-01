@@ -88,7 +88,7 @@ export { computePurlins } from './purlins'
 export { computeLedStripLengthMm, ledPurlinPieces } from './ledChannel'
 
 export type { FrameResult } from './frame'
-export { computeFrame } from './frame'
+export { computeFrame, wallEdgeIndicesInFrameOrder } from './frame'
 
 export type { CanonicalSupportType } from './support'
 export {

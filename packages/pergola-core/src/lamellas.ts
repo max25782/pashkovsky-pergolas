@@ -1,5 +1,5 @@
 import type { Point2D, Vector2D, CutPiece, PergolaSpec, ProfileDimensions } from './types'
-import { edgeValuesInCcwOrder, isCCW } from './miter'
+import { edgeIndicesInCcwOrder, edgeValuesInCcwOrder, isCCW } from './miter'
 import { resolveContourPurlinPositions } from './lamellaSpans'
 import { resolveLamellaPattern, patternMaxLamellaSpanMm, type LamellaPatternEntry } from './lamellaPattern'
 import { sanitizeContour } from './contourSanitize'
@@ -341,7 +341,7 @@ export function computeLamellas(
           profiles,
           beamProfileId: spec.beamProfileId,
           wallProfileId: spec.wallProfileId,
-          wallEdgeIndices: spec.wallEdgeIndices,
+          wallEdgeIndices: edgeIndicesInCcwOrder(cleanContour, spec.wallEdgeIndices),
           wallBeamWidthVersion: spec.wallBeamWidthVersion,
           measuredOuterLengthMmByEdgeIndex: edgeValuesInCcwOrder(cleanContour, spec.measuredOuterLengthMmByEdgeIndex),
           layoutVersion: spec.purlinClearLayoutVersion === 1 ? 1 : undefined,

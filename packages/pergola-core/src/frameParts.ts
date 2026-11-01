@@ -1,5 +1,11 @@
 import type { CutPiece, Point2D, ProfileDimensions } from './types'
-import { computeContourMiters, isCCW, DEFAULT_RIGHT_ANGLE_SNAP_DEG, type MiterOptions } from './miter'
+import {
+  computeContourMiters,
+  edgeIndicesInCcwOrder,
+  isCCW,
+  DEFAULT_RIGHT_ANGLE_SNAP_DEG,
+  type MiterOptions,
+} from './miter'
 
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
@@ -46,8 +52,9 @@ export function buildFrameEdgeParts(
   const miters = computeContourMiters(pts, {
     rightAngleSnapDeg: options?.rightAngleSnapDeg ?? DEFAULT_RIGHT_ANGLE_SNAP_DEG,
   })
+  // Wall edges are listed in the contour's own order; `pts` may be its reversed copy.
   const walls = new Set(
-    (options?.wallEdgeIndices ?? []).map((i) => ((i % n) + n) % n),
+    (edgeIndicesInCcwOrder(contour, options?.wallEdgeIndices) ?? []).map((i) => ((i % n) + n) % n),
   )
   const profileId = options?.profileId ?? ''
   const parts: FrameEdgePart[] = []

@@ -19,6 +19,7 @@ import {
   supportProfileOptions,
   hasLongDividerWithoutSupport,
   WING_SHELF_SPAN_DIVIDER_ID,
+  wallEdgeIndicesInFrameOrder,
   formatConstructionProfileLabel,
   CONSTRUCTION_PURLIN_IDS,
 } from '@pashkovsky/pergola-core'
@@ -280,8 +281,12 @@ export function PlanDrawingSheetsModal({
   const sheetPlans = useMemo(() => {
     const color = pieces[0]?.color ?? '#9aa0a6'
     const angles = sections ? buildAngleCutPieces(sections, color) : []
-    return buildProfileBundlePlans([...piecesForCutting(pieces, wallEdgeIndices), ...angles], sheetProfiles)
-  }, [pieces, sections, sheetProfiles, wallEdgeIndices])
+    // Beam ids count the frame's counter-clockwise copy: translate the plan's wall indices.
+    const wallBeamEdges = planContour && planContour.length >= 3
+      ? wallEdgeIndicesInFrameOrder(planContour, wallEdgeIndices)
+      : wallEdgeIndices
+    return buildProfileBundlePlans([...piecesForCutting(pieces, wallBeamEdges), ...angles], sheetProfiles)
+  }, [pieces, planContour, sections, sheetProfiles, wallEdgeIndices])
   const rtl = dir === 'rtl'
   const kerfNote = t('drawing.kerfNote', { mm: DEFAULT_KERF_MM })
   const cuttingHtml = useMemo(() => renderCuttingPages({

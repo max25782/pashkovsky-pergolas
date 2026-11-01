@@ -32,7 +32,7 @@ import {
 } from './beamPlanWidth'
 import { decomposeIntoRectangles, type Rectangle } from './rectangleDecomposition'
 import { sanitizeContour } from './contourSanitize'
-import { edgeValuesInCcwOrder, isCCW } from './miter'
+import { edgeIndicesInCcwOrder, edgeValuesInCcwOrder, isCCW } from './miter'
 import {
   formatPurlinClearLabelMm,
   measuredOuterAlongLamellas,
@@ -1253,12 +1253,14 @@ export function buildLamellaSections(
   const ccwSpec: PergolaSpec = outersCcw === spec.measuredOuterLengthMmByEdgeIndex
     ? spec
     : { ...spec, measuredOuterLengthMmByEdgeIndex: outersCcw }
+  // Wall edges are listed in the contour's own order, like the typed outers.
+  const wallsCcw = edgeIndicesInCcwOrder(clean, spec.wallEdgeIndices)
 
   const beamW = beamPlanWidthForDrawing(profiles, spec.beamProfileId).planWidthMm
   const purlinW = DIVIDER_PLAN_CLEARANCE_WIDTH_MM
   const purlinHalf = purlinW / 2
   const sideWidthInput = {
-    wallEdgeIndices: spec.wallEdgeIndices,
+    wallEdgeIndices: wallsCcw,
     beamProfileId: spec.beamProfileId,
     wallProfileId: spec.wallProfileId,
     wallBeamWidthVersion: spec.wallBeamWidthVersion,
@@ -1295,7 +1297,7 @@ export function buildLamellaSections(
     },
     profiles,
     beams: frame.beams,
-    wallEdgeIndices: spec.wallEdgeIndices,
+    wallEdgeIndices: wallsCcw,
   })
 
   const supportW = supportBandWidthMm(support, frame.beams, profiles, spec.beamProfileId, spec.wallBeamWidthVersion === 1)
@@ -1346,7 +1348,7 @@ export function buildLamellaSections(
           profiles,
           beamProfileId: spec.beamProfileId,
           wallProfileId: spec.wallProfileId,
-          wallEdgeIndices: spec.wallEdgeIndices,
+          wallEdgeIndices: wallsCcw,
           wallBeamWidthVersion: spec.wallBeamWidthVersion,
           measuredOuterLengthMmByEdgeIndex: outersCcw,
           layoutVersion: spec.purlinClearLayoutVersion === 1 ? 1 : undefined,
@@ -1745,8 +1747,9 @@ export function columnHeightChecksums(
   const supportW = supportLineObstacleWidthMm(profiles, spec.beamProfileId)
   const pts = sanitizeContour(spec.contour)
   const ccw: Point2D[] = isCCW(pts) ? pts : [...pts].reverse()
+  // `widthAt` is read on the counter-clockwise copy, so walls follow it.
   const sideWidthInput = {
-    wallEdgeIndices: spec.wallEdgeIndices,
+    wallEdgeIndices: edgeIndicesInCcwOrder(pts, spec.wallEdgeIndices),
     beamProfileId: spec.beamProfileId,
     wallProfileId: spec.wallProfileId,
     wallBeamWidthVersion: spec.wallBeamWidthVersion,

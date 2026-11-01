@@ -1,5 +1,5 @@
 import type { Point2D, Vector2D, CutPiece, PergolaSpec, ProfileDimensions } from './types'
-import { isCCW } from './miter'
+import { edgeIndicesInCcwOrder, isCCW } from './miter'
 import { scanLineClip, cutAtEdge, longPointOffset } from './lamellas'
 import { resolveContourPurlinPositions } from './lamellaSpans'
 import { resolveLamellaPattern, patternMaxLamellaSpanMm, patternMaxVerticalThicknessMm } from './lamellaPattern'
@@ -186,7 +186,8 @@ export function computePurlins(
     profiles,
     beamProfileId: spec.beamProfileId,
     wallProfileId: spec.wallProfileId,
-    wallEdgeIndices: spec.wallEdgeIndices,
+    // `pts` is the counter-clockwise copy, so walls are re-indexed to it.
+    wallEdgeIndices: edgeIndicesInCcwOrder(cleanContour, spec.wallEdgeIndices),
     wallBeamWidthVersion: spec.wallBeamWidthVersion,
     measuredOuterLengthMmByEdgeIndex: measuredCcw,
     layoutVersion: spec.purlinClearLayoutVersion === 1 ? 1 : undefined,

@@ -93,7 +93,11 @@ export function contourBeamEdgeIndex(pieceId: string): number | null {
   return match ? Number(match[1]) : null
 }
 
-/** Wall beams stay on the plan. They are not ordered and not cut. */
+/**
+ * Wall beams stay on the plan. They are not ordered and not cut.
+ * `wallEdgeIndices` must count edges like the beam ids do (the frame's
+ * counter-clockwise copy): pass `wallEdgeIndicesInFrameOrder(contour, walls)`.
+ */
 export function piecesForCutting(pieces: CutPiece[], wallEdgeIndices: readonly number[]): CutPiece[] {
   const walls = new Set(wallEdgeIndices)
   if (walls.size === 0) return pieces

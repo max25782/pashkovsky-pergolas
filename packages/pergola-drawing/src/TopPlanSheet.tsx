@@ -51,6 +51,7 @@ import {
   groupLamellaSectionTypes,
   lamellaSectionTypeById,
   matchContourEdgeIndex,
+  wallEdgeIndicesInFrameOrder,
   resolvePlanPurlinLines,
   WING_SHELF_SPAN_DIVIDER_ID,
   wingShelfFlushBandMm,
@@ -225,6 +226,15 @@ export function TopPlanSheet({
   const purlinEndsBounded = useMemo(
     () => purlinEndsMeetFrame(pieces, planContour && planContour.length >= 3 ? planContour : contour),
     [pieces, planContour, contour],
+  )
+  // Beam ids (`beam-<k>`) count edges of the frame's counter-clockwise copy, while
+  // `wallEdgeIndices` are in the plan's own order: translate before comparing.
+  const wallBeamEdges = useMemo(
+    () =>
+      planContour && planContour.length >= 3
+        ? wallEdgeIndicesInFrameOrder(planContour, wallEdgeIndices)
+        : wallEdgeIndices,
+    [planContour, wallEdgeIndices],
   )
   const showWarning = isOrthogonal === false && !!nonOrthogonalWarningText && !purlinEndsBounded
   const centroid = useMemo(() => centroidOf(contour), [contour])
@@ -697,7 +707,7 @@ export function TopPlanSheet({
         {/* Балки периметра */}
         {beamFootprints.map(({ piece, corners }) => {
           const edge = beamEdgeIndex(piece.id)
-          const isWall = edge != null && wallEdgeIndices.includes(edge)
+          const isWall = edge != null && wallBeamEdges.includes(edge)
           return (
             <polygon
               key={piece.id}

@@ -89,6 +89,20 @@ export function edgeValuesInCcwOrder<T>(contour: Point2D[], values: T[] | undefi
   return Array.from({ length: n }, (_, i) => values[(2 * n - 2 - i) % n])
 }
 
+/**
+ * Same re-indexing as edgeValuesInCcwOrder, for a SET of edge indices (wall
+ * edges, high edge): raw edge k of a clockwise contour is edge n - 2 - k of its
+ * counter-clockwise copy. The mapping is its own inverse. Indices are
+ * normalised to [0, n). `contour` must be the sanitised contour the indices
+ * were counted on; a counter-clockwise contour is returned unchanged.
+ */
+export function edgeIndicesInCcwOrder(contour: Point2D[], indices: number[] | undefined): number[] | undefined {
+  if (!indices || isCCW(contour)) return indices
+  const n = contour.length
+  if (n === 0) return indices
+  return indices.map((k) => (2 * n - 2 - (((k % n) + n) % n)) % n)
+}
+
 // ── Miter at one vertex ───────────────────────────────────────────────────────
 
 /**

@@ -1,5 +1,5 @@
 import type { Point2D, Vector2D, CutPiece, PergolaSpec, ProfileDimensions } from './types'
-import { isCCW, computeContourMiters, edgeValuesInCcwOrder } from './miter'
+import { isCCW, computeContourMiters, edgeIndicesInCcwOrder, edgeValuesInCcwOrder } from './miter'
 import {
   decomposeIntoRectangles,
   findWingBoundariesAlongSegment,
@@ -275,9 +275,11 @@ export function computeFrame(
 
   // Resolve wall edge indices (normalised to [0, n)) — a Set, so "is edge i a
   // wall edge" and "is vertex i an endpoint of some wall edge" are both O(1).
+  // Like the typed outers, they are listed in the contour's own edge order, so
+  // they are re-indexed to `pts` (the counter-clockwise copy) before use.
   const wallEdgeIndices = new Set<number>(
     supportType === 'wall-mounted' && spec.wallEdgeIndices != null
-      ? spec.wallEdgeIndices.map((i) => ((i % n) + n) % n)
+      ? (edgeIndicesInCcwOrder(cleanContour, spec.wallEdgeIndices) ?? []).map((i) => ((i % n) + n) % n)
       : [],
   )
 
@@ -645,4 +647,17 @@ export function computeFrame(
   }
 
   return { beams, posts, hangers, isOrthogonal, roof }
+}
+
+/**
+ * Wall edge indices as the frame pieces count them. `computeFrame` walks a
+ * counter-clockwise copy of the contour, so a beam id `beam-<k>` is edge k of
+ * that copy. Hosts that hold the plan's own wall indices (editor order) and
+ * need to ask "is this beam a wall beam?" must translate them with this call.
+ */
+export function wallEdgeIndicesInFrameOrder(
+  contour: Point2D[],
+  wallEdgeIndices: number[] | undefined,
+): number[] {
+  return edgeIndicesInCcwOrder(sanitizeContour(contour), wallEdgeIndices) ?? []
 }
