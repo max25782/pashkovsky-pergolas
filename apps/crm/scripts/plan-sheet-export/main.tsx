@@ -15,6 +15,16 @@ import { DEFAULT_PLAN_CONSTRUCTION_PARAMS } from '../../../../packages/pergola-c
 import { LamellaLayoutSheet } from '../../../../packages/pergola-drawing/src/LamellaLayoutSheet.tsx'
 import { LamellaSectionsSheet } from '../../../../packages/pergola-drawing/src/LamellaSectionsSheet.tsx'
 import { TopPlanSheet } from '../../../../packages/pergola-drawing/src/TopPlanSheet.tsx'
+import {
+  applyStraightBeam,
+  pentagonV2Contour,
+  pentagonV2PlanParams,
+} from '../../../../packages/plan-editor/src/model/__tests__/fixtures/skew-pentagon-850-2026-11-01-v2.ts'
+import {
+  SKEW_PENTAGON_850_CENTERLINE_MM,
+  SKEW_PENTAGON_850_OUTER_CM,
+  SKEW_PENTAGON_850_TYPED_OUTER_MM,
+} from '../../../../packages/plan-editor/src/model/__tests__/fixtures/skew-pentagon-850-2026-11-01.ts'
 import { buildProfileBundlePlans } from '../../lib/cut-list/order-sheet.ts'
 import { renderCuttingPages, renderProductionSummary } from '../../lib/cut-list/cut-map.ts'
 import he from '../../messages/he.json'
@@ -55,10 +65,13 @@ function walk(lengths: number[], angles: number[]): Array<[number, number]> {
   return vertices
 }
 
-type PlanId = 'skew' | 'diagonal' | 'l10' | 'notch'
+type PlanId = 'skew' | 'diagonal' | 'l10' | 'notch' | 'pentagon' | 'pentagon-exact' | 'pentagon-v2' | 'pentagon-v2-ccw'
 function planFromQuery(): PlanId {
   const raw = new URLSearchParams(location.search).get('plan')
-  if (raw === 'diagonal' || raw === 'l10' || raw === 'notch') return raw
+  if (
+    raw === 'diagonal' || raw === 'l10' || raw === 'notch' || raw === 'pentagon' || raw === 'pentagon-exact' ||
+    raw === 'pentagon-v2' || raw === 'pentagon-v2-ccw'
+  ) return raw
   return 'skew'
 }
 
@@ -78,7 +91,8 @@ const shared = {
 
 let contour: Array<[number, number]>
 let wallEdgeIndices: number[]
-let params: typeof shared & {
+let params: Omit<typeof shared, 'purlinMaxSpanMm'> & {
+  purlinMaxSpanMm?: number
   beamProfileId: string
   wallProfileId: string
   measuredOuterLengthMmByEdgeIndex?: number[]
@@ -96,6 +110,53 @@ if (planId === 'diagonal') {
     beamProfileId: 'f10040',
     wallProfileId: 'f10040',
     measuredOuterLengthMmByEdgeIndex: lengths,
+  }
+} else if (planId === 'pentagon-v2' || planId === 'pentagon-v2-ccw') {
+  // Skew pentagon v2: contour of v1 plus 7 explicit crossbeams (PA3022) and the straight beam.
+  // `pentagon-v2` is the plan as the editor shows it now (mirrored, clockwise); `pentagon-v2-ccw`
+  // is the same plan in the drawing frame (counter-clockwise), used to expose the clockwise bug.
+  wallEdgeIndices = []
+  contour = pentagonV2Contour(planId === 'pentagon-v2')
+  params = pentagonV2PlanParams(DEFAULT_PLAN_CONSTRUCTION_PARAMS)
+} else if (planId === 'pentagon' || planId === 'pentagon-exact') {
+  // Skew pentagon of 2026-11-01. `pentagon` builds the centerline the way the live skew plans
+  // do (typed outers + headings -> axisLengthsFromOuterLengthsMm). `pentagon-exact` takes the
+  // frozen centerline whose outer face is the drawing contour.
+  wallEdgeIndices = []
+  params = {
+    ...shared,
+    beamProfileId: 'f10040',
+    wallProfileId: 'f10040',
+    // Lamellas run along the long side EA; the drawing's rows are the crossbeams that cut them.
+    lamellaDirectionDeg: 90,
+    measuredOuterLengthMmByEdgeIndex: [...SKEW_PENTAGON_850_TYPED_OUTER_MM],
+  }
+  // Drawing rows: clear gaps 121.2 cm x6 then 108.7 cm x2, crossbeam and frame beam 40 mm.
+  // Centres along the long side, measured from the outer face of AB (outer y = 0).
+  const crossbeamCentresOuterY = [1272, 2524, 3776, 5028, 6280, 7532, 8659]
+  // The exact contour keeps the outer origin; the typed contour starts on the AB centerline (-20 mm).
+  const originShiftMm = planId === 'pentagon-exact' ? 0 : -20
+  params = {
+    ...params,
+    purlinDividers: {
+      mode: 'manual',
+      lines: crossbeamCentresOuterY.map((y, i) => ({ id: `row-${i + 1}`, positionMm: y + originShiftMm })),
+    },
+  }
+  if (planId === 'pentagon-exact') {
+    contour = SKEW_PENTAGON_850_CENTERLINE_MM.map((p): [number, number] => [p.x, p.y])
+  } else {
+    const outer = SKEW_PENTAGON_850_OUTER_CM
+    const angles = outer.map(([x, y], i) => {
+      const [nx, ny] = outer[(i + 1) % outer.length]
+      return (Math.atan2(ny - y, nx - x) * 180) / Math.PI
+    })
+    const axis = axisLengthsFromOuterLengthsMm({
+      outerLengthsMm: [...SKEW_PENTAGON_850_TYPED_OUTER_MM],
+      angleDeg: angles,
+      defaultBeamPlanWidthMm: 40,
+    })
+    contour = walk(axis, angles)
   }
 } else if (planId === 'l10') {
   const lengths = [5000, 4000, 10000, 8000, 5000, 4000]
@@ -153,7 +214,23 @@ if (planId === 'diagonal') {
 const profiles = PERGOLA_CONSTRUCTION_PROFILES
 const spec = specFromPlan({ contour, wallEdgeIndices, params })
 const built = buildPieces(spec, profiles)
+let pieces = built.pieces
+if (planId === 'pentagon-v2' || planId === 'pentagon-v2-ccw') {
+  // The editor cannot store a beam parallel to the lamellas: assemble it after buildPieces.
+  const withBeam = applyStraightBeam({ pieces, profiles, contour, mirror: planId === 'pentagon-v2' })
+  pieces = withBeam.pieces
+  document.body.dataset.beam = JSON.stringify({ attachment: withBeam.attachment, parts: withBeam.parts })
+}
 const sections = buildLamellaSections(spec, profiles)
+// Numbers of the frame and crossbeams for checking against the drawing (dev harness only).
+document.body.dataset.cutSummary = JSON.stringify({
+  frame: pieces
+    .filter((piece) => piece.role === 'beam')
+    .map((piece) => [Math.round(piece.lengthAxisMm * 10) / 10, Math.round(piece.lengthLongMm * 10) / 10, Math.round(piece.lengthShortMm * 10) / 10]),
+  purlins: pieces
+    .filter((piece) => piece.role === 'purlin')
+    .map((piece) => [Math.round(piece.lengthAxisMm * 10) / 10, Math.round(piece.lengthLongMm * 10) / 10, Math.round(piece.lengthShortMm * 10) / 10]),
+})
 
 function profileSize(profileId: string): string {
   const profile = profiles.get(profileId)
@@ -202,11 +279,11 @@ if (aside) {
 }
 
 createRoot(document.getElementById('plan')!).render(createElement(TopPlanSheet, {
-  pieces: built.pieces,
+  pieces,
   profiles,
   planContour: contour,
   constructionParams: params,
-  lamellaDirectionDeg: 0,
+  lamellaDirectionDeg: params.lamellaDirectionDeg,
   isOrthogonal: built.isOrthogonal,
   nonOrthogonalWarningText: text.nonOrthogonalWarning,
   sections,
@@ -238,13 +315,13 @@ createRoot(document.getElementById('sections')!).render(createElement(LamellaSec
   },
 }))
 createRoot(document.getElementById('layout')!).render(createElement(LamellaLayoutSheet, {
-  pieces: built.pieces,
+  pieces,
   profiles,
   lamellaOnEdge: false,
   sections,
 }))
 
-const plans = buildProfileBundlePlans(built.pieces, profiles)
+const plans = buildProfileBundlePlans(pieces, profiles)
 const cutting = document.getElementById('cutting')
 if (cutting) {
   const drawn = renderCuttingPages({
