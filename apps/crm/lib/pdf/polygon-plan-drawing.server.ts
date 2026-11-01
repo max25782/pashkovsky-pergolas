@@ -232,6 +232,7 @@ export function planTopSheetSvg(
     contourVertices: contour,
     lamellaDirectionDeg: params.lamellaDirectionDeg ?? 0,
     dividerPositions,
+    purlinDividerMode: params.purlinDividers?.mode,
     measuredOuterLengthMmByEdgeIndex: params.measuredOuterLengthMmByEdgeIndex,
     purlinClearLayoutVersion: params.purlinClearLayoutVersion,
     ...(endWidths

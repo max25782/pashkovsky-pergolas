@@ -441,6 +441,7 @@ export function buildPlanEditorOverlayModel(input: {
     contourVertices: contour,
     lamellaDirectionDeg: params.lamellaDirectionDeg,
     dividerPositions,
+    purlinDividerMode: params.purlinDividers?.mode,
     measuredOuterLengthMmByEdgeIndex,
     contourIsClosed: contourClosed,
     purlinClearLayoutVersion: params.purlinClearLayoutVersion,

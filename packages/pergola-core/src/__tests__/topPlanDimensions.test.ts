@@ -244,6 +244,90 @@ describe('topPlanDimensions', () => {
     expect(model.purlinClearVerification?.matchesMaxFormula).toBe(true)
   })
 
+  describe('divider mode vs the printed clear chain (typed outers + layout v1)', () => {
+    const contour: Point2D[] = [
+      [0, 0],
+      [4000, 0],
+      [4000, 3000],
+      [-4000, 3000],
+      [-4000, -3000],
+      [0, -3000],
+    ]
+    const measured = [4000, 3000, 8000, 6000, 4000, 3000]
+    const params = {
+      ...DEFAULT_PLAN_CONSTRUCTION_PARAMS,
+      beamProfileId: 'R242',
+      measuredOuterLengthMmByEdgeIndex: measured,
+    }
+    const autoDividers = resolvePlanPurlinLines(contour, params, PERGOLA_CONSTRUCTION_PROFILES)
+
+    function chainFor(
+      dividers: typeof autoDividers,
+      purlinDividerMode: 'auto' | 'manual' | undefined,
+    ) {
+      const spec = {
+        ...baseSpec(contour),
+        beamProfileId: 'R242',
+        postProfileId: 'f8080',
+        lamellaProfileId: 'f7020',
+        purlinProfileId: 'purlin-led-6040',
+      }
+      const frame = computeFrame(spec, PERGOLA_CONSTRUCTION_PROFILES)
+      return buildTopPlanDimensionModel({
+        geometricSides: beamsToGeometricSides(frame.beams),
+        beams: frame.beams,
+        profiles: PERGOLA_CONSTRUCTION_PROFILES,
+        beamProfileId: 'R242',
+        centroid: centroidOf(contour),
+        contourVertices: contour,
+        lamellaDirectionDeg: 0,
+        dividerPositions: dividers,
+        measuredOuterLengthMmByEdgeIndex: measured,
+        purlinClearLayoutVersion: 1,
+        ...(purlinDividerMode ? { purlinDividerMode } : {}),
+      })
+    }
+
+    // One divider moved by 100 mm: the two bays next to it are 100 mm apart from the rest.
+    const movedDividers = autoDividers.map((d, i) => (i === 2 ? { ...d, positionMm: d.positionMm + 100 } : d))
+
+    it('auto mode (and callers that do not pass the mode) still print the equal clear', () => {
+      const equal = computeMaxEqualPurlinClearGapMm(8000, 70, 5)
+      for (const mode of ['auto', undefined] as const) {
+        const model = chainFor(autoDividers, mode)
+        expect(model.purlinClearChain!.segmentsMm).toHaveLength(6)
+        for (const g of model.purlinClearChain!.segmentsMm) expect(g).toBeCloseTo(equal, 6)
+        expect(model.purlinClearDisplaySummary?.sectionClearLabel).toBe('1276.7')
+      }
+    })
+
+    it('manual mode prints the real clear of every bay, not the equal one', () => {
+      const equal = computeMaxEqualPurlinClearGapMm(8000, 70, 5)
+      const model = chainFor(movedDividers, 'manual')
+      const gaps = model.purlinClearChain!.segmentsMm
+      expect(gaps).toHaveLength(6)
+      expect(gaps[2]).toBeCloseTo(equal + 100, 6)
+      expect(gaps[3]).toBeCloseTo(equal - 100, 6)
+      for (const i of [0, 1, 4, 5]) expect(gaps[i]).toBeCloseTo(equal, 6)
+      // Different gaps: no single "section clear" label.
+      expect(model.purlinClearDisplaySummary).toBeNull()
+    })
+
+    it('manual mode with the same positions as auto prints the same chain as auto', () => {
+      const auto = chainFor(autoDividers, 'auto').purlinClearChain!.segmentsMm
+      const manual = chainFor(autoDividers, 'manual').purlinClearChain!.segmentsMm
+      expect(manual).toHaveLength(auto.length)
+      manual.forEach((g, i) => expect(g).toBeCloseTo(auto[i], 6))
+    })
+
+    it('auto mode ignores moved positions (the chain stays equal), as before', () => {
+      const equal = computeMaxEqualPurlinClearGapMm(8000, 70, 5)
+      for (const g of chainFor(movedDividers, 'auto').purlinClearChain!.segmentsMm) {
+        expect(g).toBeCloseTo(equal, 6)
+      }
+    })
+  })
+
   it('frozen 40 mm divider axes keep middle clears; beam change patch re-equalizes to 70 mm', () => {
     const contour: Point2D[] = [
       [0, 0],

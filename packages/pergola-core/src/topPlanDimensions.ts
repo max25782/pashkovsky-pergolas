@@ -2,7 +2,7 @@ import {
   beamPlanWidthForDrawing,
   DIVIDER_PLAN_CLEARANCE_WIDTH_MM,
 } from './beamPlanWidth'
-import type { CutPiece, Point2D, ProfileDimensions } from './types'
+import type { CutPiece, Point2D, ProfileDimensions, PurlinDividerMode } from './types'
 import { computeContourMiters, isCCW, miterAtVertex } from './miter'
 import { pieceAxis } from './pieceAxis'
 import type { AxialDimensionChain, AxialDimensionPoint, AxialEdgeRef } from './dimensionChains'
@@ -700,6 +700,13 @@ export function buildTopPlanDimensionModel(input: {
   contourVertices: Point2D[]
   lamellaDirectionDeg: number
   dividerPositions: ResolvedPurlinPosition[]
+  /**
+   * `manual`: the divider lines sit where the operator put them, so the chain
+   * shows the real clear of every bay. Not `manual` (auto, or unset on older
+   * callers): with typed outers or layout v1 the chain shows the equal clear
+   * the formula gives for that many dividers.
+   */
+  purlinDividerMode?: PurlinDividerMode
   /** Site measurements keyed by contour edge index. Present ⇒ label is that value. */
   measuredOuterLengthMmByEdgeIndex?: Array<number | null | undefined>
   contourIsClosed?: boolean
@@ -785,7 +792,9 @@ export function buildTopPlanDimensionModel(input: {
       dividerCount,
       dividerWidthMm,
     })
-    if ((layoutV1 || outerIsExplicit) && primary) {
+    // Manual dividers are placed on purpose; replacing their gaps with the equal
+    // clear would print numbers the plan does not have.
+    if ((layoutV1 || outerIsExplicit) && primary && input.purlinDividerMode !== 'manual') {
       const equalGaps = purlinClearChain.segmentsMm.map(() => formulaClear)
       let alongMm = 0
       const points = purlinClearChain.points.map((point, i) => {

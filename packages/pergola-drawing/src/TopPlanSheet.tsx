@@ -267,6 +267,7 @@ export function TopPlanSheet({
       contourVertices: contourForSpans,
       lamellaDirectionDeg,
       dividerPositions,
+      purlinDividerMode: constructionParams?.purlinDividers?.mode,
       measuredOuterLengthMmByEdgeIndex: constructionParams?.measuredOuterLengthMmByEdgeIndex,
       purlinClearLayoutVersion: constructionParams?.purlinClearLayoutVersion,
       ...(endWidths
@@ -285,6 +286,7 @@ export function TopPlanSheet({
     constructionParams?.wallProfileId,
     constructionParams?.wallBeamWidthVersion,
     constructionParams?.measuredOuterLengthMmByEdgeIndex,
+    constructionParams?.purlinDividers?.mode,
     constructionParams?.purlinClearLayoutVersion,
     centroid,
     contour,

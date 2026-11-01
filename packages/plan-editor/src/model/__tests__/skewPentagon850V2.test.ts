@@ -293,13 +293,19 @@ describe(`${SKEW_PENTAGON_850_V2_ID}: auto wing shelf rule`, () => {
 // Known deviations of the program (documented with it.fails; turn into `it` once fixed).
 // ---------------------------------------------------------------------------
 describe(`${SKEW_PENTAGON_850_V2_ID}: known deviations`, () => {
-  // buildTopPlanDimensionModel replaces the measured clear chain with equal gaps whenever typed
-  // outers exist, even when the plan stores manual crossbeam positions.
-  it.fails('the sheet dimension chain shows the real gaps (6 x 1212, 2 x 1087), not 8 x 1181.1', () => {
+  // buildTopPlanDimensionModel used to replace the clear chain with equal gaps whenever typed
+  // outers exist, even when the plan stores manual crossbeam positions (it printed 8 x 1181.1).
+  it('the sheet dimension chain shows the real gaps (6 x 1212, 2 x 1087), not 8 x 1181.1', () => {
     const { contour, params } = planFor(true)
     const model = buildPlanEditorOverlayModel({ contour, wallEdgeIndices: [], params, profiles })
-    const gaps = model?.dimensionModel.purlinClearChain?.segmentsMm.map((v) => Math.round(v)) ?? []
-    expect(gaps).toEqual([1212, 1212, 1212, 1212, 1212, 1212, 1087, 1087])
+    const gaps = model?.dimensionModel.purlinClearChain?.segmentsMm ?? []
+    const expected = [1212, 1212, 1212, 1212, 1212, 1212, 1087, 1087]
+    expect(gaps).toHaveLength(expected.length)
+    // The drawing totals 9806; the program's EA side is 9809 (the 3 mm), and 0.77 mm of it
+    // lands in the last bay: 1087.77. Everything else is exact.
+    gaps.forEach((gap, i) => expect(Math.abs(gap - expected[i]), `gap ${i + 1}: ${gap}`).toBeLessThanOrEqual(1))
+    expect(gaps.slice(0, 7).map((gap) => Math.round(gap))).toEqual([1212, 1212, 1212, 1212, 1212, 1212, 1087])
+    expect(gaps[7]).toBeCloseTo(1087.77, 1)
   })
 
   // Clockwise plan: typed outers used to land on the wrong sides (index shift when the contour is
