@@ -2,7 +2,12 @@
 import { describe, expect, it, vi } from 'vitest'
 import { render } from '@testing-library/react'
 import type { LamellaSection, LamellaSectionTypeGroup } from '@pashkovsky/pergola-core'
-import { LamellaSectionsSheet, cardsOverlap, layoutSectionTypeCards } from '../LamellaSectionsSheet'
+import {
+  LamellaSectionsSheet,
+  cardsOverlap,
+  layoutSectionTypeCards,
+  sectionProfilePolygonPoints,
+} from '../LamellaSectionsSheet'
 
 class ResizeObserverStub {
   observe() {}
@@ -109,6 +114,7 @@ describe('LamellaSectionsSheet', () => {
     }
     const { container } = render(<LamellaSectionsSheet sections={[skew]} />)
     expect(container.querySelector('[data-section-trapezoid="1"]')).not.toBeNull()
+    expect(container.querySelector('[data-section-profile="1"]')).not.toBeNull()
     expect(container.querySelector('[data-section-top="764"]')).not.toBeNull()
     expect(container.querySelector('[data-section-width="974"]')).not.toBeNull()
     expect(container.textContent).toContain('764/974×4874')
@@ -119,6 +125,37 @@ describe('LamellaSectionsSheet', () => {
     expect(container.textContent).toContain('Row → lamella length')
     const bottoms = [...container.querySelectorAll('[data-lamella-row]')].map((node) => Number(node.getAttribute('y')))
     expect(Math.max(...bottoms)).toBeLessThan(1000)
+  })
+
+  it('draws a plateau-then-tip profile instead of a linear full-height wedge', () => {
+    // Like pentagon H: many full cuts, then a short skew tip.
+    const lengths = [...Array.from({ length: 31 }, () => 1072), 606, 92]
+    const skew = section('h-0', 1072, 2983, lengths.length)
+    skew.trapezoid = {
+      corners: [
+        [0, 0],
+        [1072, 0],
+        [50, 2983],
+        [0, 2983],
+      ],
+      widthAtLowMm: 1072,
+      widthAtHighMm: 50.7,
+      lamellaLengthsMm: lengths,
+    }
+    const { container } = render(<LamellaSectionsSheet sections={[skew]} />)
+    const poly = container.querySelector('[data-section-profile="1"]')
+    expect(poly).not.toBeNull()
+    const points = poly?.getAttribute('points') ?? ''
+    expect(points.split(/\s+/).length).toBeGreaterThan(4)
+    // Mid-height right edge stays near the full cut, not halfway to the tip width.
+    const mid = sectionProfilePolygonPoints(0, 0, 100, lengths.map((l) => l / 10))
+    const midRight = mid
+      .split(/\s+/)
+      .map((pair) => pair.split(',').map(Number))
+      .filter(([x]) => x > 0)
+      .sort((a, b) => a[1] - b[1])
+    const nearMid = midRight.find(([, y]) => y >= 45 && y <= 55)
+    expect(nearMid?.[0]).toBeGreaterThan(100)
   })
 
   it('fits fifty-four trapezoid rows on the sheet in several columns', () => {

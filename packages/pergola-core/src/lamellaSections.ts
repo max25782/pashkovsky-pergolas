@@ -1612,11 +1612,12 @@ function openSkewBaySections(input: {
       [high.right, drawnY1],
       [high.left, drawnY1],
     ]
-    // Pack from the wider end of the stack. For the skew pentagon that end is the
-    // long frame EA (parallel to the lamellas): the same side computeLamellasFromSections
-    // uses for a full-width row. Packing from min(Y) instead flipped with the contour
-    // winding, so a tip that floored to 0 was dropped on one winding and kept on the other.
-    const wideAtHigh = high.width >= low.width
+    // When an external supportLine is passed (pentagon v2 beam harness, spanLimited),
+    // pack from the wider end so mirroring does not flip tip phase (385 vs 380).
+    // Do not key off wing-shelf `support` — plans like 11204 have a shelf and must
+    // keep packing from drawnY0 (established 73 f7020 bars).
+    const packFromWideEnd = input.spanLimited === true
+    const wideAtHigh = packFromWideEnd && high.width >= low.width
     const packedLengths: number[] = []
     const packedUpper: number[] = []
     let scan = input.pattern[0].visibleWidthMm * 0.5
@@ -2167,27 +2168,24 @@ function applySkewSectionLengths(
       pointOnRun(alongX, right(drawn1), drawn1),
       pointOnRun(alongX, left(drawn1), drawn1),
     ]
-    // Same rule as openSkewBaySections: pack from the wider end (frame side), store index 0 at drawn0.
-    const wideAtHigh = widthAtHighMm >= widthAtLowMm
-    const packedLengths: number[] = []
-    const packedUpper: number[] = []
+    // Pack from the cell's low face (drawn0). Wide-end packing belongs only in
+    // openSkewBaySections, where mirroring flips which physical end is AABB-low.
+    // Applying it here shifted tip samples on ordinary skew plans (e.g. plan11204).
+    const lamellaLengthsMm: number[] = []
+    const upperFromTopMm: number[] = []
     let scan = pattern[0].visibleWidthMm * 0.5
     let i = 0
     for (let row = 0; row < section.lamellaCount; row++) {
       const entry = pattern[i % pattern.length]
       const next = pattern[(i + 1) % pattern.length]
       const half = entry.visibleWidthMm * 0.5
-      const band0 = wideAtHigh ? drawn1 - scan - half : drawn0 + scan - half
-      const band1 = wideAtHigh ? drawn1 - scan + half : drawn0 + scan + half
-      const yLo = Math.min(band0, band1)
-      const yHi = Math.max(band0, band1)
-      packedLengths.push(floorLamellaLengthMm(Math.min(widthAtStack(yLo), widthAtStack(yHi)), step))
-      packedUpper.push(drawn1 - yHi)
+      const band0 = drawn0 + scan - half
+      const band1 = drawn0 + scan + half
+      lamellaLengthsMm.push(floorLamellaLengthMm(Math.min(widthAtStack(band0), widthAtStack(band1)), step))
+      upperFromTopMm.push(drawn1 - band1)
       scan += half + spec.lamellaGapMm + next.visibleWidthMm * 0.5
       i += 1
     }
-    const lamellaLengthsMm = wideAtHigh ? [...packedLengths].reverse() : packedLengths
-    const upperFromTopMm = wideAtHigh ? [...packedUpper].reverse() : packedUpper
     const trapezoid: LamellaTrapezoid = { corners, widthAtLowMm, widthAtHighMm, lamellaLengthsMm, upperFromTopMm }
     return { ...section, trapezoid }
   })

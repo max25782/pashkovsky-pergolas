@@ -62,13 +62,11 @@ describe('11204 pack report', () => {
     expect(byId.get('PA3022')).toMatchObject({ stock: 7000, bars: 5, lower: 5, wasteSum: 5369, kg: 66.2 })
     expect(byId.get('F100100')).toMatchObject({ bars: 7, lower: 6, kg: 94.2 })
     expect(byId.get('F4060')).toMatchObject({ bars: 1, kg: 4.3 })
-    // f7020 bars rose 73→74 after trapezoid rows pack from the wider end (same
-    // physical side both windings): two tip cells keep one extra short cut each.
-    expect(byId.get('f7020')).toMatchObject({ bars: 74, lower: 72, kg: 182.5 })
+    expect(byId.get('f7020')).toMatchObject({ bars: 73, lower: 71, kg: 180 })
     expect(byId.get('R242')).toMatchObject({ bars: 6, lower: 5, kg: 106.2 })
     expect(byId.get('p1034')).toMatchObject({ stock: 6000, bars: 14, lower: 12, kg: 29.7 })
-    const structural = [94.2, 4.3, 182.5, 66.2, 106.2].reduce((sum, kg) => sum + kg, 0)
-    expect(Number(structural.toFixed(1))).toBe(453.4)
+    const structural = [94.2, 4.3, 180, 66.2, 106.2].reduce((sum, kg) => sum + kg, 0)
+    expect(Number(structural.toFixed(1))).toBe(450.9)
     const pa = plans.find((plan) => plan.profileId === 'PA3022')
     const optionWaste = pa?.options.map((option) => ({
       stock: option.stockLengthMm,

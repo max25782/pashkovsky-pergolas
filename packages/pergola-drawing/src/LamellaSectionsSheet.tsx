@@ -59,10 +59,40 @@ export interface SectionTypeCard {
   topWidthLabel?: string
   topRectW?: number
   botRectW?: number
+  /**
+   * Cut widths in px, low stack end first (card bottom). When set, the card outline
+   * follows the real length profile (plateau + short skew tip) instead of a linear wedge.
+   */
+  profileWidthsPx?: number[]
   rowsLabel: string
   lengthLabel: string
   lamellaCountLabel: string
   overSpan: boolean
+}
+
+/** SVG polygon for a section card: left edge straight, right edge follows cut lengths. */
+export function sectionProfilePolygonPoints(
+  rectX: number,
+  rectY: number,
+  rectH: number,
+  widthsPx: number[],
+): string {
+  if (widthsPx.length === 0) return ''
+  if (widthsPx.length === 1) {
+    const w = widthsPx[0]
+    return `${rectX},${rectY} ${rectX + w},${rectY} ${rectX + w},${rectY + rectH} ${rectX},${rectY + rectH}`
+  }
+  const n = widthsPx.length
+  const right: string[] = []
+  for (let i = 0; i < n; i++) {
+    // lengths[0] = low end = card bottom; lengths[n-1] = high end = card top
+    const y = rectY + rectH - (i / (n - 1)) * rectH
+    right.push(`${rectX + widthsPx[i]},${y}`)
+  }
+  // Clockwise from top-left: up the left edge is implied by closing; list top-left, top→bottom right reversed, bottom-left.
+  const topLeft = `${rectX},${rectY}`
+  const bottomLeft = `${rectX},${rectY + rectH}`
+  return [topLeft, ...[...right].reverse(), bottomLeft].join(' ')
 }
 
 const CARD_FONT = 26
@@ -104,7 +134,11 @@ export function layoutSectionTypeCards(
       const botMm = trapezoid ? type.widthAtLowMm! : type.widthMm
       const topRectW = Math.max(8, topMm * scale)
       const botRectW = Math.max(8, botMm * scale)
-      const rectW = Math.max(topRectW, botRectW)
+      const cuts = type.lamellaLengthsMm
+      const profileWidthsPx = trapezoid && cuts && cuts.length > 1
+        ? cuts.map((length) => Math.max(8, Math.max(0, length) * scale))
+        : undefined
+      const rectW = Math.max(topRectW, botRectW, ...(profileWidthsPx ?? []))
       const rectH = Math.max(8, type.heightMm * scale)
       const widthLabel = shownMm(botMm)
       const topWidthLabel = trapezoid ? shownMm(topMm) : undefined
@@ -146,7 +180,7 @@ export function layoutSectionTypeCards(
         lengthLabel,
         lamellaCountLabel,
         overSpan,
-        ...(trapezoid ? { topWidthLabel, topRectW, botRectW } : {}),
+        ...(trapezoid ? { topWidthLabel, topRectW, botRectW, ...(profileWidthsPx ? { profileWidthsPx } : {}) } : {}),
       })
       x += slotW + CARD_GAP
       rowH = Math.max(rowH, rectH + LABEL_H)
@@ -397,7 +431,16 @@ export function LamellaSectionsSheet({
         const midY = card.y + card.rectH / 2
         return (
           <g key={card.typeId}>
-            {card.topRectW != null && card.botRectW != null ? (
+            {card.profileWidthsPx != null && card.profileWidthsPx.length > 1 ? (
+              <polygon
+                data-section-trapezoid="1"
+                data-section-profile="1"
+                points={sectionProfilePolygonPoints(rectX, card.y, card.rectH, card.profileWidthsPx)}
+                fill="#e7e5e4"
+                stroke="#292524"
+                strokeWidth={2}
+              />
+            ) : card.topRectW != null && card.botRectW != null ? (
               <polygon
                 data-section-trapezoid="1"
                 points={`${rectX},${card.y} ${rectX + card.topRectW},${card.y} ${rectX + card.botRectW},${card.y + card.rectH} ${rectX},${card.y + card.rectH}`}

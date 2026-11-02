@@ -22,6 +22,11 @@ export { renderPlanDimensionsSvg, collectPlanDimensionWorldPoints } from './plan
 export type { PlanDimensionsSvgInput } from './planDimensionsSvg'
 export { TopPlanSheet, purlinEndsMeetFrame } from './TopPlanSheet'
 export { LamellaLayoutSheet } from './LamellaLayoutSheet'
-export { LamellaSectionsSheet, layoutSectionTypeCards, cardsOverlap } from './LamellaSectionsSheet'
+export {
+  LamellaSectionsSheet,
+  layoutSectionTypeCards,
+  cardsOverlap,
+  sectionProfilePolygonPoints,
+} from './LamellaSectionsSheet'
 export type { LamellaSectionsSheetLabels, SectionTypeCard } from './LamellaSectionsSheet'
 export { CellFrameSheet } from './CellFrameSheet'
