@@ -117,18 +117,53 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
           ? (row.configurator_meta as Record<string, unknown>)
           : {}
 
-      // Update offer configurator_meta with plan data (merge — keep edit/view URLs)
+      // Update offer configurator_meta with plan data (merge — keep edit/view URLs).
+      // supportBeams is a top-level plan field: persist when present; keep previous when omitted.
+      const nextMeta: Record<string, unknown> = {
+        ...prevMeta,
+        planPolygon: body.planPolygon,
+        planWallIndices: body.planWallIndices,
+        planParams: body.planParams,
+        previewImageUrl: previewUrl ?? prevMeta.previewImageUrl,
+        submissionId,
+      }
+      if (Object.prototype.hasOwnProperty.call(body, 'supportBeams')) {
+        if (body.supportBeams == null) delete nextMeta.supportBeams
+        else nextMeta.supportBeams = body.supportBeams
+      }
+      // Also store a full plan snapshot so unknown top-level keys round-trip.
+      if (body.plan && typeof body.plan === 'object') {
+        nextMeta.plan = body.plan
+      } else {
+        nextMeta.plan = {
+          ...(typeof prevMeta.plan === 'object' && prevMeta.plan ? (prevMeta.plan as object) : {}),
+          schemaVersion: 1,
+          polygon: body.planPolygon,
+          wallIndices: body.planWallIndices ?? [],
+          params: body.planParams,
+          confirmed: false,
+          ...(Object.prototype.hasOwnProperty.call(body, 'supportBeams')
+            ? body.supportBeams == null
+              ? {}
+              : { supportBeams: body.supportBeams }
+            : prevMeta.supportBeams != null
+              ? { supportBeams: prevMeta.supportBeams }
+              : {}),
+        }
+        if (
+          Object.prototype.hasOwnProperty.call(body, 'supportBeams') &&
+          body.supportBeams == null &&
+          nextMeta.plan &&
+          typeof nextMeta.plan === 'object'
+        ) {
+          delete (nextMeta.plan as Record<string, unknown>).supportBeams
+        }
+      }
+
       await supabase
         .from('offers')
         .update({
-          configurator_meta: {
-            ...prevMeta,
-            planPolygon: body.planPolygon,
-            planWallIndices: body.planWallIndices,
-            planParams: body.planParams,
-            previewImageUrl: previewUrl ?? prevMeta.previewImageUrl,
-            submissionId,
-          },
+          configurator_meta: nextMeta,
         })
         .eq('id', offerId)
 
@@ -138,6 +173,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         planPolygon: body.planPolygon,
         planWallIndices: body.planWallIndices,
         planParams: body.planParams,
+        supportBeams: nextMeta.supportBeams ?? null,
+        plan: nextMeta.plan ?? null,
       })
     }
     

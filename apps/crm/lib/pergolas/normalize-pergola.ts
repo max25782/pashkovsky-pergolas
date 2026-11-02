@@ -5,6 +5,7 @@ import {
   parseLamellaWallThicknessMm,
   parseMeasuredOuterLengthMmByEdgeIndex,
   parseSupportBeamsDocument,
+  pickPergolaPlanExtras,
   PERGOLA_PLAN_SCHEMA_VERSION,
   polygonAreaM2,
   type PlanConstructionParams,
@@ -180,15 +181,23 @@ export function parsePergolaPlan(raw: unknown): PergolaPlan | null {
   const schemaVersion =
     o.schemaVersion === PERGOLA_PLAN_SCHEMA_VERSION ? PERGOLA_PLAN_SCHEMA_VERSION : PERGOLA_PLAN_SCHEMA_VERSION
 
-  const supportBeams = parseSupportBeamsDocument(o.supportBeams)
-  return {
+  // Keep raw supportBeams even when the document fails parse (warnings handle it).
+  // Also preserve unknown top-level keys for forward-compatible round-trips.
+  const extras = pickPergolaPlanExtras(o)
+  const hasSupportBeamsKey = Object.prototype.hasOwnProperty.call(o, 'supportBeams')
+  const parsedBeams = parseSupportBeamsDocument(o.supportBeams)
+  const plan: PergolaPlan = {
+    ...extras,
     schemaVersion,
     polygon,
     wallIndices,
     params: parseParams(o.params),
     confirmed: o.confirmed === true,
-    ...(supportBeams ? { supportBeams } : {}),
+    ...(hasSupportBeamsKey
+      ? { supportBeams: (parsedBeams ?? o.supportBeams) as PergolaPlan['supportBeams'] }
+      : {}),
   }
+  return plan
 }
 
 function normalizeShape(raw: unknown): PergolaShape | null {

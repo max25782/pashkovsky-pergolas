@@ -98,6 +98,10 @@ function purlinFacePositionMm(
   return face === 'high' ? linePositionMm + purlinHalfMm : linePositionMm - purlinHalfMm
 }
 
+function round1(n: number): number {
+  return Math.round(n * 10) / 10
+}
+
 /**
  * Intersection of the beam axis (axis + t·dir, t≥0) with the edge moved by
  * `offsetMm` toward the contour interior. Returns the hit point or null.
@@ -189,6 +193,115 @@ export function supportBeamsEqual(
   if (a == null && b == null) return true
   if (a == null || b == null) return false
   return JSON.stringify(a) === JSON.stringify(b)
+}
+
+function stackBounds(
+  contour: Point2D[],
+  stack: Point2D,
+  frameHalfMm: number,
+): { minS: number; maxS: number } {
+  let minS = Infinity
+  let maxS = -Infinity
+  for (const p of contour) {
+    const s = p[0] * stack[0] + p[1] * stack[1]
+    if (s < minS) minS = s
+    if (s > maxS) maxS = s
+  }
+  return { minS: minS - frameHalfMm, maxS: maxS + frameHalfMm }
+}
+
+/**
+ * Which stack extreme is the longest contour edge parallel to the lamellas
+ * (the "straight side" Max measures from — EA on the pentagon).
+ */
+export function straightSideStackExtreme(
+  contour: Point2D[],
+  directionDeg: number,
+): 'min-stack' | 'max-stack' {
+  const rad = (directionDeg * Math.PI) / 180
+  const dir: Point2D = [Math.cos(rad), Math.sin(rad)]
+  const stack: Point2D = [-dir[1], dir[0]]
+  let bestLen = -1
+  let bestFrom: 'min-stack' | 'max-stack' = 'min-stack'
+  for (let i = 0; i < contour.length; i++) {
+    const a = contour[i]
+    const b = contour[(i + 1) % contour.length]
+    const edge: Point2D = [b[0] - a[0], b[1] - a[1]]
+    const len = Math.hypot(edge[0], edge[1])
+    const along = Math.abs(edge[0] * dir[0] + edge[1] * dir[1]) / (len || 1)
+    if (along < 0.95) continue
+    if (len <= bestLen) continue
+    bestLen = len
+    const midS = ((a[0] + b[0]) / 2) * stack[0] + ((a[1] + b[1]) / 2) * stack[1]
+    const { minS, maxS } = stackBounds(contour, stack, 0)
+    bestFrom = Math.abs(midS - minS) <= Math.abs(midS - maxS) ? 'min-stack' : 'max-stack'
+  }
+  return bestFrom
+}
+
+/**
+ * Build one straight beam whose axis sits at `axisFromSideMm` from the chosen
+ * *outer* contour side along the stack axis (perpendicular to lamellas).
+ *
+ * Drawing convention (pentagon v2): typed offset is from the outer face of the
+ * straight side (EA). Pass `frameHalfMm` (typically 20 for f10040). When `from`
+ * is omitted, the longest edge parallel to the lamellas is used automatically
+ * (works for both windings).
+ */
+export function makeStraightSupportBeam(input: {
+  id?: string
+  axisFromSideMm: number
+  from?: 'min-stack' | 'max-stack'
+  contour: Point2D[]
+  startPurlinId: string
+  face?: SupportBeamPurlinFace
+  profileId: string
+  widthMm?: number
+  directionDeg?: number
+  startPurlinPositionMm: number
+  purlinHalfMm: number
+  /** Half frame plan width; expands the stack AABB to outer faces. Default 0. */
+  frameHalfMm?: number
+}): StraightSupportBeam {
+  const face = input.face ?? 'high'
+  const dirDeg = input.directionDeg ?? 90
+  const rad = (dirDeg * Math.PI) / 180
+  const dir: Point2D = [Math.cos(rad), Math.sin(rad)]
+  const stack: Point2D = [-dir[1], dir[0]]
+  const frameHalf = input.frameHalfMm ?? 0
+  const from = input.from ?? straightSideStackExtreme(input.contour, dirDeg)
+  const { minS, maxS } = stackBounds(input.contour, stack, frameHalf)
+  const axisStack = from === 'min-stack' ? minS + input.axisFromSideMm : maxS - input.axisFromSideMm
+  const faceAlong = purlinFacePositionMm(input.startPurlinPositionMm, input.purlinHalfMm, face)
+  const anchorX = axisStack * stack[0] + faceAlong * dir[0]
+  const anchorY = axisStack * stack[1] + faceAlong * dir[1]
+  return {
+    id: input.id ?? `beam-${input.startPurlinId}-${Math.round(input.axisFromSideMm)}`,
+    kind: 'straight',
+    anchorMm: { x: round1(anchorX), y: round1(anchorY) },
+    directionDeg: dirDeg,
+    profileId: input.profileId,
+    ...(input.widthMm != null ? { widthMm: input.widthMm } : {}),
+    start: { purlinId: input.startPurlinId, face },
+    end: { kind: 'outer-contour' },
+  }
+}
+
+/** Distance along stack from the straight (or chosen) outer side to the beam axis (mm). */
+export function supportBeamAxisFromSideMm(
+  beam: StraightSupportBeam,
+  contour: Point2D[],
+  from?: 'min-stack' | 'max-stack',
+  frameHalfMm = 0,
+): number {
+  const dirDeg = beam.directionDeg ?? 90
+  const rad = (dirDeg * Math.PI) / 180
+  const dir: Point2D = [Math.cos(rad), Math.sin(rad)]
+  const stack: Point2D = [-dir[1], dir[0]]
+  const side = from ?? straightSideStackExtreme(contour, dirDeg)
+  const { minS, maxS } = stackBounds(contour, stack, frameHalfMm)
+  const axisStack = beam.anchorMm.x * stack[0] + beam.anchorMm.y * stack[1]
+  return side === 'min-stack' ? axisStack - minS : maxS - axisStack
 }
 
 /** Whether the plan document carries any usable straight beams. */
@@ -412,6 +525,105 @@ export function applyStraightSupportBeamsToPieces(input: {
     pieces = out
   }
   return pieces
+}
+
+export type SupportBeamWarningCode =
+  | 'unknown-format'
+  | 'empty-beams'
+  | 'purlin-missing'
+  | 'not-resolved'
+  | 'anchor-outside'
+
+export interface SupportBeamWarning {
+  code: SupportBeamWarningCode
+  beamId?: string
+  /** Human-readable reason (Russian host may translate by code). */
+  message: string
+}
+
+/**
+ * Diagnose stored supportBeams without mutating them.
+ * Invalid / unresolved beams → warnings; calculation simply omits them.
+ */
+export function diagnoseSupportBeams(input: {
+  raw: unknown
+  spec: PergolaSpec
+  profiles: Map<string, ProfileDimensions>
+}): SupportBeamWarning[] {
+  const { raw, spec, profiles } = input
+  if (raw == null) return []
+  if (typeof raw !== 'object') {
+    return [{ code: 'unknown-format', message: 'Опорная балка не учтена: неверный формат данных' }]
+  }
+  const o = raw as Record<string, unknown>
+  if (o.formatVersion !== SUPPORT_BEAMS_FORMAT_VERSION) {
+    return [{
+      code: 'unknown-format',
+      message: `Опорная балка не учтена: неизвестная версия формата (${String(o.formatVersion)})`,
+    }]
+  }
+  if (!Array.isArray(o.beams) || o.beams.length === 0) {
+    return [{ code: 'empty-beams', message: 'Опорная балка не учтена: список балок пуст' }]
+  }
+  const doc = parseSupportBeamsDocument(raw)
+  const lines = spec.purlinDividers?.mode === 'manual' ? spec.purlinDividers.lines ?? [] : []
+  const lineIds = new Set(lines.map((l) => l.id))
+  const warnings: SupportBeamWarning[] = []
+  for (const item of o.beams) {
+    if (!item || typeof item !== 'object') {
+      warnings.push({ code: 'unknown-format', message: 'Опорная балка не учтена: повреждённая запись балки' })
+      continue
+    }
+    const b = item as Record<string, unknown>
+    const id = typeof b.id === 'string' ? b.id : undefined
+    const purlinId =
+      b.start && typeof b.start === 'object'
+        ? (b.start as { purlinId?: unknown }).purlinId
+        : undefined
+    if (typeof purlinId === 'string' && !lineIds.has(purlinId)) {
+      warnings.push({
+        code: 'purlin-missing',
+        beamId: id,
+        message: `Опорная балка не учтена: поперечина «${purlinId}» не найдена (переименована или удалена)`,
+      })
+    }
+  }
+  if (!doc) {
+    if (warnings.length === 0) {
+      warnings.push({
+        code: 'unknown-format',
+        message: 'Опорная балка не учтена: данные балки не удалось разобрать',
+      })
+    }
+    return warnings
+  }
+  const resolved = resolveStraightSupportBeams({ ...spec, supportBeams: doc }, profiles)
+  const resolvedIds = new Set(resolved.map((r) => r.id))
+  for (const beam of doc.beams) {
+    if (resolvedIds.has(beam.id)) continue
+    if (warnings.some((w) => w.beamId === beam.id && w.code === 'purlin-missing')) continue
+    const inside = pointInPolygonApprox([beam.anchorMm.x, beam.anchorMm.y], spec.contour)
+    warnings.push({
+      code: inside ? 'not-resolved' : 'anchor-outside',
+      beamId: beam.id,
+      message: inside
+        ? `Опорная балка не учтена: не удалось построить геометрию «${beam.id}» (нет пересечения с контуром)`
+        : `Опорная балка не учтена: якорь «${beam.id}» вне контура`,
+    })
+  }
+  return warnings
+}
+
+function pointInPolygonApprox(p: Point2D, poly: Point2D[]): boolean {
+  let inside = false
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i]
+    const [xj, yj] = poly[j]
+    if (yi > p[1] !== yj > p[1] && p[0] < ((xj - xi) * (p[1] - yi)) / (yj - yi + 1e-15) + xi) {
+      inside = !inside
+    }
+  }
+  return inside
 }
 
 /**

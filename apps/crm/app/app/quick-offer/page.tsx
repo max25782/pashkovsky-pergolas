@@ -1174,6 +1174,9 @@ export default function QuickOfferPage() {
           params: flushed.params,
           isClosed: true,
           isSimple: true,
+          ...(flushed.supportBeams !== undefined
+            ? { supportBeams: flushed.supportBeams }
+            : {}),
         })
         if (next === current[index]) return d
         const updated = [...current]
@@ -1185,7 +1188,7 @@ export default function QuickOfferPage() {
           polygon: flushed.polygon,
           wallIndices: flushed.wallIndices,
           params: flushed.params,
-          supportBeams: pergolas[index]?.plan?.supportBeams,
+          supportBeams: flushed.supportBeams ?? pergolas[index]?.plan?.supportBeams,
         })
         setPlanDrawingConfirmIndex(index)
       } catch {

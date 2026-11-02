@@ -43,6 +43,11 @@ import { PergolaCutPieceViewer } from '@pashkovsky/pergola-3d-preview'
 import { LamellaWallThicknessField } from '@/components/offers/LamellaWallThicknessField'
 import { RoofSlopeFields } from '@/components/offers/RoofSlopeFields'
 import { Plan3DDividerControls } from '@/components/offers/Plan3DDividerControls'
+import {
+  SupportBeamControls,
+  placeSupportBeamAtPlanPoint,
+  supportBeamWarningMessages,
+} from '@/components/offers/SupportBeamControls'
 import { PlanDrawingSheetsModal } from '@/components/offers/PlanDrawingSheetsModal'
 import { ReplaceProfileNotice } from '@/components/offers/ReplaceProfileNotice'
 import { PlanBuildErrorPanel } from '@/components/offers/PlanBuildErrorPanel'
@@ -121,12 +126,15 @@ export interface PlanFlushResult {
   wallIndices: number[]
   params: PergolaPlanConstructionParams
   isOrthogonal: boolean
+  /** Top-level plan field; may be invalid raw JSON still awaiting a warning. */
+  supportBeams?: PergolaPlan['supportBeams']
 }
 
 export interface PlanGeometryChange extends PlanContourSnapshot {
   params: PergolaPlanConstructionParams
   /** False when post/beam layout is approximate (non-axis-aligned contour). */
   isOrthogonal: boolean
+  supportBeams?: PergolaPlan['supportBeams']
 }
 
 interface OfferPlanConfiguratorEmbedProps {
@@ -164,9 +172,44 @@ export const OfferPlanConfiguratorEmbed = forwardRef<
   const [params, setParams] = useState<ConstructionParams>(() =>
     initialPlan?.params ? paramsFromStoredPlan(initialPlan.params) : { ...DEFAULT_PARAMS },
   )
-  /** Stage 2: beams come from the saved plan; editor UI (Stage 3) does not edit them yet. */
-  const [supportBeams] = useState<PergolaPlan['supportBeams']>(() => initialPlan?.supportBeams)
+  const [supportBeams, setSupportBeams] = useState<PergolaPlan['supportBeams']>(
+    () => initialPlan?.supportBeams,
+  )
+  const [supportBeamsUndo, setSupportBeamsUndo] = useState<Array<PergolaPlan['supportBeams']>>([])
+  const [supportBeamsRedo, setSupportBeamsRedo] = useState<Array<PergolaPlan['supportBeams']>>([])
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+
+  const commitSupportBeams = useCallback((next: PergolaPlan['supportBeams']) => {
+    setSupportBeams((prev) => {
+      setSupportBeamsUndo((stack) => [...stack.slice(-29), prev])
+      setSupportBeamsRedo([])
+      return next
+    })
+  }, [])
+
+  const undoSupportBeams = useCallback(() => {
+    setSupportBeamsUndo((stack) => {
+      if (stack.length === 0) return stack
+      const prev = stack[stack.length - 1]
+      setSupportBeams((current) => {
+        setSupportBeamsRedo((redo) => [...redo, current])
+        return prev
+      })
+      return stack.slice(0, -1)
+    })
+  }, [])
+
+  const redoSupportBeams = useCallback(() => {
+    setSupportBeamsRedo((stack) => {
+      if (stack.length === 0) return stack
+      const next = stack[stack.length - 1]
+      setSupportBeams((current) => {
+        setSupportBeamsUndo((undo) => [...undo, current])
+        return next
+      })
+      return stack.slice(0, -1)
+    })
+  }, [])
   const [paramsOpen, setParamsOpen] = useState(false)
   const [lastPolygonMm, setLastPolygonMm] = useState<Point[] | null>(null)
   const [lastWallEdgeIndices, setLastWallEdgeIndices] = useState<number[]>([])
@@ -176,10 +219,12 @@ export const OfferPlanConfiguratorEmbed = forwardRef<
   const [isSaving, setIsSaving] = useState(false)
   const [drawingOpen, setDrawingOpen] = useState(false)
   const [selectedCanvasDividerId, setSelectedCanvasDividerId] = useState<string | null>(null)
+  const [supportBeamPlaceMode, setSupportBeamPlaceMode] = useState(false)
+  const [beamStartPurlinId, setBeamStartPurlinId] = useState<string | null>(null)
 
   // Load saved polygon from offer
   useEffect(() => {
-    const meta = offer?.configuratorMeta as any
+    const meta = offer?.configuratorMeta as Record<string, unknown> | null | undefined
     if (meta?.planPolygon && meta?.planParams) {
       const savedPolygon = meta.planPolygon as Point[]
       const savedIndices = (meta.planWallIndices as number[]) || []
@@ -187,17 +232,27 @@ export const OfferPlanConfiguratorEmbed = forwardRef<
       setLastPolygonMm(savedPolygon)
       setLastWallEdgeIndices(savedIndices)
       setParams(paramsFromStoredPlan(savedParams))
+      const fromPlan =
+        meta.plan && typeof meta.plan === 'object'
+          ? (meta.plan as { supportBeams?: PergolaPlan['supportBeams'] }).supportBeams
+          : undefined
+      const fromMeta = meta.supportBeams as PergolaPlan['supportBeams'] | undefined
+      if (fromPlan !== undefined || fromMeta !== undefined) {
+        setSupportBeams(fromPlan ?? fromMeta)
+      }
     }
   }, [offer])
 
   const paramsRef = useRef(params)
   const polygonRef = useRef(lastPolygonMm)
   const wallsRef = useRef(lastWallEdgeIndices)
+  const supportBeamsRef = useRef(supportBeams)
   const saveGeneration = useRef(0)
   const onPlanGeometryRef = useRef(onPlanGeometry)
   paramsRef.current = params
   polygonRef.current = lastPolygonMm
   wallsRef.current = lastWallEdgeIndices
+  supportBeamsRef.current = supportBeams
   onPlanGeometryRef.current = onPlanGeometry
 
   const savePlanToServer = useCallback(
@@ -205,10 +260,26 @@ export const OfferPlanConfiguratorEmbed = forwardRef<
       polygonMm: Point[],
       wallEdgeIndices: number[],
       planParams: ConstructionParams,
+      beams: PergolaPlan['supportBeams'] = supportBeamsRef.current,
     ): Promise<PlanFlushResult> => {
-      const isOrthogonal = measureOrthogonalSafe(polygonMm, wallEdgeIndices, planParams)
+      const isOrthogonal = measureOrthogonalSafe(polygonMm, wallEdgeIndices, planParams, beams)
       if (!offerId) {
-        return { ok: true, polygon: polygonMm, wallIndices: wallEdgeIndices, params: planParams, isOrthogonal }
+        return {
+          ok: true,
+          polygon: polygonMm,
+          wallIndices: wallEdgeIndices,
+          params: planParams,
+          isOrthogonal,
+          supportBeams: beams,
+        }
+      }
+      const planDoc = {
+        schemaVersion: 1,
+        polygon: polygonMm,
+        wallIndices: wallEdgeIndices,
+        params: planParams,
+        confirmed: false,
+        ...(beams !== undefined ? { supportBeams: beams } : {}),
       }
       const res = await authFetch(`/api/offers/${offerId}/configurator-save`, {
         method: 'POST',
@@ -217,6 +288,8 @@ export const OfferPlanConfiguratorEmbed = forwardRef<
           planPolygon: polygonMm,
           planWallIndices: wallEdgeIndices,
           planParams,
+          supportBeams: beams ?? null,
+          plan: planDoc,
           locale,
         }),
       })
@@ -228,28 +301,38 @@ export const OfferPlanConfiguratorEmbed = forwardRef<
         planParams?: ConstructionParams
         planPolygon?: Point[]
         planWallIndices?: number[]
+        supportBeams?: PergolaPlan['supportBeams'] | null
       }
       onSaved?.()
       const readParams = body.planParams ? paramsFromStoredPlan(body.planParams) : planParams
+      const readBeams =
+        body.supportBeams === null ? undefined : (body.supportBeams ?? beams)
       return {
         ok: true,
         polygon: body.planPolygon ?? polygonMm,
         wallIndices: body.planWallIndices ?? wallEdgeIndices,
         params: readParams,
         isOrthogonal,
+        supportBeams: readBeams,
       }
     },
     [offerId, locale, onSaved],
   )
 
-  const publishGeometry = useCallback((planParams: ConstructionParams, polygon: Point[], walls: number[]) => {
+  const publishGeometry = useCallback((
+    planParams: ConstructionParams,
+    polygon: Point[],
+    walls: number[],
+    beams: PergolaPlan['supportBeams'] = supportBeamsRef.current,
+  ) => {
     onPlanGeometryRef.current?.({
       polygon,
       wallIndices: walls,
       isClosed: true,
       isSimple: true,
       params: planParams,
-      isOrthogonal: measureOrthogonalSafe(polygon, walls, planParams),
+      isOrthogonal: measureOrthogonalSafe(polygon, walls, planParams, beams),
+      supportBeams: beams,
     })
   }, [])
 
@@ -257,24 +340,28 @@ export const OfferPlanConfiguratorEmbed = forwardRef<
     const polygon = polygonRef.current
     const walls = wallsRef.current
     const planParams = paramsRef.current
+    const beams = supportBeamsRef.current
     if (!polygon || polygon.length < 3) return null
-    publishGeometry(planParams, polygon, walls)
+    publishGeometry(planParams, polygon, walls, beams)
     const gen = saveGeneration.current
     try {
-      const saved = await savePlanToServer(polygon, walls, planParams)
+      const saved = await savePlanToServer(polygon, walls, planParams, beams)
       if (saveGeneration.current !== gen) {
         const latestPolygon = polygonRef.current ?? polygon
         const latestWalls = wallsRef.current
         const latestParams = paramsRef.current
+        const latestBeams = supportBeamsRef.current
         return {
           ok: true,
           polygon: latestPolygon,
           wallIndices: latestWalls,
           params: latestParams,
-          isOrthogonal: measureOrthogonalSafe(latestPolygon, latestWalls, latestParams),
+          isOrthogonal: measureOrthogonalSafe(latestPolygon, latestWalls, latestParams, latestBeams),
+          supportBeams: latestBeams,
         }
       }
       if (JSON.stringify(saved.params) !== JSON.stringify(planParams)) setParams(saved.params)
+      if (JSON.stringify(saved.supportBeams) !== JSON.stringify(beams)) setSupportBeams(saved.supportBeams)
       setLastPolygonMm(saved.polygon)
       setLastWallEdgeIndices(saved.wallIndices)
       setSaveStatus('saved')
@@ -287,7 +374,8 @@ export const OfferPlanConfiguratorEmbed = forwardRef<
         polygon,
         wallIndices: walls,
         params: planParams,
-        isOrthogonal: measureOrthogonalSafe(polygon, walls, planParams),
+        isOrthogonal: measureOrthogonalSafe(polygon, walls, planParams, beams),
+        supportBeams: beams,
       }
     }
   }, [publishGeometry, savePlanToServer])
@@ -380,10 +468,46 @@ export const OfferPlanConfiguratorEmbed = forwardRef<
       if (contour.measuredOuterLengthMmByEdgeIndex) {
         setParams(nextParams)
       }
-      onPlanGeometryRef.current?.({ ...contour, params: nextParams, isOrthogonal })
+      onPlanGeometryRef.current?.({
+        ...contour,
+        params: nextParams,
+        isOrthogonal,
+        supportBeams: supportBeamsRef.current,
+      })
     },
     [params, measureOrthogonal],
   )
+
+  // Persist / publish supportBeams the same way params do (round-trip must not drop them).
+  const skipBeamPublish = useRef(true)
+  useEffect(() => {
+    if (skipBeamPublish.current) {
+      skipBeamPublish.current = false
+      return
+    }
+    const polygon = polygonRef.current
+    const walls = wallsRef.current
+    if (!polygon || polygon.length < 3) return
+    publishGeometry(paramsRef.current, polygon, walls, supportBeams)
+    setSaveStatus('saving')
+    const gen = ++saveGeneration.current
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const saved = await savePlanToServer(polygon, walls, paramsRef.current, supportBeams)
+          if (saveGeneration.current !== gen) return
+          if (JSON.stringify(saved.supportBeams) !== JSON.stringify(supportBeamsRef.current)) {
+            setSupportBeams(saved.supportBeams)
+          }
+          setSaveStatus('saved')
+        } catch (error) {
+          console.error('[plan auto-save beams]', error)
+          if (saveGeneration.current === gen) setSaveStatus('error')
+        }
+      })()
+    }, 500)
+    return () => window.clearTimeout(timer)
+  }, [supportBeams, publishGeometry, savePlanToServer])
 
   const skipParamPublish = useRef(true)
   useEffect(() => {
@@ -647,6 +771,22 @@ export const OfferPlanConfiguratorEmbed = forwardRef<
               {buildResult.roofWarning}
             </p>
           )}
+          <SupportBeamControls
+            contour={(lastPolygonMm ?? []).map((p): Point2D => [p.x, p.y])}
+            wallEdgeIndices={lastWallEdgeIndices}
+            params={params}
+            profiles={DEMO_PROFILES}
+            supportBeams={supportBeams}
+            pieces={buildResult.pieces}
+            onChange={(next) => commitSupportBeams(next)}
+            onUndo={undoSupportBeams}
+            onRedo={redoSupportBeams}
+            canUndo={supportBeamsUndo.length > 0}
+            canRedo={supportBeamsRedo.length > 0}
+            placeMode={supportBeamPlaceMode}
+            onPlaceModeChange={setSupportBeamPlaceMode}
+            t={t}
+          />
           <Plan3DDividerControls
             contour={(lastPolygonMm ?? []).map((p): Point2D => [p.x, p.y])}
             params={params}
@@ -671,6 +811,39 @@ export const OfferPlanConfiguratorEmbed = forwardRef<
                 colorHex={params.colorHex}
                 dividerHitPieces={dividerPickPieces}
                 {...bind}
+                addDividerActive={supportBeamPlaceMode || bind.addDividerActive}
+                onAddDividerAt={(planXMm, planYMm) => {
+                  if (supportBeamPlaceMode && lastPolygonMm) {
+                    const contour = lastPolygonMm.map((p): Point2D => [p.x, p.y])
+                    const lines = resolvePlanPurlinLines(contour, params, DEMO_PROFILES, lastWallEdgeIndices)
+                    const fromDoc =
+                      supportBeams &&
+                      typeof supportBeams === 'object' &&
+                      Array.isArray((supportBeams as { beams?: unknown }).beams)
+                        ? (supportBeams as { beams: Array<{ start?: { purlinId?: string } }> }).beams[0]
+                            ?.start?.purlinId
+                        : undefined
+                    const startId = beamStartPurlinId ?? fromDoc
+                    const line = lines.find((l) => l.id === startId) ?? lines[4] ?? lines[0]
+                    if (line) {
+                      setBeamStartPurlinId(line.id)
+                      commitSupportBeams(
+                        placeSupportBeamAtPlanPoint({
+                          planXMm,
+                          planYMm,
+                          contour,
+                          params,
+                          profiles: DEMO_PROFILES,
+                          startPurlinId: line.id,
+                          startPurlinPositionMm: line.positionMm,
+                        }),
+                      )
+                      setSupportBeamPlaceMode(false)
+                      return
+                    }
+                  }
+                  bind.onAddDividerAt(planXMm, planYMm)
+                }}
               />
             )}
           </Plan3DDividerControls>
@@ -694,7 +867,22 @@ export const OfferPlanConfiguratorEmbed = forwardRef<
           planContour={lastPolygonMm?.map((p): [number, number] => [p.x, p.y])}
           wallEdgeIndices={lastWallEdgeIndices}
           constructionParams={params}
-          supportBeams={supportBeams}
+          supportBeams={
+            supportBeams && typeof supportBeams === 'object' && 'formatVersion' in supportBeams
+              ? (supportBeams as import('@pashkovsky/pergola-core').SupportBeamsDocument)
+              : undefined
+          }
+          supportBeamWarningTexts={
+            lastPolygonMm
+              ? supportBeamWarningMessages({
+                  contour: lastPolygonMm.map((p): Point2D => [p.x, p.y]),
+                  wallEdgeIndices: lastWallEdgeIndices,
+                  params,
+                  profiles: DEMO_PROFILES,
+                  supportBeams,
+                })
+              : []
+          }
           lamellaDirectionDeg={params.lamellaDirectionDeg}
           isOrthogonal={buildResult.isOrthogonal}
           lamellaOnEdge={params.lamellaOnEdge}

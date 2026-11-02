@@ -73,6 +73,7 @@ export {
   movePlanDivider,
   removePlanDivider,
   addPlanDivider,
+  setManualPurlinLines,
 } from './dividerEdits'
 export {
   buildDividerPickPieces,
@@ -383,5 +384,18 @@ export {
   supportLineFromPlanBeams,
   resolveStraightSupportBeams,
   applyStraightSupportBeamsToPieces,
+  diagnoseSupportBeams,
   purlinLinesOverMaxSpanMm,
+  makeStraightSupportBeam,
+  supportBeamAxisFromSideMm,
+  straightSideStackExtreme,
 } from './supportBeams'
+export type { SupportBeamWarning, SupportBeamWarningCode } from './supportBeams'
+
+export {
+  PERGOLA_PLAN_KNOWN_KEYS,
+  pickPergolaPlanExtras,
+  mergePergolaPlanDocument,
+  serializePergolaPlan,
+} from './pergolaPlanDocument'
+export type { PergolaPlanExtras, PergolaPlanCoreFields } from './pergolaPlanDocument'

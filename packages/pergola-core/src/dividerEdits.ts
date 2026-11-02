@@ -110,3 +110,20 @@ export function addPlanDivider(
     return [...lines, { id, positionMm }].sort((a, b) => a.positionMm - b.positionMm)
   })
 }
+
+/**
+ * Replace manual purlin lines with an explicit list (keeps caller-supplied ids).
+ * Used when the operator types known centres (e.g. fixture row-1..row-7).
+ */
+export function setManualPurlinLines(
+  params: PlanConstructionParams,
+  lines: PlanPurlinDividerLine[],
+): PlanConstructionParams {
+  return {
+    ...params,
+    purlinDividers: {
+      mode: 'manual',
+      lines: [...lines].sort((a, b) => a.positionMm - b.positionMm),
+    },
+  }
+}
