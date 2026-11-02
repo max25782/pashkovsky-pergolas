@@ -5,6 +5,7 @@ import {
   countedLamellaRows,
   DEFAULT_PLAN_CONSTRUCTION_PARAMS,
   groupLamellaSectionTypes,
+  LAMELLA_TIP_MIN_LENGTH_MM,
   PERGOLA_CONSTRUCTION_PROFILES,
   specFromPlan,
 } from '@pashkovsky/pergola-core'
@@ -168,16 +169,27 @@ describe.each([
 })
 
 describe('skew pentagon sections with the straight beam: both frames match', () => {
-  it('same clear-size multiset; row counts may differ by the tip packing direction', () => {
+  it('same section count, lamella count, f7020 length sum, and mirrored cut lengths', () => {
     const a = build(false)
     const b = build(true)
-    const key = (s: LamellaSection) => `${s.clearWMm.toFixed(0)}x${s.clearHMm.toFixed(0)}`
-    expect(b.sections.map(key).sort()).toEqual(a.sections.map(key).sort())
-    // Trapezoid rows are packed from the low coordinate. Mirroring flips which end is
-    // low, so a tip row that floors to 0 is dropped on one frame and kept on the other.
-    // Clear sizes match; the cut-list length sum for the positive rows is what the shop uses.
+    expect(b.sections).toHaveLength(a.sections.length)
     const count = (sections: LamellaSection[]) => sections.reduce((n, s) => n + countedLamellaRows(s), 0)
-    expect(Math.abs(count(b.sections) - count(a.sections))).toBeLessThanOrEqual(5)
+    expect(count(b.sections)).toBe(count(a.sections))
+    expect(count(a.sections)).toBe(385)
+    const sumLen = (pieces: typeof a.pieces) =>
+      pieces.filter((p) => p.role === 'lamella').reduce((n, p) => n + p.lengthAxisMm, 0)
+    expect(Math.abs(sumLen(b.pieces) - sumLen(a.pieces))).toBeLessThan(0.5)
+    // Per-section cut multisets match when each mirrored pair is compared by clear size.
+    const cuts = (s: LamellaSection) =>
+      (s.trapezoid?.lamellaLengthsMm.filter((l) => l >= LAMELLA_TIP_MIN_LENGTH_MM)
+        ?? Array.from({ length: s.lamellaCount }, () => s.widthMm))
+        .map((l) => Math.round(l * 10) / 10)
+        .sort((x, y) => x - y)
+    const bag = (sections: LamellaSection[]) =>
+      sections
+        .map((s) => `${s.clearWMm.toFixed(0)}x${s.clearHMm.toFixed(0)}:${cuts(s).join(',')}`)
+        .sort()
+    expect(bag(b.sections)).toEqual(bag(a.sections))
   })
 })
 

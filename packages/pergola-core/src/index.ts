@@ -343,6 +343,7 @@ export {
   floorLamellaLengthMm,
   floorShownMm,
   countedLamellaRows,
+  LAMELLA_TIP_MIN_LENGTH_MM,
   DEFAULT_LAMELLA_LENGTH_STEP_MM,
   sectionDrawnSizeMm,
   sectionLabelMatchesDrawn,

@@ -157,11 +157,18 @@ export function floorLamellaLengthMm(lengthMm: number, stepMm: number = DEFAULT_
   return Math.floor((lengthMm + 0.005) / step) * step
 }
 
-/** Rows whose cut floored to 0 mm are the triangle tip. They are not lamellas. */
+/**
+ * After flooring, a trapezoid tip shorter than this (mm) is not a cut piece.
+ * Kept at 1 mm so the drawing-frame pentagon v2 stays at 385 lamellas: tips that
+ * floor to 0 are dropped, and every kept cut is at least 1 mm.
+ */
+export const LAMELLA_TIP_MIN_LENGTH_MM = 1
+
+/** Rows whose cut floored below `LAMELLA_TIP_MIN_LENGTH_MM` are the triangle tip. They are not lamellas. */
 export function countedLamellaRows(section: LamellaSection): number {
   const lengths = section.trapezoid?.lamellaLengthsMm
   if (!lengths) return section.lamellaCount
-  return lengths.filter((length) => length > 0).length
+  return lengths.filter((length) => length >= LAMELLA_TIP_MIN_LENGTH_MM).length
 }
 
 /** A side more than this far from 90° to the lamella is a trapezoid end. Matches frame joints. */
@@ -651,7 +658,7 @@ export function groupLamellaSectionTypes(sections: LamellaSection[]): LamellaSec
   const types = buckets.map((members, index): LamellaSectionTypeGroup => {
     const sample = members[0]
     const trap = sample.trapezoid
-    const cuts = trap ? trap.lamellaLengthsMm.filter((length) => length > 0) : null
+    const cuts = trap ? trap.lamellaLengthsMm.filter((length) => length >= LAMELLA_TIP_MIN_LENGTH_MM) : null
     const topCut = cuts ? cuts[cuts.length - 1] : sample.widthMm
     const bottomCut = cuts ? cuts[0] : sample.widthMm
     const varied = cuts != null && cuts.length > 1 && Math.abs(topCut - bottomCut) > LAMELLA_SECTION_TYPE_TOLERANCE_MM
@@ -1348,7 +1355,7 @@ function mergeRemainingShortTips(sections: LamellaSection[]): LamellaSection[] {
       if (bestJ < 0) continue
       const best = out[bestJ]
       const towardHighX = (tip.minX + tip.maxX) / 2 >= (best.minX + best.maxX) / 2
-      const tipRows = tip.trapezoid.lamellaLengthsMm.filter((length) => length > 0)
+      const tipRows = tip.trapezoid.lamellaLengthsMm.filter((length) => length >= LAMELLA_TIP_MIN_LENGTH_MM)
       if (best.trapezoid) {
         if (towardHighX) {
           best.trapezoid.lamellaLengthsMm = [...best.trapezoid.lamellaLengthsMm, ...tipRows]
@@ -1605,25 +1612,35 @@ function openSkewBaySections(input: {
       [high.right, drawnY1],
       [high.left, drawnY1],
     ]
-    const lamellaLengthsMm: number[] = []
-    const upperFromTopMm: number[] = []
+    // Pack from the wider end of the stack. For the skew pentagon that end is the
+    // long frame EA (parallel to the lamellas): the same side computeLamellasFromSections
+    // uses for a full-width row. Packing from min(Y) instead flipped with the contour
+    // winding, so a tip that floored to 0 was dropped on one winding and kept on the other.
+    const wideAtHigh = high.width >= low.width
+    const packedLengths: number[] = []
+    const packedUpper: number[] = []
     let scan = input.pattern[0].visibleWidthMm * 0.5
     let index = 0
     for (let row = 0; row < lamellaCount; row++) {
       const entry = input.pattern[index % input.pattern.length]
       const next = input.pattern[(index + 1) % input.pattern.length]
       const half = entry.visibleWidthMm * 0.5
-      const band0 = drawnY0 + scan - half
-      const band1 = drawnY0 + scan + half
-      const spanA = innerXSpan(edges, band0) ?? spanDrawn0
-      const spanB = innerXSpan(edges, band1) ?? spanDrawn1
+      const band0 = wideAtHigh ? drawnY1 - scan - half : drawnY0 + scan - half
+      const band1 = wideAtHigh ? drawnY1 - scan + half : drawnY0 + scan + half
+      const yLo = Math.min(band0, band1)
+      const yHi = Math.max(band0, band1)
+      const spanA = innerXSpan(edges, yLo) ?? (wideAtHigh ? spanDrawn1 : spanDrawn0)
+      const spanB = innerXSpan(edges, yHi) ?? (wideAtHigh ? spanDrawn0 : spanDrawn1)
       const w0 = Math.max(0, right(spanA) - left(spanA))
       const w1 = Math.max(0, right(spanB) - left(spanB))
-      lamellaLengthsMm.push(floorLamellaLengthMm(Math.min(w0, w1), step))
-      upperFromTopMm.push(drawnY1 - band1)
+      packedLengths.push(floorLamellaLengthMm(Math.min(w0, w1), step))
+      packedUpper.push(drawnY1 - yHi)
       scan += half + input.spec.lamellaGapMm + next.visibleWidthMm * 0.5
       index += 1
     }
+    // Index 0 stays at the low end of the stack AABB (drawnY0), as documented on LamellaTrapezoid.
+    const lamellaLengthsMm = wideAtHigh ? [...packedLengths].reverse() : packedLengths
+    const upperFromTopMm = wideAtHigh ? [...packedUpper].reverse() : packedUpper
     sections.push({
       ...section,
       trapezoid: {
@@ -2150,21 +2167,27 @@ function applySkewSectionLengths(
       pointOnRun(alongX, right(drawn1), drawn1),
       pointOnRun(alongX, left(drawn1), drawn1),
     ]
-    const lamellaLengthsMm: number[] = []
-    const upperFromTopMm: number[] = []
+    // Same rule as openSkewBaySections: pack from the wider end (frame side), store index 0 at drawn0.
+    const wideAtHigh = widthAtHighMm >= widthAtLowMm
+    const packedLengths: number[] = []
+    const packedUpper: number[] = []
     let scan = pattern[0].visibleWidthMm * 0.5
     let i = 0
     for (let row = 0; row < section.lamellaCount; row++) {
       const entry = pattern[i % pattern.length]
       const next = pattern[(i + 1) % pattern.length]
       const half = entry.visibleWidthMm * 0.5
-      const band0 = drawn0 + scan - half
-      const band1 = drawn0 + scan + half
-      lamellaLengthsMm.push(floorLamellaLengthMm(Math.min(widthAtStack(band0), widthAtStack(band1)), step))
-      upperFromTopMm.push(drawn1 - band1)
+      const band0 = wideAtHigh ? drawn1 - scan - half : drawn0 + scan - half
+      const band1 = wideAtHigh ? drawn1 - scan + half : drawn0 + scan + half
+      const yLo = Math.min(band0, band1)
+      const yHi = Math.max(band0, band1)
+      packedLengths.push(floorLamellaLengthMm(Math.min(widthAtStack(yLo), widthAtStack(yHi)), step))
+      packedUpper.push(drawn1 - yHi)
       scan += half + spec.lamellaGapMm + next.visibleWidthMm * 0.5
       i += 1
     }
+    const lamellaLengthsMm = wideAtHigh ? [...packedLengths].reverse() : packedLengths
+    const upperFromTopMm = wideAtHigh ? [...packedUpper].reverse() : packedUpper
     const trapezoid: LamellaTrapezoid = { corners, widthAtLowMm, widthAtHighMm, lamellaLengthsMm, upperFromTopMm }
     return { ...section, trapezoid }
   })
@@ -2351,7 +2374,7 @@ export function computeLamellasFromSections(
         ? placeOnRoof(start, end, plane, effectiveTiltDeg * Math.PI / 180)
         : null
       const axisMm = trap ? length : (placed?.axisMm ?? section.widthMm)
-      if (!(axisMm > 1)) {
+      if (!(axisMm >= LAMELLA_TIP_MIN_LENGTH_MM)) {
         scan += entry.visibleWidthMm * 0.5 + spec.lamellaGapMm + next.visibleWidthMm * 0.5
         i += 1
         continue
