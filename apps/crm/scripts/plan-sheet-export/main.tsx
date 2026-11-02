@@ -16,10 +16,9 @@ import { LamellaLayoutSheet } from '../../../../packages/pergola-drawing/src/Lam
 import { LamellaSectionsSheet } from '../../../../packages/pergola-drawing/src/LamellaSectionsSheet.tsx'
 import { TopPlanSheet } from '../../../../packages/pergola-drawing/src/TopPlanSheet.tsx'
 import {
-  applyStraightBeam,
   pentagonV2Contour,
   pentagonV2PlanParams,
-  pentagonV2SectionSupportLine,
+  pentagonV2SupportBeams,
 } from '../../../../packages/plan-editor/src/model/__tests__/fixtures/skew-pentagon-850-2026-11-01-v2.ts'
 import {
   SKEW_PENTAGON_850_CENTERLINE_MM,
@@ -213,21 +212,34 @@ if (planId === 'diagonal') {
 }
 
 const profiles = PERGOLA_CONSTRUCTION_PROFILES
-const spec = specFromPlan({ contour, wallEdgeIndices, params })
 const isPentagonV2 = planId === 'pentagon-v2' || planId === 'pentagon-v2-ccw'
 const pentagonMirror = planId === 'pentagon-v2'
-const supportLine = isPentagonV2
-  ? pentagonV2SectionSupportLine({ contour, mirror: pentagonMirror, profiles })
-  : null
-const built = buildPieces(spec, profiles, supportLine ? { supportLine } : undefined)
-let pieces = built.pieces
+const supportBeams = isPentagonV2 ? pentagonV2SupportBeams(pentagonMirror) : undefined
+const spec = specFromPlan({ contour, wallEdgeIndices, params, supportBeams })
+const built = buildPieces(spec, profiles)
+const pieces = built.pieces
 if (isPentagonV2) {
-  // The editor cannot store a beam parallel to the lamellas: assemble it after buildPieces.
-  const withBeam = applyStraightBeam({ pieces, profiles, contour, mirror: pentagonMirror })
-  pieces = withBeam.pieces
-  document.body.dataset.beam = JSON.stringify({ attachment: withBeam.attachment, parts: withBeam.parts })
+  const beam = pieces.find((p) => p.id.startsWith('purlin-support-beam-'))
+  document.body.dataset.beam = JSON.stringify({
+    attachment: beam
+      ? {
+          axisToInnerFaceMm: beam.lengthAxisMm,
+          endCutMiterDeg: beam.cutMiterEndDeg,
+          endCutHand: beam.cutHandEnd,
+        }
+      : null,
+    parts: pieces
+      .filter((p) => p.role === 'purlin' && /-[ab]$/.test(p.id))
+      .map((p) => ({
+        pieceId: p.id,
+        dividerId: p.dividerId,
+        axisMm: p.lengthAxisMm,
+        longMm: p.lengthLongMm,
+        shortMm: p.lengthShortMm,
+      })),
+  })
 }
-const sections = buildLamellaSections(spec, profiles, supportLine ? { supportLine } : undefined)
+const sections = buildLamellaSections(spec, profiles)
 // Numbers of the frame and crossbeams for checking against the drawing (dev harness only).
 document.body.dataset.cutSummary = JSON.stringify({
   frame: pieces

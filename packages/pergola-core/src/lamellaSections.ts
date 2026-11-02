@@ -46,6 +46,11 @@ import { pieceAxis } from './pieceAxis'
 import { contourAxesMatchEnteredOuters } from './planEditorOuterAxis'
 import { DEFAULT_PLAN_CONSTRUCTION_PARAMS } from './planDefaults'
 import { isHorizontalPlane, placeOnRoof, roofPlane, type RoofPlane } from './roof'
+import {
+  hasPlanSupportBeams,
+  resolveStraightSupportBeams,
+  supportLineFromPlanBeams,
+} from './supportBeams'
 
 export const LAMELLA_SECTION_CLEARANCE_W_MM = 15
 export const LAMELLA_SECTION_CLEARANCE_H_MM = 30
@@ -1612,7 +1617,7 @@ function openSkewBaySections(input: {
       [high.right, drawnY1],
       [high.left, drawnY1],
     ]
-    // When an external supportLine is passed (pentagon v2 beam harness, spanLimited),
+    // When a plan supportBeams line (or explicit supportLine) is present with spanLimited,
     // pack from the wider end so mirroring does not flip tip phase (385 vs 380).
     // Do not key off wing-shelf `support` — plans like 11204 have a shelf and must
     // keep packing from drawnY0 (established 73 f7020 bars).
@@ -1695,7 +1700,15 @@ export function buildLamellaSections(
   const alongX = Math.abs(dir[0]) >= Math.abs(dir[1])
 
   const frame = computeFrame(spec, profiles)
-  const external = options?.supportLine
+  // Plan supportBeams (or an explicit harness supportLine) act as an external
+  // span limiter. Presence of plan beams enables wide-end skew packing.
+  const planBeamLine =
+    options?.supportLine === undefined && hasPlanSupportBeams(spec.supportBeams)
+      ? supportLineFromPlanBeams(resolveStraightSupportBeams(spec, profiles))
+      : null
+  const external =
+    options?.supportLine !== undefined ? options.supportLine : planBeamLine
+  const spanLimitedByPlanBeams = hasPlanSupportBeams(spec.supportBeams) || options?.supportLine != null
   const wing = external == null
     ? resolveWingShelfSupport({
         contour: pts,
@@ -1952,7 +1965,7 @@ export function buildLamellaSections(
   const numbered = sections.map((s, i) => ({ ...s, id: `sec-${i}` }))
   const skewed = applySkewSectionLengths(numbered, pts, spec, pattern, widthAt)
   if (skewed.length > 0 || spec.skewSectionVersion !== 1) return skewed
-  const open = { pts, spec, pattern, widthAt, positions, support, supportW, spanLimited: external != null }
+  const open = { pts, spec, pattern, widthAt, positions, support, supportW, spanLimited: spanLimitedByPlanBeams }
   const runsAlongY = Math.abs(dir[0]) < Math.abs(dir[1])
   return runsAlongY ? openSkewBaySectionsAlongY(open) : openSkewBaySections(open)
 }

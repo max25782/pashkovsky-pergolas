@@ -134,6 +134,8 @@ interface PlanDrawingSheetsModalProps {
   visturMode: boolean
   planContour?: Point2D[]
   constructionParams?: PlanConstructionParams
+  /** Top-level plan support beams; omitted ⇒ sections match plans without beams. */
+  supportBeams?: import('@pashkovsky/pergola-core').SupportBeamsDocument
   lamellaDirectionDeg?: number
   wallEdgeIndices?: number[]
   initialSheet?: PlanDrawingSheetId
@@ -154,6 +156,7 @@ export function PlanDrawingSheetsModal({
   visturMode,
   planContour,
   constructionParams,
+  supportBeams,
   lamellaDirectionDeg,
   wallEdgeIndices = [],
   initialSheet = 'plan',
@@ -238,9 +241,14 @@ export function PlanDrawingSheetsModal({
   const builtSections = useMemo(() => {
     if (!isLamellaSectionLayoutV1(constructionParams?.lamellaSectionLayoutVersion)) return null
     if (!planContour || planContour.length < 3 || !constructionParams) return null
-    const spec = specFromPlan({ contour: planContour, wallEdgeIndices, params: constructionParams })
+    const spec = specFromPlan({
+      contour: planContour,
+      wallEdgeIndices,
+      params: constructionParams,
+      ...(supportBeams ? { supportBeams } : {}),
+    })
     return buildLamellaSections(spec, profiles)
-  }, [constructionParams, planContour, profiles, wallEdgeIndices])
+  }, [constructionParams, planContour, profiles, supportBeams, wallEdgeIndices])
   const sections = builtSections != null && builtSections.length > 0 ? builtSections : undefined
   // A shape the section builder returns nothing for still gets the production pack;
   // only the sections page is left out of it.

@@ -1,6 +1,6 @@
 // Offer Types - Updated Structure for הצעת מחיר
 
-import type { PlanConstructionParams } from '@pashkovsky/pergola-core'
+import type { PlanConstructionParams, SupportBeamsDocument } from '@pashkovsky/pergola-core'
 import { STANDARD_INSTALLATION_PAYMENT_TERMS } from '@/lib/commercial/standard-installation-terms'
 import type { OfferTermsSnapshot } from '@/lib/offers/offer-terms-snapshot'
 import {
@@ -78,6 +78,11 @@ export interface PergolaPlan {
   params: PergolaPlanConstructionParams
   /** User confirmed the drawing (אשר שרטוט) — unlocks pergola fields and offer submit. */
   confirmed: boolean
+  /**
+   * Optional straight support beams (top-level; not inside params).
+   * Omitted on plans without beams — old readers ignore unknown keys in jsonb.
+   */
+  supportBeams?: SupportBeamsDocument
 }
 
 export { PERGOLA_PLAN_SCHEMA_VERSION }

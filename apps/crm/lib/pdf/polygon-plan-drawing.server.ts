@@ -207,9 +207,13 @@ export function planTopSheetSvg(
   wallIndices: number[],
   params: PlanConstructionParams,
   profiles: Map<string, ProfileDimensions> = PERGOLA_CONSTRUCTION_PROFILES,
+  supportBeams?: import('@pashkovsky/pergola-core').SupportBeamsDocument,
 ): string {
   const contour: Point2D[] = polygon.map((p) => [p.x, p.y])
-  const built = buildPiecesFromPlan({ contour, wallEdgeIndices: wallIndices, params }, profiles)
+  const built = buildPiecesFromPlan(
+    { contour, wallEdgeIndices: wallIndices, params, ...(supportBeams ? { supportBeams } : {}) },
+    profiles,
+  )
   const beams = built.pieces.filter((p) => p.role === 'beam')
   const geometricSides = groupBeamsIntoGeometricSides(beams)
   const drawContour: Point2D[] = geometricSides.map((s) => s.start)
@@ -265,9 +269,10 @@ export function planContourSvg(
   polygon: Array<{ x: number; y: number }>,
   wallIndices: number[] = [],
   params?: PlanConstructionParams,
+  supportBeams?: import('@pashkovsky/pergola-core').SupportBeamsDocument,
 ): string {
   if (params && polygon.length >= 3) {
-    return planTopSheetSvg(polygon, wallIndices, params)
+    return planTopSheetSvg(polygon, wallIndices, params, undefined, supportBeams)
   }
   return planContourSvgLegacy(polygon, wallIndices)
 }
@@ -276,9 +281,10 @@ async function drawingsFromContour(
   polygon: Array<{ x: number; y: number }>,
   wallIndices: number[],
   params?: PlanConstructionParams,
+  supportBeams?: import('@pashkovsky/pergola-core').SupportBeamsDocument,
 ): Promise<OfferDrawings> {
   return {
-    topPlan: planContourSvg(polygon, wallIndices, params),
+    topPlan: planContourSvg(polygon, wallIndices, params, supportBeams),
     lamellaLayout: null,
   }
 }
@@ -306,7 +312,7 @@ function legacyMetaPlan(offer: Offer): {
 export async function generateDrawingsFromPlan(plan: PergolaPlan): Promise<OfferDrawings | null> {
   if (!plan.polygon || plan.polygon.length < 3) return null
   try {
-    return await drawingsFromContour(plan.polygon, plan.wallIndices ?? [], plan.params)
+    return await drawingsFromContour(plan.polygon, plan.wallIndices ?? [], plan.params, plan.supportBeams)
   } catch (error) {
     console.error('[generateDrawingsFromPlan]', error)
     return null

@@ -13,9 +13,9 @@ import {
 } from '@pashkovsky/pergola-core'
 import type { CutPiece, Point2D } from '@pashkovsky/pergola-core'
 import {
-  applyStraightBeam,
   pentagonV2Contour,
   pentagonV2PlanParams,
+  pentagonV2SupportBeams,
   SKEW_PENTAGON_850_V2_ID,
   V2_BEAM,
   V2_CENTERLINE_TARGET_MM,
@@ -85,11 +85,51 @@ function pointInPolygon(p: Point2D, poly: Point2D[]): boolean {
 
 type PlanParams = Parameters<typeof specFromPlan>[0]['params']
 
-function planFor(mirror: boolean, params: PlanParams = pentagonV2PlanParams(DEFAULT_PLAN_CONSTRUCTION_PARAMS)) {
+function planFor(
+  mirror: boolean,
+  params: PlanParams = pentagonV2PlanParams(DEFAULT_PLAN_CONSTRUCTION_PARAMS),
+  withBeams = false,
+) {
   const contour = pentagonV2Contour(mirror)
-  const spec = specFromPlan({ contour, wallEdgeIndices: [], params })
+  const supportBeams = withBeams ? pentagonV2SupportBeams(mirror) : undefined
+  const spec = specFromPlan({ contour, wallEdgeIndices: [], params, supportBeams })
   const built = buildPieces(spec, profiles)
   return { contour, params, spec, built }
+}
+
+function beamResult(mirror: boolean) {
+  const { contour, built } = planFor(mirror, pentagonV2PlanParams(DEFAULT_PLAN_CONSTRUCTION_PARAMS), true)
+  const beam = built.pieces.find((p) => p.dividerId === WING_SHELF_SPAN_DIVIDER_ID)
+  if (!beam) throw new Error('support beam missing from plan build')
+  const xB = mirror ? V2_MIRROR_X_MM - V2_BEAM.axisFromEaOuterMm : V2_BEAM.axisFromEaOuterMm
+  const centroid: Point2D = [
+    contour.reduce((s, p) => s + p[0], 0) / contour.length,
+    contour.reduce((s, p) => s + p[1], 0) / contour.length,
+  ]
+  const endYInnerFaceMm = verticalHitOnOffsetEdge(contour[3], contour[4], centroid, FRAME_HALF_MM, xB)
+  const endYOuterEdgeMm = verticalHitOnOffsetEdge(contour[3], contour[4], centroid, -FRAME_HALF_MM, xB)
+  return {
+    contour,
+    pieces: built.pieces,
+    beam,
+    attachment: {
+      endYInnerFaceMm,
+      endYOuterEdgeMm,
+      axisToInnerFaceMm: endYInnerFaceMm - V2_BEAM.startYMm,
+      axisToOuterEdgeMm: endYOuterEdgeMm - V2_BEAM.startYMm,
+      endCutMiterDeg: beam.cutMiterEndDeg,
+      endCutHand: beam.cutHandEnd,
+    },
+    parts: purlinRows(built.pieces)
+      .filter((p) => /-[ab]$/.test(p.id))
+      .map((p) => ({
+        pieceId: p.id,
+        dividerId: p.dividerId ?? '',
+        axisMm: p.lengthAxisMm,
+        longMm: p.lengthLongMm,
+        shortMm: p.lengthShortMm,
+      })),
+  }
 }
 
 const purlinRows = (pieces: CutPiece[]) =>
@@ -174,14 +214,14 @@ describe.each([
   it('every crossbeam part and the beam fit a PA3022 bar', () => {
     const stock = Math.max(...(profiles.get(V2_CROSSBEAM_PROFILE_ID)?.availableStockLengthsMm ?? [0]))
     expect(stock).toBeGreaterThan(0)
-    const { pieces } = applyStraightBeam({ pieces: built.pieces, profiles, contour, mirror })
+    const { pieces } = beamResult(mirror)
     pieces
       .filter((p) => p.role === 'purlin')
       .forEach((p) => expect(p.lengthLongMm, p.id).toBeLessThanOrEqual(stock))
   })
 
-  describe('straight beam and the split of L6 / L7', () => {
-    const result = applyStraightBeam({ pieces: built.pieces, profiles, contour, mirror })
+  describe('straight beam and the split of L6 / L7 (from plan supportBeams)', () => {
+    const result = beamResult(mirror)
     const xB = mirror ? V2_MIRROR_X_MM - V2_BEAM.axisFromEaOuterMm : V2_BEAM.axisFromEaOuterMm
 
     it('adds exactly one beam: PA3022, parallel to EA, axis 3104.1 from the outer face of EA, starts on the lower face of L5', () => {
@@ -200,7 +240,7 @@ describe.each([
       expect(Math.abs(result.attachment.endYOuterEdgeMm - V2_BEAM.endYOuterMm)).toBeLessThanOrEqual(V2_LENGTH_TOLERANCE_MM)
       expect(Math.abs(result.attachment.axisToOuterEdgeMm - V2_BEAM.axisLengthToOuterMm)).toBeLessThanOrEqual(V2_LENGTH_TOLERANCE_MM)
       expect(result.attachment.axisToInnerFaceMm).toBeCloseTo(3139.8, 0)
-      expect(result.beam.lengthAxisMm).toBe(result.attachment.axisToInnerFaceMm)
+      expect(result.beam.lengthAxisMm).toBeCloseTo(result.attachment.axisToInnerFaceMm, 1)
       // DE is tilted 6.05 deg to the row direction, so the beam end is cut at that miter.
       expect(Math.abs(result.attachment.endCutMiterDeg - 6.05)).toBeLessThanOrEqual(0.1)
     })
@@ -221,8 +261,8 @@ describe.each([
           .sort((a, b) => (mirror ? -1 : 1) * (pieceAxis(a).start[0] - pieceAxis(b).start[0]))
         expect(parts).toHaveLength(2)
         const edge = V2_CROSSBEAM_END_EDGE_INDEX[row === 'row-6' ? 5 : 6]
-        const a = contour[edge]
-        const b = contour[(edge + 1) % contour.length]
+        const a = result.contour[edge]
+        const b = result.contour[(edge + 1) % result.contour.length]
         const farFrameAlongRow = 40 / (Math.abs(b[1] - a[1]) / Math.hypot(b[0] - a[0], b[1] - a[1]))
         // EA side: EA frame 40 + clear + half of the beam. Other side: half beam + clear + frame along the row.
         const eaSideOuter = 40 + parts[0].lengthAxisMm + 20

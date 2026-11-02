@@ -1120,6 +1120,7 @@ export default function QuickOfferPage() {
         polygon: plan.polygon,
         wallIndices: plan.wallIndices,
         params: plan.params,
+        supportBeams: plan.supportBeams,
       })
       return {
         index: planDrawingConfirmIndex,
@@ -1184,6 +1185,7 @@ export default function QuickOfferPage() {
           polygon: flushed.polygon,
           wallIndices: flushed.wallIndices,
           params: flushed.params,
+          supportBeams: pergolas[index]?.plan?.supportBeams,
         })
         setPlanDrawingConfirmIndex(index)
       } catch {
@@ -1199,6 +1201,7 @@ export default function QuickOfferPage() {
         polygon: plan.polygon,
         wallIndices: plan.wallIndices,
         params: plan.params,
+        supportBeams: plan.supportBeams,
       })
       setPlanDrawingConfirmIndex(index)
     } catch {
@@ -3110,6 +3113,7 @@ export default function QuickOfferPage() {
           )}
           wallEdgeIndices={planDrawingConfirmModal.plan.wallIndices}
           constructionParams={planDrawingConfirmModal.plan.params}
+          supportBeams={planDrawingConfirmModal.plan.supportBeams}
           lamellaDirectionDeg={planDrawingConfirmModal.plan.params.lamellaDirectionDeg}
           isOrthogonal={planDrawingConfirmModal.isOrthogonal}
           lamellaOnEdge={planDrawingConfirmModal.plan.params.lamellaOnEdge}

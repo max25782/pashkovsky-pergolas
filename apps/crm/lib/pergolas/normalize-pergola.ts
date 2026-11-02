@@ -4,6 +4,7 @@ import {
   isSimplePolygon,
   parseLamellaWallThicknessMm,
   parseMeasuredOuterLengthMmByEdgeIndex,
+  parseSupportBeamsDocument,
   PERGOLA_PLAN_SCHEMA_VERSION,
   polygonAreaM2,
   type PlanConstructionParams,
@@ -179,12 +180,14 @@ export function parsePergolaPlan(raw: unknown): PergolaPlan | null {
   const schemaVersion =
     o.schemaVersion === PERGOLA_PLAN_SCHEMA_VERSION ? PERGOLA_PLAN_SCHEMA_VERSION : PERGOLA_PLAN_SCHEMA_VERSION
 
+  const supportBeams = parseSupportBeamsDocument(o.supportBeams)
   return {
     schemaVersion,
     polygon,
     wallIndices,
     params: parseParams(o.params),
     confirmed: o.confirmed === true,
+    ...(supportBeams ? { supportBeams } : {}),
   }
 }
 

@@ -10,12 +10,9 @@
  * frame (counter-clockwise), used as a diagnostic: the frame cut list of a clockwise plan is
  * wrong (contourOrientation.test.ts).
  *
- * The editor cannot store a user-placed beam that runs parallel to the lamellas. The only
- * such member the application knows is the auto wing shelf, which finds its own position
- * from the contour shape. `applyStraightBeam` below therefore assembles the beam and the
- * split of the crossbeams L6/L7 AFTER `buildPieces`, with the same cut rules the program
- * uses for a shelf (square cut on a crossing, inner face of the frame, contour miter at the
- * frame end). It is test scaffolding for the production sheet, not application behaviour.
+ * Stage 2: the straight beam is stored on the plan as `supportBeams` and applied by
+ * `buildPieces` / `buildLamellaSections`. Legacy harness helpers below remain for
+ * diagnostics but production paths must use `pentagonV2SupportBeams`.
  */
 import {
   beamPlanWidthForDrawing,
@@ -23,9 +20,10 @@ import {
   isCCW,
   longPointOffset,
   pieceAxis,
+  SUPPORT_BEAMS_FORMAT_VERSION,
   WING_SHELF_SPAN_DIVIDER_ID,
 } from '@pashkovsky/pergola-core'
-import type { CutPiece, Point2D, ProfileDimensions } from '@pashkovsky/pergola-core'
+import type { CutPiece, Point2D, ProfileDimensions, SupportBeamsDocument } from '@pashkovsky/pergola-core'
 
 export const SKEW_PENTAGON_850_V2_ID = 'skew-pentagon-850-2026-11-01-v2'
 
@@ -152,6 +150,30 @@ export const V2_PLAN_DEFAULTS = {
 /** Full plan params of v2 on top of the application defaults. One source for the test and the PDF harness. */
 export function pentagonV2PlanParams<T extends { purlinMaxSpanMm?: number }>(defaults: T) {
   return { ...withoutAutoSupport(defaults), ...V2_PLAN_DEFAULTS, ...pentagonV2ParamOverrides() }
+}
+
+/**
+ * Stored straight beam for pentagon v2. Anchor is the start face on the beam axis
+ * (x = 3104.1 from EA outer in the target frame; mirrored for the editor frame).
+ * Profile/width match the former harness (PA3022 / 40 mm plan width).
+ */
+export function pentagonV2SupportBeams(mirror: boolean): SupportBeamsDocument {
+  const x = mirror ? V2_MIRROR_X_MM - V2_BEAM.axisFromEaOuterMm : V2_BEAM.axisFromEaOuterMm
+  return {
+    formatVersion: SUPPORT_BEAMS_FORMAT_VERSION,
+    beams: [
+      {
+        id: 'beam-l5-to-de',
+        kind: 'straight',
+        anchorMm: { x, y: V2_BEAM.startYMm },
+        directionDeg: V2_LAMELLA_DIRECTION_DEG,
+        profileId: V2_BEAM.profileId,
+        widthMm: V2_BEAM_PLAN_WIDTH_MM,
+        start: { purlinId: 'row-5', face: 'high' },
+        end: { kind: 'outer-contour' },
+      },
+    ],
+  }
 }
 
 export interface StraightBeamPart {

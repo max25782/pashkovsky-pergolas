@@ -18,6 +18,13 @@ import { postHeightMm } from './roof'
 import { resolveContourPurlinPositions } from './lamellaSpans'
 import { buildLamellaSections, type BuildLamellaSectionsOptions } from './lamellaSections'
 import { resolveLamellaPattern, patternMaxLamellaSpanMm } from './lamellaPattern'
+import type { SupportBeamsDocument } from './supportBeams'
+import {
+  applyStraightSupportBeamsToPieces,
+  hasPlanSupportBeams,
+  resolveStraightSupportBeams,
+  supportLineFromPlanBeams,
+} from './supportBeams'
 
 export interface BuiltPieces {
   pieces: CutPiece[]
@@ -36,6 +43,8 @@ export interface SpecFromPlanInput {
   contour: Point2D[]
   wallEdgeIndices: number[]
   params: PlanConstructionParams
+  /** Top-level plan field; omit for plans without beams. */
+  supportBeams?: SupportBeamsDocument
 }
 
 /**
@@ -111,6 +120,7 @@ export function specFromPlan(input: SpecFromPlanInput): PergolaSpec {
     ...(typeof params.lamellaLengthStepMm === 'number' && params.lamellaLengthStepMm > 0
       ? { lamellaLengthStepMm: params.lamellaLengthStepMm }
       : {}),
+    ...(hasPlanSupportBeams(input.supportBeams) ? { supportBeams: input.supportBeams } : {}),
   }
 }
 
@@ -138,8 +148,14 @@ export function buildPieces(
   options?: { kerfMm?: number } & BuildLamellaSectionsOptions,
 ): BuiltPieces {
   const kerfMm = options?.kerfMm ?? DEFAULT_KERF_MM
+  const resolvedBeams = resolveStraightSupportBeams(spec, profiles)
+  const planSupportLine = supportLineFromPlanBeams(resolvedBeams)
   const sectionOptions: BuildLamellaSectionsOptions | undefined =
-    options?.supportLine !== undefined ? { supportLine: options.supportLine } : undefined
+    options?.supportLine !== undefined
+      ? { supportLine: options.supportLine }
+      : planSupportLine != null
+        ? { supportLine: planSupportLine }
+        : undefined
   const frame = computeFrame(spec, profiles)
   const roof = frame.roof
   const lamellas = computeLamellas(spec, profiles, roof, sectionOptions)
@@ -181,15 +197,26 @@ export function buildPieces(
     ? warningsFromSpanIssues(warned, lamellas, spec, profiles)
     : []
 
+  const assembled = [
+    ...beamResult.beams,
+    ...runResult.posts,
+    ...wingShelfPosts,
+    ...frame.hangers,
+    ...lamellas,
+    ...purlins,
+  ]
+  const pieces =
+    resolvedBeams.length > 0
+      ? applyStraightSupportBeamsToPieces({
+          pieces: assembled,
+          spec,
+          profiles,
+          resolved: resolvedBeams,
+        })
+      : assembled
+
   return {
-    pieces: [
-      ...beamResult.beams,
-      ...runResult.posts,
-      ...wingShelfPosts,
-      ...frame.hangers,
-      ...lamellas,
-      ...purlins,
-    ],
+    pieces,
     structuralPurlins,
     warnings,
     joints: [...beamResult.joints, ...runResult.joints],

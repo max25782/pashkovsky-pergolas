@@ -58,6 +58,30 @@ const planParamsSchema = z
   })
   .partial()
 
+const supportBeamSchema = z.object({
+  id: z.string().min(1),
+  kind: z.literal('straight'),
+  anchorMm: z.object({
+    x: z.number().finite(),
+    y: z.number().finite(),
+  }),
+  directionDeg: z.number().finite().optional(),
+  profileId: z.string().min(1),
+  widthMm: z.number().finite().positive().optional(),
+  start: z.object({
+    purlinId: z.string().min(1),
+    face: z.enum(['low', 'high']),
+  }),
+  end: z.object({
+    kind: z.literal('outer-contour'),
+  }),
+})
+
+const supportBeamsDocumentSchema = z.object({
+  formatVersion: z.literal(1),
+  beams: z.array(supportBeamSchema).min(1),
+})
+
 export const pergolaPlanBodySchema = z
   .object({
     schemaVersion: z.literal(PERGOLA_PLAN_SCHEMA_VERSION).optional(),
@@ -67,6 +91,7 @@ export const pergolaPlanBodySchema = z
     confirmed: z.literal(true, {
       errorMap: () => ({ message: 'Pergola drawing must be confirmed before submit' }),
     }),
+    supportBeams: supportBeamsDocumentSchema.optional(),
   })
   .superRefine((data, ctx) => {
     const area = polygonAreaM2(data.polygon)

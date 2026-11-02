@@ -68,14 +68,37 @@ type ConstructionParams = PlanConstructionParams
 
 const DEFAULT_PARAMS: ConstructionParams = DEFAULT_PLAN_CONSTRUCTION_PARAMS
 
-function buildHostPieces(contourMm: Point2D[], wallEdgeIndices: number[], params: ConstructionParams) {
-  return buildPiecesFromPlan({ contour: contourMm, wallEdgeIndices, params }, DEMO_PROFILES)
+function buildHostPieces(
+  contourMm: Point2D[],
+  wallEdgeIndices: number[],
+  params: ConstructionParams,
+  supportBeams?: PergolaPlan['supportBeams'],
+) {
+  return buildPiecesFromPlan(
+    {
+      contour: contourMm,
+      wallEdgeIndices,
+      params,
+      ...(supportBeams ? { supportBeams } : {}),
+    },
+    DEMO_PROFILES,
+  )
 }
 
-function measureOrthogonalSafe(polygonMm: Point[], wallEdgeIndices: number[], planParams: ConstructionParams): boolean {
+function measureOrthogonalSafe(
+  polygonMm: Point[],
+  wallEdgeIndices: number[],
+  planParams: ConstructionParams,
+  supportBeams?: PergolaPlan['supportBeams'],
+): boolean {
   if (polygonMm.length < 3) return true
   try {
-    return buildHostPieces(polygonMm.map((point): Point2D => [point.x, point.y]), wallEdgeIndices, planParams).isOrthogonal
+    return buildHostPieces(
+      polygonMm.map((point): Point2D => [point.x, point.y]),
+      wallEdgeIndices,
+      planParams,
+      supportBeams,
+    ).isOrthogonal
   } catch {
     return true
   }
@@ -141,6 +164,8 @@ export const OfferPlanConfiguratorEmbed = forwardRef<
   const [params, setParams] = useState<ConstructionParams>(() =>
     initialPlan?.params ? paramsFromStoredPlan(initialPlan.params) : { ...DEFAULT_PARAMS },
   )
+  /** Stage 2: beams come from the saved plan; editor UI (Stage 3) does not edit them yet. */
+  const [supportBeams] = useState<PergolaPlan['supportBeams']>(() => initialPlan?.supportBeams)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [paramsOpen, setParamsOpen] = useState(false)
   const [lastPolygonMm, setLastPolygonMm] = useState<Point[] | null>(null)
@@ -299,7 +324,7 @@ export const OfferPlanConfiguratorEmbed = forwardRef<
       setTimeout(() => {
         try {
           const contour: Point2D[] = polygonMm.map((p): Point2D => [p.x, p.y])
-          const built = buildHostPieces(contour, wallEdgeIndices, params)
+          const built = buildHostPieces(contour, wallEdgeIndices, params, supportBeams)
           console.log('[planEditor→3D] computed →', built.pieces.length, 'CutPiece')
 
           setLastPolygonMm(polygonMm)
@@ -320,7 +345,7 @@ export const OfferPlanConfiguratorEmbed = forwardRef<
         }
       }, 0)
     },
-    [params, savePlanToServer, offerId],
+    [params, savePlanToServer, offerId, supportBeams],
   )
 
   const measureOrthogonal = useCallback(
@@ -328,12 +353,12 @@ export const OfferPlanConfiguratorEmbed = forwardRef<
       if (polygonMm.length < 3) return true
       try {
         const contour: Point2D[] = polygonMm.map((p): Point2D => [p.x, p.y])
-        return buildHostPieces(contour, wallEdgeIndices, params).isOrthogonal
+        return buildHostPieces(contour, wallEdgeIndices, params, supportBeams).isOrthogonal
       } catch {
         return true
       }
     },
-    [params],
+    [params, supportBeams],
   )
 
   const handleContourChange = useCallback(
@@ -394,7 +419,7 @@ export const OfferPlanConfiguratorEmbed = forwardRef<
     }
     try {
       const contour: Point2D[] = lastPolygonMm.map((p): Point2D => [p.x, p.y])
-      const built = buildHostPieces(contour, lastWallEdgeIndices, params)
+      const built = buildHostPieces(contour, lastWallEdgeIndices, params, supportBeams)
       return {
         pieces: built.pieces,
         structuralPurlins: built.structuralPurlins,
@@ -407,7 +432,7 @@ export const OfferPlanConfiguratorEmbed = forwardRef<
       const message = err instanceof Error ? err.message : String(err)
       return { pieces: null, structuralPurlins: [], error: message, isOrthogonal: true, roofWarning: null, warnings: [] }
     }
-  }, [lastPolygonMm, lastWallEdgeIndices, params])
+  }, [lastPolygonMm, lastWallEdgeIndices, params, supportBeams])
 
   const preview3DPanelRef = useRef<HTMLDivElement>(null)
 
@@ -669,6 +694,7 @@ export const OfferPlanConfiguratorEmbed = forwardRef<
           planContour={lastPolygonMm?.map((p): [number, number] => [p.x, p.y])}
           wallEdgeIndices={lastWallEdgeIndices}
           constructionParams={params}
+          supportBeams={supportBeams}
           lamellaDirectionDeg={params.lamellaDirectionDeg}
           isOrthogonal={buildResult.isOrthogonal}
           lamellaOnEdge={params.lamellaOnEdge}

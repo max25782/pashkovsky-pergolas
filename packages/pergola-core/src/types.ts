@@ -1,5 +1,6 @@
 /** All linear dimensions in millimetres. All angles in degrees, unless noted. */
 
+import type { SupportBeamsDocument } from './supportBeams'
 import type { VisturTolerances } from './visturTolerances'
 
 export type Point2D  = [number, number]
@@ -346,6 +347,13 @@ export interface PergolaSpec {
   purlinMaxSpanMm?: number
   /** Plain (non-LED) profile for the auto wing-shelf support. */
   wingShelfProfileId?: string
+
+  /**
+   * Optional straight support beams from `Pergola.plan.supportBeams`.
+   * Unset ⇒ same calculation as before (byte-identical for plans without beams).
+   * Presence enables span-limited skew packing and splits crossed purlins.
+   */
+  supportBeams?: SupportBeamsDocument
 }
 
 /**

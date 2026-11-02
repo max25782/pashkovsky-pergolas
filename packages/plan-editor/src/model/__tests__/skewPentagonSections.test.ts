@@ -3,39 +3,40 @@ import {
   buildLamellaSections,
   buildPieces,
   countedLamellaRows,
+  DEFAULT_KERF_MM,
   DEFAULT_PLAN_CONSTRUCTION_PARAMS,
+  groupCutPiecesByBundle,
   groupLamellaSectionTypes,
   LAMELLA_TIP_MIN_LENGTH_MM,
+  packProfile,
   PERGOLA_CONSTRUCTION_PROFILES,
   specFromPlan,
 } from '@pashkovsky/pergola-core'
-import type { LamellaSection, Point2D } from '@pashkovsky/pergola-core'
+import type { CutPiece, LamellaSection, Point2D } from '@pashkovsky/pergola-core'
 import {
-  applyStraightBeam,
   pentagonV2Contour,
   pentagonV2PlanParams,
-  pentagonV2SectionSupportLine,
+  pentagonV2SupportBeams,
   V2_BEAM,
+  V2_BEAM_PLAN_WIDTH_MM,
   V2_CROSSBEAM_FACES_Y_MM,
   V2_MIRROR_X_MM,
 } from './fixtures/skew-pentagon-850-2026-11-01-v2'
 
 /**
- * Lamella sections of the skew pentagon with the drawing's straight beam.
- * The beam is not stored on the plan: the fixture passes it into the section
- * builder the same way the production-sheet harness does.
+ * Lamella sections of the skew pentagon with the drawing's straight beam stored
+ * on the plan as `supportBeams` (Stage 2 — no harness supportLine).
  */
 const profiles = PERGOLA_CONSTRUCTION_PROFILES
 const params = pentagonV2PlanParams(DEFAULT_PLAN_CONSTRUCTION_PARAMS)
 
-function build(mirror: boolean) {
+function build(mirror: boolean, withBeams = true) {
   const contour = pentagonV2Contour(mirror)
-  const spec = specFromPlan({ contour, wallEdgeIndices: [], params })
-  const supportLine = pentagonV2SectionSupportLine({ contour, mirror, profiles })
-  const sections = buildLamellaSections(spec, profiles, { supportLine })
-  const built = buildPieces(spec, profiles, { supportLine })
-  const withBeam = applyStraightBeam({ pieces: built.pieces, profiles, contour, mirror })
-  return { contour, spec, supportLine, sections, pieces: withBeam.pieces }
+  const supportBeams = withBeams ? pentagonV2SupportBeams(mirror) : undefined
+  const spec = specFromPlan({ contour, wallEdgeIndices: [], params, supportBeams })
+  const sections = buildLamellaSections(spec, profiles)
+  const built = buildPieces(spec, profiles)
+  return { contour, spec, sections, pieces: built.pieces, supportBeams }
 }
 
 function rowOf(y: number): string {
@@ -55,26 +56,51 @@ function beamX(mirror: boolean): number {
 function sideOfBeam(section: LamellaSection, mirror: boolean): 'left' | 'right' {
   const xB = beamX(mirror)
   const mid = (section.minX + section.maxX) / 2
-  // In the mirrored frame EA is on the right, so "left of beam" in drawing terms
-  // is the side toward EA (higher X when mirrored).
   if (mirror) return mid > xB ? 'left' : 'right'
   return mid < xB ? 'left' : 'right'
 }
 
+function f7020SumMm(pieces: CutPiece[]): number {
+  return pieces
+    .filter((p) => p.role === 'lamella')
+    .reduce((n, p) => n + p.lengthAxisMm, 0)
+}
+
+/** Recommended-stock bar count for one profile (same waste-first rule as the CRM order sheet). */
+function barsForProfile(pieces: CutPiece[], profileId: string): number {
+  const bundle = [...groupCutPiecesByBundle(pieces).values()].find((b) => b[0].profileId === profileId)
+  if (!bundle) return 0
+  const profile = profiles.get(profileId)
+  const stocks = [...(profile?.availableStockLengthsMm ?? [])].sort((a, b) => a - b)
+  let bestBars: number | null = null
+  let bestWaste: number | null = null
+  for (const stock of stocks) {
+    try {
+      const plan = packProfile(bundle, stock, DEFAULT_KERF_MM)
+      if (
+        bestWaste == null
+        || plan.totalWasteMm < bestWaste - 1
+        || (Math.abs(plan.totalWasteMm - bestWaste) <= 1 && bestBars != null && plan.totalBars < bestBars)
+      ) {
+        bestWaste = plan.totalWasteMm
+        bestBars = plan.totalBars
+      }
+    } catch {
+      /* piece longer than this stock */
+    }
+  }
+  return bestBars ?? 0
+}
+
 describe('skew pentagon sections without the beam (legacy of this builder)', () => {
   it('still builds sections, but does not split the three beam rows', () => {
-    const contour = pentagonV2Contour(false)
-    const spec = specFromPlan({ contour, wallEdgeIndices: [], params })
-    const sections = buildLamellaSections(spec, profiles)
+    const { sections } = build(false, false)
     const beamRows = sections.filter((s) => ['L5-L6', 'L6-L7', 'L7-frame'].includes(rowOf((s.minY + s.maxY) / 2)))
-    // Without the support line the three rows are not split into left/right pairs.
     const byRow = new Map<string, number>()
     for (const s of beamRows) {
       const row = rowOf((s.minY + s.maxY) / 2)
       byRow.set(row, (byRow.get(row) ?? 0) + 1)
     }
-    // This assertion fails on the old builder only when the beam-aware path is expected
-    // elsewhere; kept as the contrast case: at least one of those rows is not a L/R pair.
     expect([...byRow.values()].some((n) => n !== 2)).toBe(true)
   })
 })
@@ -82,10 +108,10 @@ describe('skew pentagon sections without the beam (legacy of this builder)', () 
 describe.each([
   ['drawing frame (counter-clockwise)', false],
   ['mirrored plan as shown in the editor (clockwise)', true],
-] as const)('skew pentagon sections with the straight beam: %s', (_label, mirror) => {
-  const { sections, pieces, supportLine } = build(mirror)
+] as const)('skew pentagon sections with supportBeams: %s', (_label, mirror) => {
+  const { sections, pieces } = build(mirror)
   const xB = beamX(mirror)
-  const half = supportLine.widthMm / 2
+  const half = V2_BEAM_PLAN_WIDTH_MM / 2
 
   it('splits exactly the three rows the beam crosses into left and right', () => {
     const beamRows = ['L5-L6', 'L6-L7', 'L7-frame'] as const
@@ -97,11 +123,9 @@ describe.each([
       expect(left.length).toBeGreaterThanOrEqual(1)
       expect(right.length).toBeGreaterThanOrEqual(1)
     }
-    // Other rows are not split by the beam.
     for (const s of sections) {
       const row = rowOf((s.minY + s.maxY) / 2)
       if (beamRows.includes(row as (typeof beamRows)[number])) continue
-      // A section in a non-beam row must not end on the beam face.
       const endsOnBeam =
         Math.abs(s.maxX - (xB - half)) < 2
         || Math.abs(s.minX - (xB + half)) < 2
@@ -113,8 +137,6 @@ describe.each([
 
   it('does not keep K/L/M tip remnants as their own lettered sections', () => {
     const schedule = groupLamellaSectionTypes(sections)
-    // Full-bay triangles may taper to 0 on BC (~880 mm stack). Forbidden: a short
-    // remnant at the 153.9° kink as its own letter (narrow tip AND small stack).
     for (const type of schedule.types) {
       const nums = type.sizeLabel.split(/[×x/]/).map((p) => Number.parseFloat(p)).filter((n) => !Number.isNaN(n))
       if (nums.length < 2) continue
@@ -149,8 +171,6 @@ describe.each([
       return inside
     }
     for (const s of sections) {
-      // Centroid of the drawn section must lie inside the frame; absorb may square a
-      // tip and put a corner on the outside of a slanted edge.
       const cx = (s.minX + s.maxX) / 2
       const cy = (s.minY + s.maxY) / 2
       expect(pointInPolygon([cx, cy], contour)).toBe(true)
@@ -168,18 +188,21 @@ describe.each([
   })
 })
 
-describe('skew pentagon sections with the straight beam: both frames match', () => {
-  it('same section count, lamella count, f7020 length sum, and mirrored cut lengths', () => {
+describe('skew pentagon supportBeams: both windings match', () => {
+  it('same sections, lamellas, f7020 sum, bars (385 / 16 / 392249 / 67)', () => {
     const a = build(false)
     const b = build(true)
-    expect(b.sections).toHaveLength(a.sections.length)
+    expect(a.sections).toHaveLength(16)
+    expect(b.sections).toHaveLength(16)
     const count = (sections: LamellaSection[]) => sections.reduce((n, s) => n + countedLamellaRows(s), 0)
-    expect(count(b.sections)).toBe(count(a.sections))
     expect(count(a.sections)).toBe(385)
-    const sumLen = (pieces: typeof a.pieces) =>
-      pieces.filter((p) => p.role === 'lamella').reduce((n, p) => n + p.lengthAxisMm, 0)
-    expect(Math.abs(sumLen(b.pieces) - sumLen(a.pieces))).toBeLessThan(0.5)
-    // Per-section cut multisets match when each mirrored pair is compared by clear size.
+    expect(count(b.sections)).toBe(385)
+    expect(Math.round(f7020SumMm(a.pieces))).toBe(392249)
+    expect(Math.round(f7020SumMm(b.pieces))).toBe(392249)
+    // 67 = f7020 bars on the recommended stock (production sheet), not all profiles.
+    expect(barsForProfile(a.pieces, 'f7020')).toBe(67)
+    expect(barsForProfile(b.pieces, 'f7020')).toBe(67)
+
     const cuts = (s: LamellaSection) =>
       (s.trapezoid?.lamellaLengthsMm.filter((l) => l >= LAMELLA_TIP_MIN_LENGTH_MM)
         ?? Array.from({ length: s.lamellaCount }, () => s.widthMm))
@@ -191,12 +214,26 @@ describe('skew pentagon sections with the straight beam: both frames match', () 
         .sort()
     expect(bag(b.sections)).toEqual(bag(a.sections))
   })
+
+  it('fails the beam totals when supportBeams is omitted', () => {
+    const withBeam = build(false, true)
+    const without = build(false, false)
+    expect(withBeam.sections).toHaveLength(16)
+    expect(without.sections.length).not.toBe(16)
+    expect(without.pieces.filter((p) => p.role === 'lamella').length).not.toBe(385)
+  })
 })
 
 describe('skew pentagon sections: saved plans keep their result', () => {
   it('a plan without skewSectionVersion still has no sections and the old lamella layout', () => {
     const { skewSectionVersion: _version, ...legacy } = params
-    const spec = specFromPlan({ contour: pentagonV2Contour(false), wallEdgeIndices: [], params: legacy })
+    const spec = specFromPlan({
+      contour: pentagonV2Contour(false),
+      wallEdgeIndices: [],
+      params: legacy,
+      supportBeams: pentagonV2SupportBeams(false),
+    })
+    // Without skewSectionVersion the section sheet is empty; lamellas still use continuous layout.
     expect(buildLamellaSections(spec, profiles)).toHaveLength(0)
     expect(buildPieces(spec, profiles).pieces.filter((p) => p.role === 'lamella')).toHaveLength(408)
   })

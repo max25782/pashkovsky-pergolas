@@ -366,3 +366,22 @@ export {
   parseMeasuredOuterLengthMmByEdgeIndex,
   paramsFromStoredPlan,
 } from './planDefaults'
+
+export type {
+  StraightSupportBeam,
+  StraightSupportBeamStart,
+  StraightSupportBeamEnd,
+  SupportBeamsDocument,
+  SupportBeamPurlinFace,
+  ResolvedStraightSupportBeam,
+} from './supportBeams'
+export {
+  SUPPORT_BEAMS_FORMAT_VERSION,
+  parseSupportBeamsDocument,
+  supportBeamsEqual,
+  hasPlanSupportBeams,
+  supportLineFromPlanBeams,
+  resolveStraightSupportBeams,
+  applyStraightSupportBeamsToPieces,
+  purlinLinesOverMaxSpanMm,
+} from './supportBeams'
