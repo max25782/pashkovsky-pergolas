@@ -136,6 +136,8 @@ interface PlanDrawingSheetsModalProps {
   constructionParams?: PlanConstructionParams
   /** Top-level plan support beams; omitted ⇒ sections match plans without beams. */
   supportBeams?: import('@pashkovsky/pergola-core').SupportBeamsDocument
+  /** Invalid/unresolved beams: show on plan sheet and in the PDF pack; calc omits them. */
+  supportBeamWarningTexts?: string[]
   lamellaDirectionDeg?: number
   wallEdgeIndices?: number[]
   initialSheet?: PlanDrawingSheetId
@@ -163,6 +165,7 @@ export function PlanDrawingSheetsModal({
   exportBlocked = false,
   beforePrint,
   onReplaceProfile,
+  supportBeamWarningTexts,
 }: PlanDrawingSheetsModalProps) {
   const t = useTranslations('planEditor')
   const locale = useLocale()
@@ -468,6 +471,7 @@ export function PlanDrawingSheetsModal({
                   lamellaDirectionDeg={lamellaDirectionDeg}
                   isOrthogonal={isOrthogonal}
                   nonOrthogonalWarningText={t('drawing.nonOrthogonalWarning')}
+                  extraWarningTexts={supportBeamWarningTexts}
                   sections={sections}
                   purlinLengthLegendTitle={t('drawing.purlinLengths')}
                   wallEdgeIndices={wallEdgeIndices}
@@ -562,6 +566,8 @@ export function PlanDrawingSheetsModal({
                     constructionParams={constructionParams}
                     lamellaDirectionDeg={lamellaDirectionDeg}
                     isOrthogonal={isOrthogonal}
+                    nonOrthogonalWarningText={t('drawing.nonOrthogonalWarning')}
+                    extraWarningTexts={supportBeamWarningTexts}
                     sections={sections}
                     purlinLengthLegendTitle={t('drawing.purlinLengths')}
                     showPurlinLengthLegend={false}

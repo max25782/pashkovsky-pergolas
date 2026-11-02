@@ -94,6 +94,11 @@ export interface TopPlanSheetProps {
    */
   isOrthogonal?: boolean
   nonOrthogonalWarningText?: string
+  /**
+   * Extra honest-degradation lines (e.g. invalid supportBeams kept on the plan
+   * but not applied). Shown under / instead of the non-orthogonal banner.
+   */
+  extraWarningTexts?: string[]
   /** Same factory cells as the lamella sheet. Letters only; sizes stay on the sections tab. */
   sections?: LamellaSection[]
   /** Legend title for grouped purlin clear lengths. Host supplies the translated string. */
@@ -180,6 +185,7 @@ export function TopPlanSheet({
   className,
   isOrthogonal,
   nonOrthogonalWarningText,
+  extraWarningTexts,
   sections,
   purlinLengthLegendTitle = 'Purlins',
   wallEdgeIndices = [],
@@ -237,6 +243,7 @@ export function TopPlanSheet({
     [planContour, wallEdgeIndices],
   )
   const showWarning = isOrthogonal === false && !!nonOrthogonalWarningText && !purlinEndsBounded
+  const extraWarnings = (extraWarningTexts ?? []).filter((line) => line.trim().length > 0)
   const centroid = useMemo(() => centroidOf(contour), [contour])
 
   const dividerPositions = useMemo(() => {
@@ -613,6 +620,17 @@ export function TopPlanSheet({
           className="shrink-0 border-b border-amber-400 bg-amber-100 px-4 py-2 text-sm font-medium text-amber-900 dark:border-amber-600 dark:bg-amber-900/40 dark:text-amber-200"
         >
           ⚠️ {nonOrthogonalWarningText}
+        </div>
+      )}
+      {extraWarnings.length > 0 && (
+        <div
+          role="alert"
+          data-testid="support-beam-plan-warnings"
+          className="shrink-0 whitespace-pre-line border-b border-amber-400 bg-amber-100 px-4 py-2 text-sm font-medium text-amber-900 dark:border-amber-600 dark:bg-amber-900/40 dark:text-amber-200"
+        >
+          {extraWarnings.map((line, i) => (
+            <div key={`${i}-${line.slice(0, 24)}`}>{line}</div>
+          ))}
         </div>
       )}
       <svg

@@ -1063,19 +1063,36 @@
         "name": "Basic Integration",
         "price": "$500",
         "description": "Simple websites and standard lead forms",
-        "features": ["1 website", "Lead reception", "Basic webhook", "Standard fields (name, phone, email, message)"]
+        "features": [
+          "1 website",
+          "Lead reception",
+          "Basic webhook",
+          "Standard fields (name, phone, email, message)"
+        ]
       },
       "advanced": {
         "name": "Advanced Integration",
         "price": "$1,200",
         "description": "Complex forms, file uploads and custom workflows",
-        "features": ["Multiple forms", "File uploads", "Custom fields", "Field mapping", "Advanced logic"]
+        "features": [
+          "Multiple forms",
+          "File uploads",
+          "Custom fields",
+          "Field mapping",
+          "Advanced logic"
+        ]
       },
       "custom": {
         "name": "Custom Integration",
         "price": "Quote",
         "description": "Multiple websites, custom logic, legacy systems",
-        "features": ["Unlimited websites", "Custom integration", "Full API access", "Dedicated support", "Legacy system support"]
+        "features": [
+          "Unlimited websites",
+          "Custom integration",
+          "Full API access",
+          "Dedicated support",
+          "Legacy system support"
+        ]
       }
     },
     "instructions": {
@@ -1224,7 +1241,20 @@
       "buildErrorHintNonInterrupt": "The selected purlin does not interrupt lamellas. Use an LED purlin profile or reduce spans.",
       "buildErrorHintDefault": "Add an interrupting purlin profile or choose lamellas rated for longer spans.",
       "buildErrorShowDetails": "Show all {count} lines",
-      "buildErrorHideDetails": "Hide details"
+      "buildErrorHideDetails": "Hide details",
+      "dividerPositionMm": "Position mm",
+      "supportBeamTitle": "Support beam",
+      "supportBeamPlace": "Place with mouse",
+      "supportBeamAdd": "Add beam",
+      "supportBeamUpdate": "Update beam",
+      "supportBeamDelete": "Delete beam",
+      "supportBeamStartPurlin": "Start from purlin",
+      "supportBeamAxisFromSide": "From straight side, mm",
+      "supportBeamProfile": "Profile",
+      "supportBeamWidth": "Width mm",
+      "supportBeamLength": "Beam length {mm} mm",
+      "supportBeamSplits": "splits: beam {beam}; {detail}",
+      "supportBeamHint": "Beam is perpendicular to purlins (lamella direction), from the chosen purlin face to the outer contour. Number and mouse click give the same result."
     },
     "drawing": {
       "openButton": "Drawing",

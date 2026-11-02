@@ -163,6 +163,26 @@ export function Plan3DDividerControls({
             {id}
           </button>
         ))}
+        {selectedDividerId && (
+          <label className="flex items-center gap-1 text-neutral-600 dark:text-neutral-300">
+            {t('preview3D.dividerPositionMm')}
+            <input
+              data-testid="divider-position-mm"
+              type="number"
+              step={0.1}
+              className="w-24 rounded border border-neutral-300 bg-white px-1 py-0.5 dark:border-neutral-600 dark:bg-neutral-900"
+              value={
+                resolvePlanPurlinLines(contour, params, profiles).find((l) => l.id === selectedDividerId)
+                  ?.positionMm ?? ''
+              }
+              onChange={(e) => {
+                const v = parseFloat(e.target.value)
+                if (!Number.isFinite(v) || !selectedDividerId) return
+                onChange(movePlanDivider(contour, params, profiles, selectedDividerId, v))
+              }}
+            />
+          </label>
+        )}
       </div>
       <div className="h-[420px] w-full shrink-0">
         {children({

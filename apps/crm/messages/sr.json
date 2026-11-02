@@ -1063,19 +1063,36 @@
         "name": "Osnovna integracija",
         "price": "RSD500",
         "description": "Jednostavni veb sajtovi i standardni obrasci za kontakte",
-        "features": ["1 veb sajt", "Prijem kontakata", "Osnov webhook", "Standardna polja (ime, telefon, email, poruka)"]
+        "features": [
+          "1 veb sajt",
+          "Prijem kontakata",
+          "Osnov webhook",
+          "Standardna polja (ime, telefon, email, poruka)"
+        ]
       },
       "advanced": {
         "name": "Napredna integracija",
         "price": "RSD1.200",
         "description": "Složeni obrasci, otpremanje datoteka i prilagođeni tokovi rada",
-        "features": ["Više obrazaca", "Otpremanje datoteka", "Prilagođena polja", "Mapiranje polja", "Napredna logika"]
+        "features": [
+          "Više obrazaca",
+          "Otpremanje datoteka",
+          "Prilagođena polja",
+          "Mapiranje polja",
+          "Napredna logika"
+        ]
       },
       "custom": {
         "name": "Prilagođena integracija",
         "price": "Cenovnik",
         "description": "Više veb sajtova, prilagođena logika, nasleđeni sistemi",
-        "features": ["Neograničeni veb sajtovi", "Prilagođena integracija", "Pun API pristup", "Posvećena podrška", "Podrška za nasleđene sisteme"]
+        "features": [
+          "Neograničeni veb sajtovi",
+          "Prilagođena integracija",
+          "Pun API pristup",
+          "Posvećena podrška",
+          "Podrška za nasleđene sisteme"
+        ]
       }
     },
     "instructions": {
@@ -1224,7 +1241,20 @@
       "buildErrorHintNonInterrupt": "Izabrana pregrada ne prekida lamele. Koristite LED pregradu ili smanjite raspon.",
       "buildErrorHintDefault": "Dodajte pregradu koja prekida lamele ili izaberite lamele za duži raspon.",
       "buildErrorShowDetails": "Prikaži svih {count} redova",
-      "buildErrorHideDetails": "Sakrij detalje"
+      "buildErrorHideDetails": "Sakrij detalje",
+      "dividerPositionMm": "Pozicija mm",
+      "supportBeamTitle": "Noseća greda",
+      "supportBeamPlace": "Postavi mišem",
+      "supportBeamAdd": "Dodaj gredu",
+      "supportBeamUpdate": "Ažuriraj gredu",
+      "supportBeamDelete": "Obriši gredu",
+      "supportBeamStartPurlin": "Početak od pregrade",
+      "supportBeamAxisFromSide": "Od prave strane, mm",
+      "supportBeamProfile": "Profil",
+      "supportBeamWidth": "Širina mm",
+      "supportBeamLength": "Dužina grede {mm} mm",
+      "supportBeamSplits": "preseci: greda {beam}; {detail}",
+      "supportBeamHint": "Greda je normalna na pregrade (pravac lamela), od ivice izabrane pregrade do spoljnog ruba. Broj i klik mišem daju isti rezultat."
     },
     "drawing": {
       "openButton": "Crtež",
