@@ -14,7 +14,9 @@ const LOCAL_PROFILE_PHOTOS = new Set([
   'f100100', 'f10020', 'f10040', 'f12040', 'f20050', 'f4060', 'f7020', 'f8080',
   'hs001', 'hs003', 'hs004', 'hs005', 'hs006', 'hs007', 'hs009', 'hs012', 'hs013',
   'hs022', 'hs024', 'hs025',
-  'pa1162', 'pa1197', 'pa1296', 'pa3022', 'pa1429', 'p1034', 'r242',
+  // r242.jpg is labeled 142×100; catalog/code are heightMm 142 × widthMm 70 (plan 70).
+  // Prefer the dim-labeled schematic so the cut sheet matches the header gauge.
+  'pa1162', 'pa1197', 'pa1296', 'pa3022', 'pa1429', 'p1034',
 ])
 
 export interface ProfilePhotoMatch {
@@ -80,12 +82,19 @@ function bdi(text: string): string {
 }
 
 function schematicSection(widthMm: number, heightMm: number, wallMm: number | undefined, caption: string): string {
+  // Landscape box: wider side = larger section dim (usually heightMm for DT beams).
+  const tall = Math.max(widthMm, heightMm)
+  const wide = Math.min(widthMm, heightMm)
   const outerW = 86
   const outerH = 58
   const wall = wallMm != null && wallMm > 0 ? Math.max(3, Math.min(10, wallMm * 2)) : 4
+  const hLabel = Number.isFinite(tall) && tall > 0 ? String(Math.round(tall)) : ''
+  const wLabel = Number.isFinite(wide) && wide > 0 ? String(Math.round(wide)) : ''
   return `<svg class="schematic" viewBox="0 0 120 92" role="img" aria-label="${caption}">
     <rect x="16" y="4" width="${outerW}" height="${outerH}" fill="#fafaf9" stroke="#111827" stroke-width="${wall}"/>
     <rect x="${16 + wall}" y="${4 + wall}" width="${outerW - wall * 2}" height="${outerH - wall * 2}" fill="#ffffff" stroke="#111827" stroke-width="1"/>
+    ${hLabel ? `<text x="60" y="16" text-anchor="middle" font-size="11" font-family="sans-serif" font-weight="700" fill="#111827">${hLabel}</text>` : ''}
+    ${wLabel ? `<text x="108" y="36" text-anchor="middle" font-size="11" font-family="sans-serif" font-weight="700" fill="#111827">${wLabel}</text>` : ''}
     <text x="60" y="82" text-anchor="middle" font-size="11" font-family="sans-serif" fill="#44403c">${caption}</text>
   </svg>`
 }
@@ -242,9 +251,12 @@ function profileHead(
   const height = bundle.profileHeightMm ?? 0
   const gauge = width > 0 && height > 0 ? `${Math.max(width, height)}×${Math.min(width, height)}` : ''
   const stem = bundle.profileId.trim().toLowerCase()
+  const hasDims = width > 0 && height > 0
   const picture = photoSrc
     ? `<img src="${photoSrc}" alt="${bundle.profileId}" width="120" height="80"/>`
-    : `<div class="missing-photo"><p class="no-photo">${labels.noImage}</p>${schematicSection(Math.max(width, 40), Math.max(height, 20), wallMm, labels.schematic)}</div>`
+    : hasDims
+      ? schematicSection(width, height, wallMm, labels.schematic)
+      : `<div class="missing-photo"><p class="no-photo">${labels.noImage}</p>${schematicSection(Math.max(width, 40), Math.max(height, 20), wallMm, labels.schematic)}</div>`
   const weightBit = weightKg == null
     ? labels.weightMissing
     : `${labels.weight} <bdi dir="ltr">${weightKg.toFixed(1)}</bdi>`
@@ -389,9 +401,12 @@ function orderCard(
   const height = bundle.profileHeightMm ?? 0
   const gauge = width > 0 && height > 0 ? `${Math.max(width, height)}×${Math.min(width, height)}` : ''
   const stem = bundle.profileId.trim().toLowerCase()
+  const hasDims = width > 0 && height > 0
   const picture = src
     ? `<img src="${src}" alt="${esc(bundle.profileId)}" width="160" height="110"/>`
-    : `<div class="missing-photo"><p class="no-photo">${labels.noImage}</p>${schematicSection(Math.max(width, 40), Math.max(height, 20), wallMm, labels.schematic)}</div>`
+    : hasDims
+      ? schematicSection(width, height, wallMm, labels.schematic)
+      : `<div class="missing-photo"><p class="no-photo">${labels.noImage}</p>${schematicSection(Math.max(width, 40), Math.max(height, 20), wallMm, labels.schematic)}</div>`
   const meters = (bars * stock) / 1000
   const weight = weightKgPerMeter != null
     ? `${labels.weight} <bdi dir="ltr">${(meters * weightKgPerMeter).toFixed(1)}</bdi>`

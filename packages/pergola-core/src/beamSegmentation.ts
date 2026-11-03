@@ -75,6 +75,46 @@ function orderedSlotMm(
 }
 
 /**
+ * Parent `lengthLongMm` vs `lengthAxisMm` already encodes contour semantics:
+ * - centerline: long = axis + Σ tan(miter)·w/2  (extra > 0)
+ * - outer-faces tape: long = outer chord ≈ axis   (extra ≈ 0; sharp tip on vertex)
+ * - outer + square-between trim: long < axis      (extra < 0)
+ *
+ * Stock splits must not re-add half-width miter extras onto an outer-face
+ * parent — that made house R242 sum to chord+175.
+ */
+function parentMiterExtendsLong(piece: Pick<CutPiece, 'lengthAxisMm' | 'lengthLongMm'>): boolean {
+  return piece.lengthLongMm - piece.lengthAxisMm > 1
+}
+
+/** Long/short for one stock/shape segment, matching the parent's contour rule. */
+export function segmentLongShortMm(input: {
+  segAxisMm: number
+  deltaStartMm: number
+  deltaEndMm: number
+  parent: Pick<CutPiece, 'lengthAxisMm' | 'lengthLongMm'>
+}): { lengthLongMm: number; lengthShortMm: number } {
+  const { segAxisMm, deltaStartMm, deltaEndMm, parent } = input
+  if (parentMiterExtendsLong(parent)) {
+    return {
+      lengthLongMm: segAxisMm + deltaStartMm + deltaEndMm,
+      lengthShortMm: segAxisMm - deltaStartMm - deltaEndMm,
+    }
+  }
+  // Outer-face (or trimmed): long follows the axis share; short still shows the
+  // miter face. For a trimmed parent, scale so segment longs sum to parent long.
+  const scale =
+    parent.lengthAxisMm > 1 && parent.lengthLongMm < parent.lengthAxisMm - 1
+      ? parent.lengthLongMm / parent.lengthAxisMm
+      : 1
+  const lengthLongMm = segAxisMm * scale
+  return {
+    lengthLongMm,
+    lengthShortMm: lengthLongMm - 2 * deltaStartMm - 2 * deltaEndMm,
+  }
+}
+
+/**
  * planBoundaries sizes windows from the axis. A measured long point can
  * still exceed the bar after kerf while the axis fits the capacity, and
  * an empty boundary list then keeps a piece no stock length can hold.
@@ -236,8 +276,10 @@ export function segmentReserveMm(
   const cme = hasRealEnd ? beam.cutMiterEndDeg : 0
   const cbe = hasRealEnd ? beam.cutBevelEndDeg : 0
 
-  const deltaStart = hasRealStart ? longPointOffset(cms, profileWidthMm) : 0
-  const deltaEnd = hasRealEnd ? longPointOffset(cme, profileWidthMm) : 0
+  // Outer-face longs equal the chord — half-width miter is not added to the bar.
+  const miterExtends = parentMiterExtendsLong(beam)
+  const deltaStart = hasRealStart && miterExtends ? longPointOffset(cms, profileWidthMm) : 0
+  const deltaEnd = hasRealEnd && miterExtends ? longPointOffset(cme, profileWidthMm) : 0
   const kerfStart = effectiveKerfMm(kerfMm, cms, cbs)
   const kerfEnd = effectiveKerfMm(kerfMm, cme, cbe)
 
@@ -691,6 +733,12 @@ export function segmentBeamsForStock(
 
       const δStart = longPointOffset(segCms, profile!.widthMm)
       const δEnd = longPointOffset(segCme, profile!.widthMm)
+      const cuts = segmentLongShortMm({
+        segAxisMm: segLenMm,
+        deltaStartMm: δStart,
+        deltaEndMm: δEnd,
+        parent: beam,
+      })
 
       const segStartPt: Point2D = [start[0] + segStartMm * dir[0], start[1] + segStartMm * dir[1]]
 
@@ -699,8 +747,8 @@ export function segmentBeamsForStock(
         id: `${beam.id}-seg${segIdx++}`,
 
         lengthAxisMm: segLenMm,
-        lengthLongMm: segLenMm + δStart + δEnd,
-        lengthShortMm: segLenMm - δStart - δEnd,
+        lengthLongMm: cuts.lengthLongMm,
+        lengthShortMm: cuts.lengthShortMm,
 
         cutMiterStartDeg: segCms,
         cutBevelStartDeg: segCbs,
@@ -843,13 +891,19 @@ export function segmentRunPiecesForStock(
       const segCbe = isLast ? piece.cutBevelEndDeg : 0
       const δStart = longPointOffset(segCms, profile.widthMm)
       const δEnd = longPointOffset(segCme, profile.widthMm)
+      const cuts = segmentLongShortMm({
+        segAxisMm: segLenMm,
+        deltaStartMm: δStart,
+        deltaEndMm: δEnd,
+        parent: piece,
+      })
       const segStartPt: Point2D = [start[0] + segStartMm * dir[0], start[1] + segStartMm * dir[1]]
       outputPieces.push({
         ...piece,
         id: `${piece.id}-seg${segIdx++}`,
         lengthAxisMm: segLenMm,
-        lengthLongMm: segLenMm + δStart + δEnd,
-        lengthShortMm: segLenMm - δStart - δEnd,
+        lengthLongMm: cuts.lengthLongMm,
+        lengthShortMm: cuts.lengthShortMm,
         cutMiterStartDeg: segCms,
         cutBevelStartDeg: segCbs,
         cutHandStart: segChs,

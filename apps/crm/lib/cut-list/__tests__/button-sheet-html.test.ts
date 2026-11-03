@@ -7,7 +7,8 @@ import { profilePhotoMatch, renderCuttingPages, renderOrderPages } from '../cut-
 import { inlineProfilePhotoDataUris } from '../../pdf/inline-profile-photos'
 import { renderSheetHtmlToPdfBuffer } from '../../pdf/render-sheet-pdf'
 
-const PHOTO_IDS = ['f10040', 'f7020', 'f8080', 'PA3022', 'R242', 'F100100', 'F4060'] as const
+// R242 uses the dim-labeled schematic (r242.jpg is 142×100, wrong vs 142×70).
+const PHOTO_IDS = ['f10040', 'f7020', 'f8080', 'PA3022', 'F100100', 'F4060'] as const
 
 const orderLabels = {
   title: 'הזמנה',
@@ -110,8 +111,11 @@ describe('button sheet html', () => {
     expect(html).not.toContain('legacy-cut-rows')
     expect(html).not.toContain('data-pdf-row')
     expect(html).toContain('class="bar-row"')
-    expect(html).toContain('אין תמונה')
+    // missing-x has section dims → schematic with labels, not “no photo”.
     expect(html).toContain('class="schematic"')
+    expect(html).toContain('>80</text>')
+    expect(html).toContain('>40</text>')
+    expect(html).not.toContain('אין תמונה')
     expect(html).toContain('fill="#b91c1c"')
     expect(html).toContain('font-size="18"')
   })
@@ -125,6 +129,10 @@ describe('button sheet html', () => {
       expect(inlined, id).toContain(`data:image/jpeg;base64,${encoded.slice(0, 80)}`)
     }
     expect(inlined).not.toContain('#9aa0a6')
+  })
+
+  it('R242 has no wrong 142×100 photo — schematic only', () => {
+    expect(profilePhotoMatch('R242')).toEqual({ profileId: 'R242', file: null, confidence: 'none' })
   })
 
   it('prints those drawings into the PDF', async () => {

@@ -84,6 +84,8 @@ describe('cutting map', () => {
     expect(profilePhotoMatch('f7020')).toEqual({ profileId: 'f7020', file: 'f7020.jpg', confidence: 'high' })
     expect(profilePhotoMatch('PA3022').confidence).toBe('high')
     expect(profilePhotoMatch('pa1162')).toEqual({ profileId: 'pa1162', file: 'pa1162.jpg', confidence: 'high' })
+    // Wrong catalog photo (142×100); header/gauge stay 142×70 via schematic labels.
+    expect(profilePhotoMatch('R242')).toEqual({ profileId: 'R242', file: null, confidence: 'none' })
     expect(drawn.photos.find((photo) => photo.profileId === 'f10040')?.confidence).toBe('high')
     expect(drawn.html).toContain('сечение схематично')
   })
@@ -106,8 +108,11 @@ describe('cutting map', () => {
     expect(html).toContain('чертёж F4060')
     expect(html).toContain('/photos/pa1296.jpg')
     expect(html).toContain('no-weight-bar')
-    expect(html).toContain('нет изображения')
+    // Known section size → dim-labeled schematic, not the “no image” caption.
     expect(html).toContain('сечение схематично')
+    expect(html).toContain('>120</text>')
+    expect(html).toContain('>50</text>')
+    expect(html).not.toContain('нет изображения')
     expect(html).toContain('вес не задан')
     expect(html).not.toContain('нет данных')
     expect(html).not.toContain('no-weight-bar.jpg')
