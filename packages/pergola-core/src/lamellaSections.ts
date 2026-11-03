@@ -125,11 +125,13 @@ export interface LamellaSection {
 
 /**
  * Factory outline of a cell whose end beam is not square.
- * `corners` are [low-start, low-end, high-end, high-start] in plan mm.
+ * `corners` are plan-mm vertices in ring order (open-skew quads use
+ * [low-start, low-end, high-end, high-start]; tip-fold outlines may have more
+ * vertices following the lamella-length envelope).
  * Index 0 of `lamellaLengthsMm` is the row at the low end of the stack.
  */
 export interface LamellaTrapezoid {
-  corners: [Point2D, Point2D, Point2D, Point2D]
+  corners: Point2D[]
   /** Outline width at the low end (plan bottom when lamellas run along X). */
   widthAtLowMm: number
   /** Outline width at the high end (plan top when lamellas run along X). */
@@ -1188,6 +1190,241 @@ function mergeCollinearCells(cells: BayCell[], edges: OffsetEdge[]): BayCell[] {
  * so the schedule shows one section per bay side and the tip lengths stay in
  * the cut list.
  */
+type AcrossAnchor = 'min' | 'max'
+
+/**
+ * Which bay face the tip sits on. After a bad absorb splice the short edge still
+ * records the tip (H: ~50 mm on the top transverse); an AABB from mergeRemaining
+ * has no short edge, so the caller must pass the tip's own anchor.
+ */
+function acrossAnchorFromCorners(
+  corners: LamellaTrapezoid['corners'],
+  stackIsX: boolean,
+  minAcross: number,
+  maxAcross: number,
+): AcrossAnchor | null {
+  let bestLen = Infinity
+  let bestMid = 0
+  for (let i = 0; i < corners.length; i++) {
+    const a = corners[i]
+    const b = corners[(i + 1) % corners.length]
+    if (stackIsX) {
+      if (Math.abs(a[0] - b[0]) > 1) continue
+      const len = Math.abs(a[1] - b[1])
+      if (len < bestLen) {
+        bestLen = len
+        bestMid = (a[1] + b[1]) / 2
+      }
+    } else {
+      if (Math.abs(a[1] - b[1]) > 1) continue
+      const len = Math.abs(a[0] - b[0])
+      if (len < bestLen) {
+        bestLen = len
+        bestMid = (a[0] + b[0]) / 2
+      }
+    }
+  }
+  const span = maxAcross - minAcross
+  if (!(span > 0) || !(bestLen < span * 0.95)) return null
+  return bestMid - minAcross <= maxAcross - bestMid ? 'min' : 'max'
+}
+
+/**
+ * True when corners are an AABB (or a collapsed strip) while widthAtLow/High
+ * say the card is a trapezoid — the absorb/merge paths that need a rebuild.
+ * Open-skew outlines already follow the contour; leave those alone.
+ */
+export function trapezoidCornersNeedRebuild(section: LamellaSection): boolean {
+  const trap = section.trapezoid
+  if (!trap) return false
+  const w0 = trap.widthAtLowMm
+  const w1 = trap.widthAtHighMm
+  if (!(w0 >= 0) || !(w1 >= 0)) return false
+  if (Math.abs(w0 - w1) <= LAMELLA_SECTION_TYPE_TOLERANCE_MM) return false
+  const corners = trap.corners
+  if (corners.length < 3) return true
+  const area = Math.abs(
+    corners.reduce((sum, c, i) => {
+      const n = corners[(i + 1) % corners.length]
+      return sum + c[0] * n[1] - n[0] * c[1]
+    }, 0),
+  ) / 2
+  const lengths = trap.lamellaLengthsMm.filter((l) => l > 0)
+  const pack = lengths.reduce((n, len) => n + len * section.pitchMm, 0)
+  // Collapsed strip / wrong linear trap: area far below the lamella pack.
+  if (pack > 1 && area < pack * 0.5) return true
+  const xs = corners.map((c) => +c[0].toFixed(2))
+  const ys = corners.map((c) => +c[1].toFixed(2))
+  const uniqueX = new Set(xs).size
+  const uniqueY = new Set(ys).size
+  // Axis-aligned rectangle: only two distinct X and two distinct Y.
+  if (uniqueX === 2 && uniqueY === 2) return true
+  return false
+}
+
+/**
+ * Outline from the same `lamellaLengthsMm` the section card uses: each row is a
+ * strip of that length, flush with one bay face (`anchor`). Returns a ring that
+ * follows the length envelope (rectangle + tip), not a linear widthAt trap.
+ */
+function cornersFromLamellaLengths(
+  section: LamellaSection,
+  anchor: AcrossAnchor,
+): Point2D[] {
+  const trap = section.trapezoid!
+  const lengths = trap.lamellaLengthsMm.filter((l) => l >= 0)
+  const dx = section.maxX - section.minX
+  const dy = section.maxY - section.minY
+  const stackIsX = Math.abs(dx - section.heightMm) <= Math.abs(dy - section.heightMm)
+  const stack0 = stackIsX ? section.minX : section.minY
+  const stack1 = stackIsX ? section.maxX : section.maxY
+  const n = Math.max(1, lengths.length)
+  const pitch = section.pitchMm > 0 ? section.pitchMm : section.heightMm / n
+  // Pack from the wide end so leftover clearance sits on the tip side.
+  const wideAtHigh = trap.widthAtHighMm >= trap.widthAtLowMm
+  const packSpan = n * pitch
+  let cursor = wideAtHigh ? stack1 - packSpan : stack0
+  if (!wideAtHigh && cursor + packSpan > stack1 + 1) cursor = stack0
+  if (wideAtHigh && cursor < stack0 - 1) cursor = stack1 - packSpan
+  const free: Point2D[] = []
+  const fixed: Point2D[] = []
+  for (let i = 0; i < n; i++) {
+    const len = lengths[i] ?? Math.max(trap.widthAtLowMm, trap.widthAtHighMm)
+    const a0 = cursor
+    const a1 = cursor + pitch
+    cursor += pitch
+    if (stackIsX) {
+      if (anchor === 'max') {
+        const y1 = section.maxY
+        fixed.push([a0, y1], [a1, y1])
+        free.push([a0, y1 - len], [a1, y1 - len])
+      } else {
+        const y0 = section.minY
+        fixed.push([a0, y0], [a1, y0])
+        free.push([a0, y0 + len], [a1, y0 + len])
+      }
+    } else if (anchor === 'max') {
+      const x1 = section.maxX
+      fixed.push([x1, a0], [x1, a1])
+      free.push([x1 - len, a0], [x1 - len, a1])
+    } else {
+      const x0 = section.minX
+      fixed.push([x0, a0], [x0, a1])
+      free.push([x0 + len, a0], [x0 + len, a1])
+    }
+  }
+  // Ring: along the fixed bay face, then back along the free (length) edge.
+  const simplify = (pts: Point2D[]): Point2D[] => {
+    if (pts.length === 0) return pts
+    const out: Point2D[] = [pts[0]]
+    for (let i = 1; i < pts.length; i++) {
+      const prev = out[out.length - 1]
+      const cur = pts[i]
+      if (Math.hypot(cur[0] - prev[0], cur[1] - prev[1]) < 0.05) continue
+      // Drop colinear middle points on axis-aligned runs.
+      if (out.length >= 2) {
+        const a = out[out.length - 2]
+        const b = prev
+        if (
+          (Math.abs(a[0] - b[0]) < 0.05 && Math.abs(b[0] - cur[0]) < 0.05)
+          || (Math.abs(a[1] - b[1]) < 0.05 && Math.abs(b[1] - cur[1]) < 0.05)
+        ) {
+          out[out.length - 1] = cur
+          continue
+        }
+      }
+      out.push(cur)
+    }
+    return out
+  }
+  return simplify([...fixed, ...free.reverse()])
+}
+
+/**
+ * After tip absorption, outline corners can be wrong (AABB rectangle, or tip
+ * corners spliced so both high vertices sit on the slant). Rebuild the outline
+ * from `lamellaLengthsMm` — the same lengths the section card uses — so the plan
+ * letter, layout polygon, and card stay one geometry.
+ *
+ * The tip is flush with one bay face (`anchor`): CD cuts the bottom of a bay so
+ * the tip sits on maxY; DE cuts the top so the tip sits on minY.
+ *
+ * Pass `force` after a tip fold (corners are known bad). The final pass only
+ * rebuilds when {@link trapezoidCornersNeedRebuild} is true.
+ */
+export function rebuildTrapezoidCornersFromWidths(
+  section: LamellaSection,
+  anchor?: AcrossAnchor,
+  force = false,
+): LamellaSection {
+  const trap = section.trapezoid
+  if (!trap) return section
+  const w0 = trap.widthAtLowMm
+  const w1 = trap.widthAtHighMm
+  if (!(w0 >= 0) || !(w1 >= 0)) return section
+  if (!force && !trapezoidCornersNeedRebuild(section)) return section
+  const dx = section.maxX - section.minX
+  const dy = section.maxY - section.minY
+  const stackIsX = Math.abs(dx - section.heightMm) <= Math.abs(dy - section.heightMm)
+  const minAcross = stackIsX ? section.minY : section.minX
+  const maxAcross = stackIsX ? section.maxY : section.maxX
+  const resolved =
+    anchor
+    ?? acrossAnchorFromCorners(trap.corners, stackIsX, minAcross, maxAcross)
+    ?? 'min'
+  const lengths = trap.lamellaLengthsMm.filter((l) => l >= 0)
+  const corners =
+    lengths.length > 0
+      ? cornersFromLamellaLengths(section, resolved)
+      : (() => {
+          // Fallback: linear trap from card widths when lengths are missing.
+          if (stackIsX) {
+            const x0 = section.minX
+            const x1 = section.maxX
+            if (resolved === 'max') {
+              const y1 = section.maxY
+              return [
+                [x0, y1 - w0],
+                [x0, y1],
+                [x1, y1],
+                [x1, y1 - w1],
+              ] as Point2D[]
+            }
+            const y0 = section.minY
+            return [
+              [x0, y0],
+              [x0, y0 + w0],
+              [x1, y0 + w1],
+              [x1, y0],
+            ] as Point2D[]
+          }
+          if (resolved === 'max') {
+            const y0 = section.minY
+            const y1 = section.maxY
+            const x1 = section.maxX
+            return [
+              [x1 - w0, y0],
+              [x1, y0],
+              [x1, y1],
+              [x1 - w1, y1],
+            ] as Point2D[]
+          }
+          const y0 = section.minY
+          const y1 = section.maxY
+          const x0 = section.minX
+          return [
+            [x0, y0],
+            [x0 + w0, y0],
+            [x0 + w1, y1],
+            [x0, y1],
+          ] as Point2D[]
+        })()
+  return {
+    ...section,
+    trapezoid: { ...trap, corners },
+  }
+}
+
 function absorbContourTipSections(sections: LamellaSection[]): LamellaSection[] {
   const isTip = (section: LamellaSection): boolean => {
     if (section.trapezoid == null) return false
@@ -1242,6 +1479,11 @@ function absorbContourTipSections(sections: LamellaSection[]): LamellaSection[] 
       continue
     }
     const towardHighX = tipMidX >= (best.minX + best.maxX) / 2
+    // Open-skew tips stack along Y; after the fold the host is often stack∥X.
+    // Which transverse the tip sits on = which Y face its midpoint is closer to
+    // in the host bay (before bounds grow). CD tips sit on maxY; DE on minY.
+    const tipAnchor: AcrossAnchor =
+      tipMidY - best.minY <= best.maxY - tipMidY ? 'min' : 'max'
     best.minX = Math.min(best.minX, tip.minX)
     best.maxX = Math.max(best.maxX, tip.maxX)
     best.minY = Math.min(best.minY, tip.minY)
@@ -1253,25 +1495,15 @@ function absorbContourTipSections(sections: LamellaSection[]): LamellaSection[] 
         best.trapezoid.lamellaLengthsMm = [...best.trapezoid.lamellaLengthsMm, ...tip.trapezoid.lamellaLengthsMm]
         best.trapezoid.upperFromTopMm = [...(best.trapezoid.upperFromTopMm ?? []), ...(tip.trapezoid.upperFromTopMm ?? [])]
         best.trapezoid.widthAtHighMm = tip.trapezoid.widthAtHighMm
-        best.trapezoid.corners = [
-          best.trapezoid.corners[0],
-          best.trapezoid.corners[1],
-          tip.trapezoid.corners[2],
-          tip.trapezoid.corners[3],
-        ]
       } else {
         best.trapezoid.lamellaLengthsMm = [...tip.trapezoid.lamellaLengthsMm, ...best.trapezoid.lamellaLengthsMm]
         best.trapezoid.upperFromTopMm = [...(tip.trapezoid.upperFromTopMm ?? []), ...(best.trapezoid.upperFromTopMm ?? [])]
         best.trapezoid.widthAtLowMm = tip.trapezoid.widthAtLowMm
-        best.trapezoid.corners = [
-          tip.trapezoid.corners[0],
-          tip.trapezoid.corners[1],
-          best.trapezoid.corners[2],
-          best.trapezoid.corners[3],
-        ]
       }
       best.widthMm = Math.max(best.trapezoid.widthAtLowMm, best.trapezoid.widthAtHighMm)
       best.lamellaCount = best.trapezoid.lamellaLengthsMm.length
+      const rebuilt = rebuildTrapezoidCornersFromWidths(best, tipAnchor, true)
+      best.trapezoid = rebuilt.trapezoid
     } else if (!best.trapezoid && tip.trapezoid) {
       const lowW = towardHighX ? best.widthMm : tip.trapezoid.widthAtLowMm
       const highW = towardHighX ? tip.trapezoid.widthAtHighMm : best.widthMm
@@ -1279,22 +1511,14 @@ function absorbContourTipSections(sections: LamellaSection[]): LamellaSection[] 
       const lengths = towardHighX
         ? [...baseLengths, ...tip.trapezoid.lamellaLengthsMm]
         : [...tip.trapezoid.lamellaLengthsMm, ...baseLengths]
-      // Keep the tip's outer corners so the outline follows the slant, not an AABB.
-      const tipCorners = tip.trapezoid.corners
+      // Placeholder corners; rebuild from card widths + tip anchor (no AABB, no splice).
       best.trapezoid = {
-        corners: towardHighX
-          ? [
-              [best.minX, best.minY],
-              [best.maxX, Math.min(best.minY, tipCorners[1][1])],
-              tipCorners[2],
-              tipCorners[3],
-            ]
-          : [
-              tipCorners[0],
-              tipCorners[1],
-              [best.maxX, best.maxY],
-              [best.minX, best.maxY],
-            ],
+        corners: [
+          [best.minX, best.minY],
+          [best.maxX, best.minY],
+          [best.maxX, best.maxY],
+          [best.minX, best.maxY],
+        ],
         widthAtLowMm: lowW,
         widthAtHighMm: highW,
         lamellaLengthsMm: lengths,
@@ -1305,12 +1529,14 @@ function absorbContourTipSections(sections: LamellaSection[]): LamellaSection[] 
       best.clearWMm = Math.max(best.clearWMm, tip.clearWMm)
       best.clearHMm = best.clearHMm + tip.clearHMm
       best.heightMm = best.heightMm + tip.heightMm
+      const rebuilt = rebuildTrapezoidCornersFromWidths(best, tipAnchor, true)
+      best.trapezoid = rebuilt.trapezoid
     } else {
       best.lamellaCount += countedLamellaRows(tip)
     }
   }
   kept.sort((a, b) => b.minY - a.minY || a.minX - b.minX)
-  return mergeRemainingShortTips(kept)
+  return mergeRemainingShortTips(kept).map((section) => rebuildTrapezoidCornersFromWidths(section))
 }
 
 /**
@@ -1360,6 +1586,9 @@ function mergeRemainingShortTips(sections: LamellaSection[]): LamellaSection[] {
       if (bestJ < 0) continue
       const best = out[bestJ]
       const towardHighX = (tip.minX + tip.maxX) / 2 >= (best.minX + best.maxX) / 2
+      const tipMidYMerge = (tip.minY + tip.maxY) / 2
+      const tipAnchor: AcrossAnchor =
+        tipMidYMerge - best.minY <= best.maxY - tipMidYMerge ? 'min' : 'max'
       const tipRows = tip.trapezoid.lamellaLengthsMm.filter((length) => length >= LAMELLA_TIP_MIN_LENGTH_MM)
       if (best.trapezoid) {
         if (towardHighX) {
@@ -1395,13 +1624,19 @@ function mergeRemainingShortTips(sections: LamellaSection[]): LamellaSection[] {
       best.maxY = Math.max(best.maxY, tip.maxY)
       best.heightMm += tip.heightMm
       best.clearHMm += tip.clearHMm
+      if (best.trapezoid) {
+        const rebuilt = rebuildTrapezoidCornersFromWidths(best, tipAnchor, true)
+        best.trapezoid = rebuilt.trapezoid
+      }
       out.splice(i, 1)
       changed = true
       break
     }
   }
   out.sort((a, b) => b.minY - a.minY || a.minX - b.minX)
-  return out.map((section, index) => ({ ...section, id: `sec-${index}` }))
+  return out
+    .map((section) => rebuildTrapezoidCornersFromWidths(section))
+    .map((section, index) => ({ ...section, id: `sec-${index}` }))
 }
 
 function openSkewBaySections(input: {

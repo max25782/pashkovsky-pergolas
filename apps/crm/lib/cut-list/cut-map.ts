@@ -191,11 +191,15 @@ function barSvg(bar: DrawnBar, labels: CutMapLabels, kerfMm: number): string {
     const text = String(piece.lengthMm)
     const textW = Math.max(22, text.length * 12)
     const below = piece.lengthMm < 40 || textW > pieceW * 0.72
-    const startLabel = !below && piece.startDeg !== 90
-      ? `<text x="${px + 1}" y="18" text-anchor="start" font-size="18" font-family="sans-serif" font-weight="700" fill="#b91c1c">${formatCutDeg(piece.startDeg)}°</text>`
+    // Length stays above the bar when it fits; angle marks go on the opposite
+    // band so a multi-piece stock row (e.g. 3277+2300+900) does not pile
+    // "mm" and "°" on the same baseline.
+    const angleY = below ? 18 : barY + barH + 14
+    const startLabel = piece.startDeg !== 90
+      ? `<text x="${px + 1}" y="${angleY}" text-anchor="start" font-size="15" font-family="sans-serif" font-weight="700" fill="#b91c1c">${formatCutDeg(piece.startDeg)}°</text>`
       : ''
-    const endLabel = !below && piece.endDeg !== 90
-      ? `<text x="${px + pieceW - 1}" y="18" text-anchor="end" font-size="18" font-family="sans-serif" font-weight="700" fill="#b91c1c">${formatCutDeg(piece.endDeg)}°</text>`
+    const endLabel = piece.endDeg !== 90
+      ? `<text x="${px + pieceW - 1}" y="${angleY}" text-anchor="end" font-size="15" font-family="sans-serif" font-weight="700" fill="#b91c1c">${formatCutDeg(piece.endDeg)}°</text>`
       : ''
     const lengthText = below
       ? ''

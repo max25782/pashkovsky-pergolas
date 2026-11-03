@@ -354,6 +354,8 @@ export {
   LAMELLA_SECTION_TYPE_TOLERANCE_MM,
   lamellaSectionTypeLetter,
   groupLamellaSectionTypes,
+  rebuildTrapezoidCornersFromWidths,
+  trapezoidCornersNeedRebuild,
   lamellaSectionTypeById,
   buildLamellaSections,
   computeLamellasFromSections,

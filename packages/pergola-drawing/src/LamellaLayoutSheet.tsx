@@ -111,15 +111,57 @@ function buildSectionDimensionLabels(sections: LamellaSection[], viewport: Viewp
   for (const section of ordered) {
     const trap = section.trapezoid!
     const corners = trap.corners
+    if (corners.length < 3) continue
     const interior = corners.reduce<Point2D>(
       (sum, point) => [sum[0] + point[0] / corners.length, sum[1] + point[1] / corners.length],
       [0, 0],
     )
     const others = polygons.filter((other) => other.id !== section.id).map((other) => other.corners)
+    // Open-skew quads stay [low-start, low-end, high-end, high-start]. Tip-fold
+    // outlines may have more vertices; pick the across-edges at min/max stack
+    // and the longest stack-parallel edge for heightMm.
+    const dx = section.maxX - section.minX
+    const dy = section.maxY - section.minY
+    const stackIsX = Math.abs(dx - section.heightMm) <= Math.abs(dy - section.heightMm)
+    const endEdge = (atMax: boolean): [Point2D, Point2D] => {
+      if (corners.length === 4) {
+        return atMax ? [corners[3], corners[2]] : [corners[0], corners[1]]
+      }
+      const along = (p: Point2D) => (stackIsX ? p[0] : p[1])
+      const target = atMax
+        ? Math.max(...corners.map(along))
+        : Math.min(...corners.map(along))
+      const onEnd = corners.filter((p) => Math.abs(along(p) - target) < 1)
+      if (onEnd.length >= 2) {
+        const across = (p: Point2D) => (stackIsX ? p[1] : p[0])
+        onEnd.sort((a, b) => across(a) - across(b))
+        return [onEnd[0], onEnd[onEnd.length - 1]]
+      }
+      return atMax ? [corners[corners.length - 1], corners[0]] : [corners[0], corners[1]]
+    }
+    const heightEdge = (): [Point2D, Point2D] => {
+      if (corners.length === 4) return [corners[1], corners[2]]
+      let best: [Point2D, Point2D] = [corners[0], corners[1]]
+      let bestLen = 0
+      for (let i = 0; i < corners.length; i++) {
+        const a = corners[i]
+        const b = corners[(i + 1) % corners.length]
+        const alongDelta = stackIsX ? Math.abs(a[0] - b[0]) : Math.abs(a[1] - b[1])
+        const acrossDelta = stackIsX ? Math.abs(a[1] - b[1]) : Math.abs(a[0] - b[0])
+        if (alongDelta > acrossDelta && alongDelta > bestLen) {
+          bestLen = alongDelta
+          best = [a, b]
+        }
+      }
+      return best
+    }
+    const [lowA, lowB] = endEdge(false)
+    const [highA, highB] = endEdge(true)
+    const [hA, hB] = heightEdge()
     const specs: { attr: SectionDimensionLabel['attr']; text: string; a: Point2D; b: Point2D; offset: number; anchor: SectionDimensionLabel['anchor'] }[] = [
-      { attr: 'data-layout-top', text: formatPurlinClearLabelMm(trap.widthAtHighMm), a: corners[3], b: corners[2], offset: 260, anchor: 'middle' },
-      { attr: 'data-layout-bottom', text: formatPurlinClearLabelMm(trap.widthAtLowMm), a: corners[0], b: corners[1], offset: 240, anchor: 'middle' },
-      { attr: 'data-layout-height', text: formatPurlinClearLabelMm(section.heightMm), a: corners[1], b: corners[2], offset: 320, anchor: 'start' },
+      { attr: 'data-layout-top', text: formatPurlinClearLabelMm(trap.widthAtHighMm), a: highA, b: highB, offset: 260, anchor: 'middle' },
+      { attr: 'data-layout-bottom', text: formatPurlinClearLabelMm(trap.widthAtLowMm), a: lowA, b: lowB, offset: 240, anchor: 'middle' },
+      { attr: 'data-layout-height', text: formatPurlinClearLabelMm(section.heightMm), a: hA, b: hB, offset: 320, anchor: 'start' },
     ]
     for (const spec of specs) {
       // A triangle apex (width 0) has no edge to measure; "0.0" would only be noise.
