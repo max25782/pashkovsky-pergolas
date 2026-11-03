@@ -5,7 +5,11 @@ import { computeSpanDivisionPointsMm } from './lamellaSpans'
 import { resolveLamellaPattern, patternMaxLamellaSpanMm, patternMaxVerticalThicknessMm } from './lamellaPattern'
 import { computePurlins } from './purlins'
 import { computeFrame } from './frame'
-import { collectFrameBeamTrimSegments, trimDividerAxisSegmentsForFrame } from './dividerFrameTrim'
+import {
+  collectFrameBeamTrimSegments,
+  measuredOutersForCcwContour,
+  trimDividerAxisSegmentsForFrame,
+} from './dividerFrameTrim'
 import { effectiveKerfMm } from './packProfile'
 import { findJointCandidates, planBoundaries, segmentReserveMm } from './beamSegmentation'
 import { sanitizeContour } from './contourSanitize'
@@ -315,7 +319,14 @@ export function segmentLedPurlinsForStock(
 
   const dividerPerps = plan.boundaries.map((b) => widestH0S + b)
   const sectionBoundsPerp = [widestH0S, ...dividerPerps, widestH0S + widestDepthMm]
-  const beamTrim = collectFrameBeamTrimSegments(frameBeams, profiles)
+  const beamTrim = collectFrameBeamTrimSegments(frameBeams, profiles, {
+    contour: pts,
+    measuredOuterLengthMmByEdgeIndex: measuredOutersForCcwContour(
+      cleanContour,
+      spec.measuredOuterLengthMmByEdgeIndex,
+    ),
+    layoutVersion: spec.purlinClearLayoutVersion === 1 ? 1 : undefined,
+  })
 
   // ── Dividers: plain crossing beams running along `dir` (like a lamella —
   // same scanLineClip convention, dir/perp swapped relative to the purlin

@@ -64,6 +64,8 @@ export {
   measuredOuterAlongLamellas,
   purlinEndInsetMm,
   resolvePurlinEndInsetMm,
+  axisToInnerFaceMm,
+  contourVerticesAreOuterFaces,
   PURLIN_CLEAR_LAYOUT_VERSION,
 } from './lamellaSpans'
 export type { ResolvedPurlinPosition } from './lamellaSpans'

@@ -199,7 +199,12 @@ export function computePurlins(
     (profiles.get(spec.beamProfileId) != null
       ? computeFrame(spec, profiles).beams
       : [])
-  const beamTrim = collectFrameBeamTrimSegments(frameBeams, profiles)
+  const layoutVersion = spec.purlinClearLayoutVersion === 1 ? 1 : undefined
+  const beamTrim = collectFrameBeamTrimSegments(frameBeams, profiles, {
+    contour: pts,
+    measuredOuterLengthMmByEdgeIndex: measuredCcw,
+    layoutVersion,
+  })
   const shelfParams = {
     ...DEFAULT_PLAN_CONSTRUCTION_PARAMS,
     lamellaDirectionDeg: spec.lamellaDirectionDeg,
@@ -238,24 +243,50 @@ export function computePurlins(
     .map((wingSupport) => {
       const flushBand =
         flushBandMm != null ? placeWingShelfFlushBand(wingSupport, cleanContour, flushBandMm) : null
-      const shelfHalfWidthMm = beamPlanWidthForDrawing(profiles, wingSupport.profileId).planWidthMm / 2
-      return flushBand != null
-        ? {
-            start: flushBand.clipStart,
-            end: flushBand.clipEnd,
-            lengthMm: wingSupport.lengthMm,
-            halfWidthMm: shelfHalfWidthMm,
-            support: wingSupport,
-            flushBand,
-          }
-        : {
-            start: wingSupport.start,
-            end: wingSupport.end,
-            lengthMm: wingSupport.lengthMm,
-            halfWidthMm: shelfHalfWidthMm,
-            support: wingSupport,
-            flushBand: null as ReturnType<typeof placeWingShelfFlushBand> | null,
-          }
+      const shelfPlanWidthMm = beamPlanWidthForDrawing(profiles, wingSupport.profileId).planWidthMm
+      const shelfHalfWidthMm = shelfPlanWidthMm / 2
+      const clipStart = flushBand != null ? flushBand.clipStart : wingSupport.start
+      const clipEnd = flushBand != null ? flushBand.clipEnd : wingSupport.end
+      // Same side rule as the notch-floor beam; thickness stays the shelf profile's.
+      let axisToInnerFaceMm = shelfHalfWidthMm
+      let axisToOuterFaceMm = shelfHalfWidthMm
+      let inward = beamTrim[0]?.inward ?? ([0, 1] as Point2D)
+      let bestDist = Infinity
+      for (const beam of beamTrim) {
+        const bdx = beam.end[0] - beam.start[0]
+        const bdy = beam.end[1] - beam.start[1]
+        const bl = Math.hypot(bdx, bdy)
+        if (bl < 1) continue
+        const ux = bdx / bl
+        const uy = bdy / bl
+        const cdx = clipEnd[0] - clipStart[0]
+        const cdy = clipEnd[1] - clipStart[1]
+        const cl = Math.hypot(cdx, cdy)
+        if (cl < 1) continue
+        if (Math.abs((cdx / cl) * ux + (cdy / cl) * uy) < 0.98) continue
+        const relx = clipStart[0] - beam.start[0]
+        const rely = clipStart[1] - beam.start[1]
+        const dist = Math.abs(relx * uy - rely * ux)
+        if (dist < bestDist) {
+          bestDist = dist
+          inward = beam.inward
+          const beamW = beam.halfWidthMm * 2
+          const isOuter = beam.axisToOuterFaceMm <= 0.5 && beam.axisToInnerFaceMm >= beamW - 0.5
+          axisToInnerFaceMm = isOuter ? shelfPlanWidthMm : shelfHalfWidthMm
+          axisToOuterFaceMm = shelfPlanWidthMm - axisToInnerFaceMm
+        }
+      }
+      return {
+        start: clipStart,
+        end: clipEnd,
+        lengthMm: wingSupport.lengthMm,
+        halfWidthMm: shelfHalfWidthMm,
+        axisToInnerFaceMm,
+        axisToOuterFaceMm,
+        inward,
+        support: wingSupport,
+        flushBand,
+      }
     })
 
   const pieces: CutPiece[] = []
@@ -285,13 +316,19 @@ export function computePurlins(
         end: clipEnd,
         beams: beamTrim,
         minLengthMm: MIN_SEGMENT_MM,
-        wingShelfClips: wingShelfClips.map(({ start, end, halfWidthMm }) => ({
-          start,
-          end,
-          halfWidthMm,
-        })),
+        wingShelfClips: wingShelfClips.map(
+          ({ start, end, halfWidthMm, axisToInnerFaceMm, axisToOuterFaceMm, inward }) => ({
+            start,
+            end,
+            halfWidthMm,
+            axisToInnerFaceMm,
+            axisToOuterFaceMm,
+            inward,
+          }),
+        ),
         contour: pts,
         measuredOuterLengthMmByEdgeIndex: measuredCcw,
+        layoutVersion,
         ignoreBeamsBehindEnds: true,
       })
 

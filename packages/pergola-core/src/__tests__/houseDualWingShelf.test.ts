@@ -75,9 +75,10 @@ describe('house U-notch dual wing shelf', () => {
     })
     expect(supports).toHaveLength(2)
     expect(supports.every((s) => s.profileId === 'f10040')).toBe(true)
+    // Outer-face contour + typed L_outer: clear = outer − 40 − 40 (not half-trim 3240/2710).
     const lens = supports.map((s) => s.lengthMm).sort((a, b) => b - a)
-    expect(lens[0]).toBeCloseTo(3240, 0)
-    expect(lens[1]).toBeCloseTo(2710, 0)
+    expect(lens[0]).toBeCloseTo(3200, 0)
+    expect(lens[1]).toBeCloseTo(2670, 0)
 
     const built = buildPieces(spec, profiles)
     const shelf = built.pieces.filter((p) => p.dividerId === WING_SHELF_SPAN_DIVIDER_ID)

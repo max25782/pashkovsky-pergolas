@@ -59,7 +59,11 @@ function pickPiecesForDividerLine(
   const perp: Point2D = [-Math.sin(θ), Math.cos(θ)]
 
   const frameBeams = profiles.get(spec.beamProfileId) != null ? computeFrame(spec, profiles).beams : []
-  const beamTrim = collectFrameBeamTrimSegments(frameBeams, profiles)
+  const beamTrim = collectFrameBeamTrimSegments(frameBeams, profiles, {
+    contour: pts,
+    measuredOuterLengthMmByEdgeIndex: measuredCcw,
+    layoutVersion: spec.purlinClearLayoutVersion === 1 ? 1 : undefined,
+  })
 
   const anchor: Point2D = [dir[0] * positionMm, dir[1] * positionMm]
   const hits = scanLineClip(perp, dir, positionMm, anchor, pts)

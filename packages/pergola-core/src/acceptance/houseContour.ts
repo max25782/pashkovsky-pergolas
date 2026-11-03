@@ -36,6 +36,18 @@ export const HOUSE_RAL_1013_HEX = '#E3D9C6'
 export const HOUSE_REFERENCE_PRICE_ILS = 48000
 export const HOUSE_REFERENCE_AREA_M2 = 60
 
+/** Tape edge lengths — contour vertices are outer faces, so L_outer ≈ axis. */
+export function houseMeasuredOuterLengthMm(contour: Point2D[] = HOUSE_CONTOUR_MM): number[] {
+  const n = contour.length
+  const out: number[] = []
+  for (let i = 0; i < n; i++) {
+    const a = contour[i]
+    const b = contour[(i + 1) % n]
+    out.push(Math.round(Math.hypot(b[0] - a[0], b[1] - a[1])))
+  }
+  return out
+}
+
 export function houseConstructionParams(
   overrides: Partial<PlanConstructionParams> = {},
 ): PlanConstructionParams {
@@ -43,6 +55,7 @@ export function houseConstructionParams(
     ...DEFAULT_PLAN_CONSTRUCTION_PARAMS,
     colorHex: HOUSE_RAL_1013_HEX,
     supportType: 'wall-mounted',
+    measuredOuterLengthMmByEdgeIndex: houseMeasuredOuterLengthMm(),
     ...overrides,
   }
 }
@@ -51,10 +64,15 @@ export function houseSpecInput(
   contour: Point2D[] = HOUSE_CONTOUR_MM,
   overrides: Partial<PlanConstructionParams> = {},
 ): SpecFromPlanInput {
+  const measured =
+    overrides.measuredOuterLengthMmByEdgeIndex ?? houseMeasuredOuterLengthMm(contour)
   return {
     contour,
     wallEdgeIndices: HOUSE_WALL_EDGE_INDICES,
-    params: houseConstructionParams(overrides),
+    params: houseConstructionParams({
+      ...overrides,
+      measuredOuterLengthMmByEdgeIndex: measured,
+    }),
   }
 }
 

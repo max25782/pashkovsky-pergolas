@@ -396,7 +396,11 @@ function resolveOneWingShelfSupport(
   const faced = offsetShelfToNotchFace(raw, contour, 0)
   const shelfProfileId = params.wingShelfProfileId
   const pullSkewFace = Boolean(shelfProfileId) && !isRetiredProfileId(shelfProfileId)
-  const halfTrimmed = computeWingShelfClearSpan(faced, beams, profiles, pullSkewFace)
+  const halfTrimmed = computeWingShelfClearSpan(faced, beams, profiles, pullSkewFace, {
+    contour,
+    measuredOuterLengthMmByEdgeIndex: params.measuredOuterLengthMmByEdgeIndex,
+    layoutVersion: params.purlinClearLayoutVersion === 1 ? 1 : undefined,
+  })
   if (halfTrimmed.lengthMm < 1) return null
   const widthAt = (edgeIndex: number) =>
     contourSideWidthMm(profiles, edgeIndex, {

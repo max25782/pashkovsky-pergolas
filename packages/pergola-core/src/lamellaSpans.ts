@@ -98,6 +98,70 @@ export function resolvePurlinEndInsetMm(input: {
 }
 
 /**
+ * Whether contour vertices sit on outer faces (tape) rather than beam centerlines.
+ * Any typed outer longer than its edge ⇒ centerline polygon (axis built from outers).
+ * Every present outer matching its edge ⇒ outer-face polygon (house / quick-offer).
+ * Mixed delta-0 centerline edges are outer≈axis by length alone — the longer edges
+ * on the same plan disambiguate; do not decide per-edge.
+ */
+export function contourVerticesAreOuterFaces(
+  contour: Point2D[],
+  measured: Array<number | null | undefined> | undefined,
+): boolean {
+  if (contour.length < 2 || measured == null) return false
+  let anyMeasured = false
+  let anyLonger = false
+  let anyEqual = false
+  for (let i = 0; i < contour.length; i++) {
+    const outer = measured[i]
+    if (outer == null || !(outer > 0)) continue
+    anyMeasured = true
+    const a = contour[i]
+    const b = contour[(i + 1) % contour.length]
+    const edgeLen = Math.hypot(b[0] - a[0], b[1] - a[1])
+    if (outer > edgeLen + 1) anyLonger = true
+    else if (Math.abs(outer - edgeLen) <= 1) anyEqual = true
+  }
+  if (!anyMeasured) return false
+  if (anyLonger) return false
+  return anyEqual
+}
+
+/**
+ * Axis → polygon-interior face of a frame beam.
+ * Outer-face contour + typed L_outer ⇒ full plan width inward.
+ * Centerline contour (or v1 with no typed outer) ⇒ half width.
+ */
+export function axisToInnerFaceMm(input: {
+  planWidthMm: number
+  axisLengthMm: number
+  outerLengthMm?: number | null
+  layoutVersion?: PurlinClearLayoutVersion
+  outerIsExplicit?: boolean
+  /** Whole-contour verdict from `contourVerticesAreOuterFaces`. */
+  contourIsOuter?: boolean
+}): number {
+  const w = input.planWidthMm
+  if (!(w > 0)) return 0
+  if (input.contourIsOuter === true) return w
+  if (input.contourIsOuter === false) return w / 2
+  const explicit =
+    input.outerIsExplicit === true &&
+    input.outerLengthMm != null &&
+    input.outerLengthMm > 0
+  // v1 with no typed outer: contour is the centerline (see resolvePurlinPositionsMm).
+  if (isPurlinClearLayoutV1(input.layoutVersion) && !explicit) return w / 2
+  if (!explicit) return w / 2
+  return resolvePurlinEndInsetMm({
+    axisLengthMm: input.axisLengthMm,
+    outerLengthMm: input.outerLengthMm ?? undefined,
+    endWidthMm: w,
+    layoutVersion: input.layoutVersion,
+    outerIsExplicit: explicit,
+  })
+}
+
+/**
  * Count of equal clear spans for auto purlins. Starts at `ceil(L_outer / maxSpanMm)`
  * (Max count rule). Max equal-clear placement then moves the two end dividers
  * inward, so the end *cut* is `w_end + clear + w_div/2` — that can exceed

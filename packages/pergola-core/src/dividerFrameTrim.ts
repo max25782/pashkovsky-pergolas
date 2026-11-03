@@ -1,12 +1,18 @@
 import type { CutPiece, Point2D, ProfileDimensions } from './types'
 import { beamPlanWidthForDrawing, DIVIDER_PLAN_CLEARANCE_WIDTH_MM } from './beamPlanWidth'
 import { pieceAxis } from './pieceAxis'
-import { edgeValuesInCcwOrder } from './miter'
+import { edgeValuesInCcwOrder, isCCW } from './miter'
+import {
+  axisToInnerFaceMm,
+  contourVerticesAreOuterFaces,
+  type PurlinClearLayoutVersion,
+} from './lamellaSpans'
 
 const MIN_FREE_MM = 1
 const PARALLEL_ANGLE_TOLERANCE_DEG = 0.5
 const COLINEAR_DIST_EPS_MM = 0.5
 const PARALLEL_COS = Math.cos((PARALLEL_ANGLE_TOLERANCE_DEG * Math.PI) / 180)
+const EDGE_MATCH_EPS_MM = 1.5
 
 function sub(a: Point2D, b: Point2D): Point2D {
   return [a[0] - b[0], a[1] - b[1]]
@@ -31,19 +37,122 @@ function unit(a: Point2D): Point2D {
 export interface FrameBeamTrimSegment {
   start: Point2D
   end: Point2D
+  /**
+   * Half plan width. Kept for collinear footprint tests and callers that still
+   * treat the beam as a symmetric band; face trim uses axisToInner/Outer.
+   */
   halfWidthMm: number
+  /** Axis → face toward polygon interior (full width on outer verts, half on centerline). */
+  axisToInnerFaceMm: number
+  /** Axis → face away from interior (0 on outer verts, half on centerline). */
+  axisToOuterFaceMm: number
+  /** Unit inward (left of travel on a CCW contour). */
+  inward: Point2D
+}
+
+export interface CollectFrameBeamTrimOptions {
+  contour?: Point2D[]
+  measuredOuterLengthMmByEdgeIndex?: Array<number | null | undefined>
+  layoutVersion?: PurlinClearLayoutVersion
+}
+
+function edgeInwardUnit(a: Point2D, b: Point2D, contourIsCcw: boolean): Point2D {
+  const dx = b[0] - a[0]
+  const dy = b[1] - a[1]
+  const len = Math.hypot(dx, dy)
+  if (len < 1e-9) return [0, 1]
+  const left: Point2D = [-dy / len, dx / len]
+  return contourIsCcw ? left : scale(left, -1)
+}
+
+function matchBeamContourEdge(
+  start: Point2D,
+  end: Point2D,
+  contour: Point2D[],
+): number {
+  const n = contour.length
+  if (n < 2) return -1
+  const mid: Point2D = [(start[0] + end[0]) / 2, (start[1] + end[1]) / 2]
+  const bDir = unit(sub(end, start))
+  let best = -1
+  let bestDist = EDGE_MATCH_EPS_MM
+  for (let i = 0; i < n; i++) {
+    const a = contour[i]
+    const b = contour[(i + 1) % n]
+    const eLen = segmentLength(a, b)
+    if (eLen < MIN_FREE_MM) continue
+    const eDir = unit(sub(b, a))
+    if (Math.abs(dot(bDir, eDir)) < PARALLEL_COS) continue
+    const rel = sub(mid, a)
+    const dist = Math.abs(rel[0] * eDir[1] - rel[1] * eDir[0])
+    const t = dot(rel, eDir)
+    if (t < -EDGE_MATCH_EPS_MM || t > eLen + EDGE_MATCH_EPS_MM) continue
+    if (dist < bestDist) {
+      bestDist = dist
+      best = i
+    }
+  }
+  return best
+}
+
+function faceInsetsForPlanWidth(
+  planWidthMm: number,
+  contourIsOuter: boolean | undefined,
+  layoutVersion: PurlinClearLayoutVersion | undefined,
+): { inner: number; outer: number } {
+  const inner = axisToInnerFaceMm({
+    planWidthMm,
+    axisLengthMm: 0,
+    layoutVersion,
+    contourIsOuter,
+  })
+  const outer = Math.max(0, planWidthMm - inner)
+  return { inner, outer }
+}
+
+/** Inset from the axis to the face that lies on the `approachDir` side of the beam. */
+function faceInsetToward(
+  beam: Pick<FrameBeamTrimSegment, 'axisToInnerFaceMm' | 'axisToOuterFaceMm' | 'inward'>,
+  approachDir: Point2D,
+): number {
+  return dot(approachDir, beam.inward) >= 0 ? beam.axisToInnerFaceMm : beam.axisToOuterFaceMm
 }
 
 export function collectFrameBeamTrimSegments(
   beams: CutPiece[],
   profiles: Map<string, ProfileDimensions>,
+  options?: CollectFrameBeamTrimOptions,
 ): FrameBeamTrimSegment[] {
+  const contour = options?.contour
+  const measured = options?.measuredOuterLengthMmByEdgeIndex
+  const layoutVersion = options?.layoutVersion
+  const contourIsOuter =
+    contour != null ? contourVerticesAreOuterFaces(contour, measured) : false
+  const ccw = contour != null && contour.length >= 3 ? isCCW(contour) : true
   const out: FrameBeamTrimSegment[] = []
   for (const beam of beams) {
     if (beam.role !== 'beam') continue
     const { start, end } = pieceAxis(beam)
-    const halfWidthMm = beamPlanWidthForDrawing(profiles, beam.profileId).planWidthMm / 2
-    out.push({ start, end, halfWidthMm })
+    const planWidthMm = beamPlanWidthForDrawing(profiles, beam.profileId).planWidthMm
+    const halfWidthMm = planWidthMm / 2
+    const faces = faceInsetsForPlanWidth(planWidthMm, contourIsOuter, layoutVersion)
+    let inward: Point2D = edgeInwardUnit(start, end, true)
+    if (contour != null && contour.length >= 2) {
+      const edgeIndex = matchBeamContourEdge(start, end, contour)
+      if (edgeIndex >= 0) {
+        const a = contour[edgeIndex]
+        const b = contour[(edgeIndex + 1) % contour.length]
+        inward = edgeInwardUnit(a, b, ccw)
+      }
+    }
+    out.push({
+      start,
+      end,
+      halfWidthMm,
+      axisToInnerFaceMm: faces.inner,
+      axisToOuterFaceMm: faces.outer,
+      inward,
+    })
   }
   return out
 }
@@ -127,19 +236,22 @@ export function trimAxisSegmentToInnerFaces(input: {
 
     const tHit = axisHitOnBeamSegment(start, dir, beam.start, beam.end)
     if (tHit == null) continue
-    // Inner face is half the beam width off the centerline, measured along the purlin.
-    // A diagonal spreads that offset by 1/sin(phi). Projecting the beam's two
-    // endpoints instead would stop the purlin at the higher corner, in empty space.
-    const inset = beam.halfWidthMm / sinPhi
-    const reach = inset + beam.halfWidthMm
+    // Face distance from the axis toward the kept side of the purlin. Outer-contour
+    // beams are one-sided (full width inward, 0 outward); centerline beams stay ±half.
+    // A diagonal spreads that offset by 1/sin(phi).
+    const startFaceMm = faceInsetToward(beam, dir)
+    const endFaceMm = faceInsetToward(beam, scale(dir, -1))
+    const startInset = startFaceMm / sinPhi
+    const endInset = endFaceMm / sinPhi
+    const reach = Math.max(startInset, endInset) + beam.halfWidthMm
     if ((!ignoreBeamsBehindEnds || tHit >= -reach) && tHit <= reach && tHit < axisLen * 0.5) {
-      const face = tHit + inset
+      const face = tHit + startInset
       const closer = startCap == null || tHit < startCap.tHit - 0.5
       const tied = startCap != null && Math.abs(tHit - startCap.tHit) <= 0.5 && face < startCap.face
       if (closer || tied) startCap = { tHit, face }
     }
     if ((!ignoreBeamsBehindEnds || tHit <= axisLen + reach) && tHit >= axisLen - reach && tHit > axisLen * 0.5) {
-      const face = tHit - inset
+      const face = tHit - endInset
       const closer = endCap == null || tHit > endCap.tHit + 0.5
       const tied = endCap != null && Math.abs(tHit - endCap.tHit) <= 0.5 && face > endCap.face
       if (closer || tied) endCap = { tHit, face }
@@ -243,6 +355,9 @@ export function wingShelfOuterBeamTrimSegment(
     start: inner.end,
     end: shelf.end,
     halfWidthMm: beamHalfWidthMm,
+    axisToInnerFaceMm: beamHalfWidthMm,
+    axisToOuterFaceMm: beamHalfWidthMm,
+    inward: edgeInwardUnit(inner.end, shelf.end, true),
   }
 }
 
@@ -286,6 +401,15 @@ export function wingShelfFreeSpanFromRaw(
   return longestTrimmedSegment(shelfRaw, trimBeams)
 }
 
+export interface WingShelfTrimClip {
+  start: Point2D
+  end: Point2D
+  halfWidthMm?: number
+  axisToInnerFaceMm?: number
+  axisToOuterFaceMm?: number
+  inward?: Point2D
+}
+
 /** Half plan width of the frame beam the shelf clip lies on. Fallback is half of 40 mm. */
 function beamHalfAlongClip(
   clip: { start: Point2D; end: Point2D },
@@ -306,17 +430,30 @@ function beamHalfAlongClip(
   return fallback
 }
 
-/**
- * Half of a beam whose segment actually contains `point`.
- * An infinite line is not enough: the left wing of an L meets the shelf
- * where the notch beam has already ended.
- */
-function beamHalfUnderPoint(
+function beamInwardAlongClip(
+  clip: { start: Point2D; end: Point2D },
+  beams: FrameBeamTrimSegment[],
+): Point2D | null {
+  let bestDist = Infinity
+  let best: Point2D | null = null
+  for (const beam of beams) {
+    if (!segmentsParallel(clip.start, clip.end, beam.start, beam.end)) continue
+    const dist = distancePointToInfiniteLine(clip.start, beam.start, beam.end)
+    if (dist < bestDist) {
+      bestDist = dist
+      best = beam.inward
+    }
+  }
+  if (best != null && bestDist <= beamHalfAlongClip(clip, beams) + 1) return best
+  return null
+}
+
+function beamFaceUnderPoint(
   point: Point2D,
   along: { start: Point2D; end: Point2D },
   beams: FrameBeamTrimSegment[],
-): number | null {
-  let best: { dist: number; half: number } | null = null
+): Pick<FrameBeamTrimSegment, 'axisToInnerFaceMm' | 'axisToOuterFaceMm' | 'inward' | 'halfWidthMm'> | null {
+  let best: { dist: number; beam: FrameBeamTrimSegment } | null = null
   for (const beam of beams) {
     if (!segmentsParallel(along.start, along.end, beam.start, beam.end)) continue
     const dist = distancePointToInfiniteLine(point, beam.start, beam.end)
@@ -325,9 +462,9 @@ function beamHalfUnderPoint(
     const alongBeam = projectAlong(point, beam.start, beamDir)
     const beamLen = segmentLength(beam.start, beam.end)
     if (alongBeam < -1 || alongBeam > beamLen + 1) continue
-    if (best == null || dist < best.dist) best = { dist, half: beam.halfWidthMm }
+    if (best == null || dist < best.dist) best = { dist, beam }
   }
-  return best?.half ?? null
+  return best?.beam ?? null
 }
 
 /**
@@ -347,15 +484,16 @@ export function trimDividerAxisSegmentsForFrame(input: {
   beams: FrameBeamTrimSegment[]
   minLengthMm?: number
   /**
-   * Notch centerline. `halfWidthMm` is the shelf's own plan half.
-   * A crossing that lands on a real beam segment uses that beam's half instead.
+   * Notch centerline. Face insets default to the shelf's plan half each side;
+   * outer-contour shelves pass full inward / 0 outward (same rule as frame beams).
    */
-  wingShelfClip?: { start: Point2D; end: Point2D; halfWidthMm?: number }
+  wingShelfClip?: WingShelfTrimClip
   /** U-notch may carry left and right shelves on the same floor line. */
-  wingShelfClips?: Array<{ start: Point2D; end: Point2D; halfWidthMm?: number }>
-  /** Kept so callers can pass the contour. Axes are not rewritten here. */
+  wingShelfClips?: WingShelfTrimClip[]
+  /** Used with measured outers when callers rebuild beam faces; axes stay as given. */
   contour?: Point2D[]
   measuredOuterLengthMmByEdgeIndex?: Array<number | null | undefined>
+  layoutVersion?: PurlinClearLayoutVersion
   /** Purlin rows set this. See `trimAxisSegmentToInnerFaces`. */
   ignoreBeamsBehindEnds?: boolean
 }): TrimmedDividerAxisSegment[] {
@@ -382,14 +520,24 @@ export function trimDividerAxisSegmentsForFrame(input: {
     // On the beam segment, stop on the beam faces. On the shelf alone
     // (the left wing, where the notch beam has ended), stop on the shelf faces.
     const shelfHalf = wingShelfClip.halfWidthMm ?? beamHalfAlongClip(wingShelfClip, beams)
+    const resolved: WingShelfTrimClip = {
+      ...wingShelfClip,
+      halfWidthMm: shelfHalf,
+      axisToInnerFaceMm: wingShelfClip.axisToInnerFaceMm ?? shelfHalf,
+      axisToOuterFaceMm: wingShelfClip.axisToOuterFaceMm ?? shelfHalf,
+      inward:
+        wingShelfClip.inward ??
+        beamInwardAlongClip(wingShelfClip, beams) ??
+        edgeInwardUnit(wingShelfClip.start, wingShelfClip.end, true),
+    }
     const next: Array<{ start: Point2D; end: Point2D }> = []
     for (const part of free) {
-      if (segmentRunsAlongWingShelf(part.start, part.end, wingShelfClip)) {
-        const hit = intersectCollinearSegments(part.start, part.end, wingShelfClip.start, wingShelfClip.end)
+      if (segmentRunsAlongWingShelf(part.start, part.end, resolved)) {
+        const hit = intersectCollinearSegments(part.start, part.end, resolved.start, resolved.end)
         if (hit) next.push(hit)
         continue
       }
-      const split = splitSegmentAcrossSupport(part.start, part.end, wingShelfClip, beams, shelfHalf)
+      const split = splitSegmentAcrossSupport(part.start, part.end, resolved, beams)
       if (split) next.push(...split)
       else next.push(part)
     }
@@ -408,9 +556,8 @@ export function trimDividerAxisSegmentsForFrame(input: {
 function splitSegmentAcrossSupport(
   start: Point2D,
   end: Point2D,
-  support: { start: Point2D; end: Point2D },
+  support: WingShelfTrimClip,
   beams: FrameBeamTrimSegment[],
-  shelfHalfWidthMm: number,
 ): Array<{ start: Point2D; end: Point2D }> | null {
   const dir = unit(sub(end, start))
   const axisLen = segmentLength(start, end)
@@ -420,10 +567,30 @@ function splitSegmentAcrossSupport(
   const tHit = intersectLineSegment(start, dir, support.start, support.end)
   if (tHit == null) return null
   const hit = add(start, scale(dir, tHit))
-  const supportHalfWidthMm = beamHalfUnderPoint(hit, support, beams) ?? shelfHalfWidthMm
-  if (tHit <= supportHalfWidthMm || tHit >= axisLen - supportHalfWidthMm) return null
-  const a = add(hit, scale(dir, -supportHalfWidthMm))
-  const b = add(hit, scale(dir, supportHalfWidthMm))
+  const onBeam = beamFaceUnderPoint(hit, support, beams)
+  const half = support.halfWidthMm ?? DIVIDER_PLAN_CLEARANCE_WIDTH_MM / 2
+  const shelfW = half * 2
+  // Keep the shelf's own plan width; only borrow inward + outer/centerline side rule.
+  let inner = support.axisToInnerFaceMm ?? half
+  let outer = support.axisToOuterFaceMm ?? half
+  if (onBeam != null) {
+    const beamW = onBeam.halfWidthMm * 2
+    const isOuter = onBeam.axisToOuterFaceMm <= 0.5 && onBeam.axisToInnerFaceMm >= beamW - 0.5
+    inner = isOuter ? shelfW : half
+    outer = shelfW - inner
+  }
+  const faces = {
+    axisToInnerFaceMm: inner,
+    axisToOuterFaceMm: outer,
+    inward: onBeam?.inward ?? support.inward ?? edgeInwardUnit(support.start, support.end, true),
+    halfWidthMm: half,
+  }
+  // First piece approaches the support opposite to `dir`; second with `dir`.
+  const backInset = faceInsetToward(faces, scale(dir, -1))
+  const aheadInset = faceInsetToward(faces, dir)
+  if (tHit <= backInset || tHit >= axisLen - aheadInset) return null
+  const a = add(hit, scale(dir, -backInset))
+  const b = add(hit, scale(dir, aheadInset))
   const first = { start, end: a }
   const second = { start: b, end }
   return [first, second].filter((p) => segmentLength(p.start, p.end) >= MIN_FREE_MM)
@@ -477,7 +644,8 @@ function pullEndsToSkewBeamFace(
       if (miterDeg < 15) continue
       const tHit = axisHitOnBeamSegment(tip, dir, beam.start, beam.end)
       if (tHit == null) continue
-      const inset = beam.halfWidthMm / sinPhi
+      const faceMm = faceInsetToward(beam, dir)
+      const inset = faceMm / sinPhi
       const reach = inset + beam.halfWidthMm
       if (tHit < -reach || tHit > reach) continue
       const face = tHit + inset
@@ -498,8 +666,9 @@ export function computeWingShelfClearSpan(
   beams: CutPiece[],
   profiles: Map<string, ProfileDimensions>,
   pullSkewFace = false,
+  trimOptions?: CollectFrameBeamTrimOptions,
 ): { start: Point2D; end: Point2D; lengthMm: number } {
-  const trimBeams = collectFrameBeamTrimSegments(beams, profiles)
+  const trimBeams = collectFrameBeamTrimSegments(beams, profiles, trimOptions)
   const trimmed = wingShelfInnerClearSpanFromRaw(shelfRaw, trimBeams)
   return pullSkewFace ? pullEndsToSkewBeamFace(trimmed, trimBeams) : trimmed
 }
