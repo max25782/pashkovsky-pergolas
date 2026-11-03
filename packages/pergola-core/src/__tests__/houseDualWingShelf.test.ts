@@ -39,7 +39,7 @@ function houseParamsWithSevenClears() {
     skewSectionVersion: 1,
     wallBeamWidthVersion: 1,
     wallProfileId: 'f10040',
-    beamProfileId: 'f12040',
+    beamProfileId: 'f10040',
     purlinProfileId: 'PA3022',
     frameJointVersion: 1,
     wingShelfProfileId: 'f10040',

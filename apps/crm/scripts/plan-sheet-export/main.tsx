@@ -220,12 +220,13 @@ if (planId === 'diagonal') {
   })
   contour = HOUSE_CONTOUR_MM.map((p): [number, number] => [p[0], p[1]])
   wallEdgeIndices = [...HOUSE_WALL_EDGE_INDICES]
+  // Max quick-offer panel: open frame and wall frame both 100×40 (f10040).
   params = houseConstructionParams({
     ...shared,
     lamellaDirectionDeg: 0,
     purlinMaxSpanMm: 4000,
     wingShelfProfileId: 'f10040',
-    beamProfileId: 'f12040',
+    beamProfileId: 'f10040',
     wallProfileId: 'f10040',
     purlinProfileId: 'PA3022',
     skewSectionVersion: 1,
