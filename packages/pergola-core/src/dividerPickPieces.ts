@@ -63,6 +63,7 @@ function pickPiecesForDividerLine(
     contour: pts,
     measuredOuterLengthMmByEdgeIndex: measuredCcw,
     layoutVersion: spec.purlinClearLayoutVersion === 1 ? 1 : undefined,
+    contourReference: spec.contourReference,
   })
 
   const anchor: Point2D = [dir[0] * positionMm, dir[1] * positionMm]
@@ -89,6 +90,7 @@ function pickPiecesForDividerLine(
       wingShelfClips: options?.wingShelfClips,
       contour: pts,
       measuredOuterLengthMmByEdgeIndex: measuredCcw,
+      contourReference: spec.contourReference,
       ignoreBeamsBehindEnds: true,
     })
     if (trimmed.length === 0) continue

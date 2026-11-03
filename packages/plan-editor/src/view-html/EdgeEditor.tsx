@@ -85,7 +85,13 @@ export function EdgeEditor({ labels }: EdgeEditorProps) {
         overlayForFixedEdges: construction.overlayForFixedEdges,
         getFixedEdges: () => storeApi?.getState().fixedEdges ?? [],
         applyOuterLengths: (outers, idx) =>
-          applyOuterLengths(outers, idx, construction.beamPlanWidthMm, construction.planWidthForEdge),
+          applyOuterLengths(
+            outers,
+            idx,
+            construction.beamPlanWidthMm,
+            construction.planWidthForEdge,
+            construction.contourReference,
+          ),
       })
     } else {
       const axisMm = axisLengthFromUserInputMm(lengthMm, outerDeltaMm, usesOuterLength)

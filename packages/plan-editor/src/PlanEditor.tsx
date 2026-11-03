@@ -1,7 +1,12 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { beamPlanWidthForDrawing, buildPlanEditorOverlayModel, contourSideWidthMm } from '@pashkovsky/pergola-core'
+import {
+  beamPlanWidthForDrawing,
+  buildPlanEditorOverlayModel,
+  contourSideWidthMm,
+  resolveContourReference,
+} from '@pashkovsky/pergola-core'
 import type { PlanConstructionParams, ProfileDimensions } from '@pashkovsky/pergola-core'
 import { PlanCanvas, type PlanCanvasLabels } from './view-svg/PlanCanvas'
 import {
@@ -161,7 +166,13 @@ function PlanEditorBody({ labels, onTo3D, construction }: Pick<PlanEditorProps, 
         wallBeamWidthVersion: construction.params.wallBeamWidthVersion,
       },
     )
-    return buildConstructionContextValue(overlay, overlayForFixedEdges, beamPlanWidthMm, planWidthForEdge)
+    return buildConstructionContextValue(
+      overlay,
+      overlayForFixedEdges,
+      beamPlanWidthMm,
+      planWidthForEdge,
+      construction.params.contourReference,
+    )
   }, [construction, isClosed, fixedEdges])
 
   // Открыта ли панель «Изменить размеры» — локальный UI-тумблер, не в сторе:
@@ -178,8 +189,9 @@ function PlanEditorBody({ labels, onTo3D, construction }: Pick<PlanEditorProps, 
   const edgesRef = useRef(fixedEdges)
   edgesRef.current = fixedEdges
 
-  // An explicit beam-profile change rebuilds centerlines from the typed
-  // outers. Opening a saved plan does not: the first id is only remembered.
+  // Centerline plans: an explicit beam-profile change rebuilds axes from the
+  // typed outers. Outer-face plans keep tape vertices — only insets change with
+  // width. Opening a saved plan does not rebuild: the first id is only remembered.
   useEffect(() => {
     if (!construction || !beamProfileId) return
     if (previousBeamProfileId.current === beamProfileId) return
@@ -187,6 +199,15 @@ function PlanEditorBody({ labels, onTo3D, construction }: Pick<PlanEditorProps, 
     const edges = edgesRef.current
     if (edges.length < 3) return
     if (!edges.every((edge) => typeof edge.measuredOuterLengthMm === 'number')) return
+    const polygon = toPolygon(edges)
+    const measured = edges.map((edge) => edge.measuredOuterLengthMm as number)
+    const ref = resolveContourReference({
+      contourReference: construction.params.contourReference,
+      contour: polygon.map((p): [number, number] => [p.x, p.y]),
+      measured,
+    })
+    // Width change must not flip outer-faces → centerline.
+    if (ref.reference === 'outer-faces') return
     const beamPlanWidthMm = beamPlanWidthForDrawing(construction.profiles, beamProfileId).planWidthMm
     const wallEdgeIndices = wallEdgeIndicesFromChain(edges)
     const planWidthForEdge = (edgeIndex: number) => contourSideWidthMm(
@@ -200,10 +221,11 @@ function PlanEditorBody({ labels, onTo3D, construction }: Pick<PlanEditorProps, 
       },
     )
     applyOuterLengths(
-      edges.map((edge) => edge.measuredOuterLengthMm as number),
+      measured,
       0,
       beamPlanWidthMm,
       planWidthForEdge,
+      construction.params.contourReference,
     )
   }, [applyOuterLengths, beamProfileId, construction])
 

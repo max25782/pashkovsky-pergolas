@@ -260,6 +260,12 @@ export interface PergolaSpec {
   lamellaLengthStepMm?: number
   /** Site-measured outer face per contour edge — L_outer for equal-clear. */
   measuredOuterLengthMmByEdgeIndex?: Array<number | null>
+  /**
+   * Contour vertices are outer faces or beam centerlines. Unset ⇒ heuristic
+   * from measured vs edge lengths. Copied from plan.params; do not invent
+   * a default in specFromPlan. Profile width changes must not flip this.
+   */
+  contourReference?: 'outer-faces' | 'centerline'
 
   /**
    * Profile ID for the non-LED divider beam Rule B introduces (see

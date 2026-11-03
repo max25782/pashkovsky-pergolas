@@ -12,6 +12,8 @@ export interface PlanEditorConstructionContextValue {
   planWidthForEdge?: (edgeIndex: number) => number
   /** Same overlay builder as PlanEditor uses; needed for outer-length commit iteration. */
   overlayForFixedEdges: (edges: FixedEdge[]) => PlanEditorOverlayModel | null
+  /** From plan.params — keeps outer verts when applying typed outers. */
+  contourReference?: 'outer-faces' | 'centerline'
 }
 
 const PlanEditorConstructionContext = createContext<PlanEditorConstructionContextValue | null>(null)
@@ -35,6 +37,7 @@ export function buildConstructionContextValue(
   overlayForFixedEdges: (edges: FixedEdge[]) => PlanEditorOverlayModel | null,
   beamPlanWidthMm: number,
   planWidthForEdge?: (edgeIndex: number) => number,
+  contourReference?: 'outer-faces' | 'centerline',
 ): PlanEditorConstructionContextValue {
   const outerLengthByEdgeId = new Map<string, number>()
   const outerDeltaByEdgeId = new Map<string, number>()
@@ -42,5 +45,13 @@ export function buildConstructionContextValue(
     outerLengthByEdgeId.set(side.edgeId, side.outerLengthMm)
     outerDeltaByEdgeId.set(side.edgeId, side.outerDeltaMm)
   }
-  return { overlay, outerLengthByEdgeId, outerDeltaByEdgeId, beamPlanWidthMm, planWidthForEdge, overlayForFixedEdges }
+  return {
+    overlay,
+    outerLengthByEdgeId,
+    outerDeltaByEdgeId,
+    beamPlanWidthMm,
+    planWidthForEdge,
+    overlayForFixedEdges,
+    contourReference,
+  }
 }

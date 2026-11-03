@@ -326,6 +326,7 @@ export function segmentLedPurlinsForStock(
       spec.measuredOuterLengthMmByEdgeIndex,
     ),
     layoutVersion: spec.purlinClearLayoutVersion === 1 ? 1 : undefined,
+    contourReference: spec.contourReference,
   })
 
   // ── Dividers: plain crossing beams running along `dir` (like a lamella —

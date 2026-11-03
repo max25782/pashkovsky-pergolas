@@ -150,7 +150,13 @@ function EdgeSizeRow({ edge, designation, inputUnit, wallCheckboxTitle }: EdgeSi
         overlayForFixedEdges: construction.overlayForFixedEdges,
         getFixedEdges,
         applyOuterLengths: (outerLengthsMm, updatedEdgeIndex) =>
-          applyOuterLengths(outerLengthsMm, updatedEdgeIndex, construction.beamPlanWidthMm, construction.planWidthForEdge),
+          applyOuterLengths(
+            outerLengthsMm,
+            updatedEdgeIndex,
+            construction.beamPlanWidthMm,
+            construction.planWidthForEdge,
+            construction.contourReference,
+          ),
       })
       return
     }

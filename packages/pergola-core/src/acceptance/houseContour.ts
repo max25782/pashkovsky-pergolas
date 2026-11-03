@@ -56,6 +56,8 @@ export function houseConstructionParams(
     colorHex: HOUSE_RAL_1013_HEX,
     supportType: 'wall-mounted',
     measuredOuterLengthMmByEdgeIndex: houseMeasuredOuterLengthMm(),
+    // Outer tape vertices — width changes must not rebuild to centerline.
+    contourReference: 'outer-faces',
     ...overrides,
   }
 }

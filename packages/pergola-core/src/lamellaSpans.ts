@@ -97,21 +97,58 @@ export function resolvePurlinEndInsetMm(input: {
   return purlinEndInsetMm(input.axisLengthMm, outer, input.endWidthMm)
 }
 
+/** Explicit plan field: outer-face tape vertices vs beam centerlines. */
+export type ContourReference = 'outer-faces' | 'centerline'
+
+export interface ContourReferenceResolution {
+  reference: ContourReference
+  /** `explicit` = plan.params.contourReference; else heuristic / default. */
+  source: 'explicit' | 'heuristic' | 'default'
+  /**
+   * Heuristic saw mixed signals (some outers ≈ edge, some longer). Editor may
+   * show a warning; insets still follow `reference` (longer ⇒ centerline).
+   */
+  ambiguous: boolean
+}
+
 /**
  * Whether contour vertices sit on outer faces (tape) rather than beam centerlines.
  * Any typed outer longer than its edge ⇒ centerline polygon (axis built from outers).
  * Every present outer matching its edge ⇒ outer-face polygon (house / quick-offer).
  * Mixed delta-0 centerline edges are outer≈axis by length alone — the longer edges
  * on the same plan disambiguate; do not decide per-edge.
+ *
+ * Prefer `resolveContourReference` when `contourReference` may be set — this
+ * helper is the unset-field heuristic only.
  */
 export function contourVerticesAreOuterFaces(
   contour: Point2D[],
   measured: Array<number | null | undefined> | undefined,
 ): boolean {
-  if (contour.length < 2 || measured == null) return false
+  return resolveContourReference({ contour, measured }).reference === 'outer-faces'
+}
+
+/**
+ * Decide outer-faces vs centerline for insets / trim / section span.
+ * Explicit `contourReference` wins and is never flipped by a profile-width change.
+ * Unset ⇒ length heuristic (same as pre-field behavior).
+ */
+export function resolveContourReference(input: {
+  contourReference?: ContourReference | null
+  contour: Point2D[]
+  measured?: Array<number | null | undefined>
+}): ContourReferenceResolution {
+  if (input.contourReference === 'outer-faces' || input.contourReference === 'centerline') {
+    return { reference: input.contourReference, source: 'explicit', ambiguous: false }
+  }
+  const { contour, measured } = input
+  if (contour.length < 2 || measured == null) {
+    return { reference: 'centerline', source: 'default', ambiguous: false }
+  }
   let anyMeasured = false
   let anyLonger = false
   let anyEqual = false
+  let anyShorter = false
   for (let i = 0; i < contour.length; i++) {
     const outer = measured[i]
     if (outer == null || !(outer > 0)) continue
@@ -121,10 +158,24 @@ export function contourVerticesAreOuterFaces(
     const edgeLen = Math.hypot(b[0] - a[0], b[1] - a[1])
     if (outer > edgeLen + 1) anyLonger = true
     else if (Math.abs(outer - edgeLen) <= 1) anyEqual = true
+    else if (outer < edgeLen - 1) anyShorter = true
   }
-  if (!anyMeasured) return false
-  if (anyLonger) return false
-  return anyEqual
+  if (!anyMeasured) return { reference: 'centerline', source: 'default', ambiguous: false }
+  if (anyLonger) {
+    return {
+      reference: 'centerline',
+      source: 'heuristic',
+      ambiguous: anyEqual || anyShorter,
+    }
+  }
+  if (anyEqual) {
+    return {
+      reference: 'outer-faces',
+      source: 'heuristic',
+      ambiguous: anyShorter,
+    }
+  }
+  return { reference: 'centerline', source: 'default', ambiguous: true }
 }
 
 /**

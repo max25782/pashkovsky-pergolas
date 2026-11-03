@@ -212,22 +212,22 @@ if (planId === 'diagonal') {
     wallProfileId: 'f10040',
   }
 } else if (planId === 'house') {
-  // Max house / U-notch quick offer: 9495×7480, protrusions 3280/2750, notch 3465.
-  const clear = 1310.7142857
+  // Max house / U-notch: perimeter WT 142×70 (R242), wall 120×40 (pa1162).
+  const clear = (9495 - 70 - 70 - 6 * 40) / 7
   const lines = Array.from({ length: 6 }, (_, i) => {
     const k = i + 1
-    return { id: `div-${k}`, positionMm: 40 + k * clear + (k - 1) * 40 + 20 }
+    return { id: `div-${k}`, positionMm: 70 + k * clear + (k - 1) * 40 + 20 }
   })
   contour = HOUSE_CONTOUR_MM.map((p): [number, number] => [p[0], p[1]])
   wallEdgeIndices = [...HOUSE_WALL_EDGE_INDICES]
-  // Max quick-offer panel: open frame and wall frame both 100×40 (f10040).
   params = houseConstructionParams({
     ...shared,
     lamellaDirectionDeg: 0,
     purlinMaxSpanMm: 4000,
     wingShelfProfileId: 'f10040',
-    beamProfileId: 'f10040',
-    wallProfileId: 'f10040',
+    beamProfileId: 'R242',
+    wallProfileId: 'pa1162',
+    wallBeamWidthVersion: 1,
     purlinProfileId: 'PA3022',
     skewSectionVersion: 1,
     purlinDividers: { mode: 'manual', lines },

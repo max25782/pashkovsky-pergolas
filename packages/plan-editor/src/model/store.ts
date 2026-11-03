@@ -369,7 +369,13 @@ export function createPlanEditorStore() {
       }))
     },
 
-    applyOuterLengths: (outerLengthsMm: number[], updatedEdgeIndex: number, beamPlanWidthMm: number, planWidthForEdge?: (edgeIndex: number) => number) => {
+    applyOuterLengths: (
+      outerLengthsMm: number[],
+      updatedEdgeIndex: number,
+      beamPlanWidthMm: number,
+      planWidthForEdge?: (edgeIndex: number) => number,
+      contourReference?: 'outer-faces' | 'centerline',
+    ) => {
       set((s) => {
         const { fixedEdges, startPoint } = s
         if (outerLengthsMm.length !== fixedEdges.length || updatedEdgeIndex < 0) return {}
@@ -394,6 +400,20 @@ export function createPlanEditorStore() {
 
         const angleDeg = fixedEdges.map((e) => e.angleDeg)
         const outerTargets = measuredAfter.map((o) => o as number)
+        // Outer-face plans keep tape vertices. Centerline / unset still rebuild axes.
+        if (contourReference === 'outer-faces') {
+          for (const outer of outerTargets) {
+            if (!(outer >= MIN_EDGE_LENGTH_MM)) return {}
+          }
+          const patched = fixedEdges.map((e, i) => ({
+            ...e,
+            lengthMm: outerTargets[i],
+            measuredOuterLengthMm: outerTargets[i],
+            measuredLengthMm: outerTargets[i],
+          }))
+          const rebuilt = rebuildChain(patched, startPoint)
+          return { fixedEdges: rebuilt, closeContourError: null }
+        }
         const axisLengths = axisLengthsFromOuterLengthsMm({
           outerLengthsMm: outerTargets,
           angleDeg,

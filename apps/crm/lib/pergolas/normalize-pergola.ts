@@ -107,6 +107,11 @@ function parseParams(raw: unknown): PlanConstructionParams {
   const measured = parseMeasuredOuterLengthMmByEdgeIndex(o.measuredOuterLengthMmByEdgeIndex)
   if (measured) base.measuredOuterLengthMmByEdgeIndex = measured
   else delete base.measuredOuterLengthMmByEdgeIndex
+  if (o.contourReference === 'outer-faces' || o.contourReference === 'centerline') {
+    base.contourReference = o.contourReference
+  } else {
+    delete base.contourReference
+  }
   if (o.purlinClearLayoutVersion === 1) base.purlinClearLayoutVersion = 1
   else delete base.purlinClearLayoutVersion
   if (o.lamellaSectionLayoutVersion === 1) base.lamellaSectionLayoutVersion = 1

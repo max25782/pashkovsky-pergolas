@@ -4,7 +4,8 @@ import { pieceAxis } from './pieceAxis'
 import { edgeValuesInCcwOrder, isCCW } from './miter'
 import {
   axisToInnerFaceMm,
-  contourVerticesAreOuterFaces,
+  resolveContourReference,
+  type ContourReference,
   type PurlinClearLayoutVersion,
 } from './lamellaSpans'
 
@@ -54,6 +55,8 @@ export interface CollectFrameBeamTrimOptions {
   contour?: Point2D[]
   measuredOuterLengthMmByEdgeIndex?: Array<number | null | undefined>
   layoutVersion?: PurlinClearLayoutVersion
+  /** Explicit plan field; when set, wins over the measured-vs-edge heuristic. */
+  contourReference?: ContourReference
 }
 
 function edgeInwardUnit(a: Point2D, b: Point2D, contourIsCcw: boolean): Point2D {
@@ -127,7 +130,13 @@ export function collectFrameBeamTrimSegments(
   const measured = options?.measuredOuterLengthMmByEdgeIndex
   const layoutVersion = options?.layoutVersion
   const contourIsOuter =
-    contour != null ? contourVerticesAreOuterFaces(contour, measured) : false
+    contour != null
+      ? resolveContourReference({
+          contourReference: options?.contourReference,
+          contour,
+          measured,
+        }).reference === 'outer-faces'
+      : false
   const ccw = contour != null && contour.length >= 3 ? isCCW(contour) : true
   const out: FrameBeamTrimSegment[] = []
   for (const beam of beams) {
@@ -271,8 +280,34 @@ export function trimAxisSegmentToInnerFaces(input: {
 }
 
 /**
- * Remove portions of a divider segment that lie on frame beam footprints (collinear
- * and within combined half-widths). Returns free sub-segments for CutPiece / overlay.
+ * At a parallel beam endpoint, how far to extend the blocked interval into the
+ * open bay: the face inset of a crossing frame beam at that corner (full width
+ * on outer-face verts, half on centerline). Replaces the old ±halfWidth stub
+ * that stopped near-wall purlins on the wall corner axis.
+ */
+function parallelBlockEndExtendMm(
+  beam: FrameBeamTrimSegment,
+  endPoint: Point2D,
+  intoFreeDir: Point2D,
+  beams: FrameBeamTrimSegment[],
+): number {
+  let best = 0
+  for (const other of beams) {
+    if (other === beam) continue
+    if (segmentsParallel(beam.start, beam.end, other.start, other.end)) continue
+    const d0 = segmentLength(other.start, endPoint)
+    const d1 = segmentLength(other.end, endPoint)
+    if (Math.min(d0, d1) > EDGE_MATCH_EPS_MM) continue
+    const inset = faceInsetToward(other, intoFreeDir)
+    if (inset > best) best = inset
+  }
+  return best
+}
+
+/**
+ * Remove portions of a divider that lie inside a parallel frame beam's face
+ * band. Blocked Y/X range is the beam span plus crossing-face insets at each
+ * end (frame faces), not ±half past the corner axis.
  */
 export function trimDividerSegmentAgainstFrameBeams(input: {
   start: Point2D
@@ -285,18 +320,31 @@ export function trimDividerSegmentAgainstFrameBeams(input: {
   if (axisLen < MIN_FREE_MM) return []
 
   const dir = unit(sub(end, start))
+  const mid: Point2D = [(start[0] + end[0]) / 2, (start[1] + end[1]) / 2]
   const blocked: Array<[number, number]> = []
 
   for (const beam of beams) {
     if (!segmentsParallel(start, end, beam.start, beam.end)) continue
     const lineDist = distancePointToInfiniteLine(beam.start, start, end)
-    const overlapDist = beam.halfWidthMm + dividerHalfWidthMm + COLINEAR_DIST_EPS_MM
+    const beamMid: Point2D = [
+      (beam.start[0] + beam.end[0]) / 2,
+      (beam.start[1] + beam.end[1]) / 2,
+    ]
+    const toDivider = unit(sub(mid, beamMid))
+    const beamReach = faceInsetToward(beam, toDivider)
+    const overlapDist = beamReach + dividerHalfWidthMm + COLINEAR_DIST_EPS_MM
     if (lineDist > overlapDist) continue
 
     const t0 = projectAlong(beam.start, start, dir)
     const t1 = projectAlong(beam.end, start, dir)
-    const lo = Math.min(t0, t1) - beam.halfWidthMm
-    const hi = Math.max(t0, t1) + beam.halfWidthMm
+    const lowIsStart = t0 <= t1
+    const lowPt = lowIsStart ? beam.start : beam.end
+    const highPt = lowIsStart ? beam.end : beam.start
+    // Into the free bay past each end (opposite the beam's interior span).
+    const lowExtend = parallelBlockEndExtendMm(beam, lowPt, scale(dir, -1), beams)
+    const highExtend = parallelBlockEndExtendMm(beam, highPt, dir, beams)
+    const lo = Math.min(t0, t1) - lowExtend
+    const hi = Math.max(t0, t1) + highExtend
     const a = Math.max(0, lo)
     const b = Math.min(axisLen, hi)
     if (b > a + COLINEAR_DIST_EPS_MM) blocked.push([a, b])
@@ -494,6 +542,7 @@ export function trimDividerAxisSegmentsForFrame(input: {
   contour?: Point2D[]
   measuredOuterLengthMmByEdgeIndex?: Array<number | null | undefined>
   layoutVersion?: PurlinClearLayoutVersion
+  contourReference?: ContourReference
   /** Purlin rows set this. See `trimAxisSegmentToInnerFaces`. */
   ignoreBeamsBehindEnds?: boolean
 }): TrimmedDividerAxisSegment[] {

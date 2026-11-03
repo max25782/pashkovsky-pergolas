@@ -400,6 +400,7 @@ function resolveOneWingShelfSupport(
     contour,
     measuredOuterLengthMmByEdgeIndex: params.measuredOuterLengthMmByEdgeIndex,
     layoutVersion: params.purlinClearLayoutVersion === 1 ? 1 : undefined,
+    contourReference: params.contourReference,
   })
   if (halfTrimmed.lengthMm < 1) return null
   const widthAt = (edgeIndex: number) =>

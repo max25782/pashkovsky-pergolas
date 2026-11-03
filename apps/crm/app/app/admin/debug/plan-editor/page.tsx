@@ -47,6 +47,7 @@ import {
   beamPlanWidthForDrawing,
   contourAxesMatchEnteredOuters,
   contourSideWidthMm,
+  resolveContourReference,
   computeLedStripLengthMm,
   DEFAULT_PLAN_CONSTRUCTION_PARAMS,
   formatConstructionProfileLabel,
@@ -720,9 +721,17 @@ function contourMismatch(
   params: ConstructionParams,
 ): boolean {
   if (!contourMm || contourMm.length < 3) return false
+  const contour = contourMm.map((point): Point2D => [point.x, point.y])
+  const ref = resolveContourReference({
+    contourReference: params.contourReference,
+    contour,
+    measured: params.measuredOuterLengthMmByEdgeIndex,
+  })
+  if (ref.reference === 'outer-faces') return ref.ambiguous
+  if (ref.ambiguous) return true
   const width = beamPlanWidthForDrawing(PERGOLA_CONSTRUCTION_PROFILES, params.beamProfileId).planWidthMm
   return contourAxesMatchEnteredOuters({
-    contour: contourMm.map((point): Point2D => [point.x, point.y]),
+    contour,
     measuredOuterLengthMmByEdgeIndex: params.measuredOuterLengthMmByEdgeIndex,
     defaultBeamPlanWidthMm: width,
     planWidthForEdge: (edgeIndex) => contourSideWidthMm(PERGOLA_CONSTRUCTION_PROFILES, edgeIndex, {

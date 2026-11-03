@@ -47,6 +47,7 @@ const planParamsSchema = z
     measuredOuterLengthMmByEdgeIndex: z
       .array(z.number().finite().positive().nullable())
       .optional(),
+    contourReference: z.enum(['outer-faces', 'centerline']).optional(),
     purlinClearLayoutVersion: z.literal(1).optional(),
     lamellaSectionLayoutVersion: z.literal(1).optional(),
     purlinMaxSpanMm: z.number().finite().positive().optional(),

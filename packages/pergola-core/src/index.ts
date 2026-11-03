@@ -66,9 +66,10 @@ export {
   resolvePurlinEndInsetMm,
   axisToInnerFaceMm,
   contourVerticesAreOuterFaces,
+  resolveContourReference,
   PURLIN_CLEAR_LAYOUT_VERSION,
 } from './lamellaSpans'
-export type { ResolvedPurlinPosition } from './lamellaSpans'
+export type { ContourReference, ContourReferenceResolution, ResolvedPurlinPosition } from './lamellaSpans'
 export {
   resolvePlanPurlinLines,
   beamProfileChangePatch,

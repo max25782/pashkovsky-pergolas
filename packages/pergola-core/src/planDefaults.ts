@@ -1,7 +1,7 @@
 import type { LamellaAngleDeg, PlanPurlinDividers, RoofSlope, SupportType } from './types'
 import type { LamellaWallThicknessMm } from './pergolaProfiles'
 import { DEFAULT_ROOF_SLOPE } from './roof'
-import type { PurlinClearLayoutVersion } from './lamellaSpans'
+import type { ContourReference, PurlinClearLayoutVersion } from './lamellaSpans'
 import { PURLIN_CLEAR_LAYOUT_VERSION } from './lamellaSpans'
 
 /** Current JSON schema for `Pergola.plan` stored in `pergolas_data`. */
@@ -82,6 +82,14 @@ export interface PlanConstructionParams {
    * Unset ⇒ 1.
    */
   lamellaLengthStepMm?: number
+  /**
+   * Contour vertex semantics for insets / trim.
+   * `outer-faces` = tape outer corners (house / editor outer midot).
+   * `centerline` = beam axes from typed outers (legacy rebuild path).
+   * Unset on saved plans ⇒ length heuristic only (do not migrate).
+   * A profile-width change must not rewrite this field.
+   */
+  contourReference?: ContourReference
 }
 
 export const DEFAULT_PLAN_CONSTRUCTION_PARAMS: PlanConstructionParams = {

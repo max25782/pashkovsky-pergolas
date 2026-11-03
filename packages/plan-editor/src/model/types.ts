@@ -175,12 +175,17 @@ export interface PlanEditorState {
     options?: { skipAutoCloseAdjust?: boolean; measuredOuterLengthMm?: number },
   ) => void
 
-  /** Rebuild axis chain from outer targets (construction overlay panel). */
+  /**
+   * Rebuild axis chain from outer targets (construction overlay panel).
+   * When `contourReference` is `outer-faces`, edge lengths stay equal to the
+   * typed outers (tape vertices); otherwise outers are converted to centerlines.
+   */
   applyOuterLengths: (
     outerLengthsMm: number[],
     updatedEdgeIndex: number,
     beamPlanWidthMm: number,
     planWidthForEdge?: (edgeIndex: number) => number,
+    contourReference?: 'outer-faces' | 'centerline',
   ) => void
 
   /** After outer-length solve iterations — run closed-contour adjust once. */

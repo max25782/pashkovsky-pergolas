@@ -37,6 +37,7 @@ import {
   formatPurlinClearLabelMm,
   measuredOuterAlongLamellas,
   resolveContourPurlinPositions,
+  resolveContourReference,
   resolvePurlinEndInsetMm,
 } from './lamellaSpans'
 import { patternMaxLamellaSpanMm, resolveLamellaPattern, type LamellaPatternEntry } from './lamellaPattern'
@@ -849,16 +850,22 @@ function measuredInnerAabb(
   const bottomW = alongX ? widthOfEdgeNear(pts, 'y', minY, widthAt, beamW) : endLeftW
   const topW = alongX ? widthOfEdgeNear(pts, 'y', maxY, widthAt, beamW) : endRightW
   const explicitOuter = spec.measuredOuterLengthMmByEdgeIndex != null
-  // A saved centerline built for a narrower beam is not rewritten. The cell
-  // then follows the drawn beam faces (axis minus the current halves). A
-  // contour that already matches, or one with no typed outers, keeps the
-  // outer-based span.
-  const contourMismatch = contourAxesMatchEnteredOuters({
+  // Outer-face contours keep outer-based spans when the free-beam width
+  // changes (axes are the tape, not a rebuilt centerline). Centerline
+  // mismatch still falls back to drawn half-faces without rewriting verts.
+  const contourRef = resolveContourReference({
+    contourReference: spec.contourReference,
     contour: pts,
-    measuredOuterLengthMmByEdgeIndex: spec.measuredOuterLengthMmByEdgeIndex,
-    defaultBeamPlanWidthMm: beamW,
-    planWidthForEdge: widthAt,
-  }) === 'mismatch'
+    measured: spec.measuredOuterLengthMmByEdgeIndex,
+  })
+  const contourMismatch =
+    contourRef.reference === 'centerline' &&
+    contourAxesMatchEnteredOuters({
+      contour: pts,
+      measuredOuterLengthMmByEdgeIndex: spec.measuredOuterLengthMmByEdgeIndex,
+      defaultBeamPlanWidthMm: beamW,
+      planWidthForEdge: widthAt,
+    }) === 'mismatch'
   const drawnSpan = (axisMm: number, startWidthMm: number, endWidthMm: number) =>
     innerFaceClearMm({ axisLengthMm: axisMm, startWidthMm, endWidthMm })
   const spanX = contourMismatch && !alongX

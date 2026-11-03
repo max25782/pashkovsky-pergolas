@@ -21,6 +21,7 @@ import {
   beamPlanWidthForDrawing,
   contourAxesMatchEnteredOuters,
   contourSideWidthMm,
+  resolveContourReference,
   DEFAULT_PLAN_CONSTRUCTION_PARAMS,
   formatConstructionProfileLabel,
   LAMELLA_PATTERN_PRESETS,
@@ -969,9 +970,19 @@ function contourMismatch(
   params: ConstructionParams,
 ): boolean {
   if (!contourMm || contourMm.length < 3) return false
+  const contour = contourMm.map((point): Point2D => [point.x, point.y])
+  const ref = resolveContourReference({
+    contourReference: params.contourReference,
+    contour,
+    measured: params.measuredOuterLengthMmByEdgeIndex,
+  })
+  // Outer-face tape verts are not "built for another width" — insets follow the
+  // current profiles. Ambiguous heuristic still warns.
+  if (ref.reference === 'outer-faces') return ref.ambiguous
+  if (ref.ambiguous) return true
   const width = beamPlanWidthForDrawing(PERGOLA_CONSTRUCTION_PROFILES, params.beamProfileId).planWidthMm
   return contourAxesMatchEnteredOuters({
-    contour: contourMm.map((point): Point2D => [point.x, point.y]),
+    contour,
     measuredOuterLengthMmByEdgeIndex: params.measuredOuterLengthMmByEdgeIndex,
     defaultBeamPlanWidthMm: width,
     planWidthForEdge: (edgeIndex) => contourSideWidthMm(PERGOLA_CONSTRUCTION_PROFILES, edgeIndex, {

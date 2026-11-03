@@ -114,6 +114,9 @@ export function specFromPlan(input: SpecFromPlanInput): PergolaSpec {
     ...(params.measuredOuterLengthMmByEdgeIndex
       ? { measuredOuterLengthMmByEdgeIndex: params.measuredOuterLengthMmByEdgeIndex }
       : {}),
+    ...(params.contourReference === 'outer-faces' || params.contourReference === 'centerline'
+      ? { contourReference: params.contourReference }
+      : {}),
     ...(params.frameJointVersion === 1 ? { frameJointVersion: 1 as const } : {}),
     ...(params.skewSectionVersion === 1 ? { skewSectionVersion: 1 as const } : {}),
     ...(typeof params.lamellaLengthStepMm === 'number' && params.lamellaLengthStepMm > 0

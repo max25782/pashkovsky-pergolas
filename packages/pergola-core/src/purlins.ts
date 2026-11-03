@@ -204,6 +204,7 @@ export function computePurlins(
     contour: pts,
     measuredOuterLengthMmByEdgeIndex: measuredCcw,
     layoutVersion,
+    contourReference: spec.contourReference,
   })
   const shelfParams = {
     ...DEFAULT_PLAN_CONSTRUCTION_PARAMS,
@@ -218,6 +219,7 @@ export function computePurlins(
     wingShelfProfileId: spec.wingShelfProfileId,
     wallProfileId: spec.wallProfileId,
     wallBeamWidthVersion: spec.wallBeamWidthVersion,
+    contourReference: spec.contourReference,
   }
   const wingSupports = resolveAllWingShelfSupports({
     contour: cleanContour,
@@ -329,6 +331,7 @@ export function computePurlins(
         contour: pts,
         measuredOuterLengthMmByEdgeIndex: measuredCcw,
         layoutVersion,
+        contourReference: spec.contourReference,
         ignoreBeamsBehindEnds: true,
       })
 
