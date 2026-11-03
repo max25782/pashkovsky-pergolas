@@ -38,7 +38,7 @@ import {
   computeLedStripLengthMm,
   type PlanConstructionParams,
 } from '@pashkovsky/pergola-core'
-import type { Point2D } from '@pashkovsky/pergola-core'
+import type { Point2D, StraightSupportBeam } from '@pashkovsky/pergola-core'
 import { PergolaCutPieceViewer } from '@pashkovsky/pergola-3d-preview'
 import { LamellaWallThicknessField } from '@/components/offers/LamellaWallThicknessField'
 import { RoofSlopeFields } from '@/components/offers/RoofSlopeFields'
@@ -827,6 +827,12 @@ export const OfferPlanConfiguratorEmbed = forwardRef<
                     const line = lines.find((l) => l.id === startId) ?? lines[4] ?? lines[0]
                     if (line) {
                       setBeamStartPurlinId(line.id)
+                      const existingBeams: StraightSupportBeam[] =
+                        supportBeams &&
+                        typeof supportBeams === 'object' &&
+                        Array.isArray((supportBeams as { beams?: unknown }).beams)
+                          ? ((supportBeams as { beams: StraightSupportBeam[] }).beams)
+                          : []
                       commitSupportBeams(
                         placeSupportBeamAtPlanPoint({
                           planXMm,
@@ -836,6 +842,8 @@ export const OfferPlanConfiguratorEmbed = forwardRef<
                           profiles: DEMO_PROFILES,
                           startPurlinId: line.id,
                           startPurlinPositionMm: line.positionMm,
+                          existingBeams,
+                          mode: existingBeams.length > 0 ? 'add' : 'replace',
                         }),
                       )
                       setSupportBeamPlaceMode(false)

@@ -14,8 +14,9 @@ import {
   trimDividerAxisSegmentsForFrame,
 } from './dividerFrameTrim'
 import {
-  resolveWingShelfSupport,
+  resolveAllWingShelfSupports,
   WING_SHELF_SPAN_DIVIDER_ID,
+  type WingShelfSupport,
 } from './planEditorDimensions'
 import { DEFAULT_PLAN_CONSTRUCTION_PARAMS } from './planDefaults'
 import { isRetiredProfileId } from './pergolaProfiles'
@@ -199,22 +200,23 @@ export function computePurlins(
       ? computeFrame(spec, profiles).beams
       : [])
   const beamTrim = collectFrameBeamTrimSegments(frameBeams, profiles)
-  const wingSupport = resolveWingShelfSupport({
+  const shelfParams = {
+    ...DEFAULT_PLAN_CONSTRUCTION_PARAMS,
+    lamellaDirectionDeg: spec.lamellaDirectionDeg,
+    beamProfileId: spec.beamProfileId,
+    purlinProfileId: spec.purlinProfileId ?? DEFAULT_PLAN_CONSTRUCTION_PARAMS.purlinProfileId,
+    purlinDividers: spec.purlinDividers ?? { mode: 'auto' as const },
+    measuredOuterLengthMmByEdgeIndex: spec.measuredOuterLengthMmByEdgeIndex,
+    purlinClearLayoutVersion: spec.purlinClearLayoutVersion,
+    purlinMaxSpanMm: spec.purlinMaxSpanMm,
+    postMaxSpanMm: spec.postMaxSpanMm,
+    wingShelfProfileId: spec.wingShelfProfileId,
+    wallProfileId: spec.wallProfileId,
+    wallBeamWidthVersion: spec.wallBeamWidthVersion,
+  }
+  const wingSupports = resolveAllWingShelfSupports({
     contour: cleanContour,
-    params: {
-      ...DEFAULT_PLAN_CONSTRUCTION_PARAMS,
-      lamellaDirectionDeg: spec.lamellaDirectionDeg,
-      beamProfileId: spec.beamProfileId,
-      purlinProfileId: spec.purlinProfileId ?? DEFAULT_PLAN_CONSTRUCTION_PARAMS.purlinProfileId,
-      purlinDividers: spec.purlinDividers ?? { mode: 'auto' },
-      measuredOuterLengthMmByEdgeIndex: spec.measuredOuterLengthMmByEdgeIndex,
-      purlinClearLayoutVersion: spec.purlinClearLayoutVersion,
-      purlinMaxSpanMm: spec.purlinMaxSpanMm,
-      postMaxSpanMm: spec.postMaxSpanMm,
-      wingShelfProfileId: spec.wingShelfProfileId,
-      wallProfileId: spec.wallProfileId,
-      wallBeamWidthVersion: spec.wallBeamWidthVersion,
-    },
+    params: shelfParams,
     profiles,
     beams: frameBeams,
     wallEdgeIndices: spec.wallEdgeIndices,
@@ -231,23 +233,30 @@ export function computePurlins(
         spec.wallBeamWidthVersion,
       )
     : null
-  const flushBand = wingSupport && flushBandMm != null
-    ? placeWingShelfFlushBand(wingSupport, cleanContour, flushBandMm)
-    : null
-  const shelfHalfWidthMm = wingSupport
-    ? beamPlanWidthForDrawing(profiles, wingSupport.profileId).planWidthMm / 2
-    : undefined
-  const wingShelfClip =
-    wingSupport != null && wingSupport.lengthMm >= MIN_SEGMENT_MM
-      ? flushBand != null
+  const wingShelfClips = wingSupports
+    .filter((s) => s.lengthMm >= MIN_SEGMENT_MM)
+    .map((wingSupport) => {
+      const flushBand =
+        flushBandMm != null ? placeWingShelfFlushBand(wingSupport, cleanContour, flushBandMm) : null
+      const shelfHalfWidthMm = beamPlanWidthForDrawing(profiles, wingSupport.profileId).planWidthMm / 2
+      return flushBand != null
         ? {
             start: flushBand.clipStart,
             end: flushBand.clipEnd,
             lengthMm: wingSupport.lengthMm,
             halfWidthMm: shelfHalfWidthMm,
+            support: wingSupport,
+            flushBand,
           }
-        : { start: wingSupport.start, end: wingSupport.end, lengthMm: wingSupport.lengthMm, halfWidthMm: shelfHalfWidthMm }
-      : undefined
+        : {
+            start: wingSupport.start,
+            end: wingSupport.end,
+            lengthMm: wingSupport.lengthMm,
+            halfWidthMm: shelfHalfWidthMm,
+            support: wingSupport,
+            flushBand: null as ReturnType<typeof placeWingShelfFlushBand> | null,
+          }
+    })
 
   const pieces: CutPiece[] = []
   let id = 0
@@ -276,7 +285,11 @@ export function computePurlins(
         end: clipEnd,
         beams: beamTrim,
         minLengthMm: MIN_SEGMENT_MM,
-        wingShelfClip: wingShelfClip,
+        wingShelfClips: wingShelfClips.map(({ start, end, halfWidthMm }) => ({
+          start,
+          end,
+          halfWidthMm,
+        })),
         contour: pts,
         measuredOuterLengthMmByEdgeIndex: measuredCcw,
         ignoreBeamsBehindEnds: true,
@@ -331,10 +344,12 @@ export function computePurlins(
     }
   }
 
-  if (wingSupport && wingSupport.lengthMm >= MIN_SEGMENT_MM && profiles.has(wingSupport.profileId)) {
+  for (const clip of wingShelfClips) {
+    const wingSupport: WingShelfSupport = clip.support
+    if (!profiles.has(wingSupport.profileId)) continue
     const shelfProfileId = wingSupport.profileId
-    const startPt = flushBand?.axisStart ?? wingSupport.start
-    const endPt = flushBand?.axisEnd ?? wingSupport.end
+    const startPt = clip.flushBand?.axisStart ?? wingSupport.start
+    const endPt = clip.flushBand?.axisEnd ?? wingSupport.end
     const lengthAxisMm = wingSupport.lengthMm
     const placed = sloped ? placeOnRoof(startPt, endPt, plane) : null
     const axisMm = placed?.axisMm ?? lengthAxisMm

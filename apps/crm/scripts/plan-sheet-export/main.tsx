@@ -1,12 +1,15 @@
 import { createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import {
+  HOUSE_CONTOUR_MM,
+  HOUSE_WALL_EDGE_INDICES,
   PERGOLA_CONSTRUCTION_PROFILES,
   axisLengthsFromOuterLengthsMm,
   beamPlanWidthForDrawing,
   buildLamellaSections,
   buildPieces,
   contourSideWidthMm,
+  houseConstructionParams,
   resolveLamellaPatternIds,
   sideBeamProfileId,
   specFromPlan,
@@ -65,11 +68,21 @@ function walk(lengths: number[], angles: number[]): Array<[number, number]> {
   return vertices
 }
 
-type PlanId = 'skew' | 'diagonal' | 'l10' | 'notch' | 'pentagon' | 'pentagon-exact' | 'pentagon-v2' | 'pentagon-v2-ccw'
+type PlanId =
+  | 'skew'
+  | 'diagonal'
+  | 'l10'
+  | 'notch'
+  | 'house'
+  | 'pentagon'
+  | 'pentagon-exact'
+  | 'pentagon-v2'
+  | 'pentagon-v2-ccw'
 function planFromQuery(): PlanId {
   const raw = new URLSearchParams(location.search).get('plan')
   if (
-    raw === 'diagonal' || raw === 'l10' || raw === 'notch' || raw === 'pentagon' || raw === 'pentagon-exact' ||
+    raw === 'diagonal' || raw === 'l10' || raw === 'notch' || raw === 'house' ||
+    raw === 'pentagon' || raw === 'pentagon-exact' ||
     raw === 'pentagon-v2' || raw === 'pentagon-v2-ccw'
   ) return raw
   return 'skew'
@@ -198,6 +211,26 @@ if (planId === 'diagonal') {
     beamProfileId: 'f10040',
     wallProfileId: 'f10040',
   }
+} else if (planId === 'house') {
+  // Max house / U-notch quick offer: 9495×7480, protrusions 3280/2750, notch 3465.
+  const clear = 1310.7142857
+  const lines = Array.from({ length: 6 }, (_, i) => {
+    const k = i + 1
+    return { id: `div-${k}`, positionMm: 40 + k * clear + (k - 1) * 40 + 20 }
+  })
+  contour = HOUSE_CONTOUR_MM.map((p): [number, number] => [p[0], p[1]])
+  wallEdgeIndices = [...HOUSE_WALL_EDGE_INDICES]
+  params = houseConstructionParams({
+    ...shared,
+    lamellaDirectionDeg: 0,
+    purlinMaxSpanMm: 4000,
+    wingShelfProfileId: 'f10040',
+    beamProfileId: 'f12040',
+    wallProfileId: 'f10040',
+    purlinProfileId: 'PA3022',
+    skewSectionVersion: 1,
+    purlinDividers: { mode: 'manual', lines },
+  })
 } else {
   contour = [
     [0, 0],

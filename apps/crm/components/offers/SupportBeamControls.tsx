@@ -23,6 +23,9 @@ import {
 const DEFAULT_BEAM_PROFILE = 'PA3022'
 const DEFAULT_BEAM_WIDTH_MM = 40
 
+/** Profiles offered in the «Опорная балка» panel (no silent remap for other plans). */
+export const SUPPORT_BEAM_PROFILE_OPTIONS = ['PA3022', 'f10040', 'f12040', 'F4060'] as const
+
 export interface SupportBeamControlsProps {
   contour: Point2D[]
   wallEdgeIndices: number[]
@@ -75,6 +78,13 @@ export function supportBeamAxisFromPlanPoint(
   )
 }
 
+function uniqueBeamId(base: string, existing: StraightSupportBeam[]): string {
+  if (!existing.some((b) => b.id === base)) return base
+  let n = 2
+  while (existing.some((b) => b.id === `${base}-${n}`)) n += 1
+  return `${base}-${n}`
+}
+
 export function buildSupportBeamDocument(input: {
   contour: Point2D[]
   params: PlanConstructionParams
@@ -85,13 +95,21 @@ export function buildSupportBeamDocument(input: {
   profileId: string
   widthMm: number
   existingId?: string
+  /** Prior beams kept when adding/updating (multi-beam). Omit ⇒ single-beam replace. */
+  existingBeams?: StraightSupportBeam[]
+  mode?: 'replace' | 'add' | 'update'
 }): SupportBeamsDocument {
   const purlinHalf =
     beamPlanWidthForDrawing(input.profiles, input.params.purlinProfileId || input.profileId)
       .planWidthMm / 2
   const frameHalf = beamPlanWidthForDrawing(input.profiles, input.params.beamProfileId).planWidthMm / 2
+  const mode = input.mode ?? (input.existingBeams && input.existingBeams.length > 0 ? 'update' : 'replace')
+  const existing = input.existingBeams ?? []
+  const idBase = input.existingId ?? `beam-${input.startPurlinId}`
+  const id =
+    mode === 'add' ? uniqueBeamId(`beam-${input.startPurlinId}`, existing) : idBase
   const nextBeam: StraightSupportBeam = makeStraightSupportBeam({
-    id: input.existingId ?? `beam-${input.startPurlinId}`,
+    id,
     axisFromSideMm: input.axisFromSideMm,
     contour: input.contour,
     startPurlinId: input.startPurlinId,
@@ -103,6 +121,18 @@ export function buildSupportBeamDocument(input: {
     purlinHalfMm: purlinHalf,
     frameHalfMm: frameHalf,
   })
+  if (mode === 'add') {
+    return { formatVersion: SUPPORT_BEAMS_FORMAT_VERSION, beams: [...existing, nextBeam] }
+  }
+  if (mode === 'update' && existing.length > 0) {
+    const idx = existing.findIndex((b) => b.id === (input.existingId ?? existing[0]?.id))
+    if (idx >= 0) {
+      const beams = existing.slice()
+      beams[idx] = nextBeam
+      return { formatVersion: SUPPORT_BEAMS_FORMAT_VERSION, beams }
+    }
+    return { formatVersion: SUPPORT_BEAMS_FORMAT_VERSION, beams: [...existing, nextBeam] }
+  }
   return { formatVersion: SUPPORT_BEAMS_FORMAT_VERSION, beams: [nextBeam] }
 }
 
@@ -149,17 +179,19 @@ export function SupportBeamControls({
     [contour, params, profiles, wallEdgeIndices],
   )
   const doc = asDoc(supportBeams)
-  const beam = doc?.beams[0]
+  const beams = doc?.beams ?? []
+  const [activeBeamId, setActiveBeamId] = useState<string | null>(() => beams[0]?.id ?? null)
+  const activeBeam = beams.find((b) => b.id === activeBeamId) ?? beams[0]
   const [startPurlinId, setStartPurlinId] = useState(
-    () => beam?.start.purlinId ?? lines[4]?.id ?? lines[0]?.id ?? '',
+    () => activeBeam?.start.purlinId ?? lines[4]?.id ?? lines[0]?.id ?? '',
   )
   const [axisFromSideMm, setAxisFromSideMm] = useState(() => {
-    if (!beam) return 3104.1
+    if (!activeBeam) return 3104.1
     const frameHalf = beamPlanWidthForDrawing(profiles, params.beamProfileId).planWidthMm / 2
-    return Math.round(supportBeamAxisFromSideMm(beam, contour, undefined, frameHalf) * 10) / 10
+    return Math.round(supportBeamAxisFromSideMm(activeBeam, contour, undefined, frameHalf) * 10) / 10
   })
-  const [profileId, setProfileId] = useState(beam?.profileId ?? DEFAULT_BEAM_PROFILE)
-  const [widthMm, setWidthMm] = useState(beam?.widthMm ?? DEFAULT_BEAM_WIDTH_MM)
+  const [profileId, setProfileId] = useState(activeBeam?.profileId ?? DEFAULT_BEAM_PROFILE)
+  const [widthMm, setWidthMm] = useState(activeBeam?.widthMm ?? DEFAULT_BEAM_WIDTH_MM)
 
   const warnings = useMemo((): SupportBeamWarning[] => {
     if (supportBeams == null) return []
@@ -203,23 +235,58 @@ export function SupportBeamControls({
     }
   }, [pieces])
 
-  function commit(axis: number, purlinId: string) {
+  function selectBeam(beam: StraightSupportBeam) {
+    setActiveBeamId(beam.id)
+    setStartPurlinId(beam.start.purlinId)
+    const frameHalf = beamPlanWidthForDrawing(profiles, params.beamProfileId).planWidthMm / 2
+    setAxisFromSideMm(Math.round(supportBeamAxisFromSideMm(beam, contour, undefined, frameHalf) * 10) / 10)
+    setProfileId(beam.profileId)
+    setWidthMm(beam.widthMm ?? DEFAULT_BEAM_WIDTH_MM)
+  }
+
+  function commit(axis: number, purlinId: string, mode: 'add' | 'update' | 'replace') {
     const line = lines.find((l) => l.id === purlinId)
     if (!line || !Number.isFinite(axis)) return
-    onChange(
-      buildSupportBeamDocument({
-        contour,
-        params,
-        profiles,
-        startPurlinId: purlinId,
-        startPurlinPositionMm: line.positionMm,
-        axisFromSideMm: axis,
-        profileId,
-        widthMm,
-        existingId: beam?.id,
-      }),
-    )
+    const next = buildSupportBeamDocument({
+      contour,
+      params,
+      profiles,
+      startPurlinId: purlinId,
+      startPurlinPositionMm: line.positionMm,
+      axisFromSideMm: axis,
+      profileId,
+      widthMm,
+      existingId: mode === 'add' ? undefined : activeBeam?.id,
+      existingBeams: beams,
+      mode,
+    })
+    onChange(next)
+    const last = next.beams[next.beams.length - 1]
+    if (last) setActiveBeamId(last.id)
   }
+
+  function deleteActive() {
+    if (!activeBeam || beams.length === 0) {
+      onChange(undefined)
+      setActiveBeamId(null)
+      return
+    }
+    const next = beams.filter((b) => b.id !== activeBeam.id)
+    if (next.length === 0) {
+      onChange(undefined)
+      setActiveBeamId(null)
+      return
+    }
+    onChange({ formatVersion: SUPPORT_BEAMS_FORMAT_VERSION, beams: next })
+    setActiveBeamId(next[0]?.id ?? null)
+  }
+
+  const profileOptions = useMemo(() => {
+    const set = new Set<string>([...SUPPORT_BEAM_PROFILE_OPTIONS])
+    if (profileId) set.add(profileId)
+    for (const b of beams) set.add(b.profileId)
+    return [...set]
+  }, [profileId, beams])
 
   return (
     <div
@@ -244,17 +311,25 @@ export function SupportBeamControls({
         </button>
         <button
           type="button"
-          data-testid="support-beam-apply"
-          onClick={() => commit(axisFromSideMm, startPurlinId)}
+          data-testid="support-beam-add"
+          onClick={() => commit(axisFromSideMm, startPurlinId, beams.length > 0 ? 'add' : 'replace')}
           className="rounded border border-neutral-300 bg-white px-2 py-1 text-neutral-700 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-200"
         >
-          {beam ? t('preview3D.supportBeamUpdate') : t('preview3D.supportBeamAdd')}
+          {t('preview3D.supportBeamAdd')}
+        </button>
+        <button
+          type="button"
+          data-testid="support-beam-apply"
+          onClick={() => commit(axisFromSideMm, startPurlinId, beams.length > 0 ? 'update' : 'replace')}
+          className="rounded border border-neutral-300 bg-white px-2 py-1 text-neutral-700 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-200"
+        >
+          {activeBeam ? t('preview3D.supportBeamUpdate') : t('preview3D.supportBeamAdd')}
         </button>
         <button
           type="button"
           data-testid="support-beam-delete"
-          onClick={() => onChange(undefined)}
-          disabled={!beam && supportBeams == null}
+          onClick={deleteActive}
+          disabled={!activeBeam && supportBeams == null}
           className="rounded border border-neutral-300 bg-white px-2 py-1 text-neutral-700 disabled:opacity-40 dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-200"
         >
           {t('preview3D.supportBeamDelete')}
@@ -276,6 +351,25 @@ export function SupportBeamControls({
           Redo
         </button>
       </div>
+
+      {beams.length > 1 && (
+        <div className="flex flex-wrap items-center gap-1" data-testid="support-beam-list">
+          {beams.map((b, i) => (
+            <button
+              key={b.id}
+              type="button"
+              onClick={() => selectBeam(b)}
+              className={
+                (activeBeam?.id ?? beams[0]?.id) === b.id
+                  ? 'rounded bg-blue-600 px-2 py-0.5 text-white'
+                  : 'rounded border border-neutral-300 bg-white px-2 py-0.5 dark:border-neutral-600 dark:bg-neutral-900'
+              }
+            >
+              #{i + 1} {b.profileId}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-0.5 text-neutral-600 dark:text-neutral-300">
@@ -305,17 +399,23 @@ export function SupportBeamControls({
               const v = parseFloat(e.target.value)
               if (Number.isFinite(v)) setAxisFromSideMm(v)
             }}
-            onBlur={() => commit(axisFromSideMm, startPurlinId)}
+            onBlur={() => commit(axisFromSideMm, startPurlinId, beams.length > 0 ? 'update' : 'replace')}
           />
         </label>
         <label className="flex flex-col gap-0.5 text-neutral-600 dark:text-neutral-300">
           {t('preview3D.supportBeamProfile')}
-          <input
-            type="text"
-            className="w-28 rounded border border-neutral-300 bg-white px-2 py-1 dark:border-neutral-600 dark:bg-neutral-900"
+          <select
+            data-testid="support-beam-profile"
+            className="rounded border border-neutral-300 bg-white px-2 py-1 dark:border-neutral-600 dark:bg-neutral-900"
             value={profileId}
             onChange={(e) => setProfileId(e.target.value)}
-          />
+          >
+            {profileOptions.map((id) => (
+              <option key={id} value={id}>
+                {id}
+              </option>
+            ))}
+          </select>
         </label>
         <label className="flex flex-col gap-0.5 text-neutral-600 dark:text-neutral-300">
           {t('preview3D.supportBeamWidth')}
@@ -332,16 +432,18 @@ export function SupportBeamControls({
         </label>
       </div>
 
-      {resolved[0] && (
+      {resolved.length > 0 && (
         <div className="text-neutral-700 dark:text-neutral-200">
-          {t('preview3D.supportBeamLength', {
-            mm:
+          {resolved.map((r) => {
+            const len =
               Math.round(
-                Math.hypot(
-                  resolved[0].endInner[0] - resolved[0].start[0],
-                  resolved[0].endInner[1] - resolved[0].start[1],
-                ) * 10,
-              ) / 10,
+                Math.hypot(r.endInner[0] - r.start[0], r.endInner[1] - r.start[1]) * 10,
+              ) / 10
+            return (
+              <div key={r.id}>
+                {t('preview3D.supportBeamLength', { mm: len })} ({r.profileId})
+              </div>
+            )
           })}
           {splitSummary && (
             <span className="ml-2">
@@ -382,6 +484,8 @@ export function placeSupportBeamAtPlanPoint(input: {
   profileId?: string
   widthMm?: number
   existingId?: string
+  existingBeams?: StraightSupportBeam[]
+  mode?: 'replace' | 'add' | 'update'
 }): SupportBeamsDocument {
   const frameHalf = beamPlanWidthForDrawing(input.profiles, input.params.beamProfileId).planWidthMm / 2
   const axis = supportBeamAxisFromPlanPoint(
@@ -391,6 +495,7 @@ export function placeSupportBeamAtPlanPoint(input: {
     input.params.lamellaDirectionDeg,
     frameHalf,
   )
+  const existing = input.existingBeams ?? []
   return buildSupportBeamDocument({
     contour: input.contour,
     params: input.params,
@@ -401,5 +506,7 @@ export function placeSupportBeamAtPlanPoint(input: {
     profileId: input.profileId ?? DEFAULT_BEAM_PROFILE,
     widthMm: input.widthMm ?? DEFAULT_BEAM_WIDTH_MM,
     existingId: input.existingId,
+    existingBeams: existing,
+    mode: input.mode ?? (existing.length > 0 ? 'add' : 'replace'),
   })
 }

@@ -35,7 +35,10 @@ function pickPiecesForDividerLine(
   profiles: Map<string, ProfileDimensions>,
   dividerId: string,
   positionMm: number,
-  options?: { wingShelfClip?: { start: Point2D; end: Point2D; halfWidthMm?: number } },
+  options?: {
+    wingShelfClip?: { start: Point2D; end: Point2D; halfWidthMm?: number }
+    wingShelfClips?: Array<{ start: Point2D; end: Point2D; halfWidthMm?: number }>
+  },
 ): CutPiece[] {
   const purlinProfileId = spec.purlinProfileId
   if (!purlinProfileId) return []
@@ -79,6 +82,7 @@ function pickPiecesForDividerLine(
       beams: beamTrim,
       minLengthMm: 1,
       wingShelfClip: options?.wingShelfClip,
+      wingShelfClips: options?.wingShelfClips,
       contour: pts,
       measuredOuterLengthMmByEdgeIndex: measuredCcw,
       ignoreBeamsBehindEnds: true,
@@ -122,7 +126,11 @@ export function buildDividerPickPieces(
   contour: Point2D[],
   params: PlanConstructionParams,
   profiles: Map<string, ProfileDimensions>,
-  options?: { wingShelfClip?: { start: Point2D; end: Point2D; halfWidthMm?: number }; wallEdgeIndices?: number[] },
+  options?: {
+    wingShelfClip?: { start: Point2D; end: Point2D; halfWidthMm?: number }
+    wingShelfClips?: Array<{ start: Point2D; end: Point2D; halfWidthMm?: number }>
+    wallEdgeIndices?: number[]
+  },
 ): CutPiece[] {
   const wallEdgeIndices = options?.wallEdgeIndices ?? []
   const spec = specFromPlan({ contour, wallEdgeIndices, params })

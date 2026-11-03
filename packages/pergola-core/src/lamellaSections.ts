@@ -40,7 +40,7 @@ import {
   resolvePurlinEndInsetMm,
 } from './lamellaSpans'
 import { patternMaxLamellaSpanMm, resolveLamellaPattern, type LamellaPatternEntry } from './lamellaPattern'
-import { resolveWingShelfSupport } from './planEditorDimensions'
+import { resolveAllWingShelfSupports } from './planEditorDimensions'
 import { computeFrame } from './frame'
 import { pieceAxis } from './pieceAxis'
 import { contourAxesMatchEnteredOuters } from './planEditorOuterAxis'
@@ -49,7 +49,6 @@ import { isHorizontalPlane, placeOnRoof, roofPlane, type RoofPlane } from './roo
 import {
   hasPlanSupportBeams,
   resolveStraightSupportBeams,
-  supportLineFromPlanBeams,
 } from './supportBeams'
 
 export const LAMELLA_SECTION_CLEARANCE_W_MM = 15
@@ -1935,49 +1934,85 @@ export function buildLamellaSections(
   const alongX = Math.abs(dir[0]) >= Math.abs(dir[1])
 
   const frame = computeFrame(spec, profiles)
-  // Plan supportBeams (or an explicit harness supportLine) act as an external
-  // span limiter. Presence of plan beams enables wide-end skew packing.
-  const planBeamLine =
+  // Plan supportBeams and/or auto wing shelves act as span limiters. A U-notch
+  // may carry left+right shelves; plan beams no longer suppress the wing shelf.
+  const planResolved =
     options?.supportLine === undefined && hasPlanSupportBeams(spec.supportBeams)
-      ? supportLineFromPlanBeams(resolveStraightSupportBeams(spec, profiles))
-      : null
-  const external =
-    options?.supportLine !== undefined ? options.supportLine : planBeamLine
+      ? resolveStraightSupportBeams(spec, profiles)
+      : []
+  const explicitExternal = options?.supportLine !== undefined ? options.supportLine : null
   const spanLimitedByPlanBeams = hasPlanSupportBeams(spec.supportBeams) || options?.supportLine != null
-  const wing = external == null
-    ? resolveWingShelfSupport({
-        contour: pts,
-        params: {
-          ...DEFAULT_PLAN_CONSTRUCTION_PARAMS,
-          lamellaDirectionDeg: spec.lamellaDirectionDeg,
-          beamProfileId: spec.beamProfileId,
-          postProfileId: spec.postProfileId,
-          purlinProfileId: spec.purlinProfileId ?? DEFAULT_PLAN_CONSTRUCTION_PARAMS.purlinProfileId,
-          purlinDividers: spec.purlinDividers ?? { mode: 'auto' },
-          measuredOuterLengthMmByEdgeIndex: outersCcw,
-          purlinClearLayoutVersion: spec.purlinClearLayoutVersion,
-          purlinMaxSpanMm: spec.purlinMaxSpanMm,
-          postMaxSpanMm: spec.postMaxSpanMm,
-          wingShelfProfileId: spec.wingShelfProfileId,
-          wallProfileId: spec.wallProfileId,
-          wallBeamWidthVersion: spec.wallBeamWidthVersion,
-        },
-        profiles,
-        beams: frame.beams,
-        wallEdgeIndices: wallsCcw,
+  const wings =
+    explicitExternal == null
+      ? resolveAllWingShelfSupports({
+          contour: pts,
+          params: {
+            ...DEFAULT_PLAN_CONSTRUCTION_PARAMS,
+            lamellaDirectionDeg: spec.lamellaDirectionDeg,
+            beamProfileId: spec.beamProfileId,
+            postProfileId: spec.postProfileId,
+            purlinProfileId: spec.purlinProfileId ?? DEFAULT_PLAN_CONSTRUCTION_PARAMS.purlinProfileId,
+            purlinDividers: spec.purlinDividers ?? { mode: 'auto' },
+            measuredOuterLengthMmByEdgeIndex: outersCcw,
+            purlinClearLayoutVersion: spec.purlinClearLayoutVersion,
+            purlinMaxSpanMm: spec.purlinMaxSpanMm,
+            postMaxSpanMm: spec.postMaxSpanMm,
+            wingShelfProfileId: spec.wingShelfProfileId,
+            wallProfileId: spec.wallProfileId,
+            wallBeamWidthVersion: spec.wallBeamWidthVersion,
+          },
+          profiles,
+          beams: frame.beams,
+          wallEdgeIndices: wallsCcw,
+        })
+      : []
+  type SectionSupport = {
+    start: Point2D
+    end: Point2D
+    lengthMm: number
+    profileId?: string
+    widthMm?: number
+  }
+  const sectionSupports: SectionSupport[] = []
+  if (explicitExternal != null) {
+    sectionSupports.push({
+      start: explicitExternal.start,
+      end: explicitExternal.end,
+      lengthMm: Math.hypot(
+        explicitExternal.end[0] - explicitExternal.start[0],
+        explicitExternal.end[1] - explicitExternal.start[1],
+      ),
+      widthMm: explicitExternal.widthMm,
+    })
+  } else {
+    for (const wing of wings) {
+      sectionSupports.push({
+        start: wing.start,
+        end: wing.end,
+        lengthMm: wing.lengthMm,
+        profileId: wing.profileId,
       })
-    : null
-  const support = external != null
-    ? {
-        start: external.start,
-        end: external.end,
-        lengthMm: Math.hypot(external.end[0] - external.start[0], external.end[1] - external.start[1]),
-        profileId: undefined as string | undefined,
-      }
-    : wing
-  const supportW = external != null
-    ? (external.widthMm > 0 ? external.widthMm : supportBandWidthMm(support, frame.beams, profiles, spec.beamProfileId, spec.wallBeamWidthVersion === 1))
-    : supportBandWidthMm(support, frame.beams, profiles, spec.beamProfileId, spec.wallBeamWidthVersion === 1)
+    }
+    for (const beam of planResolved) {
+      sectionSupports.push({
+        start: beam.start,
+        end: beam.endInner,
+        lengthMm: Math.hypot(beam.endInner[0] - beam.start[0], beam.endInner[1] - beam.start[1]),
+        profileId: beam.profileId,
+        widthMm: beam.widthMm,
+      })
+    }
+  }
+  // Primary support for open-skew / cutout snap: longest, else first plan beam line.
+  const support =
+    sectionSupports.length > 0
+      ? sectionSupports.reduce((best, s) => (s.lengthMm > best.lengthMm ? s : best))
+      : null
+  const supportW = support
+    ? support.widthMm != null && support.widthMm > 0
+      ? support.widthMm
+      : supportBandWidthMm(support, frame.beams, profiles, spec.beamProfileId, spec.wallBeamWidthVersion === 1)
+    : supportBandWidthMm(null, frame.beams, profiles, spec.beamProfileId, spec.wallBeamWidthVersion === 1)
   const supportHalf = supportW / 2
   // A wall notch narrower than the free beam was grown to the free-beam half.
   // Pull it back onto the wall's own face. 50 vs 40 keeps the live-L heights
@@ -1994,18 +2029,21 @@ export function buildLamellaSections(
 
   // The shelf span already ends on the cutout beam's inner face. A cutout
   // grown by the full wall width stops short of that face; snap the vertical
-  // edge to the shelf end so the last bay uses the same face.
-  if (support && support.lengthMm > 1 && cutouts.length > 0) {
-    const shelfXs = [support.start[0], support.end[0]]
+  // edge to each shelf end so the last bay uses the same face (left and right).
+  if (sectionSupports.length > 0 && cutouts.length > 0) {
     let snapped = false
-    for (const cut of cutouts) {
-      for (const x of shelfXs) {
-        if (x > cut.minX + 0.5 && x - cut.minX <= beamW + 0.5) {
-          cut.minX = x
-          snapped = true
-        } else if (x < cut.maxX - 0.5 && cut.maxX - x <= beamW + 0.5) {
-          cut.maxX = x
-          snapped = true
+    for (const shelf of sectionSupports) {
+      if (!(shelf.lengthMm > 1)) continue
+      const shelfXs = [shelf.start[0], shelf.end[0]]
+      for (const cut of cutouts) {
+        for (const x of shelfXs) {
+          if (x > cut.minX + 0.5 && x - cut.minX <= beamW + 0.5) {
+            cut.minX = x
+            snapped = true
+          } else if (x < cut.maxX - 0.5 && cut.maxX - x <= beamW + 0.5) {
+            cut.maxX = x
+            snapped = true
+          }
         }
       }
     }
@@ -2071,34 +2109,53 @@ export function buildLamellaSections(
     }
   }
 
-  if (support && support.lengthMm > 1) {
-    const y0 = Math.min(support.start[1], support.end[1])
-    const y1 = Math.max(support.start[1], support.end[1])
-    const x0 = Math.min(support.start[0], support.end[0])
-    const x1 = Math.max(support.start[0], support.end[0])
+  for (const shelf of sectionSupports) {
+    if (!(shelf.lengthMm > 1)) continue
+    const y0 = Math.min(shelf.start[1], shelf.end[1])
+    const y1 = Math.max(shelf.start[1], shelf.end[1])
+    const x0 = Math.min(shelf.start[0], shelf.end[0])
+    const x1 = Math.max(shelf.start[0], shelf.end[0])
     const midY = (y0 + y1) / 2
     const midX = (x0 + x1) / 2
+    const shelfBandW =
+      shelf.widthMm != null && shelf.widthMm > 0
+        ? shelf.widthMm
+        : supportBandWidthMm(shelf, frame.beams, profiles, spec.beamProfileId, spec.wallBeamWidthVersion === 1)
+    const shelfHalf = shelfBandW / 2
     const horizontal = Math.abs(x1 - x0) >= Math.abs(y1 - y0)
     if (horizontal) {
-      const cutoutTop = cutouts.length > 0 ? Math.max(...cutouts.map((c) => c.maxY)) : midY + supportHalf
+      const cutoutTop = cutouts.length > 0 ? Math.max(...cutouts.map((c) => c.maxY)) : midY + shelfHalf
       const spanMinX = Math.min(aabb.minX, ...field.map((r) => r.minX))
-      const spanMaxX = cutouts.length > 0 ? Math.min(...cutouts.map((c) => c.minX)) : Math.max(x0, x1)
-      // A shelf that sits on a frame beam keeps the beam-face band. A shelf
-      // with no beam under it (the left wing) occupies its own plan width
-      // on the notch axis, so the cells stop on the shelf faces.
-      const onBeam = supportRestsOnBeamSegment(support, frame.beams)
-      const shelfId = support.profileId || spec.wingShelfProfileId || ''
-      const shelfW = shelfId ? beamPlanWidthForDrawing(profiles, shelfId).planWidthMm : supportW
+      const spanMaxX = Math.max(aabb.maxX, ...field.map((r) => r.maxX))
+      const cutMinX = cutouts.length > 0 ? Math.min(...cutouts.map((c) => c.minX)) : null
+      const cutMaxX = cutouts.length > 0 ? Math.max(...cutouts.map((c) => c.maxX)) : null
+      // Left of the notch: classic span from left frame to cutout (L/G).
+      // Right of the notch: mirror for a U-notch house wing.
+      let bandMinX = x0
+      let bandMaxX = x1
+      if (cutMinX != null && cutMaxX != null) {
+        const mid = (x0 + x1) / 2
+        if (mid < cutMinX) {
+          bandMinX = spanMinX
+          bandMaxX = cutMinX
+        } else if (mid > cutMaxX) {
+          bandMinX = cutMaxX
+          bandMaxX = spanMaxX
+        }
+      }
+      const onBeam = supportRestsOnBeamSegment(shelf, frame.beams)
+      const shelfId = shelf.profileId || spec.wingShelfProfileId || ''
+      const shelfW = shelfId ? beamPlanWidthForDrawing(profiles, shelfId).planWidthMm : shelfBandW
       const band: Rectangle = onBeam
         ? {
-            minX: spanMinX,
-            maxX: spanMaxX,
-            minY: cutoutTop - supportW,
+            minX: bandMinX,
+            maxX: bandMaxX,
+            minY: cutoutTop - shelfBandW,
             maxY: cutoutTop,
           }
         : {
-            minX: spanMinX,
-            maxX: spanMaxX,
+            minX: bandMinX,
+            maxX: bandMaxX,
             minY: midY - shelfW / 2,
             maxY: midY + shelfW / 2,
           }
@@ -2112,8 +2169,8 @@ export function buildLamellaSections(
       })
     } else {
       const band: Rectangle = {
-        minX: midX - supportHalf,
-        maxX: midX + supportHalf,
+        minX: midX - shelfHalf,
+        maxX: midX + shelfHalf,
         minY: Math.min(y0, aabb.minY),
         maxY: Math.max(y1, aabb.maxY),
       }

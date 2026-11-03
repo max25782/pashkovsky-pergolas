@@ -305,23 +305,36 @@ export function wingShelfInteriorPostFractions(lengthMm: number, maxSpanMm: numb
   return ts
 }
 
-export function findConcaveLamellaParallelShelfRaw(
+/**
+ * Every concave vertex that yields a lamella-parallel shelf chord.
+ * A U-notch (house) has two: left wing and right wing on the same notch floor.
+ * Previously only the longest was kept, so the shorter right shelf was dropped.
+ */
+export function findAllConcaveLamellaParallelShelfRaws(
   contourInput: Point2D[],
   lamellaDirectionDeg: number,
-): { start: Point2D; end: Point2D; choice: WingShelfEdgeChoice } | null {
+): Array<{ start: Point2D; end: Point2D; choice: WingShelfEdgeChoice; len: number }> {
   const clean = sanitizeContour(contourInput)
   const pts = isCCW(clean) ? clean : [...clean].reverse()
   const n = pts.length
-  if (n < 4) return null
+  if (n < 4) return []
 
-  let best: { start: Point2D; end: Point2D; choice: WingShelfEdgeChoice; len: number } | null = null
+  const out: Array<{ start: Point2D; end: Point2D; choice: WingShelfEdgeChoice; len: number }> = []
   for (let i = 0; i < n; i++) {
     const raw = wingShelfRawAtConcaveVertex(pts, i, lamellaDirectionDeg)
     if (!raw) continue
     const segLen = len(sub(raw.end, raw.start))
-    if (!best || segLen > best.len) {
-      best = { ...raw, len: segLen }
-    }
+    if (segLen < 1) continue
+    out.push({ ...raw, len: segLen })
   }
-  return best
+  out.sort((a, b) => b.len - a.len)
+  return out
+}
+
+export function findConcaveLamellaParallelShelfRaw(
+  contourInput: Point2D[],
+  lamellaDirectionDeg: number,
+): { start: Point2D; end: Point2D; choice: WingShelfEdgeChoice } | null {
+  const best = findAllConcaveLamellaParallelShelfRaws(contourInput, lamellaDirectionDeg)[0]
+  return best ? { start: best.start, end: best.end, choice: best.choice } : null
 }

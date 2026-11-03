@@ -49,8 +49,8 @@ function argPlan() {
   const index = process.argv.indexOf('--plan')
   if (index < 0) return null
   const value = process.argv[index + 1]
-  if (!['diagonal', 'skew', 'l10', 'notch', 'pentagon', 'pentagon-exact', 'pentagon-v2', 'pentagon-v2-ccw'].includes(value)) {
-    console.error('--plan must be diagonal, skew, l10, notch, pentagon, pentagon-exact, pentagon-v2, or pentagon-v2-ccw')
+  if (!['diagonal', 'skew', 'l10', 'notch', 'house', 'pentagon', 'pentagon-exact', 'pentagon-v2', 'pentagon-v2-ccw'].includes(value)) {
+    console.error('--plan must be diagonal, skew, l10, notch, house, pentagon, pentagon-exact, pentagon-v2, or pentagon-v2-ccw')
     process.exit(1)
   }
   return value

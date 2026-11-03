@@ -232,8 +232,10 @@ export type { MaxPurlinClearGapVerification, PurlinClearDisplaySummary, PurlinCl
 export {
   buildPlanEditorOverlayModel,
   findWingShelfSpanSegment,
+  findWingShelfSpanSegments,
   outerLengthToAxisLengthMm,
   resolveWingShelfSupport,
+  resolveAllWingShelfSupports,
   WING_SHELF_SPAN_DIVIDER_ID,
   DEFAULT_WING_SHELF_PROFILE_ID,
   LONG_DIVIDER_WITHOUT_SUPPORT_MM,

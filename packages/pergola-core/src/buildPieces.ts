@@ -2,7 +2,7 @@ import type { CutPiece, PergolaSpec, PieceWarning, Point2D, ProfileDimensions } 
 import type { StructuralIssue } from './validation'
 import type { PlanConstructionParams } from './planDefaults'
 import { DEFAULT_PLAN_CONSTRUCTION_PARAMS } from './planDefaults'
-import { resolveWingShelfSupport } from './planEditorDimensions'
+import { resolveAllWingShelfSupports } from './planEditorDimensions'
 import { computeFrame } from './frame'
 import { computeLamellas } from './lamellas'
 import { computePurlins } from './purlins'
@@ -23,7 +23,6 @@ import {
   applyStraightSupportBeamsToPieces,
   hasPlanSupportBeams,
   resolveStraightSupportBeams,
-  supportLineFromPlanBeams,
 } from './supportBeams'
 
 export interface BuiltPieces {
@@ -149,17 +148,25 @@ export function buildPieces(
 ): BuiltPieces {
   const kerfMm = options?.kerfMm ?? DEFAULT_KERF_MM
   const resolvedBeams = resolveStraightSupportBeams(spec, profiles)
-  const planSupportLine = supportLineFromPlanBeams(resolvedBeams)
+  // Do not inject planSupportLine into section options: buildLamellaSections
+  // already merges wing shelves + all plan beams. Passing only the first beam
+  // would suppress the auto right shelf on a U-notch.
   const sectionOptions: BuildLamellaSectionsOptions | undefined =
-    options?.supportLine !== undefined
-      ? { supportLine: options.supportLine }
-      : planSupportLine != null
-        ? { supportLine: planSupportLine }
-        : undefined
+    options?.supportLine !== undefined ? { supportLine: options.supportLine } : undefined
   const frame = computeFrame(spec, profiles)
   const roof = frame.roof
   const lamellas = computeLamellas(spec, profiles, roof, sectionOptions)
-  const structuralPurlins = computePurlins(spec, profiles, roof, { frameBeams: frame.beams })
+  let structuralPurlins = computePurlins(spec, profiles, roof, { frameBeams: frame.beams })
+  // Split purlins on support beams BEFORE stock segmentation so a 6 m stock
+  // joint does not survive across the beam (house right wing).
+  if (resolvedBeams.length > 0) {
+    structuralPurlins = applyStraightSupportBeamsToPieces({
+      pieces: structuralPurlins,
+      spec,
+      profiles,
+      resolved: resolvedBeams,
+    })
+  }
   const wingShelfPosts = buildWingShelfSupportPosts(spec, profiles, frame.beams, frame.roof)
   const beamResult = segmentBeamsForStock(spec, frame, [...lamellas, ...structuralPurlins], profiles, kerfMm)
   const runResult = segmentRunPiecesForStock(
@@ -197,7 +204,7 @@ export function buildPieces(
     ? warningsFromSpanIssues(warned, lamellas, spec, profiles)
     : []
 
-  const assembled = [
+  const pieces = [
     ...beamResult.beams,
     ...runResult.posts,
     ...wingShelfPosts,
@@ -205,15 +212,6 @@ export function buildPieces(
     ...lamellas,
     ...purlins,
   ]
-  const pieces =
-    resolvedBeams.length > 0
-      ? applyStraightSupportBeamsToPieces({
-          pieces: assembled,
-          spec,
-          profiles,
-          resolved: resolvedBeams,
-        })
-      : assembled
 
   return {
     pieces,
@@ -305,7 +303,7 @@ function buildWingShelfSupportPosts(
   beams: CutPiece[],
   roof: RoofPlane,
 ): CutPiece[] {
-  const support = resolveWingShelfSupport({
+  const supports = resolveAllWingShelfSupports({
     contour: spec.contour,
     params: {
       ...DEFAULT_PLAN_CONSTRUCTION_PARAMS,
@@ -326,28 +324,33 @@ function buildWingShelfSupportPosts(
     beams,
     wallEdgeIndices: spec.wallEdgeIndices,
   })
-  if (!support || support.postPlanPoints.length === 0) return []
   const color = specColorHex(spec)
-  return support.postPlanPoints.map((plan, i) => {
-    const h = postHeightMm(spec, roof, `post-wing-shelf-${i}`, plan)
-    return {
-      id: `post-wing-shelf-${i}`,
-      role: 'post' as const,
-      profileId: spec.postProfileId,
-      lengthAxisMm: h,
-      lengthLongMm: h,
-      lengthShortMm: h,
-      cutMiterStartDeg: 0,
-      cutBevelStartDeg: 0,
-      cutHandStart: 'straight' as const,
-      cutMiterEndDeg: 0,
-      cutBevelEndDeg: 0,
-      cutHandEnd: 'straight' as const,
-      position: [plan[0], 0, plan[1]] as [number, number, number],
-      rotation: [0, 0, 0] as [number, number, number],
-      color,
+  const out: CutPiece[] = []
+  let postIdx = 0
+  for (const support of supports) {
+    for (const plan of support.postPlanPoints) {
+      const id = `post-wing-shelf-${postIdx++}`
+      const h = postHeightMm(spec, roof, id, plan)
+      out.push({
+        id,
+        role: 'post' as const,
+        profileId: spec.postProfileId,
+        lengthAxisMm: h,
+        lengthLongMm: h,
+        lengthShortMm: h,
+        cutMiterStartDeg: 0,
+        cutBevelStartDeg: 0,
+        cutHandStart: 'straight' as const,
+        cutMiterEndDeg: 0,
+        cutBevelEndDeg: 0,
+        cutHandEnd: 'straight' as const,
+        position: [plan[0], 0, plan[1]] as [number, number, number],
+        rotation: [0, 0, 0] as [number, number, number],
+        color,
+      })
     }
-  })
+  }
+  return out
 }
 
 export function buildPiecesFromPlan(

@@ -21,7 +21,7 @@ import { DEFAULT_PLAN_CONSTRUCTION_PARAMS } from './planDefaults'
 import { isRetiredProfileId } from './pergolaProfiles'
 import {
   chordInsidePolygonAlongDir,
-  findConcaveLamellaParallelShelfRaw,
+  findAllConcaveLamellaParallelShelfRaws,
   offsetShelfToNotchFace,
   wingShelfInteriorPostFractions,
 } from './wingShelfSpan'
@@ -165,22 +165,41 @@ function chordReachesLeftFrameInside(pts: Point2D[], corner: Point2D, leftOuterX
   return Math.abs(reachX - leftOuterX) <= SHELF_CHORD_REACH_TOLERANCE_MM
 }
 
+function shelfMid(seg: { start: Point2D; end: Point2D }): Point2D {
+  return [(seg.start[0] + seg.end[0]) / 2, (seg.start[1] + seg.end[1]) / 2]
+}
+
+function pushUniqueShelf(
+  out: Array<{ start: Point2D; end: Point2D }>,
+  seg: { start: Point2D; end: Point2D },
+): void {
+  const mid = shelfMid(seg)
+  const lenMm = Math.hypot(seg.end[0] - seg.start[0], seg.end[1] - seg.start[1])
+  if (lenMm < 1) return
+  for (const existing of out) {
+    const em = shelfMid(existing)
+    if (Math.hypot(mid[0] - em[0], mid[1] - em[1]) < 80) return
+  }
+  out.push({ start: seg.start, end: seg.end })
+}
+
 /**
- * Longest horizontal wing-shelf span for G/L roofs: bottom outer beam of the
- * upper wing (notch shelf), extended left to the left outer frame line.
- * Returns null when no such shelf is found.
+ * All horizontal wing-shelf spans on a notch floor: left wing and, for a U-notch
+ * (house), the right wing on the same line. G/L roofs still yield one span.
  */
-export function findWingShelfSpanSegment(
+export function findWingShelfSpanSegments(
   contour: Point2D[],
   lamellaDirectionDeg = DEFAULT_PLAN_CONSTRUCTION_PARAMS.lamellaDirectionDeg,
-): { start: Point2D; end: Point2D } | null {
+): Array<{ start: Point2D; end: Point2D }> {
   const clean = sanitizeContour(contour)
   const pts = isCCW(clean) ? clean : [...clean].reverse()
   const n = pts.length
-  if (n < 4) return null
+  if (n < 4) return []
 
   const leftOuterX = Math.min(...pts.map((p) => p[0]))
+  const out: Array<{ start: Point2D; end: Point2D }> = []
 
+  // G/L notch-corner: leftward chord only (same rule as before).
   for (let i = 0; i < n; i++) {
     const prev = pts[(i + n - 1) % n]
     const v = pts[i]
@@ -191,25 +210,47 @@ export function findWingShelfSpanSegment(
     const outVert = edgeIsVertical(eOut[0], eOut[1])
     const inHoriz = edgeIsHorizontal(eIn[0], eIn[1])
     const outHoriz = edgeIsHorizontal(eOut[0], eOut[1])
-
-    // Notch shelf: vertical frame leg meets sloped / non-horizontal closing wing (G-shape).
-    // The corner alone does not make a notch. Any shape with a vertical edge next to a sloped
-    // one has such a corner (a skew pentagon has it too), and the horizontal line through it
-    // can leave the contour. The shelf is drawn only when the chord from this corner to the
-    // left frame line runs inside the contour the whole way.
     const isNotchCorner = (inVert && !outHoriz && !outVert) || (outVert && !inHoriz && !inVert)
-    if (isNotchCorner && chordReachesLeftFrameInside(pts, v, leftOuterX)) {
-      const shelfY = v[1]
-      return { start: [leftOuterX, shelfY], end: [v[0], shelfY] }
+    if (!isNotchCorner) continue
+    if (!chordReachesLeftFrameInside(pts, v, leftOuterX)) continue
+    const shelfY = v[1]
+    pushUniqueShelf(out, { start: [leftOuterX, shelfY], end: [v[0], shelfY] })
+  }
+  // Keep the classic single-shelf G/L path: do not mix concave extras on top.
+  if (out.length > 0) return out
+
+  // U-notch (house): no G/L notch-corner match — take every concave shelf so
+  // the right wing is not dropped when it is shorter than the left.
+  for (const concave of findAllConcaveLamellaParallelShelfRaws(pts, lamellaDirectionDeg)) {
+    pushUniqueShelf(out, { start: concave.start, end: concave.end })
+  }
+
+  return out
+}
+
+/**
+ * Longest horizontal wing-shelf span for G/L roofs: bottom outer beam of the
+ * upper wing (notch shelf), extended left to the left outer frame line.
+ * Returns null when no such shelf is found. Prefer `findWingShelfSpanSegments`
+ * when a U-notch may carry a second shelf on the right.
+ */
+export function findWingShelfSpanSegment(
+  contour: Point2D[],
+  lamellaDirectionDeg = DEFAULT_PLAN_CONSTRUCTION_PARAMS.lamellaDirectionDeg,
+): { start: Point2D; end: Point2D } | null {
+  const all = findWingShelfSpanSegments(contour, lamellaDirectionDeg)
+  if (all.length === 0) return null
+  let best = all[0]
+  let bestLen = Math.hypot(best.end[0] - best.start[0], best.end[1] - best.start[1])
+  for (let i = 1; i < all.length; i++) {
+    const seg = all[i]
+    const lenMm = Math.hypot(seg.end[0] - seg.start[0], seg.end[1] - seg.start[1])
+    if (lenMm > bestLen) {
+      best = seg
+      bestLen = lenMm
     }
   }
-
-  const concave = findConcaveLamellaParallelShelfRaw(pts, lamellaDirectionDeg)
-  if (concave) {
-    return { start: concave.start, end: concave.end }
-  }
-
-  return null
+  return best
 }
 
 export const WING_SHELF_SPAN_DIVIDER_ID = 'wing-shelf-span'
@@ -337,25 +378,17 @@ function shelfInnerFaceSpan(
   }
 }
 
-/**
- * Auto support when a divider's free span in a block exceeds
- * `plan.params.purlinMaxSpanMm`. Unset on saved plans ⇒ never insert
- * (legacy). New plans default to 4000.
- */
-export function resolveWingShelfSupport(input: {
-  contour: Point2D[]
-  params: PlanConstructionParams
-  profiles: Map<string, ProfileDimensions>
-  beams: CutPiece[]
-  wallEdgeIndices?: number[]
-}): WingShelfSupport | null {
+function resolveOneWingShelfSupport(
+  raw: { start: Point2D; end: Point2D },
+  input: {
+    contour: Point2D[]
+    params: PlanConstructionParams
+    profiles: Map<string, ProfileDimensions>
+    beams: CutPiece[]
+    wallEdgeIndices?: number[]
+  },
+): WingShelfSupport | null {
   const { contour, params, profiles, beams } = input
-  const maxSpan = params.purlinMaxSpanMm
-  if (maxSpan == null || !(maxSpan > 0)) return null
-
-  const raw = findWingShelfSpanSegment(contour, params.lamellaDirectionDeg)
-  if (!raw) return null
-
   const fallbackWidth = beamPlanWidthForDrawing(profiles, params.beamProfileId).planWidthMm
   // The shelf stays on the notch-beam centerline and occupies that beam's band
   // (the purlin split uses half of DIVIDER_PLAN_CLEARANCE_WIDTH_MM). Shifting it
@@ -383,17 +416,11 @@ export function resolveWingShelfSupport(input: {
   )
   if (clear.lengthMm < 1) return null
 
-  const pickPieces = buildDividerPickPieces(contour, params, profiles)
-  let maxFree = 0
-  for (const piece of pickPieces) {
-    if (piece.dividerId === WING_SHELF_SPAN_DIVIDER_ID) continue
-    const { start, end } = pieceAxis(piece)
-    const len = Math.hypot(end[0] - start[0], end[1] - start[1])
-    if (len > maxFree) maxFree = len
-  }
-  if (maxFree <= maxSpan) return null
-
-  const fractions = wingShelfInteriorPostFractions(clear.lengthMm, params.postMaxSpanMm ?? maxSpan)
+  const maxSpan = params.purlinMaxSpanMm
+  const fractions =
+    maxSpan != null && maxSpan > 0
+      ? wingShelfInteriorPostFractions(clear.lengthMm, params.postMaxSpanMm ?? maxSpan)
+      : []
   const dx = clear.end[0] - clear.start[0]
   const dy = clear.end[1] - clear.start[1]
   const postPlanPoints = fractions.map((t): Point2D => [
@@ -401,8 +428,7 @@ export function resolveWingShelfSupport(input: {
     clear.start[1] + dy * t,
   ])
   const chosenShelf = params.wingShelfProfileId
-  const profileId =
-    chosenShelf && profiles.has(chosenShelf) ? chosenShelf : ''
+  const profileId = chosenShelf && profiles.has(chosenShelf) ? chosenShelf : ''
   return {
     start: clear.start,
     end: clear.end,
@@ -410,6 +436,63 @@ export function resolveWingShelfSupport(input: {
     postPlanPoints,
     profileId,
   }
+}
+
+/**
+ * Auto supports when a divider's free span exceeds `purlinMaxSpanMm`.
+ * A U-notch yields left and right shelves on the same floor line; G/L yields one.
+ * Unset max span on saved plans ⇒ never insert (legacy).
+ */
+export function resolveAllWingShelfSupports(input: {
+  contour: Point2D[]
+  params: PlanConstructionParams
+  profiles: Map<string, ProfileDimensions>
+  beams: CutPiece[]
+  wallEdgeIndices?: number[]
+}): WingShelfSupport[] {
+  const { contour, params, profiles } = input
+  const maxSpan = params.purlinMaxSpanMm
+  if (maxSpan == null || !(maxSpan > 0)) return []
+
+  const raws = findWingShelfSpanSegments(contour, params.lamellaDirectionDeg)
+  if (raws.length === 0) return []
+
+  const pickPieces = buildDividerPickPieces(contour, params, profiles)
+  let maxFree = 0
+  for (const piece of pickPieces) {
+    if (piece.dividerId === WING_SHELF_SPAN_DIVIDER_ID) continue
+    const { start, end } = pieceAxis(piece)
+    const lenMm = Math.hypot(end[0] - start[0], end[1] - start[1])
+    if (lenMm > maxFree) maxFree = lenMm
+  }
+  if (maxFree <= maxSpan) return []
+
+  const out: WingShelfSupport[] = []
+  for (const raw of raws) {
+    const support = resolveOneWingShelfSupport(raw, input)
+    if (support) out.push(support)
+  }
+  return out
+}
+
+/**
+ * Primary (longest) auto wing-shelf support. Prefer `resolveAllWingShelfSupports`
+ * when a U-notch may carry a second shelf on the right.
+ */
+export function resolveWingShelfSupport(input: {
+  contour: Point2D[]
+  params: PlanConstructionParams
+  profiles: Map<string, ProfileDimensions>
+  beams: CutPiece[]
+  wallEdgeIndices?: number[]
+}): WingShelfSupport | null {
+  const all = resolveAllWingShelfSupports(input)
+  if (all.length === 0) return null
+  let best = all[0]
+  for (let i = 1; i < all.length; i++) {
+    if (all[i].lengthMm > best.lengthMm) best = all[i]
+  }
+  return best
 }
 
 export function buildPlanEditorOverlayModel(input: {
@@ -491,14 +574,15 @@ export function buildPlanEditorOverlayModel(input: {
     }
   })
 
-  const support = resolveWingShelfSupport({ contour, params, profiles, beams, wallEdgeIndices })
-  const shelfHalfWidthMm = support
-    ? beamPlanWidthForDrawing(profiles, support.profileId).planWidthMm / 2
-    : undefined
+  const supports = resolveAllWingShelfSupports({ contour, params, profiles, beams, wallEdgeIndices })
+  const wingShelfClips = supports.map((support) => ({
+    start: support.start,
+    end: support.end,
+    halfWidthMm: beamPlanWidthForDrawing(profiles, support.profileId).planWidthMm / 2,
+  }))
   const pickPieces = buildDividerPickPieces(contour, params, profiles, {
-    wingShelfClip: support
-      ? { start: support.start, end: support.end, halfWidthMm: shelfHalfWidthMm }
-      : undefined,
+    wingShelfClips: wingShelfClips.length > 0 ? wingShelfClips : undefined,
+    wingShelfClip: wingShelfClips[0],
     wallEdgeIndices,
   })
   const dividerLines: PlanEditorDividerOverlayLine[] = []
@@ -508,22 +592,14 @@ export function buildPlanEditorOverlayModel(input: {
     dividerLines.push({ dividerId: piece.dividerId, start, end })
   }
 
-  if (support) {
-    const existing = dividerLines.find((l) => l.dividerId === WING_SHELF_SPAN_DIVIDER_ID)
-    if (!existing) {
-      dividerLines.push({
-        dividerId: WING_SHELF_SPAN_DIVIDER_ID,
-        start: support.start,
-        end: support.end,
-        isWingShelfSpan: true,
-        lengthMm: support.lengthMm,
-      })
-    } else {
-      existing.start = support.start
-      existing.end = support.end
-      existing.isWingShelfSpan = true
-      existing.lengthMm = support.lengthMm
-    }
+  for (const support of supports) {
+    dividerLines.push({
+      dividerId: WING_SHELF_SPAN_DIVIDER_ID,
+      start: support.start,
+      end: support.end,
+      isWingShelfSpan: true,
+      lengthMm: support.lengthMm,
+    })
   }
 
   return {

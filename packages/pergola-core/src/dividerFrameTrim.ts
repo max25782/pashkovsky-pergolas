@@ -351,13 +351,21 @@ export function trimDividerAxisSegmentsForFrame(input: {
    * A crossing that lands on a real beam segment uses that beam's half instead.
    */
   wingShelfClip?: { start: Point2D; end: Point2D; halfWidthMm?: number }
+  /** U-notch may carry left and right shelves on the same floor line. */
+  wingShelfClips?: Array<{ start: Point2D; end: Point2D; halfWidthMm?: number }>
   /** Kept so callers can pass the contour. Axes are not rewritten here. */
   contour?: Point2D[]
   measuredOuterLengthMmByEdgeIndex?: Array<number | null | undefined>
   /** Purlin rows set this. See `trimAxisSegmentToInnerFaces`. */
   ignoreBeamsBehindEnds?: boolean
 }): TrimmedDividerAxisSegment[] {
-  const { start, end, beams, minLengthMm = MIN_FREE_MM, wingShelfClip, ignoreBeamsBehindEnds = false } = input
+  const { start, end, beams, minLengthMm = MIN_FREE_MM, ignoreBeamsBehindEnds = false } = input
+  const clips =
+    input.wingShelfClips && input.wingShelfClips.length > 0
+      ? input.wingShelfClips
+      : input.wingShelfClip
+        ? [input.wingShelfClip]
+        : []
   const dividerHalf = DIVIDER_PLAN_CLEARANCE_WIDTH_MM / 2
 
   const inner = trimAxisSegmentToInnerFaces({ start, end, beams, ignoreBeamsBehindEnds })
@@ -370,7 +378,7 @@ export function trimDividerAxisSegmentsForFrame(input: {
     beams,
   })
 
-  if (wingShelfClip) {
+  for (const wingShelfClip of clips) {
     // On the beam segment, stop on the beam faces. On the shelf alone
     // (the left wing, where the notch beam has ended), stop on the shelf faces.
     const shelfHalf = wingShelfClip.halfWidthMm ?? beamHalfAlongClip(wingShelfClip, beams)
