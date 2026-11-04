@@ -368,8 +368,15 @@ export async function POST(req: NextRequest) {
       sessionId: bedrockResponse.sessionId || session.id,
     })
   } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error)
     console.error('[AI Director] Chat error:', error)
-    return NextResponse.json({ error: 'AI Director temporarily unavailable' }, { status: 500 })
+    return NextResponse.json(
+      {
+        error: msg || 'AI Director temporarily unavailable',
+        hint: 'If this mentions credentials/region, check AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, BEDROCK_AGENT_ID on Vercel.',
+      },
+      { status: 500 },
+    )
   }
 }
 

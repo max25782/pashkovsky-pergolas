@@ -8,7 +8,12 @@
  * Do not use this module for public AI Chat (`/api/ai-chat`) — that stays on Gemini.
  */
 
-const AWS_REGION = process.env.AWS_REGION || 'us-east-1'
+// Bedrock Agents live in us-east-1 for this project. Do not reuse AWS_REGION —
+// that is often set to eu-north-1 for the gallery S3 bucket.
+const AWS_REGION =
+  process.env.BEDROCK_AWS_REGION
+  || process.env.AWS_BEDROCK_REGION
+  || 'us-east-1'
 const AWS_ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID
 const AWS_SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY
 const BEDROCK_AGENT_ID = process.env.BEDROCK_AGENT_ID
@@ -116,94 +121,112 @@ export async function callBedrockAgent({
   const MAX_TOOL_CALLS = 5
   let toolCallCount = 0
 
-  while (toolCallCount <= MAX_TOOL_CALLS) {
-    const command = new InvokeAgentCommand(commandInput)
-    const response = await client.send(command)
+  try {
+    while (toolCallCount <= MAX_TOOL_CALLS) {
+      const command = new InvokeAgentCommand(commandInput)
+      const response = await client.send(command)
 
-    let responseText = ''
-    let returnControlPayload: {
-      invocationId?: string
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      invocationInputs?: any[]
-    } | null = null
+      let responseText = ''
+      let returnControlPayload: {
+        invocationId?: string
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        invocationInputs?: any[]
+      } | null = null
 
-    if (response.completion) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      for await (const chunk of response.completion as AsyncIterable<any>) {
-        if (chunk.chunk?.bytes) {
-          const decoder = new TextDecoder()
-          responseText += decoder.decode(chunk.chunk.bytes)
-        }
-        if (chunk.returnControl) {
-          returnControlPayload = chunk.returnControl
+      if (response.completion) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        for await (const chunk of response.completion as AsyncIterable<any>) {
+          if (chunk.chunk?.bytes) {
+            const decoder = new TextDecoder()
+            responseText += decoder.decode(chunk.chunk.bytes)
+          }
+          if (chunk.returnControl) {
+            returnControlPayload = chunk.returnControl
+          }
         }
       }
-    }
 
-    if (responseText) {
-      return { content: responseText, sessionId: currentSessionId }
-    }
+      if (responseText) {
+        return { content: responseText, sessionId: currentSessionId }
+      }
 
-    if (returnControlPayload && returnControlPayload.invocationId) {
-      toolCallCount++
+      if (returnControlPayload && returnControlPayload.invocationId) {
+        toolCallCount++
 
-      const invocationId = returnControlPayload.invocationId
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const results: any[] = []
+        const invocationId = returnControlPayload.invocationId
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const results: any[] = []
 
-      for (const input of returnControlPayload.invocationInputs ?? []) {
-        const fi = input.functionInvocationInput
-        if (!fi) continue
+        for (const input of returnControlPayload.invocationInputs ?? []) {
+          const fi = input.functionInvocationInput
+          if (!fi) continue
 
-        const fnName: string = fi.function ?? ''
-        const params: Array<{ name?: string; type?: string; value?: string }> =
-          fi.parameters ?? []
+          const fnName: string = fi.function ?? ''
+          const params: Array<{ name?: string; type?: string; value?: string }> =
+            fi.parameters ?? []
 
-        const resultBody = await dispatchCRMFunction(
-          fnName,
-          params,
-          apiBaseUrl,
-          apiToken,
-          companyId,
-        )
+          const resultBody = await dispatchCRMFunction(
+            fnName,
+            params,
+            apiBaseUrl,
+            apiToken,
+            companyId,
+          )
 
-        results.push({
-          functionResult: {
-            actionGroup: fi.actionGroup ?? 'CRMDataAPI',
-            function: fnName,
-            responseBody: {
-              TEXT: { body: resultBody },
+          results.push({
+            functionResult: {
+              actionGroup: fi.actionGroup ?? 'CRMDataAPI',
+              function: fnName,
+              responseBody: {
+                TEXT: { body: resultBody },
+              },
             },
+          })
+        }
+
+        commandInput = {
+          agentId: BEDROCK_AGENT_ID,
+          agentAliasId: BEDROCK_AGENT_ALIAS_ID,
+          sessionId: currentSessionId,
+          sessionState: {
+            ...(sessionAttributes ? { sessionAttributes } : {}),
+            invocationId,
+            returnControlInvocationResults: results,
           },
-        })
+        }
+
+        continue
       }
 
-      commandInput = {
-        agentId: BEDROCK_AGENT_ID,
-        agentAliasId: BEDROCK_AGENT_ALIAS_ID,
+      return {
+        content: '',
+        error:
+          'Empty response from Bedrock agent. Check AWS Console logs and ensure the agent is prepared.',
         sessionId: currentSessionId,
-        sessionState: {
-          ...(sessionAttributes ? { sessionAttributes } : {}),
-          invocationId,
-          returnControlInvocationResults: results,
-        },
       }
-
-      continue
     }
 
     return {
       content: '',
-      error:
-        'Empty response from Bedrock agent. Check AWS Console logs and ensure the agent is prepared.',
+      error: 'Bedrock agent exceeded maximum tool call iterations.',
       sessionId: currentSessionId,
     }
-  }
-
-  return {
-    content: '',
-    error: 'Bedrock agent exceeded maximum tool call iterations.',
-    sessionId: currentSessionId,
+  } catch (err: unknown) {
+    const e = err as { name?: string; message?: string; Code?: string }
+    const message = e?.message || String(err)
+    console.error('[Bedrock] InvokeAgent failed:', {
+      name: e?.name,
+      code: e?.Code,
+      message,
+      region: AWS_REGION,
+      agentId: BEDROCK_AGENT_ID,
+      aliasId: BEDROCK_AGENT_ALIAS_ID,
+    })
+    return {
+      content: '',
+      error: `Bedrock InvokeAgent failed (${AWS_REGION}/${BEDROCK_AGENT_ID}): ${message}`,
+      sessionId: currentSessionId,
+    }
   }
 }
 
