@@ -110,21 +110,21 @@ function schematicSection(widthMm: number, heightMm: number, wallMm: number | un
 }
 
 /**
- * WT R242 / double-T 142×70 (plan 70). Catalog gallery r242.jpg is 142×100 — do not use it.
- * Drawn flanges + web with the same dim labels as the header gauge.
+ * WT R242 double-T as installed on the plan.
+ * Catalog / construction: widthMm = plan width (70), heightMm = section height (142).
+ * `planWidthMm` override is also 70 (`override-70` in beamPlanWidth). Gallery
+ * r242.jpg is 142×100 — wrong; do not use it.
  */
 function doubleTSectionDrawing(widthMm: number, heightMm: number): string {
-  const tall = Math.max(widthMm, heightMm)
-  const wide = Math.min(widthMm, heightMm)
-  const hLabel = String(Math.round(tall))
-  const wLabel = String(Math.round(wide))
-  // View: flanges left/right (plan width), stack height across the page.
-  return `<svg class="schematic" viewBox="0 0 120 92" role="img" aria-label="WT R242 ${hLabel}×${wLabel}">
+  const planW = String(Math.round(widthMm))
+  const sectH = String(Math.round(heightMm))
+  // Flanges top & bottom, web vertical: horizontal = plan width 70, vertical = 142.
+  return `<svg class="schematic" viewBox="0 0 120 100" role="img" aria-label="WT R242 plan ${planW} × height ${sectH}">
     <g fill="#fafaf9" stroke="#111827" stroke-width="1.6" stroke-linejoin="miter">
-      <path d="M22 10 H98 V22 H70 V50 H98 V62 H22 V50 H50 V22 H22 Z"/>
+      <path d="M34 4 H86 V16 H64 V72 H86 V84 H34 V72 H56 V16 H34 Z"/>
     </g>
-    <text x="60" y="8" text-anchor="middle" font-size="11" font-family="sans-serif" font-weight="700" fill="#111827">${hLabel}</text>
-    <text x="110" y="40" text-anchor="middle" font-size="11" font-family="sans-serif" font-weight="700" fill="#111827">${wLabel}</text>
+    <text x="60" y="96" text-anchor="middle" font-size="11" font-family="sans-serif" font-weight="700" fill="#111827">${planW}</text>
+    <text x="108" y="48" text-anchor="middle" font-size="11" font-family="sans-serif" font-weight="700" fill="#111827">${sectH}</text>
   </svg>`
 }
 
@@ -235,6 +235,8 @@ function barSvg(bar: DrawnBar, labels: CutMapLabels, kerfMm: number): string {
   const barH = 32
   // Three under-bar bands: captions, then angles, then остаток — 45° on the
   // last piece must not cover "остаток NNN" (pa1162 Б4, R242 3/3 · Б1).
+  // Short length callouts stay ABOVE the bar so they never meet "остаток"
+  // (f7020 475 vs остаток 347/350).
   const captionY = barY + barH + 16
   const angleBelowY = barY + barH + 34
   const restY = barY + barH + 52
@@ -253,10 +255,11 @@ function barSvg(bar: DrawnBar, labels: CutMapLabels, kerfMm: number): string {
     const mid = px + pieceW / 2
     const text = String(piece.lengthMm)
     const textW = Math.max(22, text.length * 12)
-    const below = piece.lengthMm < 40 || textW > pieceW * 0.72
+    const isLast = pieceIndex === pieces.length - 1
+    // Short last piece before waste: always call out above+left (f7020 475 / остаток).
+    const below = piece.lengthMm < 40 || textW > pieceW * 0.72 || (isLast && wasteW > 1 && pieceW < 60)
     // Length above when it fits; angles on the opposite band from length.
     // Last piece + waste: end 45° stays ABOVE so it never sits on "остаток".
-    const isLast = pieceIndex === pieces.length - 1
     const endAngleY = below || (isLast && wasteW > 1) ? 18 : angleBelowY
     const startAngleY = below ? 18 : angleBelowY
     const startLabel = piece.startDeg !== 90
@@ -271,9 +274,12 @@ function barSvg(bar: DrawnBar, labels: CutMapLabels, kerfMm: number): string {
     const leader = below
       ? (() => {
           const row = dropped++
-          const ly = barY + barH + 54 + (row % 3) * 16
-          const lx = mid + (row % 2 === 0 ? -14 : 14)
-          return `<line x1="${mid}" y1="${barY + barH}" x2="${lx}" y2="${ly - 11}" stroke="#111827" stroke-width="0.8"/>
+          // Above the bar — never on the остаток / caption band.
+          const ly = 14 + (row % 3) * 12
+          // Last short piece before waste: pull left so "475" does not sit on "остаток".
+          const nearWaste = isLast && wasteW > 1
+          const lx = nearWaste ? mid - Math.max(18, pieceW * 0.35) : mid + (row % 2 === 0 ? -10 : 10)
+          return `<line x1="${mid}" y1="${barY}" x2="${lx}" y2="${ly + 2}" stroke="#111827" stroke-width="0.8"/>
             <text x="${lx}" y="${ly}" text-anchor="middle" font-size="16" font-family="sans-serif" font-weight="700" fill="#111827">${text}</text>`
         })()
       : ''
@@ -284,12 +290,17 @@ function barSvg(bar: DrawnBar, labels: CutMapLabels, kerfMm: number): string {
       ${lengthText}${startLabel}${endLabel}${caption}${leader}`
   }).join('')
   const rest = `${labels.rest} ${Math.floor(bar.wasteMm + 0.005)}`
-  const restX = wasteX + Math.max(wasteW, 12) / 2
+  // Narrow waste: right-align "остаток N" at the stock end so it does not cover a short last piece (f7020 475).
+  const restNarrow = wasteW > 1 && wasteW < Math.max(70, rest.length * 9)
+  const restX = restNarrow ? wasteX + wasteW : wasteX + Math.max(wasteW, 12) / 2
+  const restAnchor = restNarrow ? 'end' : 'middle'
   const waste = wasteW > 1
     ? `<rect x="${wasteX}" y="${barY}" width="${wasteW}" height="${barH}" fill="none" stroke="#9ca3af" stroke-width="1.2" stroke-dasharray="4 3"/>
-       <text x="${restX}" y="${restY}" text-anchor="middle" font-size="15" font-family="sans-serif" fill="#57534e">${rest}</text>`
+       <text x="${restX}" y="${restY}" text-anchor="${restAnchor}" font-size="15" font-family="sans-serif" fill="#57534e">${rest}</text>`
     : ''
-  return `<svg class="bar" viewBox="0 0 ${width.toFixed(1)} ${height}" width="${(bar.stockMm * 0.022).toFixed(1)}mm" height="38mm" role="img">${polygons}${waste}</svg>`
+  // 32mm keeps six structural rows + profile head inside one A4 port page
+  // (38mm overflowed and Chrome split the last bar onto a headless page).
+  return `<svg class="bar" viewBox="0 0 ${width.toFixed(1)} ${height}" width="${(bar.stockMm * 0.022).toFixed(1)}mm" height="32mm" role="img">${polygons}${waste}</svg>`
 }
 
 function profileHead(
@@ -346,6 +357,21 @@ function legend(labels: CutMapLabels): string {
   return `<footer class="legend"><p><strong>${labels.howTitle}</strong></p><p>${bdi(labels.howAngle)}</p><p>${bdi(labels.howBeam)}</p><p>${bdi(labels.howPart)}</p><p>${bdi(labels.howColor)}</p></footer>`
 }
 
+/** Split rows so the last page is never a single orphan when avoidable. */
+function chunkAvoidOrphan<T>(items: readonly T[], size: number): T[][] {
+  if (items.length === 0) return []
+  if (size < 2 || items.length <= size) return [items.slice()]
+  const chunks: T[][] = []
+  let i = 0
+  while (i < items.length) {
+    let n = Math.min(size, items.length - i)
+    if (items.length - i - n === 1 && n === size) n = size - 1
+    chunks.push(items.slice(i, i + n))
+    i += n
+  }
+  return chunks
+}
+
 export function renderCuttingPages(input: {
   plans: ProfileBundlePlan[]
   profiles: Map<string, ProfileDimensions>
@@ -385,16 +411,19 @@ export function renderCuttingPages(input: {
     const head = profileHead(bundle, input.labels, src, profile?.wallThicknessMm, weight, stock, plan.totalBars, kerfMm)
     const lamellaPage = plan.bars.every((bar) => bar.pieces.length > 0 && bar.pieces.every((piece) => piece.role === 'lamella'))
     const pageRows = lamellaPage ? 11 : rowsPerPage
-    for (let i = 0; i < bars.length; i += pageRows) {
-      const chunk = bars.slice(i, i + pageRows)
-      const last = profileIndex === profilesInOrder.length - 1 && i + pageRows >= bars.length
-      const title = i === 0 && profileIndex === 0 ? input.labels.title : `${input.labels.title} · ${bundle.profileId}`
+    const chunks = chunkAvoidOrphan(bars, pageRows)
+    chunks.forEach((chunk, chunkIndex) => {
+      const last = profileIndex === profilesInOrder.length - 1 && chunkIndex === chunks.length - 1
+      const title = chunkIndex === 0 && profileIndex === 0
+        ? input.labels.title
+        : `${input.labels.title} · ${bundle.profileId}`
       const banner = warned ? '' : weightWarningHtml(missingWeight, input.labels.weightIncomplete)
       warned = true
       const body = chunk.map((bar) => `<div class="bar-row"><div class="times">×${bar.count}</div>${barSvg(bar, input.labels, kerfMm)}</div>`).join('')
       const dense = lamellaPage ? ' lamella-dense' : ''
+      // Every continuation repeats the profile head (icon + id + params).
       pages.push(`<section class="port cut-page${dense}" data-pdf-page="" data-pdf-orient="port" data-pdf-kind="html" dir="${dir}"><h1>${title}</h1>${banner}${head}${body}${last ? legend(input.labels) : ''}</section>`)
-    }
+    })
   })
 
   return { html: pages.join(''), photos }

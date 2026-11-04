@@ -90,7 +90,7 @@ describe('cutting map', () => {
     expect(drawn.html).toContain('сечение схематично')
   })
 
-  it('R242 cut sheet draws double-T 142×70 without «схематично»', () => {
+  it('R242 cut sheet draws double-T plan-70 × height-142 without «схематично»', () => {
     const r242Plans = buildProfileBundlePlans([
       piece({
         id: 'beam-0',
@@ -111,7 +111,40 @@ describe('cutting map', () => {
     expect(html).toContain('>142</text>')
     expect(html).toContain('>70</text>')
     expect(html).not.toContain('сечение схематично')
-    expect(html).toContain('aria-label="WT R242 142×70"')
+    // Plan width under the section, height on the side — matches widthMm/heightMm.
+    expect(html).toContain('aria-label="WT R242 plan 70 × height 142"')
+    expect(html).toMatch(/y="96"[^>]*>70</)
+    expect(html).toMatch(/y="48"[^>]*>142</)
+  })
+
+  it('keeps short length callouts above the bar, away from остаток', () => {
+    const shortPlans = buildProfileBundlePlans([
+      piece({
+        id: 'lam-0',
+        role: 'lamella',
+        profileId: 'f7020',
+        lengthAxisMm: 475,
+        lengthLongMm: 475,
+      }),
+      piece({
+        id: 'lam-1',
+        role: 'lamella',
+        profileId: 'f7020',
+        lengthAxisMm: 5160,
+        lengthLongMm: 5160,
+      }),
+    ], profiles)
+    const html = renderCuttingPages({ plans: shortPlans, profiles, labels, rtl: false }).html
+    const bar = html.match(/<svg class="bar"[\s\S]*?<\/svg>/)![0]
+    const shortY = Number(bar.match(/y="([\d.]+)"[^>]*>475</)?.[1])
+    const shortX = Number(bar.match(/x="([\d.]+)"[^>]*y="([\d.]+)"[^>]*>475</)?.[1]
+      ?? bar.match(/y="([\d.]+)" x="([\d.]+)"[^>]*>475</)?.[2])
+    const rest = bar.match(/<text x="([\d.]+)" y="([\d.]+)" text-anchor="([^"]+)"[^>]*>остаток/)
+    expect(shortY).toBeLessThan(28)
+    expect(Number(rest?.[2])).toBeGreaterThan(70)
+    expect(Number(rest?.[2]) - shortY).toBeGreaterThan(40)
+    expect(rest?.[3]).toBe('end')
+    expect(Number(rest?.[1])).toBeGreaterThan(shortX)
   })
 
   it('uses the local F4060 drawing for PA1296 and leaves a profile without an image or a weight as such', () => {
@@ -188,7 +221,7 @@ describe('cutting map', () => {
     expect(chosen?.plan?.totalBars).toBe(1)
   })
 
-  it('puts 11 lamella bars on a page and keeps structural profiles at 6', () => {
+  it('puts 11 lamella bars on a page and avoids a single structural orphan', () => {
     const many = [
       ...Array.from({ length: 12 }, (_, index) => piece({
         id: `lam-page-${index}`,
@@ -213,7 +246,12 @@ describe('cutting map', () => {
     const lamellaPages = sections.filter((section) => section.includes('f7020'))
     const beamPages = sections.filter((section) => section.includes('f10040'))
     const rows = (section: string) => section.match(/class="bar-row"/g)?.length ?? 0
-    expect(lamellaPages.map(rows)).toEqual([11, 1])
-    expect(beamPages.map(rows)).toEqual([6, 1])
+    // Lamellas: 11 + orphan avoided → [10, 2]. Structural: 6 max, orphan avoided → [5, 2].
+    expect(lamellaPages.map(rows)).toEqual([10, 2])
+    expect(beamPages.map(rows)).toEqual([5, 2])
+    for (const section of [...lamellaPages, ...beamPages]) {
+      expect(section).toContain('class="profile-head"')
+      expect(rows(section)).toBeGreaterThanOrEqual(2)
+    }
   })
 })

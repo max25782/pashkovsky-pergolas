@@ -77,13 +77,13 @@ export function sheetPdfDocument(root: HTMLElement, locale: 'he' | 'ru' | 'en' |
   .weight-warn { color: #b91c1c; font: 700 11pt sans-serif; margin: 0 0 3mm; }
   .exclude { font-weight: 700; }
   .cut-page, .order-page { font-size: 10pt; }
-  .profile-head, .order-card { display: flex; gap: 4mm; align-items: center; margin: 0 0 4mm; break-inside: avoid; }
-  .profile-head img, .profile-head .schematic, .order-card img, .order-card .schematic { width: 32mm; height: 24mm; object-fit: contain; border: 0.2mm solid #d6d3d1; background: #fff; flex: none; }
+  .profile-head, .order-card { display: flex; gap: 4mm; align-items: center; margin: 0 0 3mm; break-inside: avoid; }
+  .profile-head img, .profile-head .schematic, .order-card img, .order-card .schematic { width: 28mm; height: 22mm; object-fit: contain; border: 0.2mm solid #d6d3d1; background: #fff; flex: none; }
   .profile-head p, .order-card p { margin: 1mm 0 0; font-size: 10pt; }
   .profile-head strong, .order-card strong { font-size: 14pt; }
   .missing-photo { width: 36mm; flex: none; }
   .no-photo { margin: 0 0 1mm; font-weight: 700; }
-  .bar-row { display: flex; align-items: center; gap: 3mm; margin: 0 0 3mm; break-inside: avoid; }
+  .bar-row { display: flex; align-items: center; gap: 2mm; margin: 0 0 2mm; break-inside: avoid; }
   .lamella-dense h1 { margin-bottom: 1mm; font-size: 12pt; }
   .lamella-dense .profile-head { margin-bottom: 2mm; }
   .lamella-dense .profile-head img, .lamella-dense .profile-head .schematic { width: 22mm; height: 16mm; }
