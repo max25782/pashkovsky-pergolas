@@ -84,10 +84,34 @@ describe('cutting map', () => {
     expect(profilePhotoMatch('f7020')).toEqual({ profileId: 'f7020', file: 'f7020.jpg', confidence: 'high' })
     expect(profilePhotoMatch('PA3022').confidence).toBe('high')
     expect(profilePhotoMatch('pa1162')).toEqual({ profileId: 'pa1162', file: 'pa1162.jpg', confidence: 'high' })
-    // Wrong catalog photo (142×100); header/gauge stay 142×70 via schematic labels.
+    // Wrong catalog photo (142×100); header uses the drawn double-T with 142×70 labels.
     expect(profilePhotoMatch('R242')).toEqual({ profileId: 'R242', file: null, confidence: 'none' })
     expect(drawn.photos.find((photo) => photo.profileId === 'f10040')?.confidence).toBe('high')
     expect(drawn.html).toContain('сечение схематично')
+  })
+
+  it('R242 cut sheet draws double-T 142×70 without «схематично»', () => {
+    const r242Plans = buildProfileBundlePlans([
+      piece({
+        id: 'beam-0',
+        profileId: 'R242',
+        lengthAxisMm: 4000,
+        lengthLongMm: 4000,
+        cutMiterStartDeg: 45,
+        cutMiterEndDeg: 0,
+        cutHandStart: 'L',
+      }),
+    ], new Map([['R242', { widthMm: 70, heightMm: 142, wallThicknessMm: 1.6, weightKgPerMeter: 2.5, availableStockLengthsMm: [6500] }]]))
+    const html = renderCuttingPages({
+      plans: r242Plans,
+      profiles: new Map([['R242', { widthMm: 70, heightMm: 142, wallThicknessMm: 1.6, weightKgPerMeter: 2.5, availableStockLengthsMm: [6500] }]]),
+      labels,
+      rtl: false,
+    }).html
+    expect(html).toContain('>142</text>')
+    expect(html).toContain('>70</text>')
+    expect(html).not.toContain('сечение схематично')
+    expect(html).toContain('aria-label="WT R242 142×70"')
   })
 
   it('uses the local F4060 drawing for PA1296 and leaves a profile without an image or a weight as such', () => {

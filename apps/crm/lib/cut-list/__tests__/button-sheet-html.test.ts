@@ -131,7 +131,7 @@ describe('button sheet html', () => {
     expect(inlined).not.toContain('#9aa0a6')
   })
 
-  it('R242 has no wrong 142×100 photo — schematic only', () => {
+  it('R242 has no wrong 142×100 photo — drawn double-T section instead', () => {
     expect(profilePhotoMatch('R242')).toEqual({ profileId: 'R242', file: null, confidence: 'none' })
   })
 

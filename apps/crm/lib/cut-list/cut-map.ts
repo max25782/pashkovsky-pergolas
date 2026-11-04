@@ -9,15 +9,18 @@ import {
   type ProfileBundlePlan,
 } from './order-sheet'
 
-/** Local gallery files whose name is the profile id. Anything else is a schematic, not a guess. */
+/** Local gallery files whose name is the profile id (lowercase .jpg). Anything else is drawn. */
 const LOCAL_PROFILE_PHOTOS = new Set([
   'f100100', 'f10020', 'f10040', 'f12040', 'f20050', 'f4060', 'f7020', 'f8080',
   'hs001', 'hs003', 'hs004', 'hs005', 'hs006', 'hs007', 'hs009', 'hs012', 'hs013',
   'hs022', 'hs024', 'hs025',
-  // r242.jpg is labeled 142×100; catalog/code are heightMm 142 × widthMm 70 (plan 70).
-  // Prefer the dim-labeled schematic so the cut sheet matches the header gauge.
+  // r242.jpg in the gallery is labeled 142×100 — wrong vs catalog 142×70. R242 uses
+  // the drawn double-T section below, not that file.
   'pa1162', 'pa1197', 'pa1296', 'pa3022', 'pa1429', 'p1034',
 ])
+
+/** Profiles with a real drawn section (not the hollow-rectangle schematic). */
+const DRAWN_SECTION_PROFILE_IDS = new Set(['r242'])
 
 export interface ProfilePhotoMatch {
   profileId: string
@@ -30,6 +33,10 @@ export function profilePhotoMatch(profileId: string): ProfilePhotoMatch {
   if (!LOCAL_PROFILE_PHOTOS.has(stem)) return { profileId, file: null, confidence: 'none' }
   const confidence = stem === 'pa1296' ? 'medium' : 'high'
   return { profileId, file: `${stem}.jpg`, confidence }
+}
+
+export function hasDrawnProfileSection(profileId: string): boolean {
+  return DRAWN_SECTION_PROFILE_IDS.has(profileId.trim().toLowerCase())
 }
 
 export interface CutMapLabels {
@@ -90,13 +97,55 @@ function schematicSection(widthMm: number, heightMm: number, wallMm: number | un
   const wall = wallMm != null && wallMm > 0 ? Math.max(3, Math.min(10, wallMm * 2)) : 4
   const hLabel = Number.isFinite(tall) && tall > 0 ? String(Math.round(tall)) : ''
   const wLabel = Number.isFinite(wide) && wide > 0 ? String(Math.round(wide)) : ''
-  return `<svg class="schematic" viewBox="0 0 120 92" role="img" aria-label="${caption}">
+  const captionText = caption
+    ? `<text x="60" y="82" text-anchor="middle" font-size="11" font-family="sans-serif" fill="#44403c">${caption}</text>`
+    : ''
+  return `<svg class="schematic" viewBox="0 0 120 92" role="img" aria-label="${caption || `${hLabel}×${wLabel}`}">
     <rect x="16" y="4" width="${outerW}" height="${outerH}" fill="#fafaf9" stroke="#111827" stroke-width="${wall}"/>
     <rect x="${16 + wall}" y="${4 + wall}" width="${outerW - wall * 2}" height="${outerH - wall * 2}" fill="#ffffff" stroke="#111827" stroke-width="1"/>
     ${hLabel ? `<text x="60" y="16" text-anchor="middle" font-size="11" font-family="sans-serif" font-weight="700" fill="#111827">${hLabel}</text>` : ''}
     ${wLabel ? `<text x="108" y="36" text-anchor="middle" font-size="11" font-family="sans-serif" font-weight="700" fill="#111827">${wLabel}</text>` : ''}
-    <text x="60" y="82" text-anchor="middle" font-size="11" font-family="sans-serif" fill="#44403c">${caption}</text>
+    ${captionText}
   </svg>`
+}
+
+/**
+ * WT R242 / double-T 142×70 (plan 70). Catalog gallery r242.jpg is 142×100 — do not use it.
+ * Drawn flanges + web with the same dim labels as the header gauge.
+ */
+function doubleTSectionDrawing(widthMm: number, heightMm: number): string {
+  const tall = Math.max(widthMm, heightMm)
+  const wide = Math.min(widthMm, heightMm)
+  const hLabel = String(Math.round(tall))
+  const wLabel = String(Math.round(wide))
+  // View: flanges left/right (plan width), stack height across the page.
+  return `<svg class="schematic" viewBox="0 0 120 92" role="img" aria-label="WT R242 ${hLabel}×${wLabel}">
+    <g fill="#fafaf9" stroke="#111827" stroke-width="1.6" stroke-linejoin="miter">
+      <path d="M22 10 H98 V22 H70 V50 H98 V62 H22 V50 H50 V22 H22 Z"/>
+    </g>
+    <text x="60" y="8" text-anchor="middle" font-size="11" font-family="sans-serif" font-weight="700" fill="#111827">${hLabel}</text>
+    <text x="110" y="40" text-anchor="middle" font-size="11" font-family="sans-serif" font-weight="700" fill="#111827">${wLabel}</text>
+  </svg>`
+}
+
+function profileSectionPicture(
+  profileId: string,
+  widthMm: number,
+  heightMm: number,
+  wallMm: number | undefined,
+  photoSrc: string | null,
+  labels: Pick<CutMapLabels, 'schematic' | 'noImage'>,
+): string {
+  if (photoSrc) {
+    return `<img src="${photoSrc}" alt="${esc(profileId)}" width="120" height="80"/>`
+  }
+  const stem = profileId.trim().toLowerCase()
+  if (hasDrawnProfileSection(stem) && widthMm > 0 && heightMm > 0) {
+    return doubleTSectionDrawing(widthMm, heightMm)
+  }
+  const hasDims = widthMm > 0 && heightMm > 0
+  if (hasDims) return schematicSection(widthMm, heightMm, wallMm, labels.schematic)
+  return `<div class="missing-photo"><p class="no-photo">${labels.noImage}</p>${schematicSection(Math.max(widthMm, 40), Math.max(heightMm, 20), wallMm, labels.schematic)}</div>`
 }
 
 interface DrawnPiece {
@@ -184,7 +233,12 @@ function barSvg(bar: DrawnBar, labels: CutMapLabels, kerfMm: number): string {
   const width = bar.stockMm * scale + pad * 2
   const barY = 28
   const barH = 32
-  const height = 132
+  // Three under-bar bands: captions, then angles, then остаток — 45° on the
+  // last piece must not cover "остаток NNN" (pa1162 Б4, R242 3/3 · Б1).
+  const captionY = barY + barH + 16
+  const angleBelowY = barY + barH + 34
+  const restY = barY + barH + 52
+  const height = 168
   let x = pad
   const pieces = bar.pieces.map((piece) => {
     const pieceW = piece.lengthMm * scale
@@ -195,20 +249,21 @@ function barSvg(bar: DrawnBar, labels: CutMapLabels, kerfMm: number): string {
   const wasteX = x
   const wasteW = Math.max(0, bar.wasteMm * scale)
   let dropped = 0
-  const polygons = pieces.map(({ piece, x: px, pieceW }) => {
+  const polygons = pieces.map(({ piece, x: px, pieceW }, pieceIndex) => {
     const mid = px + pieceW / 2
     const text = String(piece.lengthMm)
     const textW = Math.max(22, text.length * 12)
     const below = piece.lengthMm < 40 || textW > pieceW * 0.72
-    // Length stays above the bar when it fits; angle marks go on the opposite
-    // band so a multi-piece stock row (e.g. 3277+2300+900) does not pile
-    // "mm" and "°" on the same baseline.
-    const angleY = below ? 18 : barY + barH + 14
+    // Length above when it fits; angles on the opposite band from length.
+    // Last piece + waste: end 45° stays ABOVE so it never sits on "остаток".
+    const isLast = pieceIndex === pieces.length - 1
+    const endAngleY = below || (isLast && wasteW > 1) ? 18 : angleBelowY
+    const startAngleY = below ? 18 : angleBelowY
     const startLabel = piece.startDeg !== 90
-      ? `<text x="${px + 1}" y="${angleY}" text-anchor="start" font-size="15" font-family="sans-serif" font-weight="700" fill="#b91c1c">${formatCutDeg(piece.startDeg)}°</text>`
+      ? `<text x="${px + 1}" y="${startAngleY}" text-anchor="start" font-size="15" font-family="sans-serif" font-weight="700" fill="#b91c1c">${formatCutDeg(piece.startDeg)}°</text>`
       : ''
     const endLabel = piece.endDeg !== 90
-      ? `<text x="${px + pieceW - 1}" y="${angleY}" text-anchor="end" font-size="15" font-family="sans-serif" font-weight="700" fill="#b91c1c">${formatCutDeg(piece.endDeg)}°</text>`
+      ? `<text x="${px + pieceW - 1}" y="${endAngleY}" text-anchor="end" font-size="15" font-family="sans-serif" font-weight="700" fill="#b91c1c">${formatCutDeg(piece.endDeg)}°</text>`
       : ''
     const lengthText = below
       ? ''
@@ -216,25 +271,25 @@ function barSvg(bar: DrawnBar, labels: CutMapLabels, kerfMm: number): string {
     const leader = below
       ? (() => {
           const row = dropped++
-          const ly = barY + barH + 46 + (row % 3) * 16
+          const ly = barY + barH + 54 + (row % 3) * 16
           const lx = mid + (row % 2 === 0 ? -14 : 14)
           return `<line x1="${mid}" y1="${barY + barH}" x2="${lx}" y2="${ly - 11}" stroke="#111827" stroke-width="0.8"/>
             <text x="${lx}" y="${ly}" text-anchor="middle" font-size="16" font-family="sans-serif" font-weight="700" fill="#111827">${text}</text>`
         })()
       : ''
     const caption = piece.caption
-      ? `<text x="${mid}" y="${barY + barH + 16}" text-anchor="middle" font-size="15" font-family="sans-serif" fill="#44403c">${piece.caption}</text>`
+      ? `<text x="${mid}" y="${captionY}" text-anchor="middle" font-size="15" font-family="sans-serif" fill="#44403c">${piece.caption}</text>`
       : ''
     return `<polygon points="${piecePoints(px, pieceW, barY, barH, piece)}" fill="${piece.fill}" stroke="#44403c" stroke-width="1"/>
       ${lengthText}${startLabel}${endLabel}${caption}${leader}`
   }).join('')
   const rest = `${labels.rest} ${Math.floor(bar.wasteMm + 0.005)}`
-  const restY = barY + barH + 16
+  const restX = wasteX + Math.max(wasteW, 12) / 2
   const waste = wasteW > 1
     ? `<rect x="${wasteX}" y="${barY}" width="${wasteW}" height="${barH}" fill="none" stroke="#9ca3af" stroke-width="1.2" stroke-dasharray="4 3"/>
-       <text x="${wasteX + wasteW / 2}" y="${restY}" text-anchor="middle" font-size="15" font-family="sans-serif" fill="#57534e">${rest}</text>`
+       <text x="${restX}" y="${restY}" text-anchor="middle" font-size="15" font-family="sans-serif" fill="#57534e">${rest}</text>`
     : ''
-  return `<svg class="bar" viewBox="0 0 ${width.toFixed(1)} ${height}" width="${(bar.stockMm * 0.022).toFixed(1)}mm" height="30mm" role="img">${polygons}${waste}</svg>`
+  return `<svg class="bar" viewBox="0 0 ${width.toFixed(1)} ${height}" width="${(bar.stockMm * 0.022).toFixed(1)}mm" height="38mm" role="img">${polygons}${waste}</svg>`
 }
 
 function profileHead(
@@ -251,12 +306,7 @@ function profileHead(
   const height = bundle.profileHeightMm ?? 0
   const gauge = width > 0 && height > 0 ? `${Math.max(width, height)}×${Math.min(width, height)}` : ''
   const stem = bundle.profileId.trim().toLowerCase()
-  const hasDims = width > 0 && height > 0
-  const picture = photoSrc
-    ? `<img src="${photoSrc}" alt="${bundle.profileId}" width="120" height="80"/>`
-    : hasDims
-      ? schematicSection(width, height, wallMm, labels.schematic)
-      : `<div class="missing-photo"><p class="no-photo">${labels.noImage}</p>${schematicSection(Math.max(width, 40), Math.max(height, 20), wallMm, labels.schematic)}</div>`
+  const picture = profileSectionPicture(bundle.profileId, width, height, wallMm, photoSrc, labels)
   const weightBit = weightKg == null
     ? labels.weightMissing
     : `${labels.weight} <bdi dir="ltr">${weightKg.toFixed(1)}</bdi>`
@@ -401,12 +451,10 @@ function orderCard(
   const height = bundle.profileHeightMm ?? 0
   const gauge = width > 0 && height > 0 ? `${Math.max(width, height)}×${Math.min(width, height)}` : ''
   const stem = bundle.profileId.trim().toLowerCase()
-  const hasDims = width > 0 && height > 0
-  const picture = src
-    ? `<img src="${src}" alt="${esc(bundle.profileId)}" width="160" height="110"/>`
-    : hasDims
-      ? schematicSection(width, height, wallMm, labels.schematic)
-      : `<div class="missing-photo"><p class="no-photo">${labels.noImage}</p>${schematicSection(Math.max(width, 40), Math.max(height, 20), wallMm, labels.schematic)}</div>`
+  const picture = profileSectionPicture(bundle.profileId, width, height, wallMm, src, labels).replace(
+    'width="120" height="80"',
+    'width="160" height="110"',
+  )
   const meters = (bars * stock) / 1000
   const weight = weightKgPerMeter != null
     ? `${labels.weight} <bdi dir="ltr">${(meters * weightKgPerMeter).toFixed(1)}</bdi>`
