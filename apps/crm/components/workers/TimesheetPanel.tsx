@@ -124,23 +124,33 @@ export function TimesheetPanel({ workerId, workerName, month }: TimesheetPanelPr
   const handleExportPdf = async () => {
     setPdfLoading(true)
     setPdfError(null)
+    // Open synchronously in the click handler so the browser does not block the tab
+    // after the async PDF generate + S3 upload finishes.
+    const pdfWindow = window.open('about:blank', '_blank')
     try {
       const r = await authFetch(
         `/api/workers/${workerId}/pdf?month=${encodeURIComponent(month)}&locale=${encodeURIComponent(language)}`,
         { method: 'POST' },
       )
-      if (!r.ok) {
-        const data = await r.json().catch(() => ({}))
-        throw new Error(
-          typeof data.error === 'string' ? data.error : 'Failed to generate PDF',
-        )
+      const data = await r.json()
+      if (!r.ok) throw new Error(data.error ?? 'Failed to generate PDF')
+      if (typeof data.pdfUrl !== 'string' || !data.pdfUrl) {
+        throw new Error('Failed to generate PDF')
       }
-      const blob = await r.blob()
-      if (blob.size === 0) throw new Error('Failed to generate PDF')
-      const url = URL.createObjectURL(blob)
-      window.open(url, '_blank')
-      window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
+      if (pdfWindow && !pdfWindow.closed) {
+        pdfWindow.location.href = data.pdfUrl
+      } else {
+        // Popup blocked — fall back to same-tab navigation / download link
+        const a = document.createElement('a')
+        a.href = data.pdfUrl
+        a.target = '_blank'
+        a.rel = 'noopener noreferrer'
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+      }
     } catch (err: unknown) {
+      if (pdfWindow && !pdfWindow.closed) pdfWindow.close()
       setPdfError(err instanceof Error ? err.message : 'Failed to generate PDF')
     } finally {
       setPdfLoading(false)
