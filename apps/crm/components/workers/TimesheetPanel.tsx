@@ -129,9 +129,17 @@ export function TimesheetPanel({ workerId, workerName, month }: TimesheetPanelPr
         `/api/workers/${workerId}/pdf?month=${encodeURIComponent(month)}&locale=${encodeURIComponent(language)}`,
         { method: 'POST' },
       )
-      const data = await r.json()
-      if (!r.ok) throw new Error(data.error ?? 'Failed to generate PDF')
-      window.open(data.pdfUrl, '_blank')
+      if (!r.ok) {
+        const data = await r.json().catch(() => ({}))
+        throw new Error(
+          typeof data.error === 'string' ? data.error : 'Failed to generate PDF',
+        )
+      }
+      const blob = await r.blob()
+      if (blob.size === 0) throw new Error('Failed to generate PDF')
+      const url = URL.createObjectURL(blob)
+      window.open(url, '_blank')
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
     } catch (err: unknown) {
       setPdfError(err instanceof Error ? err.message : 'Failed to generate PDF')
     } finally {

@@ -11,8 +11,7 @@ import { requireCompanyAccess } from '@/lib/auth'
 import { renderHtmlToPdfBuffer } from '@/lib/pdf/render-html-to-pdf'
 import { generateWorkerTimesheetHtml } from '@/lib/pdf/worker-timesheet-html-template'
 import { fetchCompanyPdfLocale, mergeUiPdfLocale } from '@/lib/pdf/company-pdf-locale'
-import { uploadToS3 } from '@/lib/s3-upload'
-import { computeMinutesWorked, computeShiftCost, applyCurrentRatesToWorkerShifts } from '@/lib/workers/calculations'
+import { applyCurrentRatesToWorkerShifts } from '@/lib/workers/calculations'
 import type { WorkerShift, WorkerShiftSummary, WorkerShiftType } from '@/types/workers'
 
 export const runtime = 'nodejs'
@@ -162,13 +161,22 @@ export async function POST(
 
     const pdfBuffer = await renderHtmlToPdfBuffer(html)
 
-    // Upload to S3
-    const workerSlug = `${worker.first_name}-${worker.last_name}`.replace(/\s+/g, '-').toLowerCase()
+    // Stream PDF to the client — do not require S3 (prod keys may be invalid / rotated).
+    const workerSlug = `${worker.first_name}-${worker.last_name}`
+      .replace(/[^\w.-]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .toLowerCase() || workerId.slice(0, 8)
     const filename = `timesheet-${workerSlug}-${month}.pdf`
-    const key = `workers/${workerId}/timesheets/${filename}`
-    const pdfUrl = await uploadToS3(pdfBuffer, key, 'application/pdf')
 
-    return NextResponse.json({ pdfUrl })
+    return new NextResponse(new Uint8Array(pdfBuffer), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `inline; filename="${filename}"`,
+        'Cache-Control': 'no-store',
+      },
+    })
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Unknown error'
     console.error('[Worker PDF] Error:', msg)
