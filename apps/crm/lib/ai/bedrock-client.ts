@@ -1,18 +1,18 @@
 /**
- * AI Director Client
+ * Amazon Bedrock Client — AI Director (CRM assistant only).
  *
- * Uses Google Gemini API with function calling to answer CRM queries.
- * Maintains the same public interface as the original Bedrock client
- * so the rest of the codebase requires no changes.
+ * Calls a Bedrock Agent. Supports the RETURN_CONTROL action-group pattern:
+ * Bedrock asks our code to fetch data → we call the CRM data API → we send
+ * results back to Bedrock → Bedrock returns the final text answer.
  *
- * When the model requests data it calls our internal CRM data endpoints
- * (RETURN_CONTROL pattern equivalent), feeds the result back, and loops
- * until the model returns a final text answer.
+ * Do not use this module for public AI Chat (`/api/ai-chat`) — that stays on Gemini.
  */
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY
-const GEMINI_MODEL = 'gemini-2.5-flash'
-const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models'
+const AWS_REGION = process.env.AWS_REGION || 'us-east-1'
+const AWS_ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID
+const AWS_SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY
+const BEDROCK_AGENT_ID = process.env.BEDROCK_AGENT_ID
+const BEDROCK_AGENT_ALIAS_ID = process.env.BEDROCK_AGENT_ALIAS_ID || 'TSTALIASID'
 
 export interface BedrockCallParams {
   prompt: string
@@ -29,86 +29,6 @@ export interface BedrockResponse {
   error?: string
 }
 
-// ---------------------------------------------------------------------------
-// CRM function definitions (exposed to Gemini as tools)
-// ---------------------------------------------------------------------------
-
-const CRM_TOOLS = [
-  {
-    functionDeclarations: [
-      {
-        name: 'get_deals',
-        description:
-          'Fetch deals (leads/clients) from the CRM. Use this to get sales data, pipeline stats, or deal details.',
-        parameters: {
-          type: 'OBJECT',
-          properties: {
-            stage: {
-              type: 'STRING',
-              description: 'Filter by deal stage (e.g. new, in_progress, won, lost)',
-            },
-            start_date: { type: 'STRING', description: 'Start date filter YYYY-MM-DD' },
-            end_date: { type: 'STRING', description: 'End date filter YYYY-MM-DD' },
-            limit: { type: 'NUMBER', description: 'Max number of records to return (default 20)' },
-          },
-          required: [],
-        },
-      },
-      {
-        name: 'get_leads',
-        description: 'Fetch recent leads from the CRM.',
-        parameters: {
-          type: 'OBJECT',
-          properties: {
-            status: { type: 'STRING', description: 'Filter by lead status' },
-            limit: { type: 'NUMBER', description: 'Max number of records to return' },
-          },
-          required: [],
-        },
-      },
-      {
-        name: 'get_offers',
-        description: 'Fetch offers/quotes sent to clients.',
-        parameters: {
-          type: 'OBJECT',
-          properties: {
-            status: { type: 'STRING', description: 'Filter by offer status' },
-            start_date: { type: 'STRING', description: 'Start date filter YYYY-MM-DD' },
-            end_date: { type: 'STRING', description: 'End date filter YYYY-MM-DD' },
-            limit: { type: 'NUMBER', description: 'Max number of records to return' },
-          },
-          required: [],
-        },
-      },
-      {
-        name: 'get_analytics',
-        description: 'Fetch sales analytics and KPIs for the company.',
-        parameters: {
-          type: 'OBJECT',
-          properties: {
-            period: {
-              type: 'STRING',
-              description: 'Time period (e.g. today, week, month, year)',
-            },
-          },
-          required: [],
-        },
-      },
-      {
-        name: 'get_workers',
-        description: 'Fetch team members / sales workers in the company.',
-        parameters: {
-          type: 'OBJECT',
-          properties: {
-            limit: { type: 'NUMBER', description: 'Max number of records to return' },
-          },
-          required: [],
-        },
-      },
-    ],
-  },
-]
-
 const FUNCTION_TO_PATH: Record<string, string> = {
   get_deals: '/api/ai-director/data/deals',
   get_leads: '/api/ai-director/data/leads',
@@ -117,13 +37,9 @@ const FUNCTION_TO_PATH: Record<string, string> = {
   get_workers: '/api/ai-director/data/workers',
 }
 
-// ---------------------------------------------------------------------------
-// CRM function dispatcher
-// ---------------------------------------------------------------------------
-
 async function dispatchCRMFunction(
   functionName: string,
-  args: Record<string, unknown>,
+  parameters: Array<{ name?: string; type?: string; value?: string }>,
   apiBaseUrl: string,
   apiToken: string,
   companyId: string,
@@ -134,10 +50,10 @@ async function dispatchCRMFunction(
   }
 
   const qs = new URLSearchParams()
-  // Always inject company_id from session — Gemini doesn't need to pass it explicitly
+  // Always inject company_id from session — agent params may omit it.
   if (companyId) qs.set('company_id', companyId)
-  for (const [k, v] of Object.entries(args)) {
-    if (v != null && k !== 'company_id') qs.set(k, String(v))
+  for (const p of parameters) {
+    if (p.name && p.value != null && p.name !== 'company_id') qs.set(p.name, p.value)
   }
 
   const url = `${apiBaseUrl}${path}?${qs.toString()}`
@@ -154,194 +70,143 @@ async function dispatchCRMFunction(
   }
 }
 
-// ---------------------------------------------------------------------------
-// System instruction
-// ---------------------------------------------------------------------------
-
-function buildSystemInstruction(companyId: string, userLanguage: string): string {
-  const langInstruction =
-    userLanguage === 'ru'
-      ? 'Respond in Russian (Русский). Use Russian for all output.'
-      : 'Respond ONLY in Hebrew (עברית). Never switch to English, even if the user writes in English.'
-
-  return `You are an AI Director for a pergola/aluminum products CRM system. You help managers analyze their sales pipeline, deals, leads, and team performance.
-
-You have access to CRM data tools. Use them when the user asks about:
-- Deals, clients, pipeline, sales stages
-- Leads, new inquiries
-- Offers and quotes sent
-- Analytics, KPIs, revenue, conversion rates
-- Team members and workers
-
-DEAL STAGES (in order):
-new → measure → offer → offer_approved → material_ordered → approved → production → install → done
-
-STAGE TRANSLATION TABLE — always use Hebrew names when displaying stages to the user:
-- new              → חדש
-- measure          → מדידה
-- offer            → הצעה
-- offer_approved   → הצעה אושרה
-- material_ordered → חומר הוזמן
-- approved         → מאושר
-- production       → ייצור
-- install          → התקנה
-- done             → הושלם
-
-STAGE GROUPS (use these definitions automatically — never ask the user to clarify):
-- "active" deals = stages: measure, offer, offer_approved, material_ordered, approved, production, install
-- "new" deals = stage: new
-- "completed" deals = stage: done
-- "in progress" / "not new and not done" / "open pipeline" = same as "active" above
-
-IMPORTANT RULES:
-1. ALWAYS fetch real data first before answering — never say "I don't know" without trying the tools.
-2. NEVER ask "which stages?" — the get_deals tool has no stage filter in this context, so fetch ALL deals (no stage parameter) and then filter/group the results yourself in your response.
-3. When a user asks for deals "not in stage X" or "excluding X" — fetch all deals, then exclude those stages yourself when presenting results.
-4. When asked about "active", "in progress", or "open" deals — fetch all deals and show only stages: measure, offer, offer_approved, material_ordered, approved, production, install.
-5. When asked about "hot leads" or "best leads" — fetch leads and rank by: newest first, stage priority (new > in_progress), and any available scoring data.
-6. When asked about counts or totals — fetch data and count yourself, don't ask the user for criteria.
-7. "Hot" leads = recently created leads in 'new' or 'in_progress' status that haven't been contacted yet.
-8. Format numbers clearly: use currency symbols, show counts, highlight important items.
-9. If a tool call fails or returns empty — report what you found (even if nothing) rather than asking for clarification.
-10. NEVER ask clarifying questions about stages, dates, or filters — make the most useful assumption and fetch the data.
-
-Be concise, professional, and business-focused. ${langInstruction}
-
-Current company_id: ${companyId}`
-}
-
-// ---------------------------------------------------------------------------
-// Gemini API helpers
-// ---------------------------------------------------------------------------
-
-interface GeminiMessage {
-  role: 'user' | 'model'
-  parts: Array<
-    | { text: string }
-    | { functionCall: { name: string; args: Record<string, unknown> } }
-    | { functionResponse: { name: string; response: { content: string } } }
-  >
-}
-
-async function callGeminiAPI(
-  messages: GeminiMessage[],
-  systemInstruction: string,
-): Promise<{ text?: string; functionCall?: { name: string; args: Record<string, unknown> } }> {
-  if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is not configured')
-
-  const url = `${GEMINI_BASE_URL}/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`
-
-  const body = {
-    system_instruction: { parts: [{ text: systemInstruction }] },
-    contents: messages,
-    tools: CRM_TOOLS,
-    generationConfig: {
-      temperature: 0.2,
-      maxOutputTokens: 2048,
-    },
-  }
-
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(30_000),
-  })
-
-  if (!res.ok) {
-    const errText = await res.text()
-    throw new Error(`Gemini API error ${res.status}: ${errText.substring(0, 300)}`)
-  }
-
-  const data = await res.json()
-
-  const candidate = data.candidates?.[0]
-  if (!candidate) throw new Error('No candidates in Gemini response')
-
-  const parts = candidate.content?.parts ?? []
-
-  for (const part of parts) {
-    if (part.functionCall) {
-      return { functionCall: { name: part.functionCall.name, args: part.functionCall.args ?? {} } }
-    }
-    if (part.text) {
-      return { text: part.text }
-    }
-  }
-
-  return { text: '' }
-}
-
-// ---------------------------------------------------------------------------
-// Main entry point
-// ---------------------------------------------------------------------------
-
 export async function callBedrockAgent({
   prompt,
   sessionId,
   sessionAttributes,
 }: BedrockCallParams): Promise<BedrockResponse> {
-  if (!GEMINI_API_KEY) {
+  if (!BEDROCK_AGENT_ID || !AWS_ACCESS_KEY_ID || !AWS_SECRET_ACCESS_KEY) {
     return {
       content: '',
-      error: 'AI Director configuration error: GEMINI_API_KEY is not set.',
+      error:
+        'Bedrock credentials not configured. Please set AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and BEDROCK_AGENT_ID',
     }
   }
 
-  const companyId = sessionAttributes?.company_id ?? ''
-  const apiBaseUrl = sessionAttributes?.api_base_url ?? ''
-  const apiToken = sessionAttributes?.api_token ?? ''
-  const userLanguage = sessionAttributes?.user_language ?? 'en'
+  const { BedrockAgentRuntimeClient, InvokeAgentCommand } = await import(
+    '@aws-sdk/client-bedrock-agent-runtime'
+  )
 
-  const systemInstruction = buildSystemInstruction(companyId, userLanguage)
+  const client = new BedrockAgentRuntimeClient({
+    region: AWS_REGION,
+    credentials: {
+      accessKeyId: AWS_ACCESS_KEY_ID,
+      secretAccessKey: AWS_SECRET_ACCESS_KEY,
+    },
+  })
 
   const currentSessionId =
-    sessionId ?? `session-${Date.now()}-${Math.random().toString(36).substring(7)}`
+    sessionId || `session-${Date.now()}-${Math.random().toString(36).substring(7)}`
 
-  const messages: GeminiMessage[] = [{ role: 'user', parts: [{ text: prompt }] }]
+  const apiBaseUrl = sessionAttributes?.api_base_url || ''
+  const apiToken = sessionAttributes?.api_token || ''
+  const companyId = sessionAttributes?.company_id || ''
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let commandInput: any = {
+    agentId: BEDROCK_AGENT_ID,
+    agentAliasId: BEDROCK_AGENT_ALIAS_ID,
+    sessionId: currentSessionId,
+    inputText: prompt,
+    ...(sessionAttributes
+      ? { sessionState: { sessionAttributes } }
+      : {}),
+  }
 
   const MAX_TOOL_CALLS = 5
   let toolCallCount = 0
 
   while (toolCallCount <= MAX_TOOL_CALLS) {
-    const result = await callGeminiAPI(messages, systemInstruction)
+    const command = new InvokeAgentCommand(commandInput)
+    const response = await client.send(command)
 
-    if (result.text !== undefined) {
-      return { content: result.text, sessionId: currentSessionId }
+    let responseText = ''
+    let returnControlPayload: {
+      invocationId?: string
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      invocationInputs?: any[]
+    } | null = null
+
+    if (response.completion) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      for await (const chunk of response.completion as AsyncIterable<any>) {
+        if (chunk.chunk?.bytes) {
+          const decoder = new TextDecoder()
+          responseText += decoder.decode(chunk.chunk.bytes)
+        }
+        if (chunk.returnControl) {
+          returnControlPayload = chunk.returnControl
+        }
+      }
     }
 
-    if (result.functionCall) {
+    if (responseText) {
+      return { content: responseText, sessionId: currentSessionId }
+    }
+
+    if (returnControlPayload && returnControlPayload.invocationId) {
       toolCallCount++
-      const { name, args } = result.functionCall
 
-      // Add the model's function call to history
-      messages.push({ role: 'model', parts: [{ functionCall: { name, args } }] })
+      const invocationId = returnControlPayload.invocationId
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const results: any[] = []
 
-      // Execute the function
-      const fnResult = await dispatchCRMFunction(name, args, apiBaseUrl, apiToken, companyId)
+      for (const input of returnControlPayload.invocationInputs ?? []) {
+        const fi = input.functionInvocationInput
+        if (!fi) continue
 
-      // Add function response to history
-      messages.push({
-        role: 'user',
-        parts: [{ functionResponse: { name, response: { content: fnResult } } }],
-      })
+        const fnName: string = fi.function ?? ''
+        const params: Array<{ name?: string; type?: string; value?: string }> =
+          fi.parameters ?? []
+
+        const resultBody = await dispatchCRMFunction(
+          fnName,
+          params,
+          apiBaseUrl,
+          apiToken,
+          companyId,
+        )
+
+        results.push({
+          functionResult: {
+            actionGroup: fi.actionGroup ?? 'CRMDataAPI',
+            function: fnName,
+            responseBody: {
+              TEXT: { body: resultBody },
+            },
+          },
+        })
+      }
+
+      commandInput = {
+        agentId: BEDROCK_AGENT_ID,
+        agentAliasId: BEDROCK_AGENT_ALIAS_ID,
+        sessionId: currentSessionId,
+        sessionState: {
+          ...(sessionAttributes ? { sessionAttributes } : {}),
+          invocationId,
+          returnControlInvocationResults: results,
+        },
+      }
 
       continue
     }
 
-    return { content: '', error: 'Empty response from AI model.', sessionId: currentSessionId }
+    return {
+      content: '',
+      error:
+        'Empty response from Bedrock agent. Check AWS Console logs and ensure the agent is prepared.',
+      sessionId: currentSessionId,
+    }
   }
 
   return {
     content: '',
-    error: 'AI Director exceeded maximum tool call iterations.',
+    error: 'Bedrock agent exceeded maximum tool call iterations.',
     sessionId: currentSessionId,
   }
 }
 
-/**
- * Check if AI Director is configured
- */
 export function isBedrockConfigured(): boolean {
-  return !!GEMINI_API_KEY
+  return !!(BEDROCK_AGENT_ID && AWS_ACCESS_KEY_ID && AWS_SECRET_ACCESS_KEY && AWS_REGION)
 }
