@@ -2,6 +2,7 @@
  * House outer-faces: section H = face-to-face clear − 15 − 15.
  * Shelf / notch wall (40) lies entirely inside from the contour (down into the field).
  * Top frame is free 70 on G–H and wall 40 on C–D.
+ * Collinear shelf + notch floor (~14 mm AABB tilt) merge into one mid-bay section.
  */
 import { describe, expect, it } from 'vitest'
 import {
@@ -10,11 +11,14 @@ import {
   houseConstructionParams,
 } from '../acceptance/houseContour'
 import {
+  COLLINEAR_LIMITER_STEP_TOLERANCE_MM,
   DEFAULT_PLAN_CONSTRUCTION_PARAMS,
   PERGOLA_CONSTRUCTION_PROFILES,
   buildLamellaSections,
   columnHeightChecksums,
   countedLamellaRows,
+  groupLamellaSectionTypes,
+  mergeSteppedBays,
   reportLamellaSections,
   specFromPlan,
 } from '../index'
@@ -56,15 +60,18 @@ describe('house outer-faces section heights', () => {
     const upperRight = rows.filter((r) => r.maxY > 7000 && (r.minX + r.maxX) / 2 > 6700)
     const lowerLeft = rows.filter((r) => r.maxY < 5000 && (r.minX + r.maxX) / 2 < 3300)
     const lowerRight = rows.filter((r) => r.maxY < 5000 && (r.minX + r.maxX) / 2 > 6700)
-    const underNotch = rows.filter(
-      (r) => r.maxY < 5000 && (r.minX + r.maxX) / 2 > 3300 && (r.minX + r.maxX) / 2 < 6700,
+    // Mid bay between purlins 2–3 spans shelf wing + under-notch as one cell.
+    const midBay = rows.filter(
+      (r) => r.maxY < 5000 && r.minX < 3000 && r.maxX > 3800,
     )
 
     expect(upperLeft.length).toBeGreaterThanOrEqual(2)
     expect(upperRight.length).toBe(2)
     expect(lowerLeft.length).toBeGreaterThanOrEqual(2)
     expect(lowerRight.length).toBe(2)
-    expect(underNotch.length).toBeGreaterThanOrEqual(1)
+    expect(midBay.length).toBe(1)
+    expect(midBay[0].widthMm).toBeGreaterThan(1200)
+    expect(midBay[0].widthMm).toBeLessThan(1300)
 
     // 2871 − 70 − 30 = 2771 (tilt of EF ≤ ~6 mm)
     for (const r of upperLeft) expect(r.heightMm).toBeGreaterThan(2765)
@@ -72,22 +79,35 @@ describe('house outer-faces section heights', () => {
     // 2865 − 40 − 30 = 2795
     for (const r of upperRight) expect(r.heightMm).toBeGreaterThan(2785)
     for (const r of upperRight) expect(r.heightMm).toBeLessThan(2800)
-    // 7480 − 2871 − 40 − 70 − 30 = 4469
+    // 7480 − 2871 − 40 − 70 − 30 = 4469; mid-bay uses min(shelf, notch) ≈ 4463
     for (const r of lowerLeft) expect(r.heightMm).toBeGreaterThan(4455)
     for (const r of lowerLeft) expect(r.heightMm).toBeLessThan(4475)
     // 7480 − 2865 − 40 − 70 − 30 = 4475
     for (const r of lowerRight) expect(r.heightMm).toBeGreaterThan(4470)
     for (const r of lowerRight) expect(r.heightMm).toBeLessThan(4480)
-    // Under notch ≈ 4469–4475
-    for (const r of underNotch) expect(r.heightMm).toBeGreaterThan(4465)
-    for (const r of underNotch) expect(r.heightMm).toBeLessThan(4485)
+    expect(midBay[0].heightMm).toBeGreaterThan(4455)
+    expect(midBay[0].heightMm).toBeLessThan(4475)
 
-    // Narrow F: clear ≈ 486 → width ≈ 471 (allow small snap)
+    // Narrow upper (J): clear ≈ 491 → width ≈ 476 (3245 − 2754; see report)
     const narrow = rows.find((r) => r.widthMm < 600 && r.maxY > 7000)
     expect(narrow).toBeTruthy()
     expect(narrow!.clearXMm).toBeGreaterThan(480)
     expect(narrow!.clearXMm).toBeLessThan(495)
     expect(narrow!.widthMm).toBeCloseTo(narrow!.clearXMm - 15, 5)
+  })
+
+  it('12 sections and ~498 lamellas — mid bay is one 1287 cell', () => {
+    const sections = buildLamellaSections(houseMaxSpec(), profiles)
+    const schedule = groupLamellaSectionTypes(sections)
+    expect(sections.length).toBe(12)
+    const total = sections.reduce((n, s) => n + countedLamellaRows(s), 0)
+    expect(total).toBe(498)
+    expect(schedule.totalSections).toBe(12)
+    expect(schedule.totalLamellas).toBe(498)
+    const mid = sections.find((s) => s.minX < 3000 && s.maxX > 3800 && s.maxY < 5000)
+    expect(mid).toBeTruthy()
+    expect(mid!.widthMm).toBeCloseTo(1287.1, 0)
+    expect(mid!.lamellaCount).toBe(49)
   })
 
   it('column checksum: frame + 15+H+15 + shelf + 15+H+15 + frame ≈ vertical outer', () => {
@@ -120,10 +140,30 @@ describe('house outer-faces section heights', () => {
         expect(overlapX <= 1 || overlapY <= 1).toBe(true)
       }
     }
-    const total = sections.reduce((n, s) => n + countedLamellaRows(s), 0)
-    expect(total).toBeGreaterThan(480)
-    expect(total).toBeLessThan(560)
-    expect(sections.length).toBeGreaterThanOrEqual(12)
-    expect(sections.length).toBeLessThanOrEqual(14)
+    expect(sections.length).toBe(12)
+  })
+})
+
+describe('collinear limiter bay merge', () => {
+  it('tolerance is 20 mm (tilt ~14 merges; real 60 mm step does not)', () => {
+    expect(COLLINEAR_LIMITER_STEP_TOLERANCE_MM).toBe(20)
+  })
+
+  it('merges a 14 mm shelf/notch step and keeps the smaller clear', () => {
+    const left = { minX: 2754, maxX: 3245, minY: 70, maxY: 4563.4 }
+    const right = { minX: 3245, maxX: 4056, minY: 70, maxY: 4577 }
+    const out = mergeSteppedBays([left, right], true)
+    expect(out).toHaveLength(1)
+    expect(out[0].minX).toBe(2754)
+    expect(out[0].maxX).toBe(4056)
+    expect(out[0].minY).toBe(70)
+    expect(out[0].maxY).toBeCloseTo(4563.4, 5)
+  })
+
+  it('keeps a 60 mm real step as two sections', () => {
+    const left = { minX: 0, maxX: 1000, minY: 0, maxY: 4000 }
+    const right = { minX: 1000, maxX: 2000, minY: 0, maxY: 4060 }
+    const out = mergeSteppedBays([left, right], true)
+    expect(out).toHaveLength(2)
   })
 })

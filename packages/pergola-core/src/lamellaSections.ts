@@ -390,19 +390,24 @@ function mergeAdjacentRects(rects: Rectangle[]): Rectangle[] {
 }
 
 /**
- * Largest step between two touching cells that still counts as one bay, mm.
- * A 30 mm shelf face and a 40 mm beam face on the same axis differ by 5 mm.
+ * Largest step between collinear limiters that still counts as one bay, mm.
+ *
+ * Why 20: a free/wall face pair differs by ≤15 mm (70 vs 40 → half-diff 15 on
+ * centerline; flush outer-faces shelf vs notch floor on a 0.1° tilt yields
+ * ~14 mm on the house AABB). Real factory steps (e.g. 60 mm shelf offset) stay
+ * above this and remain separate sections with a joint.
  */
-const BAY_STEP_TOLERANCE_MM = 10
+export const COLLINEAR_LIMITER_STEP_TOLERANCE_MM = 20
 
 /**
- * One bay between two purlins is one cell. When the boundary of a bay steps by
- * a few millimetres (shelf face next to beam face) the rectangle subtraction
- * returns two rectangles that touch along the lamella direction. A lamella
- * runs from purlin to purlin, so cutting it there would put a joint over
- * nothing. Join the two and keep the smaller clear, which fits both sides.
+ * One bay between two purlins is one cell. When collinear limiters (shelf next
+ * to notch floor, or shelf face next to beam face) step by less than
+ * {@link COLLINEAR_LIMITER_STEP_TOLERANCE_MM}, rectangle subtraction returns
+ * two rectangles that touch along the lamella. A lamella runs purlin-to-purlin,
+ * so a joint there would sit over nothing — join them and keep the smaller
+ * clear (conservative height).
  */
-function mergeSteppedBays(cells: Rectangle[], alongX: boolean): Rectangle[] {
+export function mergeSteppedBays(cells: Rectangle[], alongX: boolean): Rectangle[] {
   const cur = [...cells]
   let merged = true
   while (merged) {
@@ -416,8 +421,10 @@ function mergeSteppedBays(cells: Rectangle[], alongX: boolean): Rectangle[] {
           : Math.abs(a.maxY - b.minY) <= EPS || Math.abs(b.maxY - a.minY) <= EPS
         if (!touch) continue
         const across = alongX
-          ? Math.abs(a.minY - b.minY) <= BAY_STEP_TOLERANCE_MM && Math.abs(a.maxY - b.maxY) <= BAY_STEP_TOLERANCE_MM
-          : Math.abs(a.minX - b.minX) <= BAY_STEP_TOLERANCE_MM && Math.abs(a.maxX - b.maxX) <= BAY_STEP_TOLERANCE_MM
+          ? Math.abs(a.minY - b.minY) <= COLLINEAR_LIMITER_STEP_TOLERANCE_MM &&
+            Math.abs(a.maxY - b.maxY) <= COLLINEAR_LIMITER_STEP_TOLERANCE_MM
+          : Math.abs(a.minX - b.minX) <= COLLINEAR_LIMITER_STEP_TOLERANCE_MM &&
+            Math.abs(a.maxX - b.maxX) <= COLLINEAR_LIMITER_STEP_TOLERANCE_MM
         if (!across) continue
         cur.splice(j, 1)
         cur[i] = {

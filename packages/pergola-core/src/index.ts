@@ -339,6 +339,8 @@ export {
   LAMELLA_SECTION_CLEARANCE_H_MM,
   factorySectionSizeMm,
   sectionOpeningForDividerSpan,
+  COLLINEAR_LIMITER_STEP_TOLERANCE_MM,
+  mergeSteppedBays,
   LAMELLA_SECTION_LAYOUT_VERSION,
   LAMELLA_SECTION_LABEL_TOLERANCE_MM,
   isLamellaSectionLayoutV1,
