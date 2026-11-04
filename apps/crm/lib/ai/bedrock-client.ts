@@ -8,16 +8,24 @@
  * Do not use this module for public AI Chat (`/api/ai-chat`) — that stays on Gemini.
  */
 
+function envTrim(name: string): string | undefined {
+  const v = process.env[name]
+  if (v == null) return undefined
+  // Strip CRLF / accidental whitespace from pasted Vercel / .env values.
+  const t = v.replace(/^\uFEFF/, '').trim()
+  return t.length > 0 ? t : undefined
+}
+
 // Bedrock Agents live in us-east-1 for this project. Do not reuse AWS_REGION —
 // that is often set to eu-north-1 for the gallery S3 bucket.
 const AWS_REGION =
-  process.env.BEDROCK_AWS_REGION
-  || process.env.AWS_BEDROCK_REGION
+  envTrim('BEDROCK_AWS_REGION')
+  || envTrim('AWS_BEDROCK_REGION')
   || 'us-east-1'
-const AWS_ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID
-const AWS_SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY
-const BEDROCK_AGENT_ID = process.env.BEDROCK_AGENT_ID
-const BEDROCK_AGENT_ALIAS_ID = process.env.BEDROCK_AGENT_ALIAS_ID || 'TSTALIASID'
+const AWS_ACCESS_KEY_ID = envTrim('AWS_ACCESS_KEY_ID')
+const AWS_SECRET_ACCESS_KEY = envTrim('AWS_SECRET_ACCESS_KEY')
+const BEDROCK_AGENT_ID = envTrim('BEDROCK_AGENT_ID')
+const BEDROCK_AGENT_ALIAS_ID = envTrim('BEDROCK_AGENT_ALIAS_ID') || 'TSTALIASID'
 
 export interface BedrockCallParams {
   prompt: string
