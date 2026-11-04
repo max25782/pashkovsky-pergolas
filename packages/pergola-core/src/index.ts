@@ -67,6 +67,7 @@ export {
   axisToInnerFaceMm,
   contourVerticesAreOuterFaces,
   resolveContourReference,
+  pinContourReferenceOnParams,
   PURLIN_CLEAR_LAYOUT_VERSION,
 } from './lamellaSpans'
 export type { ContourReference, ContourReferenceResolution, ResolvedPurlinPosition } from './lamellaSpans'

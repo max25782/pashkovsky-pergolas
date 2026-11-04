@@ -179,6 +179,28 @@ export function resolveContourReference(input: {
 }
 
 /**
+ * Persist the rule that currently applies so a later measured array cannot
+ * flip centerline ↔ outer-faces on resave. Explicit CR is left unchanged.
+ * Call with the params **before** merging newly invented measured values.
+ */
+export function pinContourReferenceOnParams<T extends {
+  contourReference?: ContourReference | null
+  measuredOuterLengthMmByEdgeIndex?: Array<number | null | undefined>
+}>(
+  contour: Point2D[],
+  params: T,
+): T & { contourReference: ContourReference } {
+  if (params.contourReference === 'outer-faces' || params.contourReference === 'centerline') {
+    return { ...params, contourReference: params.contourReference }
+  }
+  const { reference } = resolveContourReference({
+    contour,
+    measured: params.measuredOuterLengthMmByEdgeIndex,
+  })
+  return { ...params, contourReference: reference }
+}
+
+/**
  * Axis → polygon-interior face of a frame beam.
  * Outer-face contour + typed L_outer ⇒ full plan width inward.
  * Centerline contour (or v1 with no typed outer) ⇒ half width.

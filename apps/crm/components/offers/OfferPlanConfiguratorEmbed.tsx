@@ -22,6 +22,7 @@ import {
   contourAxesMatchEnteredOuters,
   contourSideWidthMm,
   resolveContourReference,
+  pinContourReferenceOnParams,
   DEFAULT_PLAN_CONSTRUCTION_PARAMS,
   formatConstructionProfileLabel,
   LAMELLA_PATTERN_PRESETS,
@@ -263,13 +264,15 @@ export const OfferPlanConfiguratorEmbed = forwardRef<
       planParams: ConstructionParams,
       beams: PergolaPlan['supportBeams'] = supportBeamsRef.current,
     ): Promise<PlanFlushResult> => {
-      const isOrthogonal = measureOrthogonalSafe(polygonMm, wallEdgeIndices, planParams, beams)
+      const contourPts: Point2D[] = polygonMm.map((p): Point2D => [p.x, p.y])
+      const pinnedParams = pinContourReferenceOnParams(contourPts, planParams)
+      const isOrthogonal = measureOrthogonalSafe(polygonMm, wallEdgeIndices, pinnedParams, beams)
       if (!offerId) {
         return {
           ok: true,
           polygon: polygonMm,
           wallIndices: wallEdgeIndices,
-          params: planParams,
+          params: pinnedParams,
           isOrthogonal,
           supportBeams: beams,
         }
@@ -278,7 +281,7 @@ export const OfferPlanConfiguratorEmbed = forwardRef<
         schemaVersion: 1,
         polygon: polygonMm,
         wallIndices: wallEdgeIndices,
-        params: planParams,
+        params: pinnedParams,
         confirmed: false,
         ...(beams !== undefined ? { supportBeams: beams } : {}),
       }
@@ -288,7 +291,7 @@ export const OfferPlanConfiguratorEmbed = forwardRef<
         body: JSON.stringify({
           planPolygon: polygonMm,
           planWallIndices: wallEdgeIndices,
-          planParams,
+          planParams: pinnedParams,
           supportBeams: beams ?? null,
           plan: planDoc,
           locale,
@@ -460,13 +463,22 @@ export const OfferPlanConfiguratorEmbed = forwardRef<
         contour.isClosed && contour.polygon.length >= 3
           ? measureOrthogonal(contour.polygon, contour.wallIndices)
           : true
+      const contourPts: Point2D[] =
+        contour.polygon.length >= 3
+          ? contour.polygon.map((p): Point2D => [p.x, p.y])
+          : (lastPolygonMm?.map((p): Point2D => [p.x, p.y]) ?? [])
+      // Pin from current (pre-merge) params so inventing measured cannot flip the rule.
+      const pinned = contourPts.length >= 3 ? pinContourReferenceOnParams(contourPts, params) : params
       const nextParams = {
-        ...params,
+        ...pinned,
         ...(contour.measuredOuterLengthMmByEdgeIndex
           ? { measuredOuterLengthMmByEdgeIndex: contour.measuredOuterLengthMmByEdgeIndex }
           : {}),
       }
-      if (contour.measuredOuterLengthMmByEdgeIndex) {
+      if (
+        contour.measuredOuterLengthMmByEdgeIndex
+        || pinned.contourReference !== params.contourReference
+      ) {
         setParams(nextParams)
       }
       onPlanGeometryRef.current?.({
@@ -476,7 +488,7 @@ export const OfferPlanConfiguratorEmbed = forwardRef<
         supportBeams: supportBeamsRef.current,
       })
     },
-    [params, measureOrthogonal],
+    [params, measureOrthogonal, lastPolygonMm],
   )
 
   // Persist / publish supportBeams the same way params do (round-trip must not drop them).
@@ -1195,6 +1207,29 @@ function ConstructionParamsPanel({
             {t('drawing.longDividerNoSupport')}
           </span>
         )}
+      </label>
+
+      <label className={labelClass} title={t('paramsPanel.contourReferenceHint')}>
+        {t('paramsPanel.contourReferenceLabel')}
+        <select
+          className={selectClass}
+          value={params.contourReference === 'outer-faces' ? 'outer-faces' : 'centerline'}
+          onChange={(e) => {
+            const next = e.target.value
+            if (next === 'outer-faces' && params.contourReference !== 'outer-faces') {
+              if (!window.confirm(t('paramsPanel.contourReferenceOuterFacesWarn'))) return
+              patch({ contourReference: 'outer-faces' })
+              return
+            }
+            if (next === 'centerline') patch({ contourReference: 'centerline' })
+          }}
+        >
+          <option value="centerline">{t('paramsPanel.contourReferenceCenterline')}</option>
+          <option value="outer-faces">{t('paramsPanel.contourReferenceOuterFaces')}</option>
+        </select>
+        <span className="text-[11px] leading-snug text-neutral-400 dark:text-neutral-500">
+          {t('paramsPanel.contourReferenceHint')}
+        </span>
       </label>
 
       <label className={labelClass}>

@@ -1,8 +1,8 @@
-import type { LamellaAngleDeg, PlanPurlinDividers, RoofSlope, SupportType } from './types'
+import type { LamellaAngleDeg, PlanPurlinDividers, Point2D, RoofSlope, SupportType } from './types'
 import type { LamellaWallThicknessMm } from './pergolaProfiles'
 import { DEFAULT_ROOF_SLOPE } from './roof'
 import type { ContourReference, PurlinClearLayoutVersion } from './lamellaSpans'
-import { PURLIN_CLEAR_LAYOUT_VERSION } from './lamellaSpans'
+import { pinContourReferenceOnParams, PURLIN_CLEAR_LAYOUT_VERSION } from './lamellaSpans'
 
 /** Current JSON schema for `Pergola.plan` stored in `pergolas_data`. */
 export const PERGOLA_PLAN_SCHEMA_VERSION = 1
@@ -147,9 +147,11 @@ export function parseMeasuredOuterLengthMmByEdgeIndex(
 /**
  * Saved JSON onto the new-plan defaults.
  * A missing max span or support profile stays missing — those are not filled in.
+ * When `contour` is provided and CR is missing, pin the rule that currently applies.
  */
 export function paramsFromStoredPlan(
   stored: Partial<PlanConstructionParams> | null | undefined,
+  contour?: Point2D[],
 ): PlanConstructionParams {
   if (!stored) return { ...DEFAULT_PLAN_CONSTRUCTION_PARAMS }
   const next: PlanConstructionParams = { ...DEFAULT_PLAN_CONSTRUCTION_PARAMS, ...stored }
@@ -160,6 +162,9 @@ export function paramsFromStoredPlan(
     || stored.wingShelfProfileId === ''
   ) {
     delete next.wingShelfProfileId
+  }
+  if (contour && contour.length >= 3) {
+    return pinContourReferenceOnParams(contour, next)
   }
   return next
 }

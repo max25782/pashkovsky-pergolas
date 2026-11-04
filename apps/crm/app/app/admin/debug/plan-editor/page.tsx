@@ -48,6 +48,7 @@ import {
   contourAxesMatchEnteredOuters,
   contourSideWidthMm,
   resolveContourReference,
+  pinContourReferenceOnParams,
   computeLedStripLengthMm,
   DEFAULT_PLAN_CONSTRUCTION_PARAMS,
   formatConstructionProfileLabel,
@@ -236,12 +237,17 @@ export default function PlanEditorDebugPage() {
       if (!contour.isClosed || contour.polygon.length < 3) return
       setLastPolygonMm(contour.polygon)
       setLastWallEdgeIndices(contour.wallIndices)
-      if (contour.measuredOuterLengthMmByEdgeIndex) {
-        setParams((prev) => ({
-          ...prev,
+      const contourPts = contour.polygon.map((p): [number, number] => [p.x, p.y])
+      setParams((prev) => {
+        const pinned = pinContourReferenceOnParams(contourPts, prev)
+        if (!contour.measuredOuterLengthMmByEdgeIndex) {
+          return pinned.contourReference !== prev.contourReference ? pinned : prev
+        }
+        return {
+          ...pinned,
           measuredOuterLengthMmByEdgeIndex: contour.measuredOuterLengthMmByEdgeIndex,
-        }))
-      }
+        }
+      })
     },
     [],
   )
@@ -250,10 +256,12 @@ export default function PlanEditorDebugPage() {
     const polygon = polygonRef.current
     if (!polygon || polygon.length < 3) return false
     try {
+      const contourPts = polygon.map((p): [number, number] => [p.x, p.y])
+      const pinned = pinContourReferenceOnParams(contourPts, paramsRef.current)
       const document = {
         polygon,
         wallIndices: wallsRef.current,
-        params: paramsRef.current,
+        params: pinned,
       }
       writeDebugPlanDocument(document)
       const read = readDebugPlanDocument()
@@ -949,6 +957,29 @@ function ConstructionParamsPanel({
             {t('drawing.longDividerNoSupport')}
           </span>
         )}
+      </label>
+
+      <label className={labelClass} title={t('paramsPanel.contourReferenceHint')}>
+        {t('paramsPanel.contourReferenceLabel')}
+        <select
+          className={selectClass}
+          value={params.contourReference === 'outer-faces' ? 'outer-faces' : 'centerline'}
+          onChange={(e) => {
+            const next = e.target.value
+            if (next === 'outer-faces' && params.contourReference !== 'outer-faces') {
+              if (!window.confirm(t('paramsPanel.contourReferenceOuterFacesWarn'))) return
+              patch({ contourReference: 'outer-faces' })
+              return
+            }
+            if (next === 'centerline') patch({ contourReference: 'centerline' })
+          }}
+        >
+          <option value="centerline">{t('paramsPanel.contourReferenceCenterline')}</option>
+          <option value="outer-faces">{t('paramsPanel.contourReferenceOuterFaces')}</option>
+        </select>
+        <span className="text-[11px] leading-snug text-neutral-400 dark:text-neutral-500">
+          {t('paramsPanel.contourReferenceHint')}
+        </span>
       </label>
 
       <label className={labelClass}>

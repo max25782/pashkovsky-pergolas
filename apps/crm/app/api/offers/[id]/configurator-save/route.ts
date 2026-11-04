@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { pinContourReferenceOnParams, type PlanConstructionParams, type Point2D } from '@pashkovsky/pergola-core'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { requireCompanyAccess } from '@/lib/auth'
 import {
@@ -8,6 +9,21 @@ import {
 } from '@/lib/configurator/apply-configurator-sync-to-offer'
 import { uploadConfiguratorScreenshot } from '@/lib/configurator/upload-configurator-screenshot'
 import { mintConfiguratorLinkForOffer } from '@/lib/configurator/mint-configurator-link'
+
+function pinPlanParamsFromBody(body: Record<string, unknown>): PlanConstructionParams | unknown {
+  const rawParams = body.planParams
+  if (!rawParams || typeof rawParams !== 'object') return rawParams
+  const polygon = body.planPolygon
+  if (!Array.isArray(polygon) || polygon.length < 3) return rawParams
+  const contour: Point2D[] = []
+  for (const pt of polygon) {
+    if (!pt || typeof pt !== 'object') return rawParams
+    const p = pt as { x?: unknown; y?: unknown }
+    if (typeof p.x !== 'number' || typeof p.y !== 'number') return rawParams
+    contour.push([p.x, p.y])
+  }
+  return pinContourReferenceOnParams(contour, rawParams as PlanConstructionParams)
+}
 
 export const runtime = 'nodejs'
 
@@ -84,9 +100,15 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     if (isPlanFormat) {
       // New plan editor format
       if (typeof body.locale === 'string' && body.locale.length <= 5) locale = body.locale
+
+      const pinnedParams = pinPlanParamsFromBody(body as Record<string, unknown>)
+      const bodyWithPin = { ...body, planParams: pinnedParams }
+      if (bodyWithPin.plan && typeof bodyWithPin.plan === 'object') {
+        bodyWithPin.plan = { ...(bodyWithPin.plan as object), params: pinnedParams }
+      }
       
       const screenshot = typeof body.screenshot === 'string' ? body.screenshot : ''
-      const configForRow = { ...body } as Record<string, unknown>
+      const configForRow = { ...bodyWithPin } as Record<string, unknown>
       delete configForRow.screenshot
       delete configForRow.locale
       
@@ -121,38 +143,38 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       // supportBeams is a top-level plan field: persist when present; keep previous when omitted.
       const nextMeta: Record<string, unknown> = {
         ...prevMeta,
-        planPolygon: body.planPolygon,
-        planWallIndices: body.planWallIndices,
-        planParams: body.planParams,
+        planPolygon: bodyWithPin.planPolygon,
+        planWallIndices: bodyWithPin.planWallIndices,
+        planParams: pinnedParams,
         previewImageUrl: previewUrl ?? prevMeta.previewImageUrl,
         submissionId,
       }
-      if (Object.prototype.hasOwnProperty.call(body, 'supportBeams')) {
-        if (body.supportBeams == null) delete nextMeta.supportBeams
-        else nextMeta.supportBeams = body.supportBeams
+      if (Object.prototype.hasOwnProperty.call(bodyWithPin, 'supportBeams')) {
+        if (bodyWithPin.supportBeams == null) delete nextMeta.supportBeams
+        else nextMeta.supportBeams = bodyWithPin.supportBeams
       }
       // Also store a full plan snapshot so unknown top-level keys round-trip.
-      if (body.plan && typeof body.plan === 'object') {
-        nextMeta.plan = body.plan
+      if (bodyWithPin.plan && typeof bodyWithPin.plan === 'object') {
+        nextMeta.plan = bodyWithPin.plan
       } else {
         nextMeta.plan = {
           ...(typeof prevMeta.plan === 'object' && prevMeta.plan ? (prevMeta.plan as object) : {}),
           schemaVersion: 1,
-          polygon: body.planPolygon,
-          wallIndices: body.planWallIndices ?? [],
-          params: body.planParams,
+          polygon: bodyWithPin.planPolygon,
+          wallIndices: bodyWithPin.planWallIndices ?? [],
+          params: pinnedParams,
           confirmed: false,
-          ...(Object.prototype.hasOwnProperty.call(body, 'supportBeams')
-            ? body.supportBeams == null
+          ...(Object.prototype.hasOwnProperty.call(bodyWithPin, 'supportBeams')
+            ? bodyWithPin.supportBeams == null
               ? {}
-              : { supportBeams: body.supportBeams }
+              : { supportBeams: bodyWithPin.supportBeams }
             : prevMeta.supportBeams != null
               ? { supportBeams: prevMeta.supportBeams }
               : {}),
         }
         if (
-          Object.prototype.hasOwnProperty.call(body, 'supportBeams') &&
-          body.supportBeams == null &&
+          Object.prototype.hasOwnProperty.call(bodyWithPin, 'supportBeams') &&
+          bodyWithPin.supportBeams == null &&
           nextMeta.plan &&
           typeof nextMeta.plan === 'object'
         ) {
@@ -170,9 +192,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       return NextResponse.json({
         success: true,
         submissionId,
-        planPolygon: body.planPolygon,
-        planWallIndices: body.planWallIndices,
-        planParams: body.planParams,
+        planPolygon: bodyWithPin.planPolygon,
+        planWallIndices: bodyWithPin.planWallIndices,
+        planParams: pinnedParams,
         supportBeams: nextMeta.supportBeams ?? null,
         plan: nextMeta.plan ?? null,
       })

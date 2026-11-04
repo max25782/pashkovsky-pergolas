@@ -2,7 +2,9 @@ import {
   isSimplePolygon,
   mergePergolaPlanDocument,
   pickPergolaPlanExtras,
+  pinContourReferenceOnParams,
   type PlanConstructionParams,
+  type Point2D,
   type SupportBeamsDocument,
 } from '@pashkovsky/pergola-core'
 import type { Pergola, PergolaPlan, PergolaPlanPointMm } from '@/types/offer'
@@ -64,11 +66,27 @@ export function applyPlanGeometry(prev: Pergola, geometry: PlanGeometryInput): P
   if (samePolygon && sameWalls && sameParams && beamsUnchanged) return prev
 
   const extras = pickPergolaPlanExtras(prev.plan as Record<string, unknown> | null | undefined)
+  const contour: Point2D[] = geometry.polygon.map((p) => [p.x, p.y])
+  const prevParams = prev.plan?.params
+  // When measured is newly invented on this write, pin from the prior state so
+  // equal-to-edge measured cannot flip centerline → outer-faces.
+  const pinSource =
+    !geometry.params.contourReference
+    && prevParams
+    && !prevParams.contourReference
+    && geometry.params.measuredOuterLengthMmByEdgeIndex
+    && !prevParams.measuredOuterLengthMmByEdgeIndex
+      ? { ...geometry.params, measuredOuterLengthMmByEdgeIndex: prevParams.measuredOuterLengthMmByEdgeIndex }
+      : geometry.params
+  const params = {
+    ...geometry.params,
+    contourReference: pinContourReferenceOnParams(contour, pinSource).contourReference,
+  }
   const doc = mergePergolaPlanDocument({
     extras,
     polygon: geometry.polygon,
     wallIndices: geometry.wallIndices,
-    params: geometry.params,
+    params,
     confirmed: samePolygon && prev.plan?.confirmed === true,
     supportBeams: geometry.supportBeams,
     prevSupportBeams: prev.plan?.supportBeams,

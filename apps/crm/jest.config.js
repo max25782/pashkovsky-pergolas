@@ -12,6 +12,11 @@ module.exports = {
     '**/tests/**/*.test.ts',
     '**/tests/**/*.spec.ts',
   ],
+  // Vitest suites (cut-list + pin-contour paths) — run via `npm run test:cutlist`.
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '<rootDir>/lib/pergolas/__tests__/pin-contour-reference-paths\\.test\\.ts$',
+  ],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
   },

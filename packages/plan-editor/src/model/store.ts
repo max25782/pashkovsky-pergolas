@@ -400,7 +400,9 @@ export function createPlanEditorStore() {
 
         const angleDeg = fixedEdges.map((e) => e.angleDeg)
         const outerTargets = measuredAfter.map((o) => o as number)
-        // Outer-face plans keep tape vertices. Centerline / unset still rebuild axes.
+        // Outer-face plans keep tape vertices — only when CR is explicitly
+        // 'outer-faces' (user confirmed). Unset / centerline rebuild axes.
+        // Never promote unset → outer-faces from typed lengths alone.
         if (contourReference === 'outer-faces') {
           for (const outer of outerTargets) {
             if (!(outer >= MIN_EDGE_LENGTH_MM)) return {}

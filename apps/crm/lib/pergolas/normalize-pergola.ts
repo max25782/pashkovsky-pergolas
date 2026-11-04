@@ -6,9 +6,11 @@ import {
   parseMeasuredOuterLengthMmByEdgeIndex,
   parseSupportBeamsDocument,
   pickPergolaPlanExtras,
+  pinContourReferenceOnParams,
   PERGOLA_PLAN_SCHEMA_VERSION,
   polygonAreaM2,
   type PlanConstructionParams,
+  type Point2D,
 } from '@pashkovsky/pergola-core'
 import type {
   Pergola,
@@ -191,12 +193,15 @@ export function parsePergolaPlan(raw: unknown): PergolaPlan | null {
   const extras = pickPergolaPlanExtras(o)
   const hasSupportBeamsKey = Object.prototype.hasOwnProperty.call(o, 'supportBeams')
   const parsedBeams = parseSupportBeamsDocument(o.supportBeams)
+  const contour: Point2D[] = polygon.map((p) => [p.x, p.y])
+  // Pin missing contourReference to the rule that currently applies (no silent flip later).
+  const params = pinContourReferenceOnParams(contour, parseParams(o.params))
   const plan: PergolaPlan = {
     ...extras,
     schemaVersion,
     polygon,
     wallIndices,
-    params: parseParams(o.params),
+    params,
     confirmed: o.confirmed === true,
     ...(hasSupportBeamsKey
       ? { supportBeams: (parsedBeams ?? o.supportBeams) as PergolaPlan['supportBeams'] }

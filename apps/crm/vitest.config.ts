@@ -14,7 +14,10 @@ export default defineConfig({
   resolve: { alias: { '@': __dirname } },
   test: {
     environment: 'node',
-    include: ['apps/crm/lib/cut-list/__tests__/**/*.test.ts'],
+    include: [
+      'apps/crm/lib/cut-list/__tests__/**/*.test.ts',
+      'apps/crm/lib/pergolas/__tests__/pin-contour-reference-paths.test.ts',
+    ],
     // wall-beams-clockwise is a jest-style suite (global describe) and runs under `npm test`.
     exclude: ['**/wall-beams-clockwise.test.ts', '**/node_modules/**'],
   },
