@@ -193,6 +193,21 @@ export function wingShelfRawAtConcaveVertex(
   }
 }
 
+/** Unit normal from a face midpoint into the polygon interior. */
+export function shelfFaceInwardNormal(
+  face: { start: Point2D; end: Point2D },
+  contour: Point2D[],
+): Point2D {
+  const clean = sanitizeContour(contour)
+  const pts = isCCW(clean) ? clean : [...clean].reverse()
+  const mid: Point2D = [(face.start[0] + face.end[0]) / 2, (face.start[1] + face.end[1]) / 2]
+  const dir = unit(sub(face.end, face.start))
+  const candidateA: Point2D = [-dir[1], dir[0]]
+  const candidateB: Point2D = [dir[1], -dir[0]]
+  const outward = shelfEdgeOutwardNormal(pts, face, mid, candidateA, candidateB)
+  return scale(outward, -1)
+}
+
 /** Shift the raw shelf onto the notch-side face of its source beam (not the centerline). */
 export function offsetShelfToNotchFace(
   shelf: { start: Point2D; end: Point2D },
@@ -253,15 +268,19 @@ function shelfEdgeOutwardNormal(
 
 /** Interior posts along a support longer than maxSpan (same rule as frame edges). */
 /**
- * The face line sits on the notch-side face of the beam. The drawn shelf is a
- * band of `bandMm` further into the notch, top flush with that face. The clip
- * line is the beam center, so vertical purlins stop on the two beam faces
- * and are not shortened by the band.
+ * Flush shelf band from a face line.
+ *
+ * - `intoField` (outer-faces): band lies entirely inside the polygon, flush
+ *   with the contour face; drawn axis is the band centreline; clip stays on
+ *   the face so purlins stop on both band faces.
+ * - legacy (centerline): band extends into the notch cavity; axis on the far
+ *   face; clip on the contour face — byte-identical to pre-outer-face plans.
  */
 export function placeWingShelfFlushBand(
   face: { start: Point2D; end: Point2D },
   contour: Point2D[],
   bandMm: number,
+  options?: { intoField?: boolean },
 ): { axisStart: Point2D; axisEnd: Point2D; clipStart: Point2D; clipEnd: Point2D } {
   const clean = sanitizeContour(contour)
   const pts = isCCW(clean) ? clean : [...clean].reverse()
@@ -283,16 +302,54 @@ export function placeWingShelfFlushBand(
   const ev = unit(sub(edge.end, edge.start))
   const n: Point2D = [-ev[1], ev[0]]
   const edgeMid: Point2D = [(edge.start[0] + edge.end[0]) / 2, (edge.start[1] + edge.end[1]) / 2]
-  const notch = pointInPolygon(add(edgeMid, scale(n, 2)), pts) ? scale(n, -1) : n
+  const intoPoly = pointInPolygon(add(edgeMid, scale(n, 2)), pts)
+  const along = options?.intoField
+    ? intoPoly
+      ? n
+      : scale(n, -1)
+    : intoPoly
+      ? scale(n, -1)
+      : n
   const faceMid: Point2D = [(face.start[0] + face.end[0]) / 2, (face.start[1] + face.end[1]) / 2]
-  const current = dot(sub(faceMid, edgeMid), notch)
-  const moveAxis = scale(notch, bandMm - current)
-  const moveClip = scale(notch, -current)
+  const current = dot(sub(faceMid, edgeMid), along)
+  const axisOffset = options?.intoField ? bandMm / 2 : bandMm
+  const moveAxis = scale(along, axisOffset - current)
+  const moveClip = scale(along, -current)
   return {
     axisStart: add(face.start, moveAxis),
     axisEnd: add(face.end, moveAxis),
     clipStart: add(face.start, moveClip),
     clipEnd: add(face.end, moveClip),
+  }
+}
+
+/**
+ * Plan rectangle of the shelf / notch-wall band for outer-faces: flush with
+ * `face`, extending `bandMm` into the contour interior. Same placement as
+ * purlins/cards via `placeWingShelfFlushBand(..., { intoField: true })`.
+ */
+export function wingShelfFlushBandRect(
+  face: { start: Point2D; end: Point2D },
+  contour: Point2D[],
+  bandMm: number,
+): { minX: number; maxX: number; minY: number; maxY: number } {
+  const placed = placeWingShelfFlushBand(face, contour, bandMm, { intoField: true })
+  // Axis is the band centreline; clip is on the face. Far face = clip + 2·(axis−clip).
+  const farStart: Point2D = [
+    placed.clipStart[0] + 2 * (placed.axisStart[0] - placed.clipStart[0]),
+    placed.clipStart[1] + 2 * (placed.axisStart[1] - placed.clipStart[1]),
+  ]
+  const farEnd: Point2D = [
+    placed.clipEnd[0] + 2 * (placed.axisEnd[0] - placed.clipEnd[0]),
+    placed.clipEnd[1] + 2 * (placed.axisEnd[1] - placed.clipEnd[1]),
+  ]
+  const xs = [placed.clipStart[0], placed.clipEnd[0], farStart[0], farEnd[0]]
+  const ys = [placed.clipStart[1], placed.clipEnd[1], farStart[1], farEnd[1]]
+  return {
+    minX: Math.min(...xs),
+    maxX: Math.max(...xs),
+    minY: Math.min(...ys),
+    maxY: Math.max(...ys),
   }
 }
 

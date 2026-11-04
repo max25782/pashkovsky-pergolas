@@ -29,6 +29,7 @@ import {
   DIVIDER_PLAN_CLEARANCE_WIDTH_MM,
   innerFaceClearMm,
   lamellaRunEndEdgeIndices,
+  wingShelfFlushBandMm,
 } from './beamPlanWidth'
 import { decomposeIntoRectangles, type Rectangle } from './rectangleDecomposition'
 import { sanitizeContour } from './contourSanitize'
@@ -51,6 +52,7 @@ import {
   hasPlanSupportBeams,
   resolveStraightSupportBeams,
 } from './supportBeams'
+import { wingShelfFlushBandRect } from './wingShelfSpan'
 
 export const LAMELLA_SECTION_CLEARANCE_W_MM = 15
 export const LAMELLA_SECTION_CLEARANCE_H_MM = 30
@@ -980,6 +982,60 @@ function pullNarrowWallNotchIntoUpperBay(
   return next
 }
 
+/**
+ * AABB uses one inset per side (first/nearest edge). A U-notch top can be
+ * wall 40 on the right and free 70 on the left — carve the extra strip so
+ * each wing stops on its own inner face.
+ */
+function subtractWiderFrameEdgeBands(
+  field: Rectangle[],
+  pts: Point2D[],
+  aabb: Rectangle,
+  widthAt: (edgeIndex: number) => number,
+): Rectangle[] {
+  const xs = pts.map((p) => p[0])
+  const ys = pts.map((p) => p[1])
+  const outerMinX = Math.min(...xs)
+  const outerMaxX = Math.max(...xs)
+  const outerMinY = Math.min(...ys)
+  const outerMaxY = Math.max(...ys)
+  const uniLeft = aabb.minX - outerMinX
+  const uniRight = outerMaxX - aabb.maxX
+  const uniBottom = aabb.minY - outerMinY
+  const uniTop = outerMaxY - aabb.maxY
+  const strips: Rectangle[] = []
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[i]
+    const b = pts[(i + 1) % pts.length]
+    const w = widthAt(i)
+    if (!(w > 0)) continue
+    const horizontal = Math.abs(a[1] - b[1]) <= 2
+    const vertical = Math.abs(a[0] - b[0]) <= 2
+    if (horizontal) {
+      const y = (a[1] + b[1]) / 2
+      const x0 = Math.min(a[0], b[0])
+      const x1 = Math.max(a[0], b[0])
+      if (Math.abs(y - outerMaxY) <= 2 && w > uniTop + 0.5) {
+        strips.push({ minX: x0, maxX: x1, minY: outerMaxY - w, maxY: aabb.maxY + 1 })
+      }
+      if (Math.abs(y - outerMinY) <= 2 && w > uniBottom + 0.5) {
+        strips.push({ minX: x0, maxX: x1, minY: aabb.minY - 1, maxY: outerMinY + w })
+      }
+    } else if (vertical) {
+      const x = (a[0] + b[0]) / 2
+      const y0 = Math.min(a[1], b[1])
+      const y1 = Math.max(a[1], b[1])
+      if (Math.abs(x - outerMinX) <= 2 && w > uniLeft + 0.5) {
+        strips.push({ minX: aabb.minX - 1, maxX: outerMinX + w, minY: y0, maxY: y1 })
+      }
+      if (Math.abs(x - outerMaxX) <= 2 && w > uniRight + 0.5) {
+        strips.push({ minX: outerMaxX - w, maxX: aabb.maxX + 1, minY: y0, maxY: y1 })
+      }
+    }
+  }
+  return strips.length > 0 ? subtractAll(field, strips) : field
+}
+
 function buildInnerFieldRects(
   pts: Point2D[],
   spec: PergolaSpec,
@@ -997,7 +1053,18 @@ function buildInnerFieldRects(
   const cutouts = holes.map((h) =>
     growCutoutTowardSolid(h, aabb, pts, spec.measuredOuterLengthMmByEdgeIndex, beamW, layoutVersion, widthAt),
   )
-  return { field: subtractAll([aabb], cutouts), aabb, cutouts }
+  let field = subtractAll([aabb], cutouts)
+  // Outer-face U-notch: one AABB top inset cannot be both wall 40 and free 70.
+  // Centerline plans keep the uniform half-inset AABB (legacy L12 / LIVE L).
+  const contourRef = resolveContourReference({
+    contourReference: spec.contourReference,
+    contour: pts,
+    measured: spec.measuredOuterLengthMmByEdgeIndex,
+  })
+  if (contourRef.reference === 'outer-faces') {
+    field = subtractWiderFrameEdgeBands(field, pts, aabb, widthAt)
+  }
+  return { field, aabb, cutouts }
 }
 
 type FaceBand = {
@@ -2122,7 +2189,6 @@ export function buildLamellaSections(
     const y1 = Math.max(shelf.start[1], shelf.end[1])
     const x0 = Math.min(shelf.start[0], shelf.end[0])
     const x1 = Math.max(shelf.start[0], shelf.end[0])
-    const midY = (y0 + y1) / 2
     const midX = (x0 + x1) / 2
     const shelfBandW =
       shelf.widthMm != null && shelf.widthMm > 0
@@ -2131,7 +2197,6 @@ export function buildLamellaSections(
     const shelfHalf = shelfBandW / 2
     const horizontal = Math.abs(x1 - x0) >= Math.abs(y1 - y0)
     if (horizontal) {
-      const cutoutTop = cutouts.length > 0 ? Math.max(...cutouts.map((c) => c.maxY)) : midY + shelfHalf
       const spanMinX = Math.min(aabb.minX, ...field.map((r) => r.minX))
       const spanMaxX = Math.max(aabb.maxX, ...field.map((r) => r.maxX))
       const cutMinX = cutouts.length > 0 ? Math.min(...cutouts.map((c) => c.minX)) : null
@@ -2150,22 +2215,48 @@ export function buildLamellaSections(
           bandMaxX = spanMaxX
         }
       }
-      const onBeam = supportRestsOnBeamSegment(shelf, frame.beams)
       const shelfId = shelf.profileId || spec.wingShelfProfileId || ''
-      const shelfW = shelfId ? beamPlanWidthForDrawing(profiles, shelfId).planWidthMm : shelfBandW
-      const band: Rectangle = onBeam
-        ? {
-            minX: bandMinX,
-            maxX: bandMaxX,
-            minY: cutoutTop - shelfBandW,
-            maxY: cutoutTop,
-          }
-        : {
-            minX: bandMinX,
-            maxX: bandMaxX,
-            minY: midY - shelfW / 2,
-            maxY: midY + shelfW / 2,
-          }
+      const shelfW = shelfId
+        ? beamPlanWidthForDrawing(profiles, shelfId).planWidthMm
+        : shelfBandW
+      const bandW = shelfW > 0 ? shelfW : shelfBandW
+      const contourRef = resolveContourReference({
+        contourReference: spec.contourReference,
+        contour: pts,
+        measured: outersCcw,
+      })
+      const flushMm =
+        contourRef.reference === 'outer-faces'
+          ? wingShelfFlushBandMm(
+              profiles,
+              spec.beamProfileId,
+              spec.wallProfileId,
+              spec.wallBeamWidthVersion,
+            )
+          : null
+      // Outer-faces + free/wall gap: one flush band into the field (same as purlins).
+      // Centerline keeps on-beam / centered so wall-L / LIVE L stay byte-identical.
+      let band: Rectangle
+      if (flushMm != null && flushMm > 0) {
+        const flush = wingShelfFlushBandRect(
+          { start: shelf.start, end: shelf.end },
+          pts,
+          flushMm,
+        )
+        band = { minX: bandMinX, maxX: bandMaxX, minY: flush.minY, maxY: flush.maxY }
+      } else {
+        const midY = (y0 + y1) / 2
+        const cutoutTop = cutouts.length > 0 ? Math.max(...cutouts.map((c) => c.maxY)) : midY + shelfHalf
+        const onBeam = supportRestsOnBeamSegment(shelf, frame.beams)
+        band = onBeam
+          ? { minX: bandMinX, maxX: bandMaxX, minY: cutoutTop - shelfBandW, maxY: cutoutTop }
+          : {
+              minX: bandMinX,
+              maxX: bandMaxX,
+              minY: midY - bandW / 2,
+              maxY: midY + bandW / 2,
+            }
+      }
       supportObstacles.push(band)
       horizontalFaces.push({
         a0: band.minY,
@@ -2572,26 +2663,23 @@ export function columnHeightChecksums(
   for (const stack of columns.values()) {
     const midX = stack.reduce((acc, s) => acc + (s.minX + s.maxX) / 2, 0) / stack.length
     const minClearY = Math.min(...stack.map((s) => s.minY - (s.clearHMm - s.heightMm) / 2))
-    const fieldBottom = Math.min(...sections.map((s) => s.minY - (s.clearHMm - s.heightMm) / 2))
-    const isFullHeight = minClearY <= fieldBottom + 2
-    let measured = outerY
-    if (!isFullHeight) {
-      const wings = [...acrossOuterByX.values()].filter((mm) => mm < outerY - 1)
-      measured = wings.length > 0 ? Math.max(...wings) : outerY
-    } else if (acrossOuterByX.size > 0) {
-      measured = Math.max(...acrossOuterByX.values())
-    }
-
-    // The beam under / over the column is the contour edge that lies just
-    // outside it: a wall edge is its own (narrower) profile, not the free beam.
     const maxClearY = Math.max(...stack.map((s) => s.maxY + (s.clearHMm - s.heightMm) / 2))
+    const fieldBottom = Math.min(...sections.map((s) => s.minY - (s.clearHMm - s.heightMm) / 2))
+    const fieldTop = Math.max(...sections.map((s) => s.maxY + (s.clearHMm - s.heightMm) / 2))
+    const reachesBottom = minClearY <= fieldBottom + 2
+    const reachesTop = maxClearY >= fieldTop - 2
+    // Under a U-notch the stack sits on the bottom but stops at the floor wall.
+    const spanIsFullHeight = reachesBottom && reachesTop
+    // House EF floor is tilted (~6 mm): still a horizontal limiter.
+    const nearlyHorizontal = (a: Point2D, b: Point2D) =>
+      Math.abs(a[1] - b[1]) <= Math.max(2, beamW * 0.15)
     const edgeWidthNear = (y: number): number => {
       let best = beamW
       let bestDist = Infinity
       for (let i = 0; i < ccw.length; i++) {
         const a = ccw[i]
         const b = ccw[(i + 1) % ccw.length]
-        if (Math.abs(a[1] - b[1]) > 2) continue
+        if (!nearlyHorizontal(a, b)) continue
         if (midX < Math.min(a[0], b[0]) - EPS || midX > Math.max(a[0], b[0]) + EPS) continue
         const dist = Math.abs((a[1] + b[1]) / 2 - y)
         if (dist < bestDist && dist <= beamW) {
@@ -2626,6 +2714,16 @@ export function columnHeightChecksums(
           sum += bandMm
         }
       }
+    }
+    let measured = outerY
+    if (reachesBottom && !reachesTop) {
+      // Under-notch: outer is bottom face → floor face, not the full height.
+      measured = maxClearY + topW - (minClearY - bottomW)
+    } else if (!reachesBottom) {
+      const wings = [...acrossOuterByX.values()].filter((mm) => mm < outerY - 1)
+      measured = wings.length > 0 ? Math.max(...wings) : outerY
+    } else if (acrossOuterByX.size > 0) {
+      measured = Math.max(...acrossOuterByX.values())
     }
     out.push({
       id: `col-${n++}`,

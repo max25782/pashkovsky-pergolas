@@ -244,7 +244,11 @@ export function computePurlins(
     .filter((s) => s.lengthMm >= MIN_SEGMENT_MM)
     .map((wingSupport) => {
       const flushBand =
-        flushBandMm != null ? placeWingShelfFlushBand(wingSupport, cleanContour, flushBandMm) : null
+        flushBandMm != null
+          ? placeWingShelfFlushBand(wingSupport, cleanContour, flushBandMm, {
+              intoField: spec.contourReference === 'outer-faces',
+            })
+          : null
       const shelfPlanWidthMm = beamPlanWidthForDrawing(profiles, wingSupport.profileId).planWidthMm
       const shelfHalfWidthMm = shelfPlanWidthMm / 2
       const clipStart = flushBand != null ? flushBand.clipStart : wingSupport.start
