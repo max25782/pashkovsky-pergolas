@@ -1,6 +1,19 @@
 /** @type {import('next').NextConfig} */
 const path = require('path')
 
+// Host of NEXT_PUBLIC_MEDIA_BASE_URL (e.g. a CloudFront domain), allowed for next/image.
+function getMediaHost() {
+  try {
+    return process.env.NEXT_PUBLIC_MEDIA_BASE_URL
+      ? new URL(process.env.NEXT_PUBLIC_MEDIA_BASE_URL).hostname
+      : null
+  } catch {
+    console.warn('[next.config] NEXT_PUBLIC_MEDIA_BASE_URL is not a valid URL, ignoring')
+    return null
+  }
+}
+const mediaHost = getMediaHost()
+
 const nextConfig = {
   transpilePackages: ['framer-motion'],
   async redirects() {
@@ -46,6 +59,19 @@ const nextConfig = {
         port: '',
         pathname: '/**',
       }] : []),
+      // New site (/new): optional CDN host for media keys (NEXT_PUBLIC_MEDIA_BASE_URL) and CloudFront
+      ...(mediaHost ? [{
+        protocol: 'https',
+        hostname: mediaHost,
+        port: '',
+        pathname: '/**',
+      }] : []),
+      {
+        protocol: 'https',
+        hostname: '*.cloudfront.net',
+        port: '',
+        pathname: '/**',
+      },
       // Supabase Storage (for admin gallery)
       {
         protocol: 'https',

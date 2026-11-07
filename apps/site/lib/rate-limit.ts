@@ -37,6 +37,9 @@ export const pdfLimiter = makeLimiter(5, '1 h', 'pdf')
 // Gallery S3 listing — max 60 requests per IP per minute
 export const galleryLimiter = makeLimiter(60, '1 m', 'gallery')
 
+// New-site lead form (/api/leads) — max 5 submissions per IP per 15 minutes
+export const leadsLimiter = makeLimiter(5, '15 m', 'leads')
+
 export function getClientIp(req: NextRequest): string {
   const forwarded = req.headers.get('x-forwarded-for')
   if (forwarded) return forwarded.split(',')[0].trim()

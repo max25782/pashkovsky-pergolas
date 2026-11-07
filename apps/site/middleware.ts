@@ -15,6 +15,8 @@ export function middleware(request: NextRequest) {
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api') ||
     pathname.startsWith('/static') ||
+    pathname === '/new' || // New site preview lives outside [locale]; it handles he/en itself
+    pathname.startsWith('/new/') ||
     pathname.includes('.') // Files with extensions
   ) {
     return NextResponse.next()
