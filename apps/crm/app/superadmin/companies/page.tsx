@@ -25,7 +25,7 @@ async function getCompanies() {
     }
   )
   
-  const { data: companies, error } = await supabase
+  const withSource = await supabase
     .from('companies')
     .select(`
       id,
@@ -42,13 +42,37 @@ async function getCompanies() {
       utm_campaign
     `)
     .order('created_at', { ascending: false })
-  
-  if (error) {
-    console.error('[Companies] Error loading:', error)
+
+  if (!withSource.error) return withSource.data || []
+
+  // Older DBs without 056_company_registration_source still list companies.
+  console.error('[Companies] Error loading (with source cols):', withSource.error)
+  const fallback = await supabase
+    .from('companies')
+    .select(`
+      id,
+      name,
+      slug,
+      status,
+      plan,
+      industry,
+      primary_email,
+      created_at,
+      trial_ends_at
+    `)
+    .order('created_at', { ascending: false })
+
+  if (fallback.error) {
+    console.error('[Companies] Error loading:', fallback.error)
     return []
   }
-  
-  return companies || []
+
+  return (fallback.data || []).map((c) => ({
+    ...c,
+    registration_source: 'direct' as string | null,
+    utm_source: null as string | null,
+    utm_campaign: null as string | null,
+  }))
 }
 
 export default async function CompaniesPage() {
