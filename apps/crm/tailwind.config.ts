@@ -8,6 +8,7 @@ export default {
       colors: {
         brand: { blue: '#0a6cff', silver: '#c8d0da' },
         bg: { dark: '#0e0f12', light: '#ffffff' },
+        warn: '#e8794a',
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',

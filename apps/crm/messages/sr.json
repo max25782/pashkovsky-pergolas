@@ -85,6 +85,7 @@
     "inventory": "Inventar",
     "profiles": "Profili",
     "aiMedia": "AI Mediji",
+    "tazrim": "Tok novca",
     "settings": "Podešavanja",
     "logout": "Odjava",
     "loggingOut": "Odjavljivanje...",
@@ -145,6 +146,7 @@
     "profilesDescription": "Upravljanje aluminijumskim profilima",
     "ordersDescription": "Narudžbine profila",
     "inventoryDescription": "Broj zaliha",
+    "tazrimDescription": "Prognoza novčanog toka",
     "quickOfferTitle": "Brza ponuda",
     "quickOfferDescription": "Kreirajte trenutnu ponudu bez klijenta",
     "aiChatDescription": "Upravljanje AI razgovorima"
