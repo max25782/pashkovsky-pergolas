@@ -43,6 +43,9 @@ export type Permission =
   // Reports
   | 'reports:view'
   | 'reports:export'
+  // Tazrim (cash flow). Also requires the Pashkovsky company, see lib/tazrim/access.ts
+  | 'tazrim:view'
+  | 'tazrim:edit'
 
 /**
  * Permission matrix for each role
@@ -93,6 +96,10 @@ export const PERMISSIONS: Record<Permission, Role[]> = {
   // Reports
   'reports:view': ['owner', 'admin', 'manager'],
   'reports:export': ['owner', 'admin'],
+
+  // Tazrim
+  'tazrim:view': ['owner', 'admin'],
+  'tazrim:edit': ['owner', 'admin'],
 }
 
 /**
@@ -159,6 +166,9 @@ export function canAccessNavPath(role: Role, path: string): boolean {
       path.startsWith('/app/admin/leads') ||
       path.startsWith('/app/quick-offer')
     )
+  }
+  if (path.startsWith('/app/admin/tazrim')) {
+    return can(role, 'tazrim:view')
   }
   if (path.startsWith('/app/admin/users')) {
     return can(role, 'users:view')

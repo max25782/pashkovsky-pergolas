@@ -85,6 +85,7 @@
     "inventory": "Инвентаризация",
     "profiles": "Профили",
     "aiMedia": "Медиа AI",
+    "tazrim": "Денежный поток",
     "settings": "Настройки",
     "logout": "Выход",
     "loggingOut": "Выход...",
@@ -145,6 +146,7 @@
     "profilesDescription": "Управление алюминиевыми профилями",
     "ordersDescription": "Заказы профилей",
     "inventoryDescription": "Учёт остатков профилей",
+    "tazrimDescription": "Прогноз денежного потока",
     "quickOfferTitle": "Быстрое предложение",
     "quickOfferDescription": "Создать предложение без клиента",
     "aiChatDescription": "Управление AI чатами"
