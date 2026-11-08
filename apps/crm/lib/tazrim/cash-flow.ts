@@ -129,6 +129,19 @@ export function buildFlows(
   );
 }
 
+// Projection input: only still-planned events. Cleared money (including CRM
+// payments counted in the account balance, see lib/tazrim/account-balance.ts)
+// is already inside the starting balance, so it must never be projected again.
+export function buildPlannedFlows(
+  events: EventRow[],
+  rules: RuleRow[]
+): CashFlowItem[] {
+  return buildFlows(
+    events.filter((e) => e.status === "planned"),
+    rules
+  );
+}
+
 export function flowTitle(f: CashFlowItem): string {
   return f.description ? `${f.vendorName} · ${f.description}` : f.vendorName;
 }

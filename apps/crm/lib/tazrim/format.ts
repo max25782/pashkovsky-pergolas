@@ -8,6 +8,14 @@ export function todayInIsrael(): string {
   );
 }
 
+// Calendar date (YYYY-MM-DD) in Israel time of any timestamp, e.g. the day a
+// bank balance snapshot was taken.
+export function dateInIsrael(iso: string): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: TIME_ZONE }).format(
+    new Date(iso)
+  );
+}
+
 export function addDays(isoDate: string, days: number): string {
   const d = new Date(`${isoDate}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + days);

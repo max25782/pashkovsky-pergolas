@@ -2,7 +2,7 @@ import type { TazrimSupabase } from "@/lib/tazrim/guard";
 import { getAccountBalances, sumBalances } from "@/lib/tazrim/bank-balances";
 import { addDays } from "@/lib/tazrim/format";
 import {
-  buildFlows,
+  buildPlannedFlows,
   type CashFlowItem,
   type EventRow,
   type RuleRow,
@@ -60,8 +60,10 @@ export async function loadCashPicture(
 
   const events = (eventsResult.data ?? []) as unknown as EventRow[];
 
-  // Today's flow counts planned and already-cleared items; projections only use
-  // planned ones (cleared money is already reflected in the bank balance).
+  // Today's flow counts planned and already-cleared items (display only, never
+  // added to the balance); projections only use planned ones, because cleared
+  // money is already in the account balance (snapshot + CRM payments cleared
+  // after it).
   const todayEvents = events.filter((e) => e.due_date === today);
   const todayIncome = todayEvents.filter((e) => e.type === "income");
   const todayExpense = todayEvents.filter((e) => e.type !== "income");
@@ -86,8 +88,8 @@ export async function loadCashPicture(
     accounts: balancesResult.accounts,
     totalBalance: sumBalances(balancesResult.accounts),
     lastUpdatedAt,
-    flows: buildFlows(
-      events.filter((e) => e.status === "planned"),
+    flows: buildPlannedFlows(
+      events,
       (rulesResult.data ?? []) as unknown as RuleRow[]
     ),
     today: {
