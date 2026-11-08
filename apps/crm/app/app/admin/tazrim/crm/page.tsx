@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireTazrimAccess } from "@/lib/tazrim/guard";
 import { formatFullDate, formatMoney } from "@/lib/tazrim/format";
 import { PAYROLL_APPROVED_SOURCE, PAYROLL_SOURCES } from "@/lib/tazrim/payroll";
@@ -163,6 +164,8 @@ export default async function CrmPage() {
     forecastResult,
     doneResult,
     payrollResult,
+    defaultAccountResult,
+    needsAccountResult,
   ] = await Promise.all([
     supabase
       .from("tz_integrations")
@@ -189,13 +192,29 @@ export default async function CrmPage() {
       .eq("type", "expense")
       .in("source", PAYROLL_SOURCES)
       .order("due_date", { ascending: true }),
+    supabase
+      .from("tz_bank_accounts")
+      .select("id", { count: "exact", head: true })
+      .eq("is_crm_default", true),
+    supabase
+      .from("tz_cash_events")
+      .select("id", { count: "exact", head: true })
+      .eq("type", "income")
+      .eq("source", "alumincrm")
+      .eq("status", "cleared")
+      .eq("needs_account", true),
   ]);
+
+  const hasCrmDefault = (defaultAccountResult.count ?? 0) > 0;
+  const needsAccountCount = needsAccountResult.count ?? 0;
 
   const errors = [
     integrationResult.error,
     forecastResult.error,
     doneResult.error,
     payrollResult.error,
+    defaultAccountResult.error,
+    needsAccountResult.error,
   ]
     .filter((e) => e !== null)
     .map((e) => e.message);
@@ -212,6 +231,26 @@ export default async function CrmPage() {
         {errors.length > 0 && (
           <div className="rounded-2xl border border-red-900 bg-red-950/40 p-4 text-sm text-red-300">
             חלק מהנתונים לא נטענו: {errors.join(" · ")}
+          </div>
+        )}
+
+        {!hasCrmDefault && (
+          <div
+            role="alert"
+            className="rounded-2xl border border-amber-900 bg-amber-950/40 p-4 text-sm text-amber-300"
+          >
+            לא נבחר חשבון ברירת מחדל לתשלומי AluminCRM, ולכן התשלומים לא ישפיעו
+            על יתרת הבנק.{" "}
+            <Link href="/app/admin/tazrim/balance" className="underline">
+              בחר חשבון בדף היתרות
+            </Link>
+          </div>
+        )}
+
+        {needsAccountCount > 0 && (
+          <div className="rounded-2xl border border-amber-900 bg-amber-950/40 p-4 text-sm text-amber-300">
+            {needsAccountCount} תשלומים שהושלמו דורשים בחירת חשבון ואינם נכללים
+            ביתרה (אין חשבון ברירת מחדל, או שהתשלום לא בשקלים).
           </div>
         )}
 

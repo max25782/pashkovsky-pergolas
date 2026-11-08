@@ -5,6 +5,17 @@ import { createClient as createServiceClient, type SupabaseClient } from "@supab
 import { requireTazrimActionContext, type TazrimSupabase } from "@/lib/tazrim/guard";
 import { todayInIsrael } from "@/lib/tazrim/format";
 import {
+  CRM_EXTERNAL_SOURCE,
+  CRM_REVERSE_AUDIT_ACTION,
+  CRM_SYNC_AUDIT_SOURCE,
+  NO_ACCOUNT,
+  REVERSED_STATUS,
+  buildPaymentRow,
+  findVanishedPayments,
+  type AccountFields,
+  type SyncedPaymentRow,
+} from "@/lib/tazrim/crm-payments";
+import {
   PAYROLL_APPROVED_SOURCE,
   PAYROLL_CATEGORY,
   PAYROLL_SOURCE,
@@ -46,7 +57,9 @@ function todayStr() {
   return new Date().toISOString().slice(0, 10);
 }
 
-type SyncRow = {
+// Every row of the income upsert carries the account columns so the bulk
+// upsert has one uniform shape (deal-level rows use NO_ACCOUNT).
+type SyncRow = AccountFields & {
   company_id: string;
   type: string;
   amount: number;
@@ -75,8 +88,28 @@ function createCrmServiceClient(): SupabaseClient {
 }
 
 export async function syncAluminCRM() {
-  const { supabase, companyId: tazrimCompanyId } = await requireTazrimActionContext();
+  const {
+    supabase,
+    companyId: tazrimCompanyId,
+    userId,
+  } = await requireTazrimActionContext();
   const crm = createCrmServiceClient();
+
+  // CRM payments carry no account, so they land on the company default account.
+  // No default (or a non-ILS payment) -> needs_account, outside every balance.
+  const { data: defaultAccount, error: defaultAccountError } = await supabase
+    .from("tz_bank_accounts")
+    .select("id")
+    .eq("company_id", tazrimCompanyId)
+    .eq("is_crm_default", true)
+    .maybeSingle();
+
+  if (defaultAccountError) {
+    throw new Error(
+      `Не удалось прочитать счёт по умолчанию (применена ли миграция 059_tz_cash_events_crm_balance?): ${defaultAccountError.message}`
+    );
+  }
+  const defaultAccountId: string | null = defaultAccount?.id ?? null;
 
   const { data: deals, error } = await crm
     .from("deals")
@@ -143,21 +176,22 @@ export async function syncAluminCRM() {
 
     if (dealPayments && dealPayments.length > 0) {
       dealPayments.forEach((payment, idx) => {
-        const paidDate = payment.paid_at.slice(0, 10);
-        const isPast = paidDate <= todayDateStr;
-        rows.push({
-          company_id: tazrimCompanyId,
-          type: "income",
-          amount: payment.amount,
-          currency: deal.currency ?? "ILS",
-          due_date: paidDate,
-          status: isPast ? "cleared" : "planned",
-          cleared_date: isPast ? paidDate : null,
-          source: isPast ? "alumincrm" : "alumincrm_forecast",
-          external_source: "alumincrm",
-          external_id: payment.id,
-          notes: `${deal.customer_name ?? "לקוח"} · תשלום ${idx + 1}/${dealPayments.length} · ${stageLabel}`,
-        });
+        rows.push(
+          buildPaymentRow({
+            companyId: tazrimCompanyId,
+            deal: {
+              id: deal.id as string,
+              customer_name: deal.customer_name,
+              currency: deal.currency,
+            },
+            payment,
+            index: idx,
+            total: dealPayments.length,
+            stageLabel,
+            today: todayDateStr,
+            defaultAccountId,
+          })
+        );
       });
       continue;
     }
@@ -179,6 +213,7 @@ export async function syncAluminCRM() {
       external_source: "alumincrm",
       external_id: deal.id as string,
       notes: `${deal.customer_name ?? "לקוח"} · ${stageLabel}`,
+      ...NO_ACCOUNT,
     });
   }
 
@@ -220,6 +255,13 @@ export async function syncAluminCRM() {
     throw new Error(`Не удалось очистить устаревшие прогнозы: ${cleanupError.message}`);
   }
 
+  const reversedPayments = await reverseVanishedPayments(
+    crm,
+    supabase,
+    tazrimCompanyId,
+    userId
+  );
+
   await supabase.from("tz_integrations").upsert(
     {
       company_id: tazrimCompanyId,
@@ -231,6 +273,9 @@ export async function syncAluminCRM() {
         deals_count: deals.length,
         payments_count: payments?.length ?? 0,
         payroll_rows: payrollRows.length,
+        reversed_payments: reversedPayments,
+        payments_needing_account: rows.filter((r) => r.needs_account).length,
+        crm_default_account_id: defaultAccountId,
       },
     },
     { onConflict: "company_id,provider" }
@@ -241,11 +286,122 @@ export async function syncAluminCRM() {
 
 function revalidateCashViews() {
   revalidatePath("/app/admin/tazrim/crm");
+  revalidatePath("/app/admin/tazrim/balance");
   revalidatePath("/app/admin/tazrim");
   revalidatePath("/app/admin/tazrim/weekly");
   revalidatePath("/app/admin/tazrim/monthly");
 }
 
+
+const SYNCED_PAGE_SIZE = 1000;
+const CRM_LOOKUP_CHUNK = 100;
+
+// The CRM deletes payments for real, so a cleared payment that was synced
+// earlier and is gone from deal_payments must stop counting. History is kept:
+// the row becomes status 'reversed' and a tz_audit_log entry (source crm_sync)
+// records the old and new values. Idempotent: reversed rows are no longer
+// 'cleared', so a repeat run finds nothing to do.
+async function reverseVanishedPayments(
+  crm: SupabaseClient,
+  supabase: TazrimSupabase,
+  tazrimCompanyId: string,
+  userId: string
+): Promise<number> {
+  const synced: (SyncedPaymentRow & {
+    amount: number;
+    due_date: string;
+    cleared_date: string | null;
+    currency: string;
+    bank_account_id: string | null;
+  })[] = [];
+
+  for (let from = 0; ; from += SYNCED_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from("tz_cash_events")
+      .select(
+        "id, crm_payment_id, status, amount, due_date, cleared_date, currency, bank_account_id"
+      )
+      .eq("company_id", tazrimCompanyId)
+      .eq("external_source", CRM_EXTERNAL_SOURCE)
+      .eq("status", "cleared")
+      .not("crm_payment_id", "is", null)
+      .order("id", { ascending: true })
+      .range(from, from + SYNCED_PAGE_SIZE - 1);
+
+    if (error) {
+      throw new Error(`Не удалось прочитать синхронизированные платежи: ${error.message}`);
+    }
+    synced.push(...(data ?? []));
+    if ((data ?? []).length < SYNCED_PAGE_SIZE) break;
+  }
+
+  if (synced.length === 0) return 0;
+
+  // Ask the CRM about exactly these payment ids. Looking only at the tracked
+  // deals would mistake a deal that left the tracked stages for deleted payments.
+  const stillInCrm = new Set<string>();
+  const ids = synced.map((r) => r.crm_payment_id as string);
+  for (let i = 0; i < ids.length; i += CRM_LOOKUP_CHUNK) {
+    const { data, error } = await crm
+      .from("deal_payments")
+      .select("id")
+      .eq("company_id", tazrimCompanyId)
+      .in("id", ids.slice(i, i + CRM_LOOKUP_CHUNK));
+
+    if (error) {
+      throw new Error(`Не удалось проверить платежи в AluminCRM: ${error.message}`);
+    }
+    for (const row of data ?? []) stillInCrm.add(row.id as string);
+  }
+
+  const vanished = findVanishedPayments(synced, stillInCrm);
+  if (vanished.length === 0) return 0;
+
+  // Audit first: if this insert fails nothing was reversed yet and the next
+  // sync simply retries; the reverse is never applied without a log entry.
+  const { error: auditError } = await supabase.from("tz_audit_log").insert(
+    vanished.map((row) => ({
+      company_id: tazrimCompanyId,
+      table_name: "tz_cash_events",
+      record_id: row.id,
+      action: CRM_REVERSE_AUDIT_ACTION,
+      changed_by: userId,
+      old_data: {
+        status: row.status,
+        amount: row.amount,
+        due_date: row.due_date,
+        cleared_date: row.cleared_date,
+        currency: row.currency,
+        bank_account_id: row.bank_account_id,
+        crm_payment_id: row.crm_payment_id,
+      },
+      new_data: {
+        status: REVERSED_STATUS,
+        source: CRM_SYNC_AUDIT_SOURCE,
+        reason: "payment no longer exists in AluminCRM",
+      },
+    }))
+  );
+  if (auditError) {
+    throw new Error(`Не удалось записать tz_audit_log: ${auditError.message}`);
+  }
+
+  const { data: updated, error: reverseError } = await supabase
+    .from("tz_cash_events")
+    .update({ status: REVERSED_STATUS })
+    .eq("company_id", tazrimCompanyId)
+    .eq("status", "cleared")
+    .in(
+      "id",
+      vanished.map((r) => r.id)
+    )
+    .select("id");
+
+  if (reverseError) {
+    throw new Error(`Не удалось сторнировать платежи: ${reverseError.message}`);
+  }
+  return updated?.length ?? 0;
+}
 
 interface PayrollRow {
   company_id: string;

@@ -27,6 +27,58 @@ export async function addBankAccount(formData: FormData) {
   revalidateBalanceViews();
 }
 
+// Which account receives AluminCRM payments. One default per company (a partial
+// unique index enforces it), so the old default is cleared first. If the second
+// step fails the company is left with no default, which is the safe state:
+// the sync then marks CRM payments "needs account" instead of guessing.
+// Already-synced payments move to the new account on the next CRM sync.
+export async function setCrmDefaultAccount(formData: FormData) {
+  const bank_account_id = String(formData.get("bank_account_id") ?? "");
+  if (!bank_account_id) return;
+
+  const { supabase, companyId: company_id } = await requireTazrimActionContext();
+
+  const { data: account, error: accountError } = await supabase
+    .from("tz_bank_accounts")
+    .select("id")
+    .eq("id", bank_account_id)
+    .eq("company_id", company_id)
+    .maybeSingle();
+
+  if (accountError) {
+    throw new Error(`Не удалось прочитать счёт: ${accountError.message}`);
+  }
+  if (!account) throw new Error("Счёт не найден");
+
+  const { error: clearError } = await supabase
+    .from("tz_bank_accounts")
+    .update({ is_crm_default: false })
+    .eq("company_id", company_id)
+    .eq("is_crm_default", true);
+
+  if (clearError) {
+    throw new Error(`Не удалось сменить счёт по умолчанию: ${clearError.message}`);
+  }
+
+  const { data: updated, error } = await supabase
+    .from("tz_bank_accounts")
+    .update({ is_crm_default: true })
+    .eq("id", account.id)
+    .eq("company_id", company_id)
+    .select("id");
+
+  if (error) {
+    throw new Error(`Не удалось сохранить счёт по умолчанию: ${error.message}`);
+  }
+  // RLS can make an update succeed with zero affected rows — surface that.
+  if (!updated || updated.length === 0) {
+    throw new Error("Счёт по умолчанию не сохранён (нет прав на изменение)");
+  }
+
+  revalidateBalanceViews();
+  revalidatePath("/app/admin/tazrim/crm");
+}
+
 export async function setBalance(formData: FormData) {
   const bank_account_id = String(formData.get("bank_account_id") ?? "");
   const balanceRaw = String(formData.get("balance") ?? "").trim();

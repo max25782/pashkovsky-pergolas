@@ -1,6 +1,7 @@
 import { requireTazrimAccess } from "@/lib/tazrim/guard";
 import { getAccountBalances } from "@/lib/tazrim/bank-balances";
-import { addBankAccount, setBalance } from "./actions";
+import { formatFullDate, formatSignedMoney } from "@/lib/tazrim/format";
+import { addBankAccount, setBalance, setCrmDefaultAccount } from "./actions";
 import { NavTabs } from "../components/NavTabs";
 
 function formatMoney(value: number): string {
@@ -18,7 +19,21 @@ function formatUpdatedAt(iso: string): string {
 
 export default async function BalancePage() {
   const { supabase } = await requireTazrimAccess();
-  const { accounts, error } = await getAccountBalances(supabase);
+  const [{ accounts, error }, needsAccountResult] = await Promise.all([
+    getAccountBalances(supabase),
+    // Cleared CRM payments that could not be put on an account (no default
+    // account, or not ILS); they stay out of every balance.
+    supabase
+      .from("tz_cash_events")
+      .select("id", { count: "exact", head: true })
+      .eq("type", "income")
+      .eq("source", "alumincrm")
+      .eq("status", "cleared")
+      .eq("needs_account", true),
+  ]);
+
+  const needsAccountCount = needsAccountResult.count ?? 0;
+  const hasCrmDefault = accounts.some((a) => a.isCrmDefault);
 
   return (
     <div dir="rtl" className="min-h-screen bg-zinc-950 text-zinc-100">
@@ -33,6 +48,23 @@ export default async function BalancePage() {
         {error && (
           <div className="mb-6 rounded-2xl border border-red-900 bg-red-950/40 p-4 text-sm text-red-300">
             חלק מהנתונים לא נטענו: {error}
+          </div>
+        )}
+
+        {accounts.length > 0 && !hasCrmDefault && (
+          <div
+            role="alert"
+            className="mb-6 rounded-2xl border border-amber-900 bg-amber-950/40 p-4 text-sm text-amber-300"
+          >
+            לא נבחר חשבון ברירת מחדל לתשלומי AluminCRM. עד שייבחר, תשלומים
+            מה-CRM לא ישפיעו על היתרה. בחר חשבון ברשימה למטה.
+          </div>
+        )}
+
+        {needsAccountCount > 0 && (
+          <div className="mb-6 rounded-2xl border border-amber-900 bg-amber-950/40 p-4 text-sm text-amber-300">
+            {needsAccountCount} תשלומי CRM דורשים בחירת חשבון ואינם נכללים ביתרה
+            (אין חשבון ברירת מחדל, או שהתשלום לא בשקלים).
           </div>
         )}
 
@@ -98,6 +130,32 @@ export default async function BalancePage() {
                         : "טרם עודכן"}
                     </div>
                   </div>
+                </div>
+
+                {a.snapshotBalance !== null && a.snapshotDate !== null && (
+                  <div className="mt-3 text-xs text-zinc-400">
+                    {`צילום ${formatMoney(a.snapshotBalance)} בתאריך ${formatFullDate(a.snapshotDate)}`}
+                    {` + תשלומי CRM אחרי התאריך (${a.crmCount}) ${formatSignedMoney(a.crmTotal)}`}
+                    {` = ${formatMoney(a.balance ?? a.snapshotBalance)}`}
+                  </div>
+                )}
+
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                  {a.isCrmDefault ? (
+                    <span className="rounded-full border border-emerald-800 bg-emerald-950/40 px-2.5 py-1 text-emerald-300">
+                      חשבון ברירת מחדל לתשלומי CRM
+                    </span>
+                  ) : (
+                    <form action={setCrmDefaultAccount}>
+                      <input type="hidden" name="bank_account_id" value={a.id} />
+                      <button
+                        type="submit"
+                        className="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-1 font-semibold text-zinc-300 hover:text-amber-400"
+                      >
+                        קבע כברירת מחדל לתשלומי CRM
+                      </button>
+                    </form>
+                  )}
                 </div>
 
                 <form
