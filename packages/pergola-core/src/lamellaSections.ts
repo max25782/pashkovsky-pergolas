@@ -31,7 +31,7 @@ import {
   lamellaRunEndEdgeIndices,
   wingShelfFlushBandMm,
 } from './beamPlanWidth'
-import { decomposeIntoRectangles, type Rectangle } from './rectangleDecomposition'
+import { decomposeIntoRectangles, isOrthogonalContour, type Rectangle } from './rectangleDecomposition'
 import { sanitizeContour } from './contourSanitize'
 import { edgeIndicesInCcwOrder, edgeValuesInCcwOrder, isCCW } from './miter'
 import {
@@ -1137,10 +1137,38 @@ function edgeInwardUnit(a: Point2D, b: Point2D): Point2D | null {
   return [-dy / len, dx / len]
 }
 
+/**
+ * Distance from a contour side to that beam's inner face, for the skew builders.
+ * A centerline contour runs through the beam middle, so the inner face is half
+ * the width in. An outer-face contour runs along the beam's outer face, so the
+ * inner face is the whole width in. The rectangle builder already does the
+ * latter; the skew builders used half either way (20 mm short per 40 mm beam).
+ */
+function skewInnerFaceOffsetMm(widthMm: number, outerFaces: boolean): number {
+  return outerFaces ? widthMm : widthMm / 2
+}
+
+/**
+ * True when the skew builders must measure from outer faces: the plan says (or
+ * is read as) outer-faces and the contour is not a rectangle-like shape. Square
+ * contours keep the previous numbers.
+ */
+function skewOffsetsFromOuterFaces(pts: Point2D[], spec: PergolaSpec): boolean {
+  if (isOrthogonalContour(pts)) return false
+  return (
+    resolveContourReference({
+      contourReference: spec.contourReference,
+      contour: pts,
+      measured: spec.measuredOuterLengthMmByEdgeIndex,
+    }).reference === 'outer-faces'
+  )
+}
+
 /** Beam inner faces. The contour is CCW, so left-of-travel is inside. */
 function innerOffsetEdges(
   pts: Point2D[],
   widthAt: (edgeIndex: number) => number,
+  outerFaces = false,
 ): OffsetEdge[] {
   const edges: OffsetEdge[] = []
   for (let i = 0; i < pts.length; i++) {
@@ -1148,7 +1176,7 @@ function innerOffsetEdges(
     const b = pts[(i + 1) % pts.length]
     const inward = edgeInwardUnit(a, b)
     if (!inward) continue
-    const half = widthAt(i) / 2
+    const half = skewInnerFaceOffsetMm(widthAt(i), outerFaces)
     edges.push({
       a: [a[0] + inward[0] * half, a[1] + inward[1] * half],
       b: [b[0] + inward[0] * half, b[1] + inward[1] * half],
@@ -1192,6 +1220,7 @@ function yOnOffsetEdge(edge: OffsetEdge, x: number): number | null {
 function innerMitredPolygon(
   pts: Point2D[],
   widthAt: (edgeIndex: number) => number,
+  outerFaces = false,
 ): { edges: OffsetEdge[]; vertices: Point2D[] } | null {
   const n = pts.length
   const lines: Array<{ p: Point2D; d: Point2D }> = []
@@ -1200,7 +1229,7 @@ function innerMitredPolygon(
     const b = pts[(i + 1) % n]
     const inward = edgeInwardUnit(a, b)
     if (!inward) return null
-    const half = widthAt(i) / 2
+    const half = skewInnerFaceOffsetMm(widthAt(i), outerFaces)
     lines.push({ p: [a[0] + inward[0] * half, a[1] + inward[1] * half], d: [b[0] - a[0], b[1] - a[1]] })
   }
   const vertices: Point2D[] = []
@@ -1751,6 +1780,8 @@ function openSkewBaySections(input: {
   support: { start: Point2D; end: Point2D; lengthMm: number } | null
   supportW: number
   general?: boolean
+  /** Contour sits on outer faces of a non-rectangular plan: inner face is a whole beam in. */
+  outerFaces?: boolean
   /** Beam parallel to the lamellas: only the bays it crosses are split. */
   spanLimited?: boolean
 }): LamellaSection[] {
@@ -1758,9 +1789,9 @@ function openSkewBaySections(input: {
   const runX = Math.cos(θ)
   const runY = Math.sin(θ)
   if (Math.abs(runX) < Math.abs(runY)) return []
-  const mitred = input.general === true ? innerMitredPolygon(input.pts, input.widthAt) : null
+  const mitred = input.general === true ? innerMitredPolygon(input.pts, input.widthAt, input.outerFaces === true) : null
   if (input.general === true && mitred == null) return []
-  const edges = mitred ? mitred.edges : innerOffsetEdges(input.pts, input.widthAt)
+  const edges = mitred ? mitred.edges : innerOffsetEdges(input.pts, input.widthAt, input.outerFaces === true)
   const horizontalYs: number[] = []
   for (let i = 0; i < input.pts.length; i++) {
     const a = input.pts[i]
@@ -1768,7 +1799,7 @@ function openSkewBaySections(input: {
     if (Math.abs(a[1] - b[1]) > 2) continue
     const inward = edgeInwardUnit(a, b)
     if (!inward) continue
-    horizontalYs.push((a[1] + b[1]) / 2 + inward[1] * (input.widthAt(i) / 2))
+    horizontalYs.push((a[1] + b[1]) / 2 + inward[1] * skewInnerFaceOffsetMm(input.widthAt(i), input.outerFaces === true))
   }
   if (horizontalYs.length < 2 && mitred == null) return []
   const yBottom = horizontalYs.length >= 2 || mitred == null
@@ -2397,9 +2428,10 @@ export function buildLamellaSectionsCore(
 
   sections.sort((a, b) => b.minY - a.minY || a.minX - b.minX)
   const numbered = sections.map((s, i) => ({ ...s, id: `sec-${i}` }))
-  const skewed = applySkewSectionLengths(numbered, pts, spec, pattern, widthAt)
+  const outerFaces = skewOffsetsFromOuterFaces(pts, spec)
+  const skewed = applySkewSectionLengths(numbered, pts, spec, pattern, widthAt, outerFaces)
   if (skewed.length > 0 || spec.skewSectionVersion !== 1) return skewed
-  const open = { pts, spec, pattern, widthAt, positions, support, supportW, spanLimited: spanLimitedByPlanBeams }
+  const open = { pts, spec, pattern, widthAt, positions, support, supportW, spanLimited: spanLimitedByPlanBeams, outerFaces }
   const runsAlongY = Math.abs(dir[0]) < Math.abs(dir[1])
   return runsAlongY ? openSkewBaySectionsAlongY(open) : openSkewBaySections(open)
 }
@@ -2495,6 +2527,7 @@ function skewEndFaces(
   dir: Point2D,
   perp: Point2D,
   widthAt: (edgeIndex: number) => number,
+  outerFaces = false,
 ): SkewEndFace[] {
   const faces: SkewEndFace[] = []
   for (let i = 0; i < pts.length; i++) {
@@ -2506,7 +2539,7 @@ function skewEndFaces(
     if (len < 1) continue
     const fromPerp = angleFromUnitDeg(dx, dy, perp)
     if (fromPerp <= SKEW_END_TOL_DEG || fromPerp >= 45) continue
-    const half = widthAt(i) / 2
+    const half = skewInnerFaceOffsetMm(widthAt(i), outerFaces)
     const nx = -dy / len
     const ny = dx / len
     const origin: Point2D = [a[0] + nx * half, a[1] + ny * half]
@@ -2550,6 +2583,7 @@ function applySkewSectionLengths(
   spec: PergolaSpec,
   pattern: LamellaPatternEntry[],
   widthAt: (edgeIndex: number) => number,
+  outerFaces = false,
 ): LamellaSection[] {
   if (spec.skewSectionVersion !== 1 || sections.length === 0 || pattern.length === 0) return sections
   const θ = (spec.lamellaDirectionDeg * Math.PI) / 180
@@ -2557,7 +2591,7 @@ function applySkewSectionLengths(
   const alongX = Math.abs(run[0]) >= Math.abs(run[1])
   const dir: Point2D = alongX ? [1, 0] : [0, 1]
   const perp: Point2D = alongX ? [0, 1] : [1, 0]
-  const faces = skewEndFaces(pts, dir, perp, widthAt)
+  const faces = skewEndFaces(pts, dir, perp, widthAt, outerFaces)
   if (faces.length === 0) return sections
   const step = spec.lamellaLengthStepMm != null && spec.lamellaLengthStepMm > 0
     ? spec.lamellaLengthStepMm
