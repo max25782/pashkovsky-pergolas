@@ -280,18 +280,13 @@ describe('divider 3D pick zones', () => {
 })
 
 describe('buildPieces span policy', () => {
-  it('mode auto still throws when a lamella exceeds maxLamellaSpanMm', () => {
+  it('mode auto no longer throws: a span over maxLamellaSpanMm is a warning and pieces are still built', () => {
     const s = spec({ purlinProfileId: undefined, purlinDividers: { mode: 'auto' } })
-    expect(() => buildPieces(s, PROFILES)).toThrow(/maxLamellaSpanMm/)
-    try {
-      buildPieces(s, PROFILES)
-    } catch (err) {
-      const message = err instanceof Error ? err.message : ''
-      const details = message.split('\n').filter((line) => line.includes('profile "'))
-      expect(details.length).toBeGreaterThan(1)
-      expect(new Set(details).size).toBe(details.length)
-      expect(details[0]).toMatch(/\[lamella-\d+\]/)
-    }
+    expect(() => buildPieces(s, PROFILES)).not.toThrow()
+    const built = buildPieces(s, PROFILES)
+    expect(built.pieces.length).toBeGreaterThan(0)
+    expect(built.warnings.length).toBeGreaterThan(0)
+    expect(built.warnings.every((w) => w.type === 'lamella-span-exceeds-max')).toBe(true)
   })
 
   it('mode manual converts the same span exceed into warnings[] and still returns pieces', () => {

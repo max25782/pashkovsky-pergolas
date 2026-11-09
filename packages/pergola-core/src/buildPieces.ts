@@ -16,7 +16,7 @@ import type { SupportType } from './types'
 import type { RoofPlane } from './roof'
 import { postHeightMm } from './roof'
 import { resolveContourPurlinPositions } from './lamellaSpans'
-import { buildLamellaSections, type BuildLamellaSectionsOptions } from './lamellaSections'
+import type { BuildLamellaSectionsOptions } from './lamellaSections'
 import { resolveLamellaPattern, patternMaxLamellaSpanMm } from './lamellaPattern'
 import type { SupportBeamsDocument } from './supportBeams'
 import {
@@ -126,20 +126,6 @@ export function specFromPlan(input: SpecFromPlanInput): PergolaSpec {
   }
 }
 
-function summarizeStructuralIssues(issues: StructuralIssue[]): string {
-  const lines = issues.map((issue) => {
-    return (
-      `  profile "${issue.profileId}" [${issue.pieceId}]: ` +
-      `${Math.round(issue.spanMm)}mm unsupported (limit ${issue.maxSpanMm}mm)`
-    )
-  })
-  return (
-    `Structural violation — ${issues.length} lamella piece(s) exceed their profile's maxLamellaSpanMm:\n` +
-    `${lines.join('\n')}\n` +
-    `Add a purlin profile with interruptsLamella: true, or a lamella profile rated for this span.`
-  )
-}
-
 /**
  * Single pipeline used by every 3D/cut-list host: frame → lamellas → LED
  * reversal → beam stock split → structural validation.
@@ -185,9 +171,10 @@ export function buildPieces(
   const purlins = stampDividerIds(runResult.pieces, structuralPurlins, spec)
 
   const structuralIssues = validateLamellaSpans(lamellas, profiles)
-  const isManualDividers = spec.purlinDividers?.mode === 'manual'
-  const trapezoidSections = spec.skewSectionVersion === 1
-    ? buildLamellaSections(spec, profiles, sectionOptions).filter((section) => section.trapezoid != null)
+  // A lamella span over the profile limit never blocks the build (3D, cut list,
+  // PDF): it is reported as a warning only, so the user decides.
+  const warnings = structuralIssues.length > 0
+    ? warningsFromSpanIssues(structuralIssues, lamellas, spec, profiles)
     : []
   const blocksBuild = (issue: (typeof structuralIssues)[number]) => {
     const piece = lamellas.find((item) => item.id === issue.pieceId)
