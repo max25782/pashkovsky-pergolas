@@ -56,6 +56,16 @@ const planParamsSchema = z
     wallProfileId: z.enum(['f10040', 'pa1162']).optional(),
     skewSectionVersion: z.literal(1).optional(),
     lamellaLengthStepMm: z.number().finite().positive().optional(),
+    lamellaZones: z
+      .array(
+        z.object({
+          id: z.string().min(1),
+          cutEdgeIndex: z.number().int().nonnegative(),
+          lamellaEdgeIndex: z.number().int().nonnegative(),
+          dividerEdgeIndex: z.number().int().nonnegative(),
+        }),
+      )
+      .optional(),
   })
   .partial()
 
@@ -169,6 +179,9 @@ export function validatePergolaPlanForApi(plan: unknown): PergolaPlanValidationR
           : {}),
         ...('lamellaLengthStepMm' in incoming
           ? { lamellaLengthStepMm: incoming.lamellaLengthStepMm }
+          : {}),
+        ...('lamellaZones' in incoming && incoming.lamellaZones
+          ? { lamellaZones: incoming.lamellaZones }
           : {}),
       }
     })(),

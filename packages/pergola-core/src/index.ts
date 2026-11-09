@@ -380,6 +380,7 @@ export type {
 export {
   buildLamellaZoneLayout,
   hasLamellaZones,
+  parseLamellaZones,
   planLamellaZones,
   splitContourByLamellaZones,
   zoneFrameFromEdges,

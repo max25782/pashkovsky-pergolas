@@ -367,6 +367,33 @@ export interface LamellaZonePlan {
   split: LamellaZoneSplit
 }
 
+/**
+ * Read `lamellaZones` from untrusted JSON (saved plan, API body, pasted export).
+ * An entry needs a non-empty string `id` and three non-negative integer edge
+ * numbers; anything else is skipped. Returns `undefined` when nothing valid is
+ * left, so the field disappears instead of becoming an empty list.
+ */
+export function parseLamellaZones(raw: unknown): LamellaZone[] | undefined {
+  if (!Array.isArray(raw)) return undefined
+  const isEdge = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 0
+  const zones: LamellaZone[] = []
+  const seen = new Set<string>()
+  for (const item of raw) {
+    if (item == null || typeof item !== 'object') continue
+    const z = item as Record<string, unknown>
+    if (typeof z.id !== 'string' || z.id.length === 0 || seen.has(z.id)) continue
+    if (!isEdge(z.cutEdgeIndex) || !isEdge(z.lamellaEdgeIndex) || !isEdge(z.dividerEdgeIndex)) continue
+    seen.add(z.id)
+    zones.push({
+      id: z.id,
+      cutEdgeIndex: z.cutEdgeIndex,
+      lamellaEdgeIndex: z.lamellaEdgeIndex,
+      dividerEdgeIndex: z.dividerEdgeIndex,
+    })
+  }
+  return zones.length > 0 ? zones : undefined
+}
+
 export function hasLamellaZones(spec: Pick<PergolaSpec, 'lamellaZones'>): boolean {
   return spec.lamellaZones != null && spec.lamellaZones.length > 0
 }

@@ -3,6 +3,7 @@ import {
   DEFAULT_PLAN_CONSTRUCTION_PARAMS,
   isSimplePolygon,
   parseLamellaWallThicknessMm,
+  parseLamellaZones,
   parseMeasuredOuterLengthMmByEdgeIndex,
   parseSupportBeamsDocument,
   pickPergolaPlanExtras,
@@ -150,6 +151,9 @@ function parseParams(raw: unknown): PlanConstructionParams {
   } else {
     delete base.lamellaLengthStepMm
   }
+  const zones = parseLamellaZones(o.lamellaZones)
+  if (zones) base.lamellaZones = zones
+  else delete base.lamellaZones
   return base
 }
 
