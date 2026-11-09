@@ -139,6 +139,8 @@ export interface PlanDimensionsSvgInput {
   lamellaDirectionDeg: number
   /** Stock-splice points on a straight side. Drawn as dots, not as corners. */
   splicePoints?: Point2D[]
+  /** Plan footprints of the purlins (cross dividers), drawn over the floor and under the dimensions. */
+  purlinFootprints?: Point2D[][]
 }
 
 export function collectPlanDimensionWorldPoints(input: PlanDimensionsSvgInput): Point2D[] {
@@ -239,6 +241,15 @@ export function renderPlanDimensionsSvg(input: PlanDimensionsSvgInput): string {
   const parts: string[] = [
     `<polygon points="${poly}" fill="#f8fafc" stroke="#0f172a" stroke-width="40"/>`,
   ]
+  for (const corners of input.purlinFootprints ?? []) {
+    const points = corners
+      .map((corner) => {
+        const s = screen(corner)
+        return `${s.x.toFixed(1)},${s.y.toFixed(1)}`
+      })
+      .join(' ')
+    parts.push(`<polygon data-purlin="1" points="${points}" fill="#fde68a" stroke="#b45309" stroke-width="20"/>`)
+  }
   for (const point of input.splicePoints ?? []) {
     const s = screen(point)
     parts.push(

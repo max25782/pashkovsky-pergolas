@@ -2,13 +2,20 @@ import type { Offer, PergolaPlan } from '@/types/offer'
 import type { PlanConstructionParams, Point2D, ProfileDimensions } from '@pashkovsky/pergola-core'
 import {
   PERGOLA_CONSTRUCTION_PROFILES,
+  WING_SHELF_SPAN_DIVIDER_ID,
   buildPiecesFromPlan,
   buildTopPlanDimensionModel,
   contourSideWidthMm,
   lamellaRunEndWidthsMm,
   resolvePlanPurlinLines,
+  wingShelfFlushBandMm,
 } from '@pashkovsky/pergola-core'
-import { beamSplicePoints, groupBeamsIntoGeometricSides, renderPlanDimensionsSvg } from '@pashkovsky/pergola-drawing/server'
+import {
+  beamFootprintCorners,
+  beamSplicePoints,
+  groupBeamsIntoGeometricSides,
+  renderPlanDimensionsSvg,
+} from '@pashkovsky/pergola-drawing/server'
 
 const DIM_FONT = 220
 const DIM_STROKE = 40
@@ -215,6 +222,17 @@ export function planTopSheetSvg(
     profiles,
   )
   const beams = built.pieces.filter((p) => p.role === 'beam')
+  const shelfBandMm = wingShelfFlushBandMm(profiles, params.beamProfileId, params.wallProfileId, params.wallBeamWidthVersion)
+  // Same footprints as the on-screen plan sheet: the cross dividers belong on the offer drawing.
+  const purlinFootprints = built.pieces
+    .filter((p) => p.role === 'purlin')
+    .map((piece) => {
+      const profile = profiles.get(piece.profileId) ?? { widthMm: 40, heightMm: 60 }
+      const drawn = piece.dividerId === WING_SHELF_SPAN_DIVIDER_ID && shelfBandMm != null
+        ? { ...profile, widthMm: shelfBandMm }
+        : profile
+      return beamFootprintCorners(piece, drawn)
+    })
   const geometricSides = groupBeamsIntoGeometricSides(beams)
   const drawContour: Point2D[] = geometricSides.map((s) => s.start)
   const centroid = centroidOf(drawContour)
@@ -259,6 +277,7 @@ export function planTopSheetSvg(
     centroid,
     lamellaDirectionDeg: params.lamellaDirectionDeg ?? 0,
     splicePoints: beamSplicePoints(beams),
+    purlinFootprints,
   })
 }
 
@@ -314,8 +333,10 @@ export async function generateDrawingsFromPlan(plan: PergolaPlan): Promise<Offer
   try {
     return await drawingsFromContour(plan.polygon, plan.wallIndices ?? [], plan.params, plan.supportBeams)
   } catch (error) {
-    console.error('[generateDrawingsFromPlan]', error)
-    return null
+    // A plan the builder rejects used to drop its drawing from the offer without a trace.
+    // The outline with axis lengths is the plain fallback; the error stays in the log.
+    console.error('[generateDrawingsFromPlan] full drawing failed, using the outline only', error)
+    return { topPlan: planContourSvgLegacy(plan.polygon, plan.wallIndices ?? []), lamellaLayout: null }
   }
 }
 
