@@ -70,6 +70,7 @@ import { PergolaCutPieceViewer } from '@pashkovsky/pergola-3d-preview'
 import { LamellaWallThicknessField } from '@/components/offers/LamellaWallThicknessField'
 import { RoofSlopeFields } from '@/components/offers/RoofSlopeFields'
 import { Plan3DDividerControls } from '@/components/offers/Plan3DDividerControls'
+import { CopyPlanJsonButton } from '@/components/offers/CopyPlanJsonButton'
 import { PlanDrawingSheetsModal } from '@/components/offers/PlanDrawingSheetsModal'
 import { ReplaceProfileNotice } from '@/components/offers/ReplaceProfileNotice'
 import { readDebugPlanDocument, writeDebugPlanDocument } from '@/lib/pergolas/debug-plan-storage'
@@ -529,6 +530,20 @@ export default function PlanEditorDebugPage() {
                   : t('paramsPanel.saveSaved')}
             </span>
           )}
+          <CopyPlanJsonButton
+            getPlan={() => {
+              const polygon = polygonRef.current
+              if (!polygon || polygon.length < 3) return null
+              return {
+                polygon,
+                wallIndices: wallsRef.current,
+                params: pinContourReferenceOnParams(
+                  polygon.map((p): [number, number] => [p.x, p.y]),
+                  paramsRef.current,
+                ),
+              }
+            }}
+          />
           {pieces && (
             <button
               type="button"

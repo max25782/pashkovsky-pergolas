@@ -1263,6 +1263,9 @@
     },
     "drawing": {
       "openButton": "Crtež",
+      "copyJsonButton": "Kopiraj JSON plana",
+      "copyJsonDone": "JSON kopiran",
+      "copyJsonError": "Kopiranje nije uspelo",
       "title": "Osnova — osne mere",
       "sheetPlan": "Osnova",
       "sheetLamellaLayout": "Raspored lamela",

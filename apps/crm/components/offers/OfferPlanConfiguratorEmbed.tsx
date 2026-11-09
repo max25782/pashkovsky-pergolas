@@ -50,6 +50,7 @@ import {
   placeSupportBeamAtPlanPoint,
   supportBeamWarningMessages,
 } from '@/components/offers/SupportBeamControls'
+import { CopyPlanJsonButton } from '@/components/offers/CopyPlanJsonButton'
 import { PlanDrawingSheetsModal } from '@/components/offers/PlanDrawingSheetsModal'
 import { ReplaceProfileNotice } from '@/components/offers/ReplaceProfileNotice'
 import { PlanBuildErrorPanel } from '@/components/offers/PlanBuildErrorPanel'
@@ -696,6 +697,19 @@ export const OfferPlanConfiguratorEmbed = forwardRef<
                   : t('paramsPanel.saveSaved')}
             </span>
           )}
+          <CopyPlanJsonButton
+            className="flex items-center gap-2 rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-50 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700"
+            getPlan={() => {
+              const polygon = polygonRef.current
+              if (!polygon || polygon.length < 3) return null
+              return {
+                polygon,
+                wallIndices: wallsRef.current,
+                params: paramsRef.current,
+                supportBeams: supportBeamsRef.current,
+              }
+            }}
+          />
           {showDrawingOpenButton && buildResult.pieces && (
             <button
               type="button"

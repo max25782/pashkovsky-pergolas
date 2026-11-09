@@ -1263,6 +1263,9 @@
     },
     "drawing": {
       "openButton": "Drawing",
+      "copyJsonButton": "Copy plan JSON",
+      "copyJsonDone": "JSON copied",
+      "copyJsonError": "Copy failed",
       "title": "Top plan — axial dimensions",
       "sheetPlan": "Top plan",
       "sheetLamellaLayout": "Lamella layout",

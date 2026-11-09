@@ -1263,6 +1263,9 @@
     },
     "drawing": {
       "openButton": "שרטוט",
+      "copyJsonButton": "העתק JSON של התוכנית",
+      "copyJsonDone": "JSON הועתק",
+      "copyJsonError": "ההעתקה נכשלה",
       "title": "תוכנית מלמעלה — מידות צירים",
       "sheetPlan": "תוכנית מלמעלה",
       "sheetLamellaLayout": "פריסת למלות",

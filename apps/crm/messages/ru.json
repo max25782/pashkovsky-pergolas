@@ -1263,6 +1263,9 @@
     },
     "drawing": {
       "openButton": "Чертёж",
+      "copyJsonButton": "Копировать JSON плана",
+      "copyJsonDone": "JSON скопирован",
+      "copyJsonError": "Не удалось скопировать",
       "title": "План сверху — осевые размеры",
       "sheetPlan": "План сверху",
       "sheetLamellaLayout": "Раскладка ламелей",
