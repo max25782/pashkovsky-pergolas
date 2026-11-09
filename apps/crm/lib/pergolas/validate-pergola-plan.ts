@@ -55,6 +55,7 @@ const planParamsSchema = z
     wallBeamWidthVersion: z.literal(1).optional(),
     wallProfileId: z.enum(['f10040', 'pa1162']).optional(),
     skewSectionVersion: z.literal(1).optional(),
+    overhangDividerVersion: z.literal(1).optional(),
     lamellaLengthStepMm: z.number().finite().positive().optional(),
     lamellaZones: z
       .array(
@@ -146,6 +147,7 @@ export function validatePergolaPlanForApi(plan: unknown): PergolaPlanValidationR
         wallBeamWidthVersion: _omitWallWidth,
         wallProfileId: _omitWallProfile,
         skewSectionVersion: _omitSkew,
+        overhangDividerVersion: _omitOverhang,
         lamellaLengthStepMm: _omitStep,
         ...legacyDefaults
       } = DEFAULT_PLAN_CONSTRUCTION_PARAMS
@@ -176,6 +178,9 @@ export function validatePergolaPlanForApi(plan: unknown): PergolaPlanValidationR
             }),
         ...('skewSectionVersion' in incoming
           ? { skewSectionVersion: incoming.skewSectionVersion }
+          : {}),
+        ...('overhangDividerVersion' in incoming
+          ? { overhangDividerVersion: incoming.overhangDividerVersion }
           : {}),
         ...('lamellaLengthStepMm' in incoming
           ? { lamellaLengthStepMm: incoming.lamellaLengthStepMm }

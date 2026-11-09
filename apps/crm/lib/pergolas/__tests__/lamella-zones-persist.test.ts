@@ -51,4 +51,13 @@ describe('lamellaZones persist round-trip', () => {
     expect(parseLamellaZones([broken])).toBeUndefined()
     expect(parseLamellaZones(undefined)).toBeUndefined()
   })
+
+  it('overhangDividerVersion survives parse and the API path; absent stays absent', () => {
+    const withVersion = { ...saved, params: { overhangDividerVersion: 1 as const } }
+    expect(parsePergolaPlan(withVersion)?.params.overhangDividerVersion).toBe(1)
+    const api = validatePergolaPlanForApi(withVersion)
+    expect(api.ok && api.plan.params.overhangDividerVersion).toBe(1)
+    const without = parsePergolaPlan({ ...saved, params: { lamellaDirectionDeg: 90 } })
+    expect(without?.params.overhangDividerVersion).toBeUndefined()
+  })
 })

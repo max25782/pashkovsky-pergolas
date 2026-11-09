@@ -256,6 +256,11 @@ export interface PergolaSpec {
    * this in specFromPlan.
    */
   skewSectionVersion?: 1
+  /**
+   * `1` = the builder adds dividers where a slanted end leaves a lamella over the
+   * span limit. Unset on saved plans => no added dividers (do not migrate).
+   */
+  overhangDividerVersion?: 1
   /** Floor step for trapezoid lamella cuts, mm. Unset ⇒ 1. */
   lamellaLengthStepMm?: number
   /** Site-measured outer face per contour edge — L_outer for equal-clear. */

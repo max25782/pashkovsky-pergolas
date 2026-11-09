@@ -35,6 +35,7 @@ import { decomposeIntoRectangles, isOrthogonalContour, type Rectangle } from './
 import { sanitizeContour } from './contourSanitize'
 import { edgeIndicesInCcwOrder, edgeValuesInCcwOrder, isCCW } from './miter'
 import {
+  AUTO_DIVIDER_ID_PREFIX,
   formatPurlinClearLabelMm,
   measuredOuterAlongLamellas,
   resolveContourPurlinPositions,
@@ -2044,8 +2045,108 @@ export function buildLamellaSections(
   return buildLamellaSectionsCore(spec, profiles, options)
 }
 
-/** Sections for one lamella direction (`lamellaDirectionDeg`); ignores `lamellaZones`. */
+/**
+ * Sections for one lamella direction (`lamellaDirectionDeg`); ignores `lamellaZones`.
+ * Dividers the plan needs to keep every lamella inside its span limit are added first
+ * (see `withOverhangDividers`), so sections, pieces and drawings share them.
+ */
 export function buildLamellaSectionsCore(
+  spec: PergolaSpec,
+  profiles: Map<string, ProfileDimensions>,
+  options?: BuildLamellaSectionsOptions,
+): LamellaSection[] {
+  return buildLamellaSectionsRaw(withOverhangDividers(spec, profiles), profiles, options)
+}
+
+const OVERHANG_MAX_PASSES = 3
+/** The lamella is this much shorter than the bay's clear length (15 mm on each end). */
+const LAMELLA_END_CLEARANCE_MM = LAMELLA_SECTION_CLEARANCE_W_MM
+
+interface OverhangDividerProposal {
+  id: string
+  positionMm: number
+}
+
+/**
+ * A slanted side at the end of a strip leaves the last bay longer than the rest:
+ * the equal grid is laid on the straight side, and the slant sticks out past it.
+ * This returns, for every trapezoid bay whose longest lamella is over `maxSpanMm`,
+ * the dividers that cut that bay into equal parts at its longest row.
+ */
+function overhangDividerProposals(
+  sections: LamellaSection[],
+  spec: PergolaSpec,
+  maxSpanMm: number,
+): OverhangDividerProposal[] {
+  const θ = (spec.lamellaDirectionDeg * Math.PI) / 180
+  const alongX = Math.abs(Math.cos(θ)) >= Math.abs(Math.sin(θ))
+  const toPosition = alongX ? Math.cos(θ) : Math.sin(θ)
+  const alongOf = (p: Point2D): number => (alongX ? p[0] : p[1])
+  const dividerW = DIVIDER_PLAN_CLEARANCE_WIDTH_MM
+  const out: OverhangDividerProposal[] = []
+  for (const section of sections) {
+    const trap = section.trapezoid
+    if (trap == null) continue
+    const lengths = trap.lamellaLengthsMm.filter((length) => length >= LAMELLA_TIP_MIN_LENGTH_MM)
+    if (lengths.length === 0) continue
+    const longest = Math.max(...lengths)
+    if (longest <= maxSpanMm + 0.5) continue
+    const [lowL, lowR, highR, highL] = trap.corners
+    const leftSlant = Math.abs(alongOf(lowL) - alongOf(highL))
+    const rightSlant = Math.abs(alongOf(lowR) - alongOf(highR))
+    const leftIsStraight = leftSlant <= rightSlant
+    // Walk from the straight end toward the slanted one.
+    const towardSlant = leftIsStraight ? 1 : -1
+    const straightLamellaEnd = leftIsStraight ? (alongOf(lowL) + alongOf(highL)) / 2 : (alongOf(lowR) + alongOf(highR)) / 2
+    const straightFace = straightLamellaEnd - towardSlant * (LAMELLA_END_CLEARANCE_MM / 2)
+    const longClear = longest + LAMELLA_END_CLEARANCE_MM
+    const clearLimit = maxSpanMm + LAMELLA_END_CLEARANCE_MM
+    let count = 1
+    while ((longClear - count * dividerW) / (count + 1) > clearLimit && count < 20) count += 1
+    const clear = (longClear - count * dividerW) / (count + 1)
+    for (let j = 1; j <= count; j++) {
+      const centerAlong = straightFace + towardSlant * (j * clear + (j - 0.5) * dividerW)
+      const positionMm = centerAlong * toPosition
+      out.push({ id: `${AUTO_DIVIDER_ID_PREFIX}${Math.round(positionMm)}`, positionMm })
+    }
+  }
+  return out
+}
+
+/**
+ * Adds auto dividers where a slanted side would leave a lamella over the span limit.
+ * They ride in `purlinDividers.lines` of the auto-mode spec (ids start with
+ * `AUTO_DIVIDER_ID_PREFIX`); every position consumer already reads that field, so
+ * pieces, sections and drawings all see the same grid. Rectangles, manual dividers
+ * and specs that already carry added dividers come back untouched.
+ */
+export function withOverhangDividers(
+  spec: PergolaSpec,
+  profiles: Map<string, ProfileDimensions>,
+): PergolaSpec {
+  if (spec.overhangDividerVersion !== 1) return spec
+  if (spec.purlinDividers?.mode === 'manual') return spec
+  if ((spec.purlinDividers?.lines?.length ?? 0) > 0) return spec
+  if (hasLamellaZones(spec)) return spec
+  const clean = sanitizeContour(spec.contour)
+  if (clean.length < 3 || isOrthogonalContour(clean)) return spec
+  const maxSpanMm = patternMaxLamellaSpanMm(resolveLamellaPattern(spec, profiles))
+  if (maxSpanMm === undefined || !(maxSpanMm > 0)) return spec
+
+  const added: OverhangDividerProposal[] = []
+  let current = spec
+  for (let pass = 0; pass < OVERHANG_MAX_PASSES; pass++) {
+    const fresh = overhangDividerProposals(buildLamellaSectionsRaw(current, profiles), current, maxSpanMm)
+      .filter((proposal) => !added.some((have) => Math.abs(have.positionMm - proposal.positionMm) < 60))
+    if (fresh.length === 0) break
+    added.push(...fresh)
+    current = { ...spec, purlinDividers: { mode: 'auto', lines: added.map((a) => ({ ...a })) } }
+  }
+  return current
+}
+
+/** Sections without the divider pre-pass. Internal: callers want `buildLamellaSectionsCore`. */
+function buildLamellaSectionsRaw(
   spec: PergolaSpec,
   profiles: Map<string, ProfileDimensions>,
   options?: BuildLamellaSectionsOptions,

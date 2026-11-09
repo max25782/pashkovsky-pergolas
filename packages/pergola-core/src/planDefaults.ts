@@ -77,6 +77,8 @@ export interface PlanConstructionParams {
    * saved plans ⇒ one rectangle width (do not migrate).
    */
   skewSectionVersion?: 1
+  /** See `PergolaSpec.overhangDividerVersion`. Unset on saved plans => do not migrate. */
+  overhangDividerVersion?: 1
   /**
    * Zones with their own lamella / divider direction (edge references).
    * Unset or empty ⇒ one direction for the whole plan.
@@ -124,6 +126,7 @@ export const DEFAULT_PLAN_CONSTRUCTION_PARAMS: PlanConstructionParams = {
   wallProfileId: 'f10040',
   frameJointVersion: 1,
   skewSectionVersion: 1,
+  overhangDividerVersion: 1,
   lamellaLengthStepMm: 1,
 }
 

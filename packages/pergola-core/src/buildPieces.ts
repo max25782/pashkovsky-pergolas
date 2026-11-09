@@ -15,8 +15,8 @@ import { clampLamellaAngleDeg, resolveSupportType, specColorHex } from './suppor
 import type { SupportType } from './types'
 import type { RoofPlane } from './roof'
 import { postHeightMm } from './roof'
-import { resolveContourPurlinPositions } from './lamellaSpans'
-import type { BuildLamellaSectionsOptions } from './lamellaSections'
+import { isAutoAddedDividerId, resolveContourPurlinPositions } from './lamellaSpans'
+import { withOverhangDividers, type BuildLamellaSectionsOptions } from './lamellaSections'
 import { planLamellaZones } from './lamellaZones'
 import { resolveLamellaPattern, patternMaxLamellaSpanMm } from './lamellaPattern'
 import type { SupportBeamsDocument } from './supportBeams'
@@ -33,6 +33,11 @@ export interface BuiltPieces {
   warnings: PieceWarning[]
   /** Stock splices (position + profile). Fasteners are counted later — not added to BOM here. */
   joints: StockJoint[]
+  /**
+   * Dividers the builder added itself (ids `div-auto-*`) so a slanted end does not
+   * leave a lamella over the span limit. Drawings mark these as added automatically.
+   */
+  autoDividers: Array<{ id: string; positionMm: number }>
   isOrthogonal: boolean
   colorHex: string
   heightMm: number
@@ -73,6 +78,7 @@ export function specFromPlan(input: SpecFromPlanInput): PergolaSpec {
     wallProfileId: _ignoredWallProfile,
     frameJointVersion: _ignoredJoints,
     skewSectionVersion: _ignoredSkew,
+    overhangDividerVersion: _ignoredOverhang,
     lamellaLengthStepMm: _ignoredStep,
     ...planDefaults
   } = DEFAULT_PLAN_CONSTRUCTION_PARAMS
@@ -120,6 +126,7 @@ export function specFromPlan(input: SpecFromPlanInput): PergolaSpec {
       : {}),
     ...(params.frameJointVersion === 1 ? { frameJointVersion: 1 as const } : {}),
     ...(params.skewSectionVersion === 1 ? { skewSectionVersion: 1 as const } : {}),
+    ...(params.overhangDividerVersion === 1 ? { overhangDividerVersion: 1 as const } : {}),
     ...(typeof params.lamellaLengthStepMm === 'number' && params.lamellaLengthStepMm > 0
       ? { lamellaLengthStepMm: params.lamellaLengthStepMm }
       : {}),
@@ -159,8 +166,10 @@ export function buildPieces(
         beams: [...plainFrame.beams, ...zonePlan.junctionBeams],
         posts: [...plainFrame.posts, ...zonePlan.junctionPosts],
       }
-  const pipelineSpec = zonePlan?.mainSpec ?? spec
-  const lamellaSpec = zonePlan == null ? spec : zonePlan.mainSpec
+  // A slanted end can leave the last bay over the lamella span limit: the
+  // builder adds the dividers that fix it (ids `div-auto-*`, listed in `autoDividers`).
+  const pipelineSpec = withOverhangDividers(zonePlan?.mainSpec ?? spec, profiles)
+  const lamellaSpec = zonePlan == null ? pipelineSpec : zonePlan.mainSpec == null ? null : pipelineSpec
   const lamellas = [
     ...(lamellaSpec != null ? computeLamellas(lamellaSpec, profiles, roof, sectionOptions) : []),
     ...(zonePlan?.zoneLayouts.flatMap((layout) => layout.lamellas) ?? []),
@@ -199,7 +208,7 @@ export function buildPieces(
   // A lamella span over the profile limit never blocks the build (3D, cut list,
   // PDF): it is reported as a warning only, so the user decides.
   const warnings = structuralIssues.length > 0
-    ? warningsFromSpanIssues(structuralIssues, lamellas, spec, profiles)
+    ? warningsFromSpanIssues(structuralIssues, lamellas, pipelineSpec, profiles)
     : []
 
   const pieces = [
@@ -216,6 +225,9 @@ export function buildPieces(
     structuralPurlins,
     warnings,
     joints: [...beamResult.joints, ...runResult.joints],
+    autoDividers: (pipelineSpec.purlinDividers?.mode !== 'manual' ? (pipelineSpec.purlinDividers?.lines ?? []) : [])
+      .filter((line) => isAutoAddedDividerId(line.id))
+      .map((line) => ({ id: line.id, positionMm: line.positionMm })),
     isOrthogonal: frame.isOrthogonal,
     colorHex: specColorHex(spec),
     heightMm: spec.heightMm,

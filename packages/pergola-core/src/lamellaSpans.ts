@@ -23,6 +23,34 @@ import {
 export interface ResolvedPurlinPosition {
   id: string
   positionMm: number
+  /** Put in by the builder (not drawn by the user, not on the equal-clear grid). */
+  autoAdded?: true
+}
+
+/**
+ * Dividers the builder adds itself carry this id prefix. They travel in
+ * `purlinDividers.lines` of an auto-mode spec (a saved auto plan never has
+ * lines), so every caller of the position resolver sees them unchanged.
+ */
+export const AUTO_DIVIDER_ID_PREFIX = 'div-auto-'
+
+export function isAutoAddedDividerId(id: string): boolean {
+  return id.startsWith(AUTO_DIVIDER_ID_PREFIX)
+}
+
+function mergeAutoAddedPositions(
+  grid: ResolvedPurlinPosition[],
+  lines: Array<Pick<PlanPurlinDividerLine, 'id' | 'positionMm'>> | undefined,
+  rangeMinMm: number,
+  rangeMaxMm: number,
+): ResolvedPurlinPosition[] {
+  const extras = (lines ?? [])
+    .filter((line) => isAutoAddedDividerId(line.id) && Number.isFinite(line.positionMm))
+    .filter((line) => line.positionMm > rangeMinMm + 1 && line.positionMm < rangeMaxMm - 1)
+    .map((line): ResolvedPurlinPosition => ({ id: line.id, positionMm: line.positionMm, autoAdded: true }))
+  if (extras.length === 0) return grid
+  const taken = new Set(grid.map((g) => g.id))
+  return [...grid, ...extras.filter((e) => !taken.has(e.id))].sort((a, b) => a.positionMm - b.positionMm)
 }
 
 /** New plans: equal clears from entered L_outer. Absent on saved plans = legacy. */
@@ -409,7 +437,7 @@ export function resolvePurlinPositionsMm(input: {
     Math.max(leftEndWidthMm, rightEndWidthMm),
     dividerWidthMm,
   )
-  if (nSpans <= 1) return []
+  if (nSpans <= 1) return mergeAutoAddedPositions([], input.lines, input.rangeMinMm, input.rangeMaxMm)
   const endInsetMm = resolvePurlinEndInsetMm({
     axisLengthMm,
     outerLengthMm,
@@ -417,17 +445,22 @@ export function resolvePurlinPositionsMm(input: {
     layoutVersion: input.layoutVersion,
     outerIsExplicit: input.outerLengthMm != null && input.outerLengthMm > 0,
   })
-  return dividerPositionsForMaxEqualClears({
-    rangeMinMm: input.rangeMinMm,
-    rangeMaxMm: input.rangeMaxMm,
-    outerLengthMm,
-    endBeamPlanWidthMm: leftEndWidthMm,
-    leftEndWidthMm,
-    rightEndWidthMm,
-    dividerCount: nSpans - 1,
-    dividerWidthMm,
-    endInsetMm,
-  })
+  return mergeAutoAddedPositions(
+    dividerPositionsForMaxEqualClears({
+      rangeMinMm: input.rangeMinMm,
+      rangeMaxMm: input.rangeMaxMm,
+      outerLengthMm,
+      endBeamPlanWidthMm: leftEndWidthMm,
+      leftEndWidthMm,
+      rightEndWidthMm,
+      dividerCount: nSpans - 1,
+      dividerWidthMm,
+      endInsetMm,
+    }),
+    input.lines,
+    input.rangeMinMm,
+    input.rangeMaxMm,
+  )
 }
 
 /** Longest measured outer on a side parallel to the lamellas (L_outer). */

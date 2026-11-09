@@ -34,6 +34,7 @@ function parseParams(raw: unknown): PlanConstructionParams {
       wallProfileId: _omitWallProfile,
       frameJointVersion: _omitJoints,
       skewSectionVersion: _omitSkew,
+      overhangDividerVersion: _omitOverhang,
       lamellaLengthStepMm: _omitStep,
       ...legacy
     } = DEFAULT_PLAN_CONSTRUCTION_PARAMS
@@ -50,6 +51,7 @@ function parseParams(raw: unknown): PlanConstructionParams {
     wallProfileId: _omitWallProfile,
     frameJointVersion: _omitJoints,
     skewSectionVersion: _omitSkew,
+    overhangDividerVersion: _omitOverhang,
     lamellaLengthStepMm: _omitStep,
     ...legacyDefaults
   } = DEFAULT_PLAN_CONSTRUCTION_PARAMS
@@ -146,6 +148,8 @@ function parseParams(raw: unknown): PlanConstructionParams {
   else delete base.frameJointVersion
   if (o.skewSectionVersion === 1) base.skewSectionVersion = 1
   else delete base.skewSectionVersion
+  if (o.overhangDividerVersion === 1) base.overhangDividerVersion = 1
+  else delete base.overhangDividerVersion
   if (isFiniteNumber(o.lamellaLengthStepMm) && (o.lamellaLengthStepMm as number) > 0) {
     base.lamellaLengthStepMm = o.lamellaLengthStepMm as number
   } else {
