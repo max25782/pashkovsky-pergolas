@@ -80,6 +80,7 @@ export function PergolaPlanPreview({ plan, title }: PergolaPlanPreviewProps) {
             showPurlinLengthLegend={false}
             rowBoundaryLabel={t('drawing.rowBoundary')}
             lamellaDirectionLabel={t('drawing.lamellaDirection')}
+            autoDividerLabel={t('drawing.autoDivider')}
           />
         ) : (
           <svg viewBox={polygonViewBox(plan.polygon)} className="h-full w-full">

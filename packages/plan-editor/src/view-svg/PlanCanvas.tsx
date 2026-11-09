@@ -19,6 +19,10 @@ import { PlanEditorCanvasOverlay } from '@pashkovsky/pergola-drawing'
 export interface PlanCanvasLabels {
   /** Тултип у стартовой вершины в зоне магнита замыкания — «клик замкнёт контур». */
   closeContourTooltip: string
+  /** Caption for dividers the builder added itself. Optional: hosts without it draw them dashed only. */
+  autoDivider?: string
+  /** Caption next to the lamella-direction arrow of each zone. */
+  lamellaDirection?: string
 }
 
 interface PlanCanvasProps {
@@ -174,6 +178,8 @@ export function PlanCanvas({
           viewport={viewport}
           selectedDividerId={selectedDividerId}
           onSelectDivider={onSelectDivider}
+          autoDividerLabel={labels.autoDivider}
+          lamellaDirectionLabel={labels.lamellaDirection}
         />
       )}
       {isClosed && lastFixedPoint && (

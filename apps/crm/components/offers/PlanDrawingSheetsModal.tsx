@@ -480,6 +480,7 @@ export function PlanDrawingSheetsModal({
                   showPurlinLengthLegend={false}
                   rowBoundaryLabel={t('drawing.rowBoundary')}
                   lamellaDirectionLabel={t('drawing.lamellaDirection')}
+                  autoDividerLabel={t('drawing.autoDivider')}
                 />
               </div>
               {planContour && constructionParams && (
@@ -576,6 +577,7 @@ export function PlanDrawingSheetsModal({
                     labelFontFamily={labelFont}
                     rowBoundaryLabel={t('drawing.rowBoundary')}
                     lamellaDirectionLabel={t('drawing.lamellaDirection')}
+                    autoDividerLabel={t('drawing.autoDivider')}
                   />
                 </div>
                 <PlanProfileAside

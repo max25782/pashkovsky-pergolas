@@ -17,7 +17,7 @@ import type { RoofPlane } from './roof'
 import { postHeightMm } from './roof'
 import { isAutoAddedDividerId, resolveContourPurlinPositions } from './lamellaSpans'
 import { withOverhangDividers, type BuildLamellaSectionsOptions } from './lamellaSections'
-import { planLamellaZones } from './lamellaZones'
+import { checkLamellaZones, planLamellaZones } from './lamellaZones'
 import { resolveLamellaPattern, patternMaxLamellaSpanMm } from './lamellaPattern'
 import type { SupportBeamsDocument } from './supportBeams'
 import {
@@ -86,6 +86,12 @@ export function specFromPlan(input: SpecFromPlanInput): PergolaSpec {
   const pattern = resolveLamellaPatternIds(params.lamellaPatternId, params.lamellaWallThicknessMm)
   const supportType = planSupportType(params, input.wallEdgeIndices)
   const colorHex = params.colorHex
+  // A zone the geometry cannot build would throw deep in the pipeline. The editor shows
+  // why it was left out (checkLamellaZones); the build uses the zones that work.
+  const applicableZones =
+    params.lamellaZones != null && params.lamellaZones.length > 0
+      ? checkLamellaZones(input.contour, params.lamellaZones).applicable
+      : []
   return {
     contour: input.contour,
     heightMm: params.heightMm,
@@ -131,9 +137,7 @@ export function specFromPlan(input: SpecFromPlanInput): PergolaSpec {
       ? { lamellaLengthStepMm: params.lamellaLengthStepMm }
       : {}),
     ...(hasPlanSupportBeams(input.supportBeams) ? { supportBeams: input.supportBeams } : {}),
-    ...(params.lamellaZones != null && params.lamellaZones.length > 0
-      ? { lamellaZones: params.lamellaZones }
-      : {}),
+    ...(applicableZones.length > 0 ? { lamellaZones: applicableZones } : {}),
   }
 }
 

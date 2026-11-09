@@ -58,6 +58,8 @@ import {
   formatPurlinClearLabelMm,
   contourSideWidthMm,
   lamellaRunEndWidthsMm,
+  lamellaDirectionArrows,
+  isAutoAddedDividerId,
 } from '@pashkovsky/pergola-core'
 import { computeFitToScreenViewport, worldToScreen } from './viewport'
 import type { Viewport, Point, CanvasSize, WorldBounds } from './viewport'
@@ -115,6 +117,8 @@ export interface TopPlanSheetProps {
   rowBoundaryLabel?: string
   /** Caption for the lamella-run arrow. Without it the arrow is not drawn. */
   lamellaDirectionLabel?: string
+  /** Caption for dividers the builder added itself. Without it they are drawn like the others. */
+  autoDividerLabel?: string
 }
 
 /** Насколько размерная линия отстоит от контура, мм — фиксированное значение для первой версии (см. «что пока не реализовано» — разнесение по уровням придёт позже, если размеров станет много на одной стороне). */
@@ -194,6 +198,7 @@ export function TopPlanSheet({
   showPurlinLengthLegend = true,
   rowBoundaryLabel = 'row boundary (not a beam)',
   lamellaDirectionLabel,
+  autoDividerLabel,
 }: TopPlanSheetProps) {
   const svgRef = useRef<SVGSVGElement>(null)
   const [canvasPx, setCanvasPx] = useState<CanvasSize>({ widthPx: 0, heightPx: 0 })
@@ -397,6 +402,29 @@ export function TopPlanSheet({
     return len > 1e-6 ? ([dx / len, dy / len] as Point2D) : null
   }, [lamellas])
 
+  const hasAutoDividers = useMemo(
+    () => autoDividerLabel != null && purlins.some((p) => p.dividerId != null && isAutoAddedDividerId(p.dividerId)),
+    [autoDividerLabel, purlins],
+  )
+
+  // With lamella zones every area gets its own arrow along its own lamellas.
+  const zoneArrows = useMemo(() => {
+    const zones = constructionParams?.lamellaZones
+    if (!planContour || planContour.length < 3 || zones == null || zones.length === 0) return null
+    return lamellaDirectionArrows(planContour, zones, lamellaDirectionDeg)
+  }, [planContour, constructionParams?.lamellaZones, lamellaDirectionDeg])
+
+  const directionArrows = useMemo(() => {
+    if (zoneArrows != null && zoneArrows.length > 0) {
+      return zoneArrows.map((arrow, index) => ({
+        labelId: index === 0 ? 'lamella-dir' : `lamella-dir-${arrow.zoneId ?? 'rest'}`,
+        center: arrow.center,
+        direction: arrow.direction as Point2D,
+      }))
+    }
+    return lamellaDirection ? [{ labelId: 'lamella-dir', center: centroid, direction: lamellaDirection }] : []
+  }, [zoneArrows, lamellaDirection, centroid])
+
   const worldBounds = useMemo<WorldBounds>(() => {
     const allPoints: Point2D[] = [
       ...beamFootprints.flatMap((f) => f.corners),
@@ -561,18 +589,20 @@ export function TopPlanSheet({
       labels.push(box)
       lines.push({ x1: screenStart.x, y1: screenStart.y, x2: screenEnd.x, y2: screenEnd.y, ownerId: box.id })
     }
-    if (lamellaDirection && lamellaDirectionLabel) {
-      const tip: Point2D = [
-        centroid[0] + lamellaDirection[0] * 800,
-        centroid[1] + lamellaDirection[1] * 800,
-      ]
-      const screen = worldToScreen({ x: tip[0], y: tip[1] }, viewport)
-      const perp = worldToScreen(
-        { x: -lamellaDirection[1], y: -lamellaDirection[0] },
-        { scale: viewport.scale, panX: 0, panY: 0 },
-      )
-      const plen = Math.hypot(perp.x, perp.y) || 1
-      labels.push(labelBox(screen.x + (perp.x / plen) * 22, screen.y + (perp.y / plen) * 22, lamellaDirectionLabel, 14, 'lamella-dir', { x: perp.x / plen, y: perp.y / plen }, true))
+    if (lamellaDirectionLabel) {
+      for (const arrow of directionArrows) {
+        const tip: Point2D = [
+          arrow.center[0] + arrow.direction[0] * 800,
+          arrow.center[1] + arrow.direction[1] * 800,
+        ]
+        const screen = worldToScreen({ x: tip[0], y: tip[1] }, viewport)
+        const perp = worldToScreen(
+          { x: -arrow.direction[1], y: -arrow.direction[0] },
+          { scale: viewport.scale, panX: 0, panY: 0 },
+        )
+        const plen = Math.hypot(perp.x, perp.y) || 1
+        labels.push(labelBox(screen.x + (perp.x / plen) * 22, screen.y + (perp.y / plen) * 22, lamellaDirectionLabel, 14, arrow.labelId, { x: perp.x / plen, y: perp.y / plen }, true))
+      }
     }
     const separated = separateLabels(labels, lines)
     const letterCells = sectionLetterCells(sections ?? [], viewport).filter((cell) => sectionTypeById.get(cell.id))
@@ -604,7 +634,7 @@ export function TopPlanSheet({
         return moved ? { ...letter, x: moved.x, y: moved.y } : letter
       }),
     }
-  }, [geometricSides, contour, centroid, dimensionModel.vertexAngles, dimensionModel.purlinClearDisplaySummary, perimeterLayouts, purlinClearLayout, viewport, purlins, sections, sectionTypeById, lamellaDirection, lamellaDirectionLabel])
+  }, [geometricSides, contour, centroid, dimensionModel.vertexAngles, dimensionModel.purlinClearDisplaySummary, perimeterLayouts, purlinClearLayout, viewport, purlins, sections, sectionTypeById, directionArrows, lamellaDirectionLabel])
   const placedLabels = placed.byId
 
   return (
@@ -671,9 +701,27 @@ export function TopPlanSheet({
         })}
 
         {/* Прогоны — под балками/ламелями по z-order отрисовки, светлее */}
-        {purlinFootprints.map(({ piece, corners }) => (
-          <polygon key={piece.id} points={pointsToSvg(corners, viewport)} fill="#fde68a" stroke="#b45309" strokeWidth={1} />
-        ))}
+        {purlinFootprints.map(({ piece, corners }) => {
+          const added = autoDividerLabel != null && piece.dividerId != null && isAutoAddedDividerId(piece.dividerId)
+          return (
+            <polygon
+              key={piece.id}
+              points={pointsToSvg(corners, viewport)}
+              fill={added ? '#bfdbfe' : '#fde68a'}
+              stroke={added ? '#1d4ed8' : '#b45309'}
+              strokeWidth={added ? 1.5 : 1}
+              {...(added ? { 'data-auto-divider': '1' } : {})}
+            />
+          )
+        })}
+        {hasAutoDividers && (
+          <g data-auto-divider-legend="1">
+            <rect x={16} y={34} width={14} height={12} fill="#bfdbfe" stroke="#1d4ed8" strokeWidth={1.5} />
+            <text x={36} y={44} fontSize={13} fontFamily={labelFontFamily} fill="#1d4ed8">
+              {autoDividerLabel}
+            </text>
+          </g>
+        )}
         {purlins.filter((p) => p.dividerId === WING_SHELF_SPAN_DIVIDER_ID).map((piece) => {
           const { start, end } = pieceAxis(piece)
           const screenStart = worldToScreen({ x: start[0], y: start[1] }, viewport)
@@ -758,16 +806,18 @@ export function TopPlanSheet({
           <polygon key={piece.id} points={pointsToSvg(corners, viewport)} fill="#4b5563" stroke="#111827" strokeWidth={1} />
         ))}
 
-        {lamellaDirection && lamellaDirectionLabel && (
+        {lamellaDirectionLabel && directionArrows.map((arrow) => (
           <LamellaDirectionIndicator
-            centroid={centroid}
-            direction={lamellaDirection}
+            key={arrow.labelId}
+            labelId={arrow.labelId}
+            centroid={arrow.center}
+            direction={arrow.direction}
             viewport={viewport}
             label={lamellaDirectionLabel}
-            labelAt={placedLabels.get('lamella-dir')}
+            labelAt={placedLabels.get(arrow.labelId)}
             letters={placed.letters.map((letter) => ({ x: letter.x, y: letter.y, font: letter.font }))}
           />
-        )}
+        ))}
 
         <InteriorAngleSvg
           contour={contour}
@@ -1006,6 +1056,7 @@ export function TopPlanSheet({
 }
 
 interface LamellaDirectionIndicatorProps {
+  labelId: string
   centroid: Point2D
   direction: Point2D
   viewport: Viewport
@@ -1158,7 +1209,7 @@ function purlinMiterLabels(purlins: CutPiece[]): Array<{ key: string; at: Point2
   return labels
 }
 
-function LamellaDirectionIndicator({ centroid, direction, viewport, label, labelAt, letters = [] }: LamellaDirectionIndicatorProps) {
+function LamellaDirectionIndicator({ labelId, centroid, direction, viewport, label, labelAt, letters = [] }: LamellaDirectionIndicatorProps) {
   const arrowLengthMm = 800
   const from: Point2D = centroid
   const to: Point2D = [centroid[0] + direction[0] * arrowLengthMm, centroid[1] + direction[1] * arrowLengthMm]
@@ -1204,7 +1255,7 @@ function LamellaDirectionIndicator({ centroid, direction, viewport, label, label
     <g data-lamella-direction="1">
       <line x1={sFrom.x} y1={sFrom.y} x2={sTo.x} y2={sTo.y} stroke="#2563eb" strokeWidth={2} markerEnd="url(#pergola-dim-arrow)" />
       <text
-        data-label-id="lamella-dir"
+        data-label-id={labelId}
         data-label-box={`${x},${y},${labelAt?.w ?? 80},${labelAt?.h ?? 16}`}
         data-label-font={14}
         x={x}

@@ -398,6 +398,102 @@ export function hasLamellaZones(spec: Pick<PergolaSpec, 'lamellaZones'>): boolea
   return spec.lamellaZones != null && spec.lamellaZones.length > 0
 }
 
+export interface LamellaZoneIssue {
+  zoneId: string
+  /** Why the zone cannot be built; the text comes from the geometry check. */
+  message: string
+}
+
+export interface CheckedLamellaZones {
+  /** Zones that can be built, in order; zones are tried one after another. */
+  applicable: LamellaZone[]
+  /** One entry per zone that was left out. */
+  issues: LamellaZoneIssue[]
+}
+
+/**
+ * The pipeline throws on a zone that cannot be built (parallel edges, an edge that is
+ * not on the contour, a non-convex cut). An editor lets the user pick any edges, so it
+ * checks first: each zone is tried on top of the ones before it, and a failing zone is
+ * reported with its reason instead of being passed on.
+ */
+export function checkLamellaZones(contour: Point2D[], zones: LamellaZone[]): CheckedLamellaZones {
+  const applicable: LamellaZone[] = []
+  const issues: LamellaZoneIssue[] = []
+  for (const zone of zones) {
+    const attempt = [...applicable, zone]
+    try {
+      const split = splitContourByLamellaZones(contour, attempt)
+      const built = split.zones.find((resolved) => resolved.zone.id === zone.id)
+      if (built == null) throw new Error(`lamellaZones: zone "${zone.id}" was not resolved`)
+      applicable.push(zone)
+    } catch (error) {
+      issues.push({ zoneId: zone.id, message: error instanceof Error ? error.message : String(error) })
+    }
+  }
+  return { applicable, issues }
+}
+
+export interface LamellaDirectionArrow {
+  /** Zone id, or `null` for the part outside every zone. */
+  zoneId: string | null
+  /** Plan point (mm) the arrow is centred on. */
+  center: Point2D
+  /** Unit direction of the lamellas. */
+  direction: [number, number]
+}
+
+function polygonCentroid(poly: Array<readonly [number, number]>): Point2D {
+  let area2 = 0
+  let cx = 0
+  let cy = 0
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i]
+    const b = poly[(i + 1) % poly.length]
+    const cross = a[0] * b[1] - b[0] * a[1]
+    area2 += cross
+    cx += (a[0] + b[0]) * cross
+    cy += (a[1] + b[1]) * cross
+  }
+  if (Math.abs(area2) < 1e-6) {
+    const n = poly.length
+    return [poly.reduce((s, p) => s + p[0], 0) / n, poly.reduce((s, p) => s + p[1], 0) / n]
+  }
+  return [cx / (3 * area2), cy / (3 * area2)]
+}
+
+/**
+ * One lamella-direction arrow per area: each zone gets its own, and the part outside
+ * the zones gets the plan-wide direction. Zones that cannot be built are skipped, as in
+ * the build. Without zones the single arrow sits at the contour centroid.
+ */
+export function lamellaDirectionArrows(
+  contour: Point2D[],
+  zones: LamellaZone[] | undefined,
+  planDirectionDeg: number,
+): LamellaDirectionArrow[] {
+  const theta = (planDirectionDeg * Math.PI) / 180
+  const planDirection: [number, number] = [Math.cos(theta), Math.sin(theta)]
+  const { applicable } = checkLamellaZones(contour, zones ?? [])
+  if (applicable.length === 0) {
+    return [{ zoneId: null, center: polygonCentroid(contour), direction: planDirection }]
+  }
+  const split = splitContourByLamellaZones(contour, applicable)
+  const arrows: LamellaDirectionArrow[] = split.zones.map((resolved) => ({
+    zoneId: resolved.zone.id,
+    center: polygonCentroid(resolved.polygon),
+    direction: [resolved.frame.lamellaDir[0], resolved.frame.lamellaDir[1]],
+  }))
+  if (split.remainder != null) {
+    arrows.push({
+      zoneId: null,
+      center: polygonCentroid(split.remainder.map((v) => v.p)),
+      direction: planDirection,
+    })
+  }
+  return arrows
+}
+
 /** x-range of a convex polygon at height y (sheared coordinates), or null. */
 function xSpanAt(poly: Point2D[], y: number): [number, number] | null {
   let lo = Infinity

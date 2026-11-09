@@ -136,11 +136,15 @@ export function buildDividerPickPieces(
     wingShelfClip?: { start: Point2D; end: Point2D; halfWidthMm?: number }
     wingShelfClips?: Array<{ start: Point2D; end: Point2D; halfWidthMm?: number }>
     wallEdgeIndices?: number[]
+    /** Include the dividers the builder adds at a slanted end (editor overlay only). */
+    overhangDividers?: boolean
   },
 ): CutPiece[] {
   const wallEdgeIndices = options?.wallEdgeIndices ?? []
   const spec = specFromPlan({ contour, wallEdgeIndices, params })
-  const lines = resolvePlanPurlinLines(contour, params, profiles, wallEdgeIndices)
+  const lines = resolvePlanPurlinLines(contour, params, profiles, wallEdgeIndices, {
+    overhangDividers: options?.overhangDividers === true,
+  })
   const out: CutPiece[] = []
   for (const line of lines) {
     out.push(...pickPiecesForDividerLine(contour, spec, profiles, line.id, line.positionMm, options))

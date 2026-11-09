@@ -65,6 +65,12 @@ describe('dividers added for a slanted strip end', () => {
         expect(over).toEqual([])
       })
 
+      it('carries the automatic mark on the purlin pieces that stand on the added dividers', () => {
+        const autoIds = new Set(built.autoDividers.map((divider) => divider.id))
+        const marked = built.pieces.filter((p) => p.role === 'purlin' && p.dividerId != null && autoIds.has(p.dividerId))
+        expect(marked.length).toBeGreaterThanOrEqual(autoIds.size)
+      })
+
       it('lists the added dividers and marks their ids as automatic', () => {
         expect(built.autoDividers.length).toBeGreaterThan(0)
         for (const divider of built.autoDividers) expect(isAutoAddedDividerId(divider.id)).toBe(true)

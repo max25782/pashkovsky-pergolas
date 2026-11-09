@@ -13,6 +13,7 @@ import {
 } from './topPlanDimensions'
 import { beamPlanWidthForDrawing, contourSideWidthMm, innerFaceClearMm, lamellaRunEndWidthsMm } from './beamPlanWidth'
 import { resolvePlanPurlinLines } from './dividerEdits'
+import { lamellaDirectionArrows, type LamellaDirectionArrow } from './lamellaZones'
 import { buildDividerPickPieces } from './dividerPickPieces'
 import { computeWingShelfClearSpan } from './dividerFrameTrim'
 import { pieceAxis } from './pieceAxis'
@@ -114,6 +115,8 @@ export interface PlanEditorOverlayModel {
   centroid: Point2D
   dividerLines: PlanEditorDividerOverlayLine[]
   lamellaDirectionDeg: number
+  /** One arrow per lamella zone and one for the rest; empty when the plan has no zones. */
+  lamellaZoneArrows: LamellaDirectionArrow[]
 }
 
 function centroidOf(points: Point2D[]): Point2D {
@@ -528,7 +531,7 @@ export function buildPlanEditorOverlayModel(input: {
   const measuredOuterLengthMmByEdgeIndex = hasMeasured ? measuredByIndex : fromParams
 
   const centroid = centroidOf(contour)
-  const dividerPositions = resolvePlanPurlinLines(contour, params, profiles, wallEdgeIndices)
+  const dividerPositions = resolvePlanPurlinLines(contour, params, profiles, wallEdgeIndices, { overhangDividers: true })
   const sideWidthInput = {
     wallEdgeIndices,
     beamProfileId: params.beamProfileId,
@@ -589,6 +592,7 @@ export function buildPlanEditorOverlayModel(input: {
     wingShelfClips: wingShelfClips.length > 0 ? wingShelfClips : undefined,
     wingShelfClip: wingShelfClips[0],
     wallEdgeIndices,
+    overhangDividers: true,
   })
   const dividerLines: PlanEditorDividerOverlayLine[] = []
   for (const piece of pickPieces) {
@@ -614,6 +618,10 @@ export function buildPlanEditorOverlayModel(input: {
     centroid,
     dividerLines,
     lamellaDirectionDeg: params.lamellaDirectionDeg,
+    lamellaZoneArrows:
+      params.lamellaZones != null && params.lamellaZones.length > 0
+        ? lamellaDirectionArrows(contour, params.lamellaZones, params.lamellaDirectionDeg)
+        : [],
   }
 }
 

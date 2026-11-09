@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import type { PlanEditorOverlayModel, Point2D } from '@pashkovsky/pergola-core'
-import { contourEdgeOutward, matchContourEdgeIndex } from '@pashkovsky/pergola-core'
+import { contourEdgeOutward, isAutoAddedDividerId, matchContourEdgeIndex } from '@pashkovsky/pergola-core'
 import type { Viewport } from './viewport'
 import { worldToScreen } from './viewport'
 import { InteriorAngleSvg } from './InteriorAngleSvg'
@@ -18,6 +18,10 @@ export interface PlanEditorCanvasOverlayProps {
   viewport: Viewport
   selectedDividerId?: string | null
   onSelectDivider?: (id: string | null) => void
+  /** Caption for dividers the builder added itself; they are also drawn dashed. */
+  autoDividerLabel?: string
+  /** Caption next to each lamella-direction arrow drawn for a zone. */
+  lamellaDirectionLabel?: string
 }
 
 export function PlanEditorCanvasOverlay({
@@ -26,6 +30,8 @@ export function PlanEditorCanvasOverlay({
   viewport,
   selectedDividerId,
   onSelectDivider,
+  autoDividerLabel,
+  lamellaDirectionLabel,
 }: PlanEditorCanvasOverlayProps) {
   const contour2d = useMemo(
     () => contour.map((p): [number, number] => [p.x, p.y]),
@@ -111,11 +117,43 @@ export function PlanEditorCanvasOverlay({
         ]}
       />
 
+      {model.lamellaZoneArrows.map((arrow) => {
+        const half = 600
+        const tail = worldToScreen(
+          { x: arrow.center[0] - arrow.direction[0] * half, y: arrow.center[1] - arrow.direction[1] * half },
+          viewport,
+        )
+        const head = worldToScreen(
+          { x: arrow.center[0] + arrow.direction[0] * half, y: arrow.center[1] + arrow.direction[1] * half },
+          viewport,
+        )
+        return (
+          <g key={`zone-arrow:${arrow.zoneId ?? 'rest'}`} data-lamella-zone-arrow={arrow.zoneId ?? 'rest'}>
+            <line x1={tail.x} y1={tail.y} x2={head.x} y2={head.y} stroke="#2563eb" strokeWidth={2.5} markerEnd="url(#pergola-lamella-arrow)" />
+            {lamellaDirectionLabel != null && (
+              <text
+                x={head.x + 6}
+                y={head.y - 6}
+                fontSize={12}
+                fontFamily="sans-serif"
+                fill="#1d4ed8"
+                stroke="#ffffff"
+                strokeWidth={3}
+                paintOrder="stroke"
+              >
+                {lamellaDirectionLabel}
+              </text>
+            )}
+          </g>
+        )
+      })}
+
       {model.dividerLines.map((line, lineIndex) => {
         const from = worldToScreen({ x: line.start[0], y: line.start[1] }, viewport)
         const to = worldToScreen({ x: line.end[0], y: line.end[1] }, viewport)
         const selected = selectedDividerId === line.dividerId
-        const stroke = selected ? '#2563eb' : line.isWingShelfSpan ? '#f97316' : '#fb923c'
+        const added = !line.isWingShelfSpan && isAutoAddedDividerId(line.dividerId)
+        const stroke = selected ? '#2563eb' : line.isWingShelfSpan ? '#f97316' : added ? '#0284c7' : '#fb923c'
         const dx = line.end[0] - line.start[0]
         const dy = line.end[1] - line.start[1]
         const lineLen = Math.hypot(dx, dy)
@@ -148,7 +186,29 @@ export function PlanEditorCanvasOverlay({
                 onSelectDivider?.(line.dividerId)
               }}
             />
-            <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke={stroke} strokeWidth={selected ? 4 : 2.5} />
+            <line
+              x1={from.x}
+              y1={from.y}
+              x2={to.x}
+              y2={to.y}
+              stroke={stroke}
+              strokeWidth={selected ? 4 : 2.5}
+              {...(added ? { strokeDasharray: '9 5', 'data-auto-divider': '1' } : {})}
+            />
+            {added && autoDividerLabel != null && (
+              <text
+                x={(from.x + to.x) / 2 + 8}
+                y={(from.y + to.y) / 2}
+                fontSize={11}
+                fontFamily="sans-serif"
+                fill="#0369a1"
+                stroke="#ffffff"
+                strokeWidth={3}
+                paintOrder="stroke"
+              >
+                {autoDividerLabel}
+              </text>
+            )}
             {line.isWingShelfSpan && lineLen > 1 && (
               <text
                 x={(from.x + to.x) / 2}

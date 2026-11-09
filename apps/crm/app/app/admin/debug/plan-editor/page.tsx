@@ -71,6 +71,7 @@ import { LamellaWallThicknessField } from '@/components/offers/LamellaWallThickn
 import { RoofSlopeFields } from '@/components/offers/RoofSlopeFields'
 import { Plan3DDividerControls } from '@/components/offers/Plan3DDividerControls'
 import { CopyPlanJsonButton } from '@/components/offers/CopyPlanJsonButton'
+import { LamellaZonesField } from '@/components/offers/LamellaZonesField'
 import { PlanDrawingSheetsModal } from '@/components/offers/PlanDrawingSheetsModal'
 import { ReplaceProfileNotice } from '@/components/offers/ReplaceProfileNotice'
 import { readDebugPlanDocument, writeDebugPlanDocument } from '@/lib/pergolas/debug-plan-storage'
@@ -396,6 +397,8 @@ export default function PlanEditorDebugPage() {
     () => ({
       canvas: {
         closeContourTooltip: t('canvas.closeContourTooltip'),
+        autoDivider: t('drawing.autoDivider'),
+        lamellaDirection: t('drawing.lamellaDirection'),
       },
       edgeEditor: {
         lengthLabel: t('edgeEditor.lengthLabel'),
@@ -856,6 +859,14 @@ function ConstructionParamsPanel({
           }}
         />
       </label>
+
+      <LamellaZonesField
+        contourMm={contourMm}
+        zones={params.lamellaZones}
+        onChange={(lamellaZones) => patch({ lamellaZones })}
+        selectClass={selectClass}
+        labelClass={labelClass}
+      />
 
       <label className="flex flex-row items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400" title={t('paramsPanel.lamellaOnEdgeHint')}>
         <input

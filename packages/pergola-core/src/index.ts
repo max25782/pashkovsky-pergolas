@@ -371,15 +371,21 @@ export {
 export type { LamellaObliqueGeometry } from './lamellaSections'
 export type { LamellaZone } from './types'
 export type {
+  CheckedLamellaZones,
+  LamellaDirectionArrow,
+  LamellaZoneIssue,
   LamellaZoneLayout,
   LamellaZonePlan,
   LamellaZoneSplit,
   ResolvedLamellaZone,
   ZoneFrame,
 } from './lamellaZones'
+export { AUTO_DIVIDER_ID_PREFIX, isAutoAddedDividerId } from './lamellaSpans'
 export {
   buildLamellaZoneLayout,
+  checkLamellaZones,
   hasLamellaZones,
+  lamellaDirectionArrows,
   parseLamellaZones,
   planLamellaZones,
   splitContourByLamellaZones,

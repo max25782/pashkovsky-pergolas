@@ -1,6 +1,7 @@
 import type { PlanConstructionParams } from './planDefaults'
 import type { PlanPurlinDividerLine, Point2D, ProfileDimensions } from './types'
 import { specFromPlan } from './buildPieces'
+import { withOverhangDividers } from './lamellaSections'
 import { resolveLamellaPattern, patternMaxLamellaSpanMm } from './lamellaPattern'
 import { resolveContourPurlinPositions, type ResolvedPurlinPosition } from './lamellaSpans'
 
@@ -32,8 +33,12 @@ export function resolvePlanPurlinLines(
   params: PlanConstructionParams,
   profiles: Map<string, ProfileDimensions>,
   wallEdgeIndices: number[] = [],
+  options?: { overhangDividers?: boolean },
 ): ResolvedPurlinPosition[] {
-  const spec = specFromPlan({ contour, wallEdgeIndices, params })
+  const plain = specFromPlan({ contour, wallEdgeIndices, params })
+  // Off by default: the section builder reaches this function while it measures the strip,
+  // and asking it for the added dividers from there would loop. The editor overlay asks.
+  const spec = options?.overhangDividers === true ? withOverhangDividers(plain, profiles) : plain
   const pattern = resolveLamellaPattern(spec, profiles)
   return resolveContourPurlinPositions({
     contour: spec.contour,
