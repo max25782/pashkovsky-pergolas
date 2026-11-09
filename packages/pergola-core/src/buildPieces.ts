@@ -17,6 +17,7 @@ import type { RoofPlane } from './roof'
 import { postHeightMm } from './roof'
 import { resolveContourPurlinPositions } from './lamellaSpans'
 import type { BuildLamellaSectionsOptions } from './lamellaSections'
+import { planLamellaZones } from './lamellaZones'
 import { resolveLamellaPattern, patternMaxLamellaSpanMm } from './lamellaPattern'
 import type { SupportBeamsDocument } from './supportBeams'
 import {
@@ -123,6 +124,9 @@ export function specFromPlan(input: SpecFromPlanInput): PergolaSpec {
       ? { lamellaLengthStepMm: params.lamellaLengthStepMm }
       : {}),
     ...(hasPlanSupportBeams(input.supportBeams) ? { supportBeams: input.supportBeams } : {}),
+    ...(params.lamellaZones != null && params.lamellaZones.length > 0
+      ? { lamellaZones: params.lamellaZones }
+      : {}),
   }
 }
 
@@ -142,10 +146,31 @@ export function buildPieces(
   // would suppress the auto right shelf on a U-notch.
   const sectionOptions: BuildLamellaSectionsOptions | undefined =
     options?.supportLine !== undefined ? { supportLine: options.supportLine } : undefined
-  const frame = computeFrame(spec, profiles)
-  const roof = frame.roof
-  const lamellas = computeLamellas(spec, profiles, roof, sectionOptions)
-  let structuralPurlins = computePurlins(spec, profiles, roof, { frameBeams: frame.beams })
+  const plainFrame = computeFrame(spec, profiles)
+  const roof = plainFrame.roof
+  // Zones: the part outside them goes through the unchanged calculation as its
+  // own spec; each zone adds its own lamellas and dividers; the cut lines get
+  // the beam line the full frame lacks. No zones ⇒ this block does nothing.
+  const zonePlan = planLamellaZones(spec, profiles, roof, plainFrame)
+  const frame = zonePlan == null
+    ? plainFrame
+    : {
+        ...plainFrame,
+        beams: [...plainFrame.beams, ...zonePlan.junctionBeams],
+        posts: [...plainFrame.posts, ...zonePlan.junctionPosts],
+      }
+  const pipelineSpec = zonePlan?.mainSpec ?? spec
+  const lamellaSpec = zonePlan == null ? spec : zonePlan.mainSpec
+  const lamellas = [
+    ...(lamellaSpec != null ? computeLamellas(lamellaSpec, profiles, roof, sectionOptions) : []),
+    ...(zonePlan?.zoneLayouts.flatMap((layout) => layout.lamellas) ?? []),
+  ]
+  let structuralPurlins = [
+    ...(lamellaSpec != null
+      ? computePurlins(pipelineSpec, profiles, roof, zonePlan == null ? { frameBeams: frame.beams } : undefined)
+      : []),
+    ...(zonePlan?.zoneLayouts.flatMap((layout) => layout.purlins) ?? []),
+  ]
   // Split purlins on support beams BEFORE stock segmentation so a 6 m stock
   // joint does not survive across the beam (house right wing).
   if (resolvedBeams.length > 0) {
@@ -175,23 +200,6 @@ export function buildPieces(
   // PDF): it is reported as a warning only, so the user decides.
   const warnings = structuralIssues.length > 0
     ? warningsFromSpanIssues(structuralIssues, lamellas, spec, profiles)
-    : []
-  const blocksBuild = (issue: (typeof structuralIssues)[number]) => {
-    const piece = lamellas.find((item) => item.id === issue.pieceId)
-    if (!piece) return true
-    const x = piece.position[0]
-    const y = piece.position[2]
-    return !trapezoidSections.some((section) =>
-      x >= section.minX - 30 && x <= section.maxX + 30 && y >= section.minY - 30 && y <= section.maxY + 30,
-    )
-  }
-  const blocking = structuralIssues.filter(blocksBuild)
-  if (blocking.length > 0 && !isManualDividers) {
-    throw new Error(summarizeStructuralIssues(blocking))
-  }
-  const warned = isManualDividers ? structuralIssues : structuralIssues.filter((issue) => !blocksBuild(issue))
-  const warnings = warned.length > 0
-    ? warningsFromSpanIssues(warned, lamellas, spec, profiles)
     : []
 
   const pieces = [

@@ -1,4 +1,4 @@
-import type { LamellaAngleDeg, PlanPurlinDividers, Point2D, RoofSlope, SupportType } from './types'
+import type { LamellaAngleDeg, LamellaZone, PlanPurlinDividers, Point2D, RoofSlope, SupportType } from './types'
 import type { LamellaWallThicknessMm } from './pergolaProfiles'
 import { DEFAULT_ROOF_SLOPE } from './roof'
 import type { ContourReference, PurlinClearLayoutVersion } from './lamellaSpans'
@@ -77,6 +77,11 @@ export interface PlanConstructionParams {
    * saved plans ⇒ one rectangle width (do not migrate).
    */
   skewSectionVersion?: 1
+  /**
+   * Zones with their own lamella / divider direction (edge references).
+   * Unset or empty ⇒ one direction for the whole plan.
+   */
+  lamellaZones?: LamellaZone[]
   /**
    * Lamella cut lengths on a trapezoid section are floored to this step, mm.
    * Unset ⇒ 1.

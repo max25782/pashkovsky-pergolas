@@ -53,6 +53,10 @@ import {
   resolveStraightSupportBeams,
 } from './supportBeams'
 import { wingShelfFlushBandRect } from './wingShelfSpan'
+// Circular on purpose: lamellaZones builds its sections from this file's helpers
+// and this file delegates to it for specs with zones. Both only call each other
+// inside functions, never at module load.
+import { buildLamellaSectionsWithZones, hasLamellaZones } from './lamellaZones'
 
 export const LAMELLA_SECTION_CLEARANCE_W_MM = 15
 export const LAMELLA_SECTION_CLEARANCE_H_MM = 30
@@ -123,6 +127,25 @@ export interface LamellaSection {
    * that does not carry the version.
    */
   trapezoid?: LamellaTrapezoid
+  /** Set on sections of a `lamellaZones` zone; absent on every other section. */
+  zoneId?: string
+  /**
+   * Set on a zone section whose lamellas are not square to its dividers.
+   * Its outline is a parallelogram; `minX..maxY` are the bounding box of that outline.
+   */
+  oblique?: LamellaObliqueGeometry
+}
+
+/** Direction data of one zone section. Angles are plan degrees from +X. */
+export interface LamellaObliqueGeometry {
+  lamellaDirectionDeg: number
+  dividerDirectionDeg: number
+  /** Acute angle between lamella and divider, degrees. */
+  crossAngleDeg: number
+  /** Saw table angle at both lamella ends (0 = square). */
+  cutMiterDeg: number
+  /** Parallelogram vertices in ring order. */
+  corners: Point2D[]
 }
 
 /**
@@ -289,7 +312,7 @@ function uniqueSorted(values: number[]): number[] {
   return out
 }
 
-function countRowsInHeight(heightMm: number, pattern: LamellaPatternEntry[], gapMm: number): number {
+export function countRowsInHeight(heightMm: number, pattern: LamellaPatternEntry[], gapMm: number): number {
   if (heightMm < pattern[0].visibleWidthMm) return 0
   let scanT = pattern[0].visibleWidthMm * 0.5
   let i = 0
@@ -305,7 +328,7 @@ function countRowsInHeight(heightMm: number, pattern: LamellaPatternEntry[], gap
   return n
 }
 
-function representativePitchMm(pattern: LamellaPatternEntry[], gapMm: number): number {
+export function representativePitchMm(pattern: LamellaPatternEntry[], gapMm: number): number {
   const a = pattern[0].visibleWidthMm
   const b = pattern[Math.min(1, pattern.length - 1)].visibleWidthMm
   return a * 0.5 + gapMm + b * 0.5
@@ -1977,7 +2000,21 @@ function openSkewBaySections(input: {
   return sections.map((section, index) => ({ ...section, id: `sec-${index}` }))
 }
 
+/**
+ * Every section of the plan. A spec with `lamellaZones` gets the sections of the
+ * part outside the zones (plan-wide direction) plus the sections of each zone.
+ */
 export function buildLamellaSections(
+  spec: PergolaSpec,
+  profiles: Map<string, ProfileDimensions>,
+  options?: BuildLamellaSectionsOptions,
+): LamellaSection[] {
+  if (hasLamellaZones(spec)) return buildLamellaSectionsWithZones(spec, profiles, options)
+  return buildLamellaSectionsCore(spec, profiles, options)
+}
+
+/** Sections for one lamella direction (`lamellaDirectionDeg`); ignores `lamellaZones`. */
+export function buildLamellaSectionsCore(
   spec: PergolaSpec,
   profiles: Map<string, ProfileDimensions>,
   options?: BuildLamellaSectionsOptions,
@@ -2761,6 +2798,8 @@ export function computeLamellasFromSections(
   let id = 0
 
   for (const section of sections) {
+    // Zone sections have their own direction; `lamellaZones.ts` builds their lamellas.
+    if (section.zoneId !== undefined) continue
     let scan = pattern[0].visibleWidthMm * 0.5
     let i = 0
     for (let row = 0; row < section.lamellaCount; row++) {

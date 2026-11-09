@@ -368,6 +368,22 @@ export {
   buildLamellaSections,
   computeLamellasFromSections,
 } from './lamellaSections'
+export type { LamellaObliqueGeometry } from './lamellaSections'
+export type { LamellaZone } from './types'
+export type {
+  LamellaZoneLayout,
+  LamellaZonePlan,
+  LamellaZoneSplit,
+  ResolvedLamellaZone,
+  ZoneFrame,
+} from './lamellaZones'
+export {
+  buildLamellaZoneLayout,
+  hasLamellaZones,
+  planLamellaZones,
+  splitContourByLamellaZones,
+  zoneFrameFromEdges,
+} from './lamellaZones'
 
 
 export type { PlanConstructionParams } from './planDefaults'

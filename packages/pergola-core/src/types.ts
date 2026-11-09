@@ -360,6 +360,32 @@ export interface PergolaSpec {
    * Presence enables span-limited skew packing and splits crossed purlins.
    */
   supportBeams?: SupportBeamsDocument
+  /**
+   * Optional zones with their own lamella / divider direction. Unset or empty
+   * ⇒ one direction for the whole contour (`lamellaDirectionDeg`), byte-identical
+   * to plans saved before zones existed. See `lamellaZones.ts`.
+   */
+  lamellaZones?: LamellaZone[]
+}
+
+/**
+ * A part of the contour whose lamellas and dividers follow contour edges
+ * instead of the plan-wide direction. All three fields are indices of edges of
+ * the contour as drawn (same numbering as `wallEdgeIndices`), so the zone
+ * follows the geometry when vertices move — no coordinates are stored.
+ *
+ * The zone is the part of the contour on one side of the line through
+ * `cutEdgeIndex`, extended until it leaves the contour. The side is the one
+ * that holds `dividerEdgeIndex` (falls back to `lamellaEdgeIndex`).
+ */
+export interface LamellaZone {
+  id: string
+  /** The zone ends on the line through this edge. */
+  cutEdgeIndex: number
+  /** Lamellas run parallel to this edge. */
+  lamellaEdgeIndex: number
+  /** Dividers (purlins) run parallel to this edge. */
+  dividerEdgeIndex: number
 }
 
 /**
