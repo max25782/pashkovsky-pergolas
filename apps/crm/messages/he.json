@@ -85,6 +85,7 @@
     "inventory": "ספירת מלאי",
     "profiles": "פרופילים",
     "aiMedia": "מדיה AI",
+    "tazrim": "תזרים",
     "settings": "הגדרות",
     "logout": "התנתק",
     "loggingOut": "מתנתק...",
@@ -145,6 +146,7 @@
     "profilesDescription": "ניהול מלאי פרופילים",
     "ordersDescription": "הזמנות פרופילים",
     "inventoryDescription": "ניהול מלאי פרופילים",
+    "tazrimDescription": "תזרים מזומנים",
     "quickOfferTitle": "הצעה מהירה",
     "quickOfferDescription": "צור הצעת מחיר מיידית ללא לקוח",
     "aiChatDescription": "ניהול צ'אטים AI"

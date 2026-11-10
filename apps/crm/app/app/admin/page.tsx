@@ -21,6 +21,7 @@ import {
   Package,
   Zap,
   Lock,
+  Wallet,
 } from 'lucide-react'
 import { PlanBoundary } from '@/components/subscription/PlanBoundary'
 import { useSubscriptionPlan } from '@/components/subscription/subscription-plan-context'
@@ -28,6 +29,7 @@ import { minPlanForFeature } from '@/lib/subscription/plan-access'
 import type { SaasFeature } from '@/lib/subscription/plan-types'
 import { OnboardingModal, FirstActions, useOnboardingGate } from '@/components/onboarding'
 import { snapshotOnboardingLocalStorage, restoreOnboardingLocalStorage } from '@/lib/onboarding/constants'
+import { canAccessTazrim, TAZRIM_BASE_PATH } from '@/lib/tazrim/access'
 
 interface DashboardStats {
   activeDeals: number
@@ -43,6 +45,7 @@ export default function AdminPage() {
   const { can } = useSubscriptionPlan()
   const [authUserId, setAuthUserId] = useState<string | null>(null)
   const [companyId, setCompanyId] = useState<string | null>(null)
+  const [memberRole, setMemberRole] = useState<string | null>(null)
   /** null until `/api/companies/me` succeeds (server field `crm_intro_completed_at`) */
   const [introRemoteComplete, setIntroRemoteComplete] = useState<boolean | null>(null)
   const { showOnboarding, markOnboardingComplete } = useOnboardingGate({
@@ -72,9 +75,11 @@ export default function AdminPage() {
         const data = (await r.json()) as {
           company_id?: string
           company_name?: string
+          role?: string
           crm_intro_completed_at?: string | null
         }
         if (data.company_name) setCompanyName(data.company_name)
+        if (typeof data.role === 'string') setMemberRole(data.role)
         const id = data.company_id
         if (id && typeof id === 'string') {
           setCompanyId(id)
@@ -183,6 +188,8 @@ export default function AdminPage() {
     icon: typeof Zap
     color: string
     feature: SaasFeature
+    /** Access governed by role/company instead of the subscription plan. */
+    alwaysUnlocked?: boolean
   }[] = [
     {
       id: 'quick-offer',
@@ -283,6 +290,21 @@ export default function AdminPage() {
       color: 'bg-teal-600 hover:bg-teal-700',
       feature: 'inventory',
     },
+    // Tazrim: Pashkovsky company, owner/admin only. Hidden (not locked) for everyone else.
+    ...(canAccessTazrim(companyId, memberRole)
+      ? [
+          {
+            id: 'tazrim',
+            title: tNav('tazrim'),
+            description: tAdmin('tazrimDescription'),
+            href: TAZRIM_BASE_PATH,
+            icon: Wallet,
+            color: 'bg-rose-600 hover:bg-rose-700',
+            feature: 'reports_finance' as SaasFeature,
+            alwaysUnlocked: true,
+          },
+        ]
+      : []),
   ]
 
   return (
@@ -317,7 +339,7 @@ export default function AdminPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {adminSections.map((section) => {
             const Icon = section.icon
-            const unlocked = can(section.feature)
+            const unlocked = section.alwaysUnlocked === true || can(section.feature)
             const need = minPlanForFeature(section.feature)
             const planLabel = tSub(`planNames.${need}`)
 

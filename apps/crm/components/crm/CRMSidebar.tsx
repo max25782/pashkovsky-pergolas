@@ -16,6 +16,7 @@ import {
   Images,
   Zap,
   Lock,
+  Wallet,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import clsx from 'clsx'
@@ -28,6 +29,7 @@ import { useSubscriptionPlan } from '@/components/subscription/subscription-plan
 import { minPlanForFeature } from '@/lib/subscription/plan-access'
 import type { SaasFeature } from '@/lib/subscription/plan-types'
 import { canAccessNavPath, type Role } from '@/lib/permissions'
+import { canAccessTazrim, TAZRIM_BASE_PATH } from '@/lib/tazrim/access'
 
 interface MenuItemConfig {
   href: string
@@ -35,6 +37,8 @@ interface MenuItemConfig {
   icon: typeof LayoutDashboard
   feature: SaasFeature
   highlight?: boolean
+  /** Skip the subscription-plan lock (access is governed by role/company instead). */
+  alwaysUnlocked?: boolean
 }
 
 export default function CRMSidebar() {
@@ -50,6 +54,7 @@ export default function CRMSidebar() {
   const [loggingOut, setLoggingOut] = useState(false)
   const [companyName, setCompanyName] = useState<string>('AluminCRM')
   const [memberRole, setMemberRole] = useState<Role | null>(null)
+  const [companyId, setCompanyId] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/companies/me')
@@ -57,6 +62,7 @@ export default function CRMSidebar() {
       .then(data => {
         if (data?.company_name) setCompanyName(data.company_name)
         if (data?.role) setMemberRole(data.role as Role)
+        if (data?.company_id) setCompanyId(data.company_id as string)
       })
       .catch(() => {})
   }, [])
@@ -76,6 +82,10 @@ export default function CRMSidebar() {
     { href: '/app/admin/statistics', label: t.nav.statistic, icon: BarChart3, feature: 'statistics' },
     { href: '/app/admin/workers', label: t.nav.workers, icon: Users, feature: 'workers' },
     { href: '/app/admin/media', label: tNav('aiMedia'), icon: Images, feature: 'ai_media' },
+    // Tazrim: Pashkovsky company, owner/admin only. Hidden (not locked) for everyone else.
+    ...(canAccessTazrim(companyId, memberRole)
+      ? [{ href: TAZRIM_BASE_PATH, label: tNav('tazrim'), icon: Wallet, feature: 'reports_finance' as SaasFeature, alwaysUnlocked: true }]
+      : []),
   ]
 
   const handleLogout = async () => {
@@ -117,7 +127,7 @@ export default function CRMSidebar() {
           const Icon = item.icon
           const roleAllowed = memberRole ? canAccessNavPath(memberRole, item.href) : true
           if (!roleAllowed) return null
-          const unlocked = can(item.feature)
+          const unlocked = item.alwaysUnlocked === true || can(item.feature)
           const isActive = pathname === item.href || pathname?.startsWith(item.href + '/')
           const isHighlight = item.highlight === true
           const needPlan = minPlanForFeature(item.feature)
