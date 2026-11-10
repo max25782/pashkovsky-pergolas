@@ -3,6 +3,8 @@ import { requireTazrimAccess } from "@/lib/tazrim/guard";
 import { addRecurringRule, deleteRecurringRule } from "./actions";
 import { NavTabs } from "../components/NavTabs";
 import { DeleteButton } from "../components/DeleteButton";
+import { todayInIsrael } from "@/lib/tazrim/format";
+import { nextOccurrence } from "@/lib/tazrim/recurring-schedule";
 
 const FREQUENCY_LABELS: Record<string, string> = {
   monthly: "חודשי",
@@ -11,6 +13,7 @@ const FREQUENCY_LABELS: Record<string, string> = {
 
 export default async function RecurringPage() {
   const { supabase } = await requireTazrimAccess();
+  const today = todayInIsrael();
 
   const { data: vendors } = await supabase
     .from("tz_vendors")
@@ -161,7 +164,7 @@ export default async function RecurringPage() {
                       {FREQUENCY_LABELS[r.frequency] ?? r.frequency}
                     </td>
                     <td className="px-5 py-3 text-zinc-400">
-                      {r.next_due_date ?? "—"}
+                      {nextOccurrence(r, today) ?? "—"}
                     </td>
                     <td className="px-5 py-3 text-left">
                       <DeleteButton

@@ -197,10 +197,15 @@ describe("cash picture does not count a CRM payment twice", () => {
 
   const today = "2026-11-07";
   const weekEnd = "2026-11-09";
+  const window = { from: today, to: weekEnd };
 
   it("projects a planned payment from the balance only once it is planned", () => {
     const balance = computeAccountBalance(SNAP_NOV_3, []).balance ?? 0;
-    const flows = buildPlannedFlows([eventRow({ status: "planned" })], []);
+    const flows = buildPlannedFlows(
+      [eventRow({ status: "planned" })],
+      [],
+      window
+    );
     const days = projectBalance(balance, flows, today, weekEnd);
     expect(days.at(-1)?.balance).toBe(1200);
   });
@@ -210,7 +215,8 @@ describe("cash picture does not count a CRM payment twice", () => {
     const balance = computeAccountBalance(SNAP_NOV_3, [cleared]).balance ?? 0;
     const flows = buildPlannedFlows(
       [eventRow({ status: "cleared", due_date: "2026-11-08" })],
-      []
+      [],
+      window
     );
     expect(flows).toHaveLength(0);
     const days = projectBalance(balance, flows, today, weekEnd);
@@ -220,7 +226,7 @@ describe("cash picture does not count a CRM payment twice", () => {
   it("end balance is the same before and after a planned payment clears", () => {
     const planned = projectBalance(
       computeAccountBalance(SNAP_NOV_3, []).balance ?? 0,
-      buildPlannedFlows([eventRow({ status: "planned" })], []),
+      buildPlannedFlows([eventRow({ status: "planned" })], [], window),
       today,
       weekEnd
     ).at(-1)?.balance;
@@ -230,7 +236,7 @@ describe("cash picture does not count a CRM payment twice", () => {
         .balance ?? 0;
     const cleared = projectBalance(
       clearedBalance,
-      buildPlannedFlows([eventRow({ status: "cleared" })], []),
+      buildPlannedFlows([eventRow({ status: "cleared" })], [], window),
       today,
       weekEnd
     ).at(-1)?.balance;

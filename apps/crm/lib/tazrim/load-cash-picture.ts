@@ -3,10 +3,13 @@ import { getAccountBalances, sumBalances } from "@/lib/tazrim/bank-balances";
 import { addDays } from "@/lib/tazrim/format";
 import {
   buildPlannedFlows,
+  recurringMonthForecast,
   type CashFlowItem,
   type EventRow,
+  type RecurringMonthForecast,
   type RuleRow,
 } from "@/lib/tazrim/cash-flow";
+import { monthBounds } from "@/lib/tazrim/recurring-schedule";
 import type { AccountBalance } from "@/lib/tazrim/bank-balances";
 
 type Supabase = TazrimSupabase;
@@ -50,12 +53,14 @@ export async function loadCashPicture(
       .gte("due_date", today)
       .lte("due_date", horizonEnd)
       .order("due_date", { ascending: true }),
+    // All rules, not only those whose saved date is inside the horizon: the
+    // saved date is never advanced, occurrences are derived from it.
     supabase
       .from("tz_recurring_rules")
-      .select("id, label, amount, is_variable, next_due_date, vendors:tz_vendors(name)")
-      .gte("next_due_date", today)
-      .lte("next_due_date", horizonEnd)
-      .order("next_due_date", { ascending: true }),
+      .select(
+        "id, label, amount, is_variable, frequency, next_due_date, vendors:tz_vendors(name)"
+      )
+      .not("next_due_date", "is", null),
   ]);
 
   const events = (eventsResult.data ?? []) as unknown as EventRow[];
@@ -90,7 +95,8 @@ export async function loadCashPicture(
     lastUpdatedAt,
     flows: buildPlannedFlows(
       events,
-      (rulesResult.data ?? []) as unknown as RuleRow[]
+      (rulesResult.data ?? []) as unknown as RuleRow[],
+      { from: today, to: horizonEnd }
     ),
     today: {
       income: sum(todayIncome),
@@ -99,5 +105,54 @@ export async function loadCashPicture(
       expenseCount: todayExpense.length,
     },
     errors,
+  };
+}
+
+export interface RecurringMonthPicture extends RecurringMonthForecast {
+  monthStart: string;
+  monthEnd: string;
+  errors: string[];
+}
+
+// Recurring charges of the calendar month containing `today`, including the
+// days already behind us (see recurringMonthForecast).
+export async function loadRecurringMonth(
+  supabase: Supabase,
+  today: string
+): Promise<RecurringMonthPicture> {
+  const { start, end } = monthBounds(today);
+
+  const [rulesResult, eventsResult] = await Promise.all([
+    supabase
+      .from("tz_recurring_rules")
+      .select(
+        "id, label, amount, is_variable, frequency, next_due_date, vendors:tz_vendors(name)"
+      )
+      .not("next_due_date", "is", null),
+    supabase
+      .from("tz_cash_events")
+      .select(
+        "id, type, amount, due_date, status, notes, payment_method, recurring_rule_id, debt_id, vendors:tz_vendors(name), checks:tz_checks(check_number, bank_name)"
+      )
+      .not("recurring_rule_id", "is", null)
+      .in("status", ["planned", "cleared"])
+      .gte("due_date", start)
+      .lte("due_date", end),
+  ]);
+
+  const forecast = recurringMonthForecast(
+    (eventsResult.data ?? []) as unknown as EventRow[],
+    (rulesResult.data ?? []) as unknown as RuleRow[],
+    start,
+    end
+  );
+
+  return {
+    ...forecast,
+    monthStart: start,
+    monthEnd: end,
+    errors: [rulesResult.error?.message, eventsResult.error?.message].filter(
+      (e): e is string => e !== undefined
+    ),
   };
 }

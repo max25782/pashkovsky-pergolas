@@ -60,6 +60,15 @@ export function hebrewDayName(isoDate: string): string {
     .replace(/^יום\s+/, "");
 }
 
+// 2026-11-10 -> נובמבר 2026
+export function formatMonthYear(isoDate: string): string {
+  return new Intl.DateTimeFormat("he-IL", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${isoDate}T00:00:00Z`));
+}
+
 // 2026-10-02 -> יום שישי, 2 באוקטובר 2026
 export function formatLongDate(isoDate: string): string {
   return new Intl.DateTimeFormat("he-IL", {

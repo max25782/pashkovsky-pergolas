@@ -1,11 +1,15 @@
 import Link from "next/link";
 import { requireTazrimAccess } from "@/lib/tazrim/guard";
-import { loadCashPicture } from "@/lib/tazrim/load-cash-picture";
+import {
+  loadCashPicture,
+  loadRecurringMonth,
+} from "@/lib/tazrim/load-cash-picture";
 import {
   flowAmount,
   flowTitle,
   projectBalance,
   summarizeRisk,
+  variableFlows,
   type CashFlowItem,
   type ProjectionDay,
 } from "@/lib/tazrim/cash-flow";
@@ -13,6 +17,7 @@ import {
   addDays,
   formatFullDate,
   formatMoney,
+  formatMonthYear,
   formatShortDate,
   formatSignedMoney,
   hebrewDayName,
@@ -92,11 +97,15 @@ export default async function MonthlyCashFlowPage() {
   const today = todayInIsrael();
   const periodEnd = addDays(today, PERIOD_DAYS - 1);
 
-  const picture = await loadCashPicture(supabase, today, PERIOD_DAYS);
+  const [picture, recurringMonth] = await Promise.all([
+    loadCashPicture(supabase, today, PERIOD_DAYS),
+    loadRecurringMonth(supabase, today),
+  ]);
   const { totalBalance } = picture;
 
   const flows = picture.flows.filter((f) => f.date <= periodEnd);
   const expenses = flows.filter((f) => f.direction === "out");
+  const variableExpenses = variableFlows(expenses);
   const income = flows.filter((f) => f.direction === "in");
   const expenseTotal = expenses.reduce((t, f) => t + (f.amount ?? 0), 0);
   const incomeTotal = income.reduce((t, f) => t + (f.amount ?? 0), 0);
@@ -109,6 +118,7 @@ export default async function MonthlyCashFlowPage() {
   const risk = totalBalance === null ? null : summarizeRisk(totalBalance, days);
   const riskStyle = risk ? RISK_STYLES[risk.level] : null;
 
+  const allErrors = [...picture.errors, ...recurringMonth.errors];
   const weeks = bucketWeeks(today, periodEnd, days, flows);
   const byType = totalsByType(expenses);
   const activeDays = days.filter((d) => d.income > 0 || d.expense > 0);
@@ -131,9 +141,9 @@ export default async function MonthlyCashFlowPage() {
 
         <NavTabs active="/app/admin/tazrim/monthly" />
 
-        {picture.errors.length > 0 && (
+        {allErrors.length > 0 && (
           <div className="rounded-2xl border border-red-900 bg-red-950/40 p-4 text-sm text-red-300">
-            חלק מהנתונים לא נטענו: {picture.errors.join(" · ")}
+            חלק מהנתונים לא נטענו: {allErrors.join(" · ")}
           </div>
         )}
 
@@ -182,6 +192,18 @@ export default async function MonthlyCashFlowPage() {
             </Card>
           )}
         </div>
+
+        {variableExpenses.length > 0 && (
+          <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 px-[22px] py-[14px] text-[13.5px] leading-[1.6] text-zinc-300">
+            לא נכלל בסכום ההוצאות (סכום משתנה):{" "}
+            {variableExpenses
+              .map(
+                (f) =>
+                  `${flowTitle(f)} · ${formatShortDate(f.date)} (${flowAmount(f)})`
+              )
+              .join(", ")}
+          </div>
+        )}
 
         {/* Risk callout */}
         {risk && riskStyle && risk.level !== "green" && (
@@ -347,6 +369,51 @@ export default async function MonthlyCashFlowPage() {
             )}
           </Card>
         </div>
+
+        {/* Recurring charges of the whole calendar month, past days included */}
+        <Card className="flex flex-col gap-3.5">
+          <div className="text-base font-bold">
+            חיובים קבועים · {formatMonthYear(today)}
+          </div>
+          {recurringMonth.flows.length === 0 ? (
+            <div className="text-sm text-zinc-500">{EMPTY_TEXT}</div>
+          ) : (
+            <table className="w-full">
+              <tbody>
+                {recurringMonth.flows.map((f) => (
+                  <tr key={f.key} className="border-t border-zinc-800">
+                    <td className="w-[70px] py-2.5 text-sm text-zinc-400">
+                      {formatShortDate(f.date)}
+                    </td>
+                    <td className="py-2.5 text-sm text-zinc-300">
+                      {flowTitle(f)}
+                      {f.date < today && <Tag>עבר</Tag>}
+                    </td>
+                    <td className="py-2.5 text-left text-sm font-semibold text-zinc-100">
+                      {flowAmount(f)}
+                    </td>
+                  </tr>
+                ))}
+                <tr className="border-t border-zinc-700">
+                  <td className="py-2.5 text-sm font-bold" colSpan={2}>
+                    סך הכל חיובים בסכום ידוע
+                  </td>
+                  <td className="py-2.5 text-left text-sm font-extrabold text-zinc-100">
+                    {formatMoney(recurringMonth.fixedTotal)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          )}
+          {recurringMonth.variable.length > 0 && (
+            <div className="text-[13px] text-amber-400">
+              לא נכלל בסך הכל:{" "}
+              {recurringMonth.variable
+                .map((f) => `${flowTitle(f)} (${flowAmount(f)})`)
+                .join(", ")}
+            </div>
+          )}
+        </Card>
 
         {/* All expenses */}
         <Card className="flex flex-col gap-3.5">
