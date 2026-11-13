@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { getCompanyId, getCompanyIdAsync } from '@/lib/middleware/company-context'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { loadCompanyVatPercent } from '@/lib/deals/company-vat'
-import { laborByDeal, loadWorkerCostBook, type WorkerShiftRow } from '@/lib/workers/load-cost-book'
+import { laborByDeal, loadCompanyShifts, loadWorkerCostBook } from '@/lib/workers/load-cost-book'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -18,8 +18,6 @@ export interface DealFinanceContextResponse {
   /** Worker cost per deal id: employer cost with the coefficient, no VAT. */
   laborByDeal: Record<string, number>
 }
-
-const PAGE_SIZE = 1000
 
 /**
  * GET /admin-api/deals/finance-context
@@ -36,19 +34,7 @@ export async function GET(req: NextRequest) {
   if (!companyId) return new Response('Unauthorized: No company context', { status: 401 })
 
   try {
-    const shifts: WorkerShiftRow[] = []
-    for (let from = 0; ; from += PAGE_SIZE) {
-      const { data, error } = await supabase
-        .from('worker_shifts')
-        .select('worker_id, deal_id, shift_date, shift_type, minutes_worked, computed_cost')
-        .eq('company_id', companyId)
-        .not('deal_id', 'is', null)
-        .order('id', { ascending: true })
-        .range(from, from + PAGE_SIZE - 1)
-      if (error) throw new Error(`Failed to load worker_shifts: ${error.message}`)
-      shifts.push(...((data ?? []) as WorkerShiftRow[]))
-      if ((data ?? []).length < PAGE_SIZE) break
-    }
+    const shifts = await loadCompanyShifts(supabase, companyId, { dealLinkedOnly: true })
 
     const [vatPercent, book] = await Promise.all([
       loadCompanyVatPercent(supabase, companyId),

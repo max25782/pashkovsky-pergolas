@@ -91,3 +91,37 @@ export function laborByDeal(
   for (const dealId of Object.keys(totals)) totals[dealId] = roundMoney(totals[dealId])
   return totals
 }
+
+const SHIFT_PAGE_SIZE = 1000
+
+export interface LoadShiftsOptions {
+  /** Only shifts logged against a deal (the project cost view). */
+  dealLinkedOnly?: boolean
+  /** Only shifts on or after this date (YYYY-MM-DD). */
+  fromDate?: string
+}
+
+/** Pages through the company's worker shifts so no row is lost to the 1000-row API cap. */
+export async function loadCompanyShifts(
+  supabase: SupabaseClient,
+  companyId: string,
+  options: LoadShiftsOptions = {},
+): Promise<WorkerShiftRow[]> {
+  const shifts: WorkerShiftRow[] = []
+  for (let from = 0; ; from += SHIFT_PAGE_SIZE) {
+    let query = supabase
+      .from('worker_shifts')
+      .select('worker_id, deal_id, shift_date, shift_type, minutes_worked, computed_cost')
+      .eq('company_id', companyId)
+    if (options.dealLinkedOnly) query = query.not('deal_id', 'is', null)
+    if (options.fromDate) query = query.gte('shift_date', options.fromDate)
+    const { data, error } = await query
+      .order('id', { ascending: true })
+      .range(from, from + SHIFT_PAGE_SIZE - 1)
+    if (error) throw new Error(`Failed to load worker_shifts: ${error.message}`)
+    const page = (data ?? []) as WorkerShiftRow[]
+    shifts.push(...page)
+    if (page.length < SHIFT_PAGE_SIZE) break
+  }
+  return shifts
+}

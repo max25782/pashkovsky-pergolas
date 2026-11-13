@@ -15,6 +15,16 @@ import {
   type AccountFields,
   type SyncedPaymentRow,
 } from "@/lib/tazrim/crm-payments";
+import { loadCompanyVatPercent } from "@/lib/deals/company-vat";
+import { laborByDeal, loadCompanyShifts, loadWorkerCostBook } from "@/lib/workers/load-cost-book";
+import { buildMonthPensionReport } from "@/lib/workers/pension-report";
+import {
+  CALCULATED_SOURCES,
+  buildPensionRows,
+  buildVatRows,
+  type CalculatedCashRow,
+  type VatDealInput,
+} from "@/lib/tazrim/vat-pension-rows";
 import {
   PAYROLL_APPROVED_SOURCE,
   PAYROLL_CATEGORY,
@@ -113,7 +123,7 @@ export async function syncAluminCRM() {
 
   const { data: deals, error } = await crm
     .from("deals")
-    .select("id, customer_name, price, stage, currency, deal_date")
+    .select("id, customer_name, price, my_cost, stage, currency, deal_date")
     .eq("company_id", tazrimCompanyId)
     .not("price", "is", null)
     .gt("price", 0)
@@ -169,6 +179,8 @@ export async function syncAluminCRM() {
   const today = new Date();
   const todayDateStr = todayStr();
   const rows: SyncRow[] = [];
+  // Date each payment-less deal is placed on in Tazrim; its VAT follows it.
+  const fallbackDates = new Map<string, string>();
 
   for (const deal of deals) {
     const stageLabel = STAGE_LABELS[deal.stage ?? ""] ?? deal.stage ?? "—";
@@ -201,6 +213,7 @@ export async function syncAluminCRM() {
       ? doneDates.get(deal.id as string) ?? (deal.deal_date ? new Date(deal.deal_date).toISOString().slice(0, 10) : todayDateStr)
       : addDays(today, STAGE_FORECAST_DAYS[deal.stage as string] ?? 30);
 
+    fallbackDates.set(deal.id as string, due_date);
     rows.push({
       company_id: tazrimCompanyId,
       type: "income",
@@ -237,6 +250,23 @@ export async function syncAluminCRM() {
     }
   }
 
+  const calculatedRows = await buildCalculatedRows(
+    crm,
+    tazrimCompanyId,
+    deals,
+    paymentsByDeal,
+    fallbackDates,
+  );
+
+  if (calculatedRows.length > 0) {
+    const { error: calculatedError } = await supabase
+      .from("tz_cash_events")
+      .upsert(calculatedRows, { onConflict: "company_id,external_source,external_id" });
+    if (calculatedError) {
+      throw new Error(`Не удалось записать НДС и пенсию в Tazrim: ${calculatedError.message}`);
+    }
+  }
+
   const currentIds = [...rows, ...payrollRows]
     .filter((r) => r.status === "planned")
     .map((r) => r.external_id);
@@ -253,6 +283,24 @@ export async function syncAluminCRM() {
 
   if (cleanupError) {
     throw new Error(`Не удалось очистить устаревшие прогнозы: ${cleanupError.message}`);
+  }
+
+  // Calculated VAT / pension rows that no longer apply (a payment was removed,
+  // a worker flagged "no pension"). Only planned rows from this month on are
+  // touched: earlier months are history and manual rows have other sources.
+  const calculatedIds = calculatedRows.map((r) => r.external_id);
+  const { error: calculatedCleanupError } = await supabase
+    .from("tz_cash_events")
+    .delete()
+    .eq("company_id", tazrimCompanyId)
+    .eq("external_source", "alumincrm")
+    .eq("status", "planned")
+    .in("source", CALCULATED_SOURCES)
+    .gte("due_date", `${monthOf(todayInIsrael())}-01`)
+    .not("external_id", "in", `(${calculatedIds.length > 0 ? calculatedIds.map((id) => `"${id}"`).join(",") : "''"})`);
+
+  if (calculatedCleanupError) {
+    throw new Error(`Не удалось очистить устаревший НДС и пенсию: ${calculatedCleanupError.message}`);
   }
 
   const reversedPayments = await reverseVanishedPayments(
@@ -273,6 +321,7 @@ export async function syncAluminCRM() {
         deals_count: deals.length,
         payments_count: payments?.length ?? 0,
         payroll_rows: payrollRows.length,
+        calculated_rows: calculatedRows.length,
         reversed_payments: reversedPayments,
         payments_needing_account: rows.filter((r) => r.needs_account).length,
         crm_default_account_id: defaultAccountId,
@@ -417,6 +466,60 @@ interface PayrollRow {
   payment_method: string;
   category_id: string | null;
   notes: string;
+}
+
+// VAT payable and the employer's pension / pitzuim, calculated from CRM data
+// and placed in Tazrim as separate, clearly marked rows. Manual taxes and
+// payments are never read or changed here.
+async function buildCalculatedRows(
+  crm: SupabaseClient,
+  tazrimCompanyId: string,
+  deals: Array<{ id: unknown; price: unknown; my_cost: unknown }>,
+  paymentsByDeal: Map<string, DealPayment[]>,
+  fallbackDates: Map<string, string>,
+): Promise<CalculatedCashRow[]> {
+  const today = todayInIsrael();
+  const currentMonth = monthOf(today);
+
+  const [vatPercent, book, shifts] = await Promise.all([
+    loadCompanyVatPercent(crm, tazrimCompanyId),
+    loadWorkerCostBook(crm, tazrimCompanyId),
+    loadCompanyShifts(crm, tazrimCompanyId),
+  ]);
+  const labor = laborByDeal(shifts, book);
+
+  const vatDeals: VatDealInput[] = deals.map((deal) => {
+    const id = deal.id as string;
+    return {
+      id,
+      price: deal.price as number,
+      my_cost: deal.my_cost as number | string | null,
+      labor: labor[id] ?? 0,
+      payments: (paymentsByDeal.get(id) ?? []).map((p) => ({
+        id: p.id,
+        amount: Number(p.amount),
+        paid_at: p.paid_at,
+      })),
+      fallbackDate: fallbackDates.get(id) ?? today,
+    };
+  });
+
+  const vatRows = buildVatRows({
+    companyId: tazrimCompanyId,
+    today,
+    vatPercent,
+    deals: vatDeals,
+  });
+
+  // Last month (paid this month) and the current month so far (forecast).
+  const pensionMonths = [previousMonth(today), currentMonth];
+  const pensionRows = buildPensionRows({
+    companyId: tazrimCompanyId,
+    today,
+    reports: pensionMonths.map((month) => buildMonthPensionReport(shifts, book, month)),
+  });
+
+  return [...vatRows, ...pensionRows];
 }
 
 // Worker wages from AluminCRM shifts: one expense per worker per month, due on
