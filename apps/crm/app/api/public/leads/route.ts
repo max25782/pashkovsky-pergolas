@@ -125,10 +125,28 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 3. Parse and validate body
+    // 3. Parse body early so form_key can resolve the firm before CAPTCHA.
     const body = await request.json()
 
-    // 4. Cloudflare Turnstile CAPTCHA verification
+    // 4. Resolve company_id before CAPTCHA: no firm → 401 (do not burn Turnstile / hide the auth failure).
+    const bodyFormKey = typeof body.form_key === 'string' ? body.form_key : null
+    const resolved = resolvePublicLeadCompany({
+      formKey: bodyFormKey || formKey,
+      origin: request.headers.get('origin'),
+      referer: request.headers.get('referer'),
+    })
+    if (!resolved.ok) {
+      console.warn('[Public Leads] Company unresolved', { reason: resolved.reason, ip: clientIp })
+      const status = resolved.reason === 'invalid_map' ? 500 : 401
+      return jsonResponse(
+        { error: resolved.reason === 'conflict' ? 'Conflicting company mapping' : 'Unauthorized' },
+        { status },
+        request,
+      )
+    }
+    const companyId = resolved.companyId
+
+    // 5. Cloudflare Turnstile CAPTCHA verification
     const turnstileToken = typeof body['cf-turnstile-response'] === 'string'
       ? body['cf-turnstile-response']
       : null
@@ -145,7 +163,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 5. Honeypot check (if 'website' field is filled, it's a bot)
+    // 6. Honeypot check (if 'website' field is filled, it's a bot)
     if (body.website && body.website.trim() !== '') {
       console.warn('[Public Leads] Honeypot triggered', {
         ip: clientIp,
@@ -155,7 +173,7 @@ export async function POST(request: NextRequest) {
       return jsonResponse({ success: true, id: 'blocked' }, undefined, request)
     }
 
-    // 6. Validate with Zod
+    // 7. Validate with Zod
     const validationResult = PublicLeadSchema.safeParse(body)
     
     if (!validationResult.success) {
@@ -177,24 +195,6 @@ export async function POST(request: NextRequest) {
     }
 
     const leadData = validationResult.data
-
-    // 7. Resolve company_id (form key and/or Origin/Referer domain). Never insert without it.
-    const bodyFormKey = typeof body.form_key === 'string' ? body.form_key : null
-    const resolved = resolvePublicLeadCompany({
-      formKey: bodyFormKey || formKey,
-      origin: request.headers.get('origin'),
-      referer: request.headers.get('referer'),
-    })
-    if (!resolved.ok) {
-      console.warn('[Public Leads] Company unresolved', { reason: resolved.reason, ip: clientIp })
-      const status = resolved.reason === 'invalid_map' ? 500 : 401
-      return jsonResponse(
-        { error: resolved.reason === 'conflict' ? 'Conflicting company mapping' : 'Unauthorized' },
-        { status },
-        request,
-      )
-    }
-    const companyId = resolved.companyId
 
     const supabase = getSupabase()
     if (!supabase) {
