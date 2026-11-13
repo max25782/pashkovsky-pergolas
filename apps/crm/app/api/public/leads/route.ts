@@ -7,6 +7,7 @@ import { uploadLeadConversion } from '@/lib/googleAds/offlineConversion'
 import { verifyTurnstile } from '@/lib/captcha/turnstile'
 import { MissingEnvError } from '@/lib/env/require-env'
 import { newLeadDefaults } from '@/lib/leads/new-lead-defaults'
+import { resolvePublicLeadCompany } from '@/lib/leads/resolve-public-company'
 
 function getSupabase(): SupabaseClient | null {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -41,7 +42,7 @@ const getAllowedOrigin = (origin: string | null): string => {
 const corsHeaders = (origin: string | null) => ({
   'Access-Control-Allow-Origin': getAllowedOrigin(origin),
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, x-site-token',
+  'Access-Control-Allow-Headers': 'Content-Type, x-site-token, x-form-key',
   'Access-Control-Max-Age': '86400', // 24 hours
 })
 
@@ -88,27 +89,12 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now()
   
   try {
-    // 1. Check site token
-    const siteToken = request.headers.get('x-site-token')
-    const expectedToken = process.env.CRM_SITE_TOKEN
-
-    if (!expectedToken) {
-      console.error('[Public Leads] CRM_SITE_TOKEN not configured')
-      return jsonResponse(
-        { error: 'Service misconfigured' },
-        { status: 500 },
-        request
-      )
-    }
-
-    if (!siteToken || siteToken !== expectedToken) {
-      console.warn('[Public Leads] Invalid site token')
-      return jsonResponse(
-        { error: 'Unauthorized' },
-        { status: 401 },
-        request
-      )
-    }
+    // 1. Resolve the firm from the form key and/or the request domain. No firm = reject.
+    // A bare site token is still accepted when it matches CRM_SITE_TOKEN (mapped to DEFAULT_COMPANY_ID).
+    const formKey =
+      request.headers.get('x-form-key') ||
+      request.headers.get('x-site-token') ||
+      null
 
     // 2. Rate limiting
     const clientIp = getClientIp(request)
@@ -192,18 +178,25 @@ export async function POST(request: NextRequest) {
 
     const leadData = validationResult.data
 
-    // 7. Get default company ID and Supabase client
-    const defaultCompanyId = process.env.DEFAULT_COMPANY_ID
-    const supabase = getSupabase()
-
-    if (!defaultCompanyId) {
-      console.error('[Public Leads] DEFAULT_COMPANY_ID not configured')
+    // 7. Resolve company_id (form key and/or Origin/Referer domain). Never insert without it.
+    const bodyFormKey = typeof body.form_key === 'string' ? body.form_key : null
+    const resolved = resolvePublicLeadCompany({
+      formKey: bodyFormKey || formKey,
+      origin: request.headers.get('origin'),
+      referer: request.headers.get('referer'),
+    })
+    if (!resolved.ok) {
+      console.warn('[Public Leads] Company unresolved', { reason: resolved.reason, ip: clientIp })
+      const status = resolved.reason === 'invalid_map' ? 500 : 401
       return jsonResponse(
-        { error: 'Service misconfigured' },
-        { status: 500 },
-        request
+        { error: resolved.reason === 'conflict' ? 'Conflicting company mapping' : 'Unauthorized' },
+        { status },
+        request,
       )
     }
+    const companyId = resolved.companyId
+
+    const supabase = getSupabase()
     if (!supabase) {
       console.error('[Public Leads] Supabase not configured (NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)')
       return jsonResponse(
@@ -213,12 +206,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 8. Save to database
-    const defaults = await newLeadDefaults(supabase, defaultCompanyId)
+    // 8. Save to database — company_id is required (DB NOT NULL and explicit here).
+    const defaults = await newLeadDefaults(supabase, companyId)
     const { data: lead, error: dbError } = await supabase
       .from('leads')
       .insert({
-        company_id: defaultCompanyId,
+        company_id: companyId,
         name: leadData.name,
         phone: leadData.phone,
         email: leadData.email || null,
