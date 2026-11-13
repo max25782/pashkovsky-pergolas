@@ -124,7 +124,7 @@ export function OffersList({
     if (!email) return
     try {
       const offerUrl = getOfferPublicUrl(offer.id, locale)
-      const response = await fetch(`/api/offers/${offer.id}/send-email`, {
+      const response = await authFetch(`/api/offers/${offer.id}/send-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, offerUrl, customerName: offer.customerName }),

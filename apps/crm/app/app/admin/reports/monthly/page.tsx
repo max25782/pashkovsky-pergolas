@@ -8,6 +8,7 @@ import type { MonthlyReport } from '@/types/workers'
 import type { Locale } from '@/lib/locales'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
 import { MonthlyReportCharts } from '@/components/admin/MonthlyReportCharts'
+import { authFetch } from '@/lib/api/auth-fetch'
 
 export default function MonthlyReportPage() {
   const t = useCRMTranslations()
@@ -50,7 +51,7 @@ export default function MonthlyReportPage() {
     try {
       setLoading(true)
       setError(null)
-      const response = await fetch(`/api/reports/monthly?month=${month}`)
+      const response = await authFetch(`/api/reports/monthly?month=${month}`)
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
