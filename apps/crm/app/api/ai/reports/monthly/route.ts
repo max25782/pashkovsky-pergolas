@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { aiReportLimiter, checkLimit } from '@/lib/middleware/rate-limit'
+import { loadStageContext } from '@/lib/deals/stage-store'
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY!
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -89,12 +90,16 @@ async function collectMonthlyData(companyId: string, dateRange: { start: Date; e
   const startISO = dateRange.start.toISOString()
   const endISO = dateRange.end.toISOString()
   
+  // The firm's "completed" columns (by role, not by name).
+  const stageContext = await loadStageContext(supabase, companyId)
+  const completedKeys = stageContext.keysWithRole(['completed'])
+
   // Fetch deals by installation_date (revenue attribution by installation month)
   const { data: deals } = await supabase
     .from('deals')
     .select('*')
     .eq('company_id', companyId)
-    .eq('stage', 'done')
+    .in('stage', completedKeys)
     .not('installation_date', 'is', null)
     .gte('installation_date', startISO)
     .lte('installation_date', endISO)
@@ -136,7 +141,7 @@ async function collectMonthlyData(companyId: string, dateRange: { start: Date; e
     dealsData.byStatus[stage] = (dealsData.byStatus[stage] || 0) + 1
     if (deal.price) dealsData.totalValue += parseFloat(String(deal.price))
     if (stage === 'new') dealsData.new++
-    if (stage === 'done') dealsData.closed++
+    if (completedKeys.includes(stage)) dealsData.closed++
   })
   
   dealsData.avgValue = dealsData.total > 0 ? dealsData.totalValue / dealsData.total : 0

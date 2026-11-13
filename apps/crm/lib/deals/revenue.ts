@@ -3,6 +3,16 @@
  * Shared by CRM statistics, monthly report API, and analytics.
  */
 
+import { legacyRoleOfKey, REVENUE_ROLES, type StageRoleResolver } from '@/lib/deals/stages'
+
+/**
+ * Every function below that looks at a deal's stage takes an optional
+ * `roleOf`: it turns the stage key into the firm's column role (signed ...
+ * completed), so statistics follow what a column means, not what it is
+ * called. Without it the fixed aluminium keys are read, as before.
+ */
+
+/** Legacy aluminium keys, kept for code that has no firm columns at hand. */
 export const REVENUE_STAGES = [
   'offer_approved',
   'material_ordered',
@@ -91,17 +101,22 @@ function numericAmount(value: number | string | null | undefined): number {
   return Number.isFinite(n) ? n : 0
 }
 
-function isRevenueStage(stage: string | null | undefined): stage is RevenueStage {
-  return stage != null && (REVENUE_STAGES as readonly string[]).includes(stage)
+function isRevenueStage(stage: string | null | undefined, roleOf: StageRoleResolver): boolean {
+  const role = roleOf(stage)
+  return role !== null && REVENUE_ROLES.has(role)
 }
 
-export function isRevenueDeal(deal: RevenueDeal | null | undefined, mode: StatisticType): boolean {
+export function isRevenueDeal(
+  deal: RevenueDeal | null | undefined,
+  mode: StatisticType,
+  roleOf: StageRoleResolver = legacyRoleOfKey,
+): boolean {
   if (!deal?.id) return false
   if (mode === 'money') {
     if (deal.customer_type === 'contractor') return true
-    return deal.stage === 'done' && deal.installation_date != null
+    return roleOf(deal.stage) === 'completed' && deal.installation_date != null
   }
-  return isRevenueStage(deal.stage)
+  return isRevenueStage(deal.stage, roleOf)
 }
 
 export function getDealAttributionDate(
@@ -163,12 +178,13 @@ export function getMonthDealRows<T extends RevenueDeal>(
   month: string,
   mode: StatisticType,
   paymentsByDeal: Map<string, Array<{ amount: number; paid_at: string }>>,
+  roleOf: StageRoleResolver = legacyRoleOfKey,
 ): { rows: MonthDealRow<T>[]; totals: MonthDealTotals } {
   const rows: MonthDealRow<T>[] = []
   const totals = emptyTotals()
 
   deals.forEach((deal) => {
-    if (!isRevenueDeal(deal, mode)) return
+    if (!isRevenueDeal(deal, mode, roleOf)) return
 
     if (mode === 'money' && deal.customer_type === 'contractor') {
       const { hasPayments, revenue } = contractorMonthRevenue(deal, month, paymentsByDeal)
@@ -197,6 +213,7 @@ export function aggregateMonthlyDealStats<T extends RevenueDeal>(
   mode: StatisticType,
   paymentsByDeal: Map<string, Array<{ amount: number; paid_at: string }>>,
   dateLocale: string,
+  roleOf: StageRoleResolver = legacyRoleOfKey,
 ): { monthlyStats: MonthlyDealStats[]; datelessCount: number } {
   const statsMap = new Map<string, MonthlyDealStats>()
   let datelessCount = 0
@@ -218,7 +235,7 @@ export function aggregateMonthlyDealStats<T extends RevenueDeal>(
   }
 
   deals.forEach((deal) => {
-    if (!isRevenueDeal(deal, mode)) return
+    if (!isRevenueDeal(deal, mode, roleOf)) return
 
     if (mode === 'money' && deal.customer_type === 'contractor') {
       const dealPayments = paymentsByDeal.get(deal.id ?? '') ?? []
@@ -253,10 +270,11 @@ export function aggregateMonthlyDealStats<T extends RevenueDeal>(
 export function sumRevenueDealTotals(
   deals: RevenueDeal[],
   mode: StatisticType,
+  roleOf: StageRoleResolver = legacyRoleOfKey,
 ): { revenue: number; expenses: number } {
   return deals.reduce(
     (acc, deal) => {
-      if (!isRevenueDeal(deal, mode)) return acc
+      if (!isRevenueDeal(deal, mode, roleOf)) return acc
       acc.revenue += numericAmount(deal.price)
       acc.expenses += numericAmount(deal.my_cost)
       return acc
@@ -269,8 +287,9 @@ export function buildMoneyMonthReport<T extends RevenueDeal>(
   deals: T[],
   month: string,
   paymentsByDeal: Map<string, Array<{ amount: number; paid_at: string }>>,
+  roleOf: StageRoleResolver = legacyRoleOfKey,
 ): MoneyMonthReport {
-  const { rows, totals } = getMonthDealRows(deals, month, 'money', paymentsByDeal)
+  const { rows, totals } = getMonthDealRows(deals, month, 'money', paymentsByDeal, roleOf)
   return {
     month,
     totalRevenue: totals.revenue,
@@ -302,11 +321,12 @@ export function sumMoneyInDateRange(
   paymentsByDeal: Map<string, Array<{ amount: number; paid_at: string }>>,
   fromIso: string,
   toIso: string,
+  roleOf: StageRoleResolver = legacyRoleOfKey,
 ): MonthDealTotals {
   const totals = emptyTotals()
 
   deals.forEach((deal) => {
-    if (!isRevenueDeal(deal, 'money')) return
+    if (!isRevenueDeal(deal, 'money', roleOf)) return
 
     if (deal.customer_type === 'contractor') {
       const dealPayments = paymentsByDeal.get(deal.id ?? '') ?? []

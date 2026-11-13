@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { requireAIDirectorAuth } from '@/lib/middleware/ai-director-auth'
+import { loadStageContext } from '@/lib/deals/stage-store'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -58,7 +59,10 @@ export async function GET(req: NextRequest) {
     // - status=open: treat as "not completed"
     if (stageOrStatus) {
       if (stageOrStatus === 'open') {
-        query = query.neq('stage', 'done')
+        // "Completed" columns by role; a firm without one has no completed deals to exclude.
+        const { keysWithRole } = await loadStageContext(supabase, companyId)
+        const completedKeys = keysWithRole(['completed'])
+        if (completedKeys.length > 0) query = query.not('stage', 'in', `(${completedKeys.join(',')})`)
       } else {
         query = query.eq('stage', stageOrStatus)
       }

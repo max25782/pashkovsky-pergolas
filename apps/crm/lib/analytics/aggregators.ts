@@ -9,6 +9,7 @@ import { createClient } from '@supabase/supabase-js'
 import type { AnalyticsPeriod } from '@/lib/ai/analyticsTypes'
 import { DEFAULT_TIMEZONE } from '@/lib/ai/analyticsTypes'
 import { buildPaymentsByDeal, sumMoneyInDateRange, type RevenueDeal } from '@/lib/deals/revenue'
+import { loadStageContext } from '@/lib/deals/stage-store'
 
 // ============================================================================
 // Supabase Client Setup
@@ -272,10 +273,14 @@ export async function getDealsSummary(
 
   const dealsData = deals || []
 
+  // "Done" means the firm's column with the completed role, whatever it is called.
+  const { roleOf } = await loadStageContext(supabase, companyId)
+  const isCompleted = (stage: string | null | undefined) => roleOf(stage) === 'completed'
+
   // Calculate totals
   const totalDeals = dealsData.length
-  const openDeals = dealsData.filter(d => d.stage !== 'done').length
-  const wonDeals = dealsData.filter(d => d.stage === 'done').length
+  const openDeals = dealsData.filter(d => !isCompleted(d.stage)).length
+  const wonDeals = dealsData.filter(d => isCompleted(d.stage)).length
   const lostDeals = 0 // No "lost" stage in current schema - deals are either done or open
 
   // Stage breakdown
@@ -286,7 +291,7 @@ export async function getDealsSummary(
     approved: dealsData.filter(d => d.stage === 'approved').length,
     production: dealsData.filter(d => d.stage === 'production').length,
     install: dealsData.filter(d => d.stage === 'install').length,
-    done: dealsData.filter(d => d.stage === 'done').length,
+    done: wonDeals,
   }
 
   // Average deal value (from price field)
@@ -302,7 +307,7 @@ export async function getDealsSummary(
   const winRate = totalDeals > 0 ? Math.round((wonDeals / totalDeals) * 100) : 0
 
   // Average days to close (for won deals)
-  const wonDealsWithDates = dealsData.filter(d => d.stage === 'done' && d.created_at && d.updated_at)
+  const wonDealsWithDates = dealsData.filter(d => isCompleted(d.stage) && d.created_at && d.updated_at)
   const daysToClose = wonDealsWithDates
     .map(d => getDaysDifference(d.created_at, d.updated_at))
     .filter((d): d is number => d !== null)
@@ -316,7 +321,7 @@ export async function getDealsSummary(
   
   // Stalled deals (in same stage for >30 days)
   const stalledDeals = dealsData.filter(d => {
-    if (!d.updated_at || d.stage === 'done') return false
+    if (!d.updated_at || isCompleted(d.stage)) return false
     const daysSinceUpdate = getDaysDifference(d.updated_at, new Date().toISOString())
     return daysSinceUpdate !== null && daysSinceUpdate > 30
   })
@@ -374,10 +379,14 @@ export async function getFinanceSummary(
 
   const dealCols = 'id, price, my_cost, stage, customer_type, installation_date'
 
+  // Completed columns by role; without a company the legacy aluminium key applies.
+  const stageContext = companyId ? await loadStageContext(supabase, companyId) : null
+  const completedKeys = stageContext ? stageContext.keysWithRole(['completed']) : ['done']
+
   let doneQuery = supabase
     .from('deals')
     .select(dealCols)
-    .eq('stage', 'done')
+    .in('stage', completedKeys)
     .not('installation_date', 'is', null)
     .gte('installation_date', from)
     .lte('installation_date', to)
@@ -437,6 +446,7 @@ export async function getFinanceSummary(
     buildPaymentsByDeal(payments ?? []),
     from,
     to,
+    stageContext?.roleOf,
   )
   const revenue = money.revenue
 

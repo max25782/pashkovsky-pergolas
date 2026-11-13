@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js'
 import { getCompanyId, getCompanyIdAsync } from '@/lib/middleware/company-context'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { requirePermissionAsync } from '@/lib/middleware/auth'
+import { loadCompanyStages } from '@/lib/deals/stage-store'
+import { firstStageKey } from '@/lib/deals/stages'
 
 function env(name: string): string {
   const v = process.env[name]
@@ -140,12 +142,13 @@ export async function PATCH(req: NextRequest) {
   // If status changed to 'won', automatically create a deal
   if (isChangingToWon && data) {
     try {
-      // Create deal from lead
+      // Create deal from lead, in the firm's first column (aluminium: "new")
+      const { stages: firmStages } = await loadCompanyStages(supabase, companyId)
       const dealData = {
         lead_id: data.id,
         customer_name: data.name,
         customer_phone: data.phone,
-        stage: 'new',
+        stage: firstStageKey(firmStages),
         notes: `Создано из лида #${data.id}\n${data.notes || ''}`,
       }
       

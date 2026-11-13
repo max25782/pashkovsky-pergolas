@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { requireAIDirectorAuth } from '@/lib/middleware/ai-director-auth'
 import { sumRevenueDealTotals } from '@/lib/deals/revenue'
+import { loadStageContext } from '@/lib/deals/stage-store'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -70,6 +71,9 @@ export async function GET(req: NextRequest) {
       }
     }
     
+    // The firm's columns: "completed" and revenue stages follow roles, not names.
+    const { roleOf } = await loadStageContext(supabase, companyId)
+
     // Fetch deals (use 'stage' not 'status')
     const { data: deals } = await supabase
       .from('deals')
@@ -102,7 +106,7 @@ export async function GET(req: NextRequest) {
     
     // Calculate REVENUE from completed deals (fallback if no approved offers)
     const revenueFromDeals = deals
-      ?.filter(d => d.stage === 'done')
+      ?.filter(d => roleOf(d.stage) === 'completed')
       .reduce((sum, deal) => {
         return sum + (parseFloat(deal.price?.toString() || '0') || 0)
       }, 0) || 0
@@ -111,7 +115,7 @@ export async function GET(req: NextRequest) {
     const totalRevenue = revenueFromOffers > 0 ? revenueFromOffers : revenueFromDeals
     
     // Pipeline value (mode `all`): signed-offer and later. Drafts stay out.
-    const pipeline = sumRevenueDealTotals(deals ?? [], 'all')
+    const pipeline = sumRevenueDealTotals(deals ?? [], 'all', roleOf)
 
     // Aggregate deals data
     const dealsData = {
@@ -119,7 +123,7 @@ export async function GET(req: NextRequest) {
       byStage: {} as Record<string, number>,
       totalValue: pipeline.revenue,
       avgValue: 0,
-      completed: deals?.filter(d => d.stage === 'done').length || 0,
+      completed: deals?.filter(d => roleOf(d.stage) === 'completed').length || 0,
       totalCost: pipeline.expenses,
     }
     

@@ -16,6 +16,8 @@ import {
   type SyncedPaymentRow,
 } from "@/lib/tazrim/crm-payments";
 import { loadCompanyVatPercent } from "@/lib/deals/company-vat";
+import { loadStageContext } from "@/lib/deals/stage-store";
+import { FORECAST_DAYS_BY_ROLE, stageLabel, type StageRole } from "@/lib/deals/stages";
 import { laborByDeal, loadCompanyShifts, loadWorkerCostBook } from "@/lib/workers/load-cost-book";
 import { buildMonthPensionReport } from "@/lib/workers/pension-report";
 import {
@@ -38,7 +40,9 @@ import {
   type CrmWorkerShift,
 } from "@/lib/tazrim/payroll";
 
-const STAGE_LABELS: Record<string, string> = {
+// Hebrew names of the built-in aluminium columns, used in the row notes when the
+// firm has not given a column a name of its own.
+const LEGACY_STAGE_LABELS: Record<string, string> = {
   material_ordered: "חומר הוזמן",
   approved: "חומר הגיע למפעל",
   production: "בייצור",
@@ -46,14 +50,14 @@ const STAGE_LABELS: Record<string, string> = {
   done: "הושלם",
 };
 
-const STAGE_FORECAST_DAYS: Record<string, number> = {
-  material_ordered: 60,
-  approved: 30,
-  production: 21,
-  install: 14,
-};
-
-const TRACKED_STAGES = Object.keys(STAGE_FORECAST_DAYS).concat("done");
+// Tazrim follows what a column means (its role), not what it is called or its key.
+const TRACKED_ROLES: readonly StageRole[] = [
+  "material_ordered",
+  "material_arrived",
+  "in_production",
+  "installation",
+  "completed",
+];
 
 type DealPayment = { id: string; deal_id: string; amount: number; paid_at: string };
 
@@ -105,6 +109,16 @@ export async function syncAluminCRM() {
   } = await requireTazrimActionContext();
   const crm = createCrmServiceClient();
 
+  const stageContext = await loadStageContext(crm, tazrimCompanyId);
+  const { roleOf, stages: firmStages } = stageContext;
+  const trackedStages = stageContext.keysWithRole(TRACKED_ROLES);
+  const completedStages = stageContext.keysWithRole(["completed"]);
+  const stageNameOf = (key: string | null | undefined): string => {
+    const stage = firmStages.find((s) => s.key === key);
+    if (!stage) return key ?? "—";
+    return stageLabel(stage, "he", (k) => LEGACY_STAGE_LABELS[k]);
+  };
+
   // CRM payments carry no account, so they land on the company default account.
   // No default (or a non-ILS payment) -> needs_account, outside every balance.
   const { data: defaultAccount, error: defaultAccountError } = await supabase
@@ -127,7 +141,7 @@ export async function syncAluminCRM() {
     .eq("company_id", tazrimCompanyId)
     .not("price", "is", null)
     .gt("price", 0)
-    .in("stage", TRACKED_STAGES);
+    .in("stage", trackedStages);
 
   if (error || !deals) {
     throw new Error(`Не удалось прочитать сделки из AluminCRM: ${error?.message ?? "нет данных"}`);
@@ -152,7 +166,7 @@ export async function syncAluminCRM() {
   }
 
   const doneDealIds = deals
-    .filter((d) => d.stage === "done" && !paymentsByDeal.has(d.id as string))
+    .filter((d) => roleOf(d.stage) === "completed" && !paymentsByDeal.has(d.id as string))
     .map((d) => d.id);
 
   const doneDates = new Map<string, string>();
@@ -170,7 +184,11 @@ export async function syncAluminCRM() {
 
     for (const log of logs ?? []) {
       const changes = log.changes as Record<string, unknown> | null;
-      if (changes?.stage === "done" && !doneDates.has(log.resource_id as string)) {
+      if (
+        typeof changes?.stage === "string" &&
+        completedStages.includes(changes.stage) &&
+        !doneDates.has(log.resource_id as string)
+      ) {
         doneDates.set(log.resource_id as string, (log.created_at as string).slice(0, 10));
       }
     }
@@ -183,7 +201,7 @@ export async function syncAluminCRM() {
   const fallbackDates = new Map<string, string>();
 
   for (const deal of deals) {
-    const stageLabel = STAGE_LABELS[deal.stage ?? ""] ?? deal.stage ?? "—";
+    const dealStageName = stageNameOf(deal.stage);
     const dealPayments = paymentsByDeal.get(deal.id as string);
 
     if (dealPayments && dealPayments.length > 0) {
@@ -199,7 +217,7 @@ export async function syncAluminCRM() {
             payment,
             index: idx,
             total: dealPayments.length,
-            stageLabel,
+            stageLabel: dealStageName,
             today: todayDateStr,
             defaultAccountId,
           })
@@ -208,10 +226,10 @@ export async function syncAluminCRM() {
       continue;
     }
 
-    const isDone = deal.stage === "done";
+    const isDone = roleOf(deal.stage) === "completed";
     const due_date = isDone
       ? doneDates.get(deal.id as string) ?? (deal.deal_date ? new Date(deal.deal_date).toISOString().slice(0, 10) : todayDateStr)
-      : addDays(today, STAGE_FORECAST_DAYS[deal.stage as string] ?? 30);
+      : addDays(today, FORECAST_DAYS_BY_ROLE[roleOf(deal.stage) as StageRole] ?? 30);
 
     fallbackDates.set(deal.id as string, due_date);
     rows.push({
@@ -225,7 +243,7 @@ export async function syncAluminCRM() {
       source: isDone ? "alumincrm" : "alumincrm_forecast",
       external_source: "alumincrm",
       external_id: deal.id as string,
-      notes: `${deal.customer_name ?? "לקוח"} · ${stageLabel}`,
+      notes: `${deal.customer_name ?? "לקוח"} · ${dealStageName}`,
       ...NO_ACCOUNT,
     });
   }

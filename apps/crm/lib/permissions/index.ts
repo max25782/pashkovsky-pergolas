@@ -46,6 +46,8 @@ export type Permission =
   // Tazrim (cash flow). Also requires the Pashkovsky company, see lib/tazrim/access.ts
   | 'tazrim:view'
   | 'tazrim:edit'
+  // Kanban columns of the firm (everyone who sees deals sees the columns)
+  | 'deal_stages:edit'
 
 /**
  * Permission matrix for each role
@@ -100,6 +102,9 @@ export const PERMISSIONS: Record<Permission, Role[]> = {
   // Tazrim
   'tazrim:view': ['owner', 'admin'],
   'tazrim:edit': ['owner', 'admin'],
+
+  // Kanban columns: owner and admin edit; manager and salesperson only see them
+  'deal_stages:edit': ['owner', 'admin'],
 }
 
 /**

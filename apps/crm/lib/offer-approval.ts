@@ -12,11 +12,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { trySyncDealPrice } from '@/lib/deals/deal-price-sync'
 import { escapeHtml, notifyRecipients, resolveCompanyRecipients } from '@/lib/company-notify'
+import { loadCompanyStages } from '@/lib/deals/stage-store'
+import { approvalTargetStage, DEFAULT_STAGES, type DealStageDef } from '@/lib/deals/stages'
 
+/** The aluminium key of the "signed" column (kept for existing callers and tests). */
 export const OFFER_APPROVED_STAGE = 'offer_approved'
 
-/** Stages a signature may move a deal out of. Later stages are never moved back. */
-const STAGES_BEFORE_OFFER_APPROVED = new Set(['new', 'measure', 'offer'])
 const QUICK_OFFER_SOURCES = new Set(['quick_offer', 'quick_offer_saved'])
 
 export interface ApprovedOffer {
@@ -44,8 +45,9 @@ export interface DealForApproval {
 }
 
 /**
- * Column patch after the customer signs. Any deal still before "offer approved"
- * moves to that stage. Quick-offer deals are also un-hidden onto the board.
+ * Column patch after the customer signs. Any deal still before the firm's
+ * "signed" column moves to it (aluminium: "offer approved"); later stages are
+ * never moved back. Quick-offer deals are also un-hidden onto the board.
  * Returns null when there is nothing to write.
  */
 export function buildApprovalDealPatch(
@@ -53,14 +55,15 @@ export function buildApprovalDealPatch(
   offer: Pick<ApprovedOffer, 'final_price'>,
   contact: ApprovalContact,
   nowIso: string,
+  stages: readonly DealStageDef[] = DEFAULT_STAGES,
 ): Record<string, unknown> | null {
   const isQuickOffer = !!deal.source && QUICK_OFFER_SOURCES.has(deal.source)
   const patch: Record<string, unknown> = {}
 
   if (isQuickOffer) patch.source = 'quick_offer_saved'
 
-  const stage = deal.stage ?? 'new'
-  if (STAGES_BEFORE_OFFER_APPROVED.has(stage)) patch.stage = OFFER_APPROVED_STAGE
+  const targetStage = approvalTargetStage(deal.stage, stages)
+  if (targetStage) patch.stage = targetStage
 
   if (isQuickOffer) {
     const existingPrice = Number(deal.price)
@@ -158,7 +161,8 @@ export async function handleOfferApproved(
     } else if (deal) {
       const d = deal as DealForApproval
       creatorId = d.created_by
-      const patch = buildApprovalDealPatch(d, offer, contact, new Date().toISOString())
+      const { stages } = await loadCompanyStages(supabase, offer.company_id)
+      const patch = buildApprovalDealPatch(d, offer, contact, new Date().toISOString(), stages)
       if (patch) {
         const { data: updated, error: updateError } = await supabase
           .from('deals')

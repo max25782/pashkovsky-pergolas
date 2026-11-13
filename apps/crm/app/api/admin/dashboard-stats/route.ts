@@ -9,6 +9,8 @@ import { createClient } from '@supabase/supabase-js'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { requireCompanyAccess } from '@/lib/auth'
 import { assertUserHasFeature } from '@/lib/subscription/require-feature-api'
+import { loadStageContext } from '@/lib/deals/stage-store'
+import { IN_PROGRESS_ROLES } from '@/lib/deals/stages'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -40,13 +42,17 @@ export async function GET(req: NextRequest) {
     const thirtyDaysAgo = new Date()
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-    // Active deals: only where material was ordered (material_ordered, approved, production, install)
+    // Active deals: the columns whose role says work is under way (aluminium: material_ordered,
+    // approved, production, install).
+    const { keysWithRole } = await loadStageContext(supabase, companyId)
+    const inProgressKeys = keysWithRole(IN_PROGRESS_ROLES)
+
     const [activeDealsRes, newLeadsRes, activeWorkersRes] = await Promise.all([
       supabase
         .from('deals')
         .select('*', { count: 'exact', head: true })
         .eq('company_id', companyId)
-        .in('stage', ['material_ordered', 'approved', 'production', 'install']),
+        .in('stage', inProgressKeys),
       supabase
         .from('leads')
         .select('*', { count: 'exact', head: true })

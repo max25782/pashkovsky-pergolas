@@ -10,6 +10,7 @@ import {
   resolveProductLinesForCreate,
 } from '@/lib/deals/deal-product-lines'
 import { manualPriceSource, readPriceSource, withPriceSource } from '@/lib/deals/deal-price-sync'
+import { loadStageContext } from '@/lib/deals/stage-store'
 
 function env(name: string): string {
   const v = process.env[name]
@@ -523,16 +524,20 @@ export async function PATCH(req: NextRequest) {
     }
   }
   
-  // When moving to completed: auto-set installation_date if empty (server time)
-  if (updates.stage === 'done') {
-    const { data: current } = await supabase
-      .from('deals')
-      .select('installation_date')
-      .eq('id', id)
-      .eq('company_id', companyId)
-      .single()
-    if (current?.installation_date == null) {
-      updates.installation_date = new Date().toISOString()
+  // When moving to a "completed" column: auto-set installation_date if empty (server time).
+  // A firm without such a column simply never triggers this.
+  if (typeof updates.stage === 'string') {
+    const { roleOf } = await loadStageContext(supabase, companyId)
+    if (roleOf(updates.stage) === 'completed') {
+      const { data: current } = await supabase
+        .from('deals')
+        .select('installation_date')
+        .eq('id', id)
+        .eq('company_id', companyId)
+        .single()
+      if (current?.installation_date == null) {
+        updates.installation_date = new Date().toISOString()
+      }
     }
   }
   

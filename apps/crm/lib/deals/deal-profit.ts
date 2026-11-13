@@ -13,6 +13,7 @@ import {
   computeDealFinance,
   type DealFinance,
 } from '@/lib/deals/deal-finance'
+import { legacyRoleOfKey, type StageRoleResolver } from '@/lib/deals/stages'
 import {
   getDealAttributionDate,
   isRevenueDeal,
@@ -101,10 +102,11 @@ export function aggregateMonthlyNetMetrics(
   mode: StatisticType,
   paymentsByDeal: PaymentsByDeal,
   context: DealFinanceContext,
+  roleOf: StageRoleResolver = legacyRoleOfKey,
 ): Map<string, NetMetrics> {
   const totals = new Map<string, NetMetrics>()
   for (const deal of deals) {
-    if (!isRevenueDeal(deal, mode)) continue
+    if (!isRevenueDeal(deal, mode, roleOf)) continue
     for (const [month, metrics] of dealNetMetricsByMonth(deal, mode, paymentsByDeal, context)) {
       totals.set(month, addMetrics(totals.get(month) ?? EMPTY_NET_METRICS, metrics))
     }
@@ -119,10 +121,11 @@ export function netMetricsForMonthByDeal(
   mode: StatisticType,
   paymentsByDeal: PaymentsByDeal,
   context: DealFinanceContext,
+  roleOf: StageRoleResolver = legacyRoleOfKey,
 ): Map<string, NetMetrics> {
   const rows = new Map<string, NetMetrics>()
   for (const deal of deals) {
-    if (!deal.id || !isRevenueDeal(deal, mode)) continue
+    if (!deal.id || !isRevenueDeal(deal, mode, roleOf)) continue
     const metrics = dealNetMetricsByMonth(deal, mode, paymentsByDeal, context).get(month)
     if (metrics) rows.set(deal.id, metrics)
   }
