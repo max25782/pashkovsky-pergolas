@@ -18,18 +18,25 @@
 --                                                   have been typed without VAT
 --                           'suspect_negative_margin' materials cost (with VAT)
 --                                                   is above the price
+--                           'unverified_no_offer'   priced deal with no offer, so
+--                                                   whether the price includes
+--                                                   VAT cannot be checked from
+--                                                   data (the price is assumed
+--                                                   to include VAT, as entered)
 --                           'reviewed_ok'           a person checked it, fine
 --                           'reviewed_fixed'        a person corrected the price
 --        vat_review_note    free text for the reviewer
---   3. Flags the suspicious deals by the two rules above. A flagged deal is
---      recalculated only by hand after review: the flag changes no money value.
+--   3. Flags deals by the three rules above. A flagged deal is recalculated only
+--      by hand after review: the flag changes no price, cost or stage. The
+--      unverified_no_offer flag is only a mark; those prices are left as they are.
 --
 -- Report of 2026-11-13 on production (company 6998295e-...), run before this
 -- file was written: 225 deals, 137 with price 0 (all of them also materials 0),
 -- 150 with materials 0, 0 with materials above price, 0 with a price equal to an
 -- offer's pre-VAT total, 64 priced deals with no offer (VAT status of the price
--- cannot be verified from data). So steps 3 flags nothing today; it is here so
--- the same file is safe to run later or on other tenants.
+-- cannot be verified from data). So step 3 flags only those 64 as
+-- unverified_no_offer today (the two suspect rules match nothing); the file is
+-- safe to run later or on other tenants.
 
 BEGIN;
 
@@ -55,6 +62,7 @@ ALTER TABLE public.deals
     OR vat_review_status IN (
       'suspect_net_price',
       'suspect_negative_margin',
+      'unverified_no_offer',
       'reviewed_ok',
       'reviewed_fixed'
     )
@@ -80,5 +88,18 @@ SET vat_review_status = 'suspect_negative_margin',
 WHERE d.vat_review_status IS NULL
   AND coalesce(d.price, 0) > 0
   AND coalesce(d.my_cost, 0) > d.price;
+
+-- Priced deals with no offer at all. Runs last so the stronger suspect flags win.
+-- Mark only: the price is not touched.
+UPDATE public.deals d
+SET vat_review_status = 'unverified_no_offer',
+    vat_review_note = 'No offer to compare with; price assumed to include VAT as entered.'
+WHERE d.vat_review_status IS NULL
+  AND coalesce(d.price, 0) > 0
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.offers o
+    WHERE o.deal_id::text = d.id::text
+  );
 
 COMMIT;
