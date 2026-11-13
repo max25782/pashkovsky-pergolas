@@ -16,7 +16,7 @@ import { useCRMTranslations } from './useCRMTranslations'
 import { useDealActions } from './hooks/useDealActions'
 import { useDealDragDrop } from './hooks/useDealDragDrop'
 import { useDealPaymentsMap } from './hooks/useDealPaymentsMap'
-import { useDealLaborMap } from './hooks/useDealLaborMap'
+import { useDealFinanceContext } from './hooks/useDealFinanceContext'
 import { useDealMaterialOrdersTotalsMap } from './hooks/useDealMaterialOrdersTotalsMap'
 import { ModuleEmptyState } from '@/components/onboarding'
 
@@ -89,7 +89,8 @@ export function DealsTable() {
 
   const dealIds = deals.map((d) => d.id)
   const paymentsMap = useDealPaymentsMap(dealIds)
-  const laborMap = useDealLaborMap(dealIds)
+  // One request for the VAT rate and every deal's worker cost (with the employer coefficient).
+  const financeContext = useDealFinanceContext()
   const materialOrdersMap = useDealMaterialOrdersTotalsMap(dealIds)
 
   function handleScopeChange(next: DealsScope) {
@@ -166,7 +167,8 @@ export function DealsTable() {
           deals={deals}
           memberNames={teamNames}
           paymentsMap={paymentsMap}
-          laborMap={laborMap}
+          laborMap={financeContext.laborByDeal}
+          vatPercent={financeContext.isReady ? financeContext.vatPercent : undefined}
           materialOrdersMap={materialOrdersMap}
           onDragOver={handleDragOver}
           onDrop={handleDrop}

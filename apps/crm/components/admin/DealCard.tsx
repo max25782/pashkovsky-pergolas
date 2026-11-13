@@ -2,6 +2,7 @@ import type { Deal } from './deal-types'
 import type { DealMaterialOrdersSummary } from './hooks/useDealMaterialOrdersTotalsMap'
 import { useCRMTranslations } from './useCRMTranslations'
 import { PhoneActions } from './PhoneActions'
+import { computeDealFinance } from '@/lib/deals/deal-finance'
 
 interface DealCardProps {
   deal: Deal
@@ -10,6 +11,11 @@ interface DealCardProps {
   laborCost?: number
   /** Sum of material_orders.total_price (non-cancelled), batched on board load. */
   materialOrdersSummary?: DealMaterialOrdersSummary
+  /**
+   * Company VAT rate. VAT payable and net profit are shown only when it is
+   * known (undefined while the finance context is still loading).
+   */
+  vatPercent?: number
   /** Resolved display name for deal.created_by (undefined while unresolved). */
   createdByName?: string
   onDragStart: () => void
@@ -23,6 +29,7 @@ export function DealCard({
   paidToDate,
   laborCost,
   materialOrdersSummary,
+  vatPercent,
   createdByName,
   onDragStart, 
   onClick,
@@ -38,6 +45,10 @@ export function DealCard({
   const priceNum =
     deal.price != null && Number.isFinite(Number(deal.price)) ? Number(deal.price) : null
   const estimatedProfit = priceNum != null ? priceNum - totalInternalCosts : null
+  const vatFinance =
+    priceNum != null && vatPercent !== undefined
+      ? computeDealFinance({ price: priceNum, materials: material, labor, vatPercent })
+      : null
   const showCostBreakdown =
     deal.price != null || material > 0 || labor > 0 || ordersCount > 0
 
@@ -121,6 +132,23 @@ export function DealCard({
               >
                 {t.deals.kanbanEstimatedProfit}: {formatCurrency(estimatedProfit)}
               </div>
+            )}
+            {vatFinance != null && (
+              <>
+                <div className="font-semibold text-amber-100">
+                  {vatFinance.vatPayable < 0 ? t.deals.vatRefundDue : t.deals.vatPayable}:{' '}
+                  {formatCurrency(vatFinance.vatPayable)}
+                </div>
+                <div
+                  className={
+                    vatFinance.netProfit >= 0
+                      ? 'font-semibold text-emerald-300'
+                      : 'font-semibold text-rose-300'
+                  }
+                >
+                  {t.deals.netProfitExVat}: {formatCurrency(vatFinance.netProfit)}
+                </div>
+              </>
             )}
             <p className="text-[11px] text-white/35 pt-1 leading-snug">{t.deals.kanbanTapForDetails}</p>
           </div>

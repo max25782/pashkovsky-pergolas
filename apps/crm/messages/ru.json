@@ -517,7 +517,10 @@
     "quickOfferBadge": "Быстрое предложение",
     "quickOfferHint": "Быстрые предложения, ещё не сохранённые в CRM. Чтобы перенести предложение на доску, сохраните его в CRM на экране быстрого предложения.",
     "createdBy": "Создал",
-    "createdByUnknown": "неизвестно"
+    "createdByUnknown": "неизвестно",
+    "vatPayable": "НДС к уплате",
+    "vatRefundDue": "НДС к возмещению",
+    "netProfitExVat": "Чистая прибыль без НДС"
   },
   "leads": {
     "title": "Лиды",
@@ -733,7 +736,13 @@
     "chartTotalExpenses": "Итого расходы",
     "chartTotalProfit": "Итого прибыль",
     "chartDealCountLabel": "Кол-во сделок",
-    "noName": "Без имени"
+    "noName": "Без имени",
+    "vatPayable": "НДС к уплате",
+    "netProfit": "Чистая прибыль без НДС",
+    "totalVatPayable": "Всего НДС к уплате",
+    "totalNetProfit": "Всего чистая прибыль без НДС",
+    "vatRefundNote": "Отрицательный НДС означает возмещение.",
+    "chartNetProfitByDeal": "Чистая прибыль по сделке (без НДС)"
   },
   "reports": {
     "weekly": {

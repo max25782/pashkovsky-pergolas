@@ -15,6 +15,7 @@ import {
 } from 'recharts'
 import type { Deal } from './deal-types'
 import { isRevenueDeal, type StatisticType } from './deal-utils'
+import { rankDealsByNetProfit, type DealFinanceContext } from '@/lib/deals/deal-profit'
 
 interface DealsChartsLabels {
   revenueVsExpensesTop10: string
@@ -33,6 +34,12 @@ interface DealsChartsProps {
   deals: Deal[]
   statisticType?: StatisticType
   labels: DealsChartsLabels
+  /**
+   * VAT rate and worker cost per deal. When given, the profit ranking is by
+   * net profit (price, materials without VAT, minus workers); without it the
+   * chart keeps the old price-minus-materials figure.
+   */
+  financeContext?: DealFinanceContext
 }
 
 const COLORS = {
@@ -42,7 +49,7 @@ const COLORS = {
   profitNegative: '#ef4444', // red
 }
 
-export function DealsCharts({ deals, statisticType, labels }: DealsChartsProps) {
+export function DealsCharts({ deals, statisticType, labels, financeContext }: DealsChartsProps) {
   const chartDeals = statisticType
     ? deals.filter((deal) => isRevenueDeal(deal, statisticType))
     : deals
@@ -81,6 +88,18 @@ export function DealsCharts({ deals, statisticType, labels }: DealsChartsProps) 
     })
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 10) // Top 10 deals
+
+  // Profit ranking: most profitable projects by net profit when VAT context is known.
+  const profitChartData = financeContext
+    ? rankDealsByNetProfit(chartDeals, financeContext, 10).map(({ deal, finance }) => {
+        const customerName = deal.customer_name || labels.noName
+        return {
+          name: customerName.length > 15 ? customerName.substring(0, 15) + '...' : customerName,
+          fullName: customerName,
+          profit: finance.netProfit,
+        }
+      })
+    : chartData
 
   // Summary data for pie chart
   const summaryData = [
@@ -136,7 +155,7 @@ export function DealsCharts({ deals, statisticType, labels }: DealsChartsProps) 
       <div className="bg-white/5 border border-white/10 rounded-lg p-6">
         <h3 className="text-lg font-bold mb-4 text-right">{labels.profitByDeal}</h3>
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={chartData} layout="vertical">
+          <BarChart data={profitChartData} layout="vertical">
             <CartesianGrid strokeDasharray="3 3" stroke="#ffffff20" />
             <XAxis type="number" tick={{ fill: '#ffffff80' }} />
             <YAxis
@@ -155,7 +174,7 @@ export function DealsCharts({ deals, statisticType, labels }: DealsChartsProps) 
               formatter={formatTooltipValue}
             />
             <Bar dataKey="profit" name={labels.profit}>
-              {chartData.map((entry, index) => (
+              {profitChartData.map((entry, index) => (
                 <Cell
                   key={`cell-${index}`}
                   fill={entry.profit >= 0 ? COLORS.profit : COLORS.profitNegative}

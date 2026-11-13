@@ -9,6 +9,7 @@ interface KanbanColumnProps {
   deals: Deal[]
   paymentsMap?: Record<string, number>
   laborMap?: Record<string, number>
+  vatPercent?: number
   materialOrdersMap?: Record<string, DealMaterialOrdersSummary>
   memberNames?: Record<string, string>
   onDragOver: (e: React.DragEvent) => void
@@ -22,6 +23,7 @@ export function KanbanColumn({
   deals,
   paymentsMap = {},
   laborMap = {},
+  vatPercent,
   materialOrdersMap = {},
   memberNames = {},
   onDragOver,
@@ -52,6 +54,7 @@ export function KanbanColumn({
               deal={deal}
               paidToDate={paymentsMap[deal.id]}
               laborCost={laborMap[deal.id]}
+              vatPercent={vatPercent}
               materialOrdersSummary={materialOrdersMap[deal.id]}
               createdByName={deal.created_by ? memberNames[deal.created_by] : undefined}
               onDragStart={() => onDealDragStart(deal)}

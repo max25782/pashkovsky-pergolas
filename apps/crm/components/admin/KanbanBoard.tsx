@@ -8,6 +8,7 @@ interface KanbanBoardProps {
   deals: Deal[]
   paymentsMap?: Record<string, number>
   laborMap?: Record<string, number>
+  vatPercent?: number
   materialOrdersMap?: Record<string, DealMaterialOrdersSummary>
   /** Display names keyed by user id (for deals.created_by). */
   memberNames?: Record<string, string>
@@ -21,6 +22,7 @@ export function KanbanBoard({
   deals,
   paymentsMap = {},
   laborMap = {},
+  vatPercent,
   materialOrdersMap = {},
   memberNames = {},
   onDragOver,
@@ -52,6 +54,7 @@ export function KanbanBoard({
               deals={stageDeals}
               paymentsMap={paymentsMap}
               laborMap={laborMap}
+              vatPercent={vatPercent}
               materialOrdersMap={materialOrdersMap}
               memberNames={memberNames}
               onDragOver={onDragOver}

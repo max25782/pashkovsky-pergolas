@@ -517,7 +517,10 @@
     "quickOfferBadge": "Brza ponuda",
     "quickOfferHint": "Brze ponude koje još nisu sačuvane u CRM-u. Da biste ponudu prebacili na tablu, sačuvajte je u CRM-u sa ekrana brze ponude.",
     "createdBy": "Kreirao",
-    "createdByUnknown": "nepoznato"
+    "createdByUnknown": "nepoznato",
+    "vatPayable": "PDV za uplatu",
+    "vatRefundDue": "PDV za povraćaj",
+    "netProfitExVat": "Neto profit bez PDV-a"
   },
   "leads": {
     "title": "Kontakti",
@@ -733,7 +736,13 @@
     "chartTotalExpenses": "Ukupni rashodi",
     "chartTotalProfit": "Ukupni profit",
     "chartDealCountLabel": "Broj poslova",
-    "noName": "Bez naziva"
+    "noName": "Bez naziva",
+    "vatPayable": "PDV za uplatu",
+    "netProfit": "Neto profit bez PDV-a",
+    "totalVatPayable": "Ukupno PDV za uplatu",
+    "totalNetProfit": "Ukupan neto profit bez PDV-a",
+    "vatRefundNote": "Negativan PDV je povraćaj.",
+    "chartNetProfitByDeal": "Neto profit po poslu (bez PDV-a)"
   },
   "reports": {
     "weekly": {

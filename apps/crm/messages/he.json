@@ -517,7 +517,10 @@
     "quickOfferBadge": "הצעה מהירה",
     "quickOfferHint": "הצעות מחיר מהירות שטרם נשמרו ב-CRM. כדי להעביר הצעה ללוח, שמור אותה ב-CRM ממסך ההצעה המהירה.",
     "createdBy": "נוצר על ידי",
-    "createdByUnknown": "לא ידוע"
+    "createdByUnknown": "לא ידוע",
+    "vatPayable": "מע\"מ לתשלום",
+    "vatRefundDue": "מע\"מ להחזר",
+    "netProfitExVat": "רווח נקי ללא מע\"מ"
   },
   "leads": {
     "title": "לידים",
@@ -733,7 +736,13 @@
     "chartTotalExpenses": "סה״כ הוצאות",
     "chartTotalProfit": "סה״כ רווח",
     "chartDealCountLabel": "מספר עסקאות",
-    "noName": "ללא שם"
+    "noName": "ללא שם",
+    "vatPayable": "מע\"מ לתשלום",
+    "netProfit": "רווח נקי ללא מע\"מ",
+    "totalVatPayable": "סה\"כ מע\"מ לתשלום",
+    "totalNetProfit": "סה\"כ רווח נקי ללא מע\"מ",
+    "vatRefundNote": "מע\"מ שלילי הוא החזר.",
+    "chartNetProfitByDeal": "רווח נקי לפי עסקה (ללא מע\"מ)"
   },
   "reports": {
     "weekly": {

@@ -16,6 +16,8 @@ import { useTranslations } from 'next-intl'
 import { LanguageSwitcher } from './LanguageSwitcher'
 import { authFetch } from '@/lib/api/auth-fetch'
 import { useLanguage } from '@/lib/language-context'
+import { useDealFinanceContext } from './hooks/useDealFinanceContext'
+import { aggregateMonthlyNetMetrics, sumNetMetrics } from '@/lib/deals/deal-profit'
 
 interface DealsStatisticsProps {
   deals: Deal[]
@@ -49,6 +51,17 @@ export function DealsStatistics({ deals, onDealClick }: DealsStatisticsProps) {
   }, [])
 
   const paymentsByDeal = useMemo(() => buildPaymentsByDeal(payments), [payments])
+
+  // VAT payable and net profit need the company VAT rate and worker cost per deal.
+  const financeContext = useDealFinanceContext()
+  const netByMonth = useMemo(
+    () =>
+      financeContext.isReady
+        ? aggregateMonthlyNetMetrics(deals, statisticType, paymentsByDeal, financeContext)
+        : null,
+    [deals, statisticType, paymentsByDeal, financeContext],
+  )
+  const netTotals = useMemo(() => (netByMonth ? sumNetMetrics(netByMonth.values()) : null), [netByMonth])
 
   const validDeals = useMemo(
     () => deals.filter((deal) => isRevenueDeal(deal, statisticType)),
@@ -137,6 +150,12 @@ export function DealsStatistics({ deals, onDealClick }: DealsStatisticsProps) {
                   <th className="p-3 text-right text-xs font-semibold text-white/70 uppercase">{t('revenue')}</th>
                   <th className="p-3 text-right text-xs font-semibold text-white/70 uppercase">{t('expenses')}</th>
                   <th className="p-3 text-right text-xs font-semibold text-white/70 uppercase">{t('profit')}</th>
+                  {netByMonth && (
+                    <>
+                      <th className="p-3 text-right text-xs font-semibold text-white/70 uppercase">{t('vatPayable')}</th>
+                      <th className="p-3 text-right text-xs font-semibold text-white/70 uppercase">{t('netProfit')}</th>
+                    </>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -163,6 +182,18 @@ export function DealsStatistics({ deals, onDealClick }: DealsStatisticsProps) {
                     }`}>
                       {formatCurrency(stat.profit)}
                     </td>
+                    {netByMonth && (
+                      <>
+                        <td className="p-3 text-right font-semibold text-amber-300">
+                          {formatCurrency(netByMonth.get(stat.month)?.vatPayable ?? 0)}
+                        </td>
+                        <td className={`p-3 text-right font-bold ${
+                          (netByMonth.get(stat.month)?.netProfit ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'
+                        }`}>
+                          {formatCurrency(netByMonth.get(stat.month)?.netProfit ?? 0)}
+                        </td>
+                      </>
+                    )}
                   </tr>
                 ))}
                 <tr className="border-t-2 border-white/20 bg-white/5 font-bold">
@@ -179,13 +210,25 @@ export function DealsStatistics({ deals, onDealClick }: DealsStatisticsProps) {
                   }`}>
                     {formatCurrency(totals.profit)}
                   </td>
+                  {netTotals && (
+                    <>
+                      <td className="p-3 text-right text-amber-300">{formatCurrency(netTotals.vatPayable)}</td>
+                      <td className={`p-3 text-right ${netTotals.netProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {formatCurrency(netTotals.netProfit)}
+                      </td>
+                    </>
+                  )}
                 </tr>
               </tbody>
             </table>
           </div>
 
+          {netTotals && (
+            <div className="mb-2 text-xs text-white/50">{t('vatRefundNote')}</div>
+          )}
+
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-4 mt-6">
             <div className="bg-green-500/20 border border-green-500/50 rounded-lg p-4">
               <div className="text-sm text-green-200 mb-1">{t('totalRevenue')}</div>
               <div className="text-2xl font-bold text-green-400">
@@ -212,6 +255,22 @@ export function DealsStatistics({ deals, onDealClick }: DealsStatisticsProps) {
                 {formatCurrency(totals.profit)}
               </div>
             </div>
+            {netTotals && (
+              <>
+                <div className="bg-amber-500/20 border border-amber-500/50 rounded-lg p-4">
+                  <div className="text-sm text-amber-200 mb-1">{t('totalVatPayable')}</div>
+                  <div className="text-2xl font-bold text-amber-300">{formatCurrency(netTotals.vatPayable)}</div>
+                </div>
+                <div className={`${
+                  netTotals.netProfit >= 0 ? 'bg-green-500/20 border-green-500/50' : 'bg-red-500/20 border-red-500/50'
+                } border rounded-lg p-4`}>
+                  <div className="text-sm text-white/70 mb-1">{t('totalNetProfit')}</div>
+                  <div className={`text-2xl font-bold ${netTotals.netProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {formatCurrency(netTotals.netProfit)}
+                  </div>
+                </div>
+              </>
+            )}
             <div className="bg-blue-500/20 border border-blue-500/50 rounded-lg p-4">
               <div className="text-sm text-blue-200 mb-1">{t('totalDeals')}</div>
               <div className="text-2xl font-bold text-blue-400">
@@ -238,9 +297,10 @@ export function DealsStatistics({ deals, onDealClick }: DealsStatisticsProps) {
           <DealsCharts
             deals={validDeals}
             statisticType={statisticType}
+            financeContext={financeContext.isReady ? financeContext : undefined}
             labels={{
               revenueVsExpensesTop10: t('chartRevenueVsExpensesTop10'),
-              profitByDeal: t('chartProfitByDeal'),
+              profitByDeal: financeContext.isReady ? t('chartNetProfitByDeal') : t('chartProfitByDeal'),
               revenueDistribution: t('chartRevenueDistribution'),
               revenue: t('revenue'),
               expenses: t('expenses'),
