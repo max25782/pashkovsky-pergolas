@@ -9,6 +9,7 @@ import {
   resolverFor,
   roleOfStage,
   stageLabel,
+  stagesForNewFirm,
   stagesFromTemplate,
   templateIdForIndustry,
   validateStageDrafts,
@@ -80,6 +81,14 @@ describe('templates', () => {
     expect(keys).not.toContain('offer_approved')
   })
 
+  it('a new aluminium firm gets every column named in all four languages (no reliance on messages)', () => {
+    for (const stage of stagesForNewFirm('aluminum')) {
+      expect(Object.keys(stage.labels ?? {}).sort()).toEqual(['en', 'he', 'ru', 'sr'])
+    }
+    // Pashkovsky's own template stays name-less so it keeps reading the translations.
+    expect(stagesFromTemplate('aluminum').every((s) => s.labels === null)).toBe(true)
+  })
+
   it('picks the template by industry; unknown industries keep the aluminium set', () => {
     expect(templateIdForIndustry('renovation')).toBe('repair')
     expect(templateIdForIndustry('construction')).toBe('construction')
@@ -137,6 +146,12 @@ describe('validateStageDrafts', () => {
   it('requires at least one active column', () => {
     const drafts = draftsFrom(existing).map((d) => ({ ...d, isActive: false }))
     expect(validateStageDrafts({ drafts, existing, dealCounts: noDeals }).errors).toContain('at_least_one_active_stage')
+  })
+
+  it('does not ask a built-in aluminium column for a stored name (it has a translated default)', () => {
+    const al = stagesFromTemplate('aluminum')
+    const drafts: StageDraft[] = al.map((s) => ({ key: s.key, role: s.role, color: s.color, isActive: true }))
+    expect(validateStageDrafts({ drafts, existing: al, dealCounts: {} }).errors).toEqual([])
   })
 
   it('requires a name and a valid color', () => {

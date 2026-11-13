@@ -1,6 +1,6 @@
 import type { Deal } from './deal-types'
 import type { DealMaterialOrdersSummary } from './hooks/useDealMaterialOrdersTotalsMap'
-import { getStages } from './deal-types'
+import { useDealStages } from './hooks/useDealStages'
 import { KanbanColumn } from './KanbanColumn'
 import { useCRMTranslations } from './useCRMTranslations'
 
@@ -30,15 +30,11 @@ export function KanbanBoard({
   onDealDragStart,
   onDealClick
 }: KanbanBoardProps) {
-  const t = useCRMTranslations()
-  const stages = getStages(t.deals)
-  
+  const { stages, columnOf } = useDealStages()
+
   function getDealsByStage(stage: string) {
-    return deals.filter(deal => {
-      // Нормализуем stage: если null, undefined или пустая строка, используем 'new'
-      const dealStage = deal.stage || 'new'
-      return dealStage === stage
-    })
+    // A deal without a stage, or in a column the firm no longer shows, appears in the first column.
+    return deals.filter(deal => columnOf(deal.stage) === stage)
   }
   
 

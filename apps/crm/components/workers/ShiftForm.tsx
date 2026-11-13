@@ -5,6 +5,7 @@ import { Save, X } from 'lucide-react'
 import type { WorkerShiftDraft, WorkerShift, WorkerShiftType } from '@/types/workers'
 import { authFetch } from '@/lib/api/auth-fetch'
 import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
+import { useDealStages } from '@/components/admin/hooks/useDealStages'
 
 const TIME_PRESETS = [
   { label: '07:00–16:00', start: '07:00', end: '16:00' },
@@ -40,6 +41,7 @@ export function ShiftForm({
   onCopyYesterday,
 }: ShiftFormProps) {
   const t = useCRMTranslations()
+  const { roleOf } = useDealStages()
   const today = new Date().toISOString().split('T')[0]
   const [deals, setDeals] = useState<DealOption[]>([])
   const [dealsLoading, setDealsLoading] = useState(false)
@@ -108,7 +110,8 @@ export function ShiftForm({
     }
   }, [editingShift, initialData])
 
-  const openDeals = deals.filter((d) => d.stage !== 'done')
+  // Open = not in the firm's "completed" column.
+  const openDeals = deals.filter((d) => roleOf(d.stage) !== 'completed')
   const filteredDeals = dealSearch
     ? openDeals.filter(
         (d) =>

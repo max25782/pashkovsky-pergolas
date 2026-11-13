@@ -4,6 +4,13 @@ import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import {
+  RegistrationStagesStep,
+  stageRowsValid,
+  stageStepErrorText,
+} from '@/components/register/RegistrationStagesStep'
+import { draftsFromRows, rowsFromStages, type EditorRow } from '@/lib/deals/stage-editor'
+import { stagesForNewFirm, templateIdForIndustry } from '@/lib/deals/stages'
 
 function RegisterPageContent() {
   const router = useRouter()
@@ -11,6 +18,10 @@ function RegisterPageContent() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  // Step 1: account and company. Step 2: which stages the deals kanban starts with.
+  const [step, setStep] = useState<1 | 2>(1)
+  const [stageRows, setStageRows] = useState<EditorRow[]>([])
+  const [stageError, setStageError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -114,6 +125,24 @@ function RegisterPageContent() {
       return
     }
 
+    if (step === 1) {
+      // Offer the template of the chosen industry; it can be accepted, edited or cleared.
+      if (stageRows.length === 0) {
+        setStageRows(rowsFromStages(stagesForNewFirm(templateIdForIndustry(formData.industry))))
+      }
+      setStep(2)
+      setLoading(false)
+      return
+    }
+
+    const stageProblem = stageRowsValid(stageRows)
+    if (stageProblem !== 'ok') {
+      setStageError(stageStepErrorText(stageProblem))
+      setLoading(false)
+      return
+    }
+    setStageError(null)
+
     try {
       const supabase = createClient()
       
@@ -152,6 +181,12 @@ function RegisterPageContent() {
           full_name:           formData.full_name,
           company_name:        formData.company_name,
           industry:            formData.industry,
+          deal_stages:         draftsFromRows(stageRows).map(({ role, color, label, labels }) => ({
+            role,
+            color,
+            label,
+            labels,
+          })),
           registration_source: deriveSource(utmMedium),
           utm_source:          utmSource,
           utm_medium:          utmMedium,
@@ -228,6 +263,7 @@ function RegisterPageContent() {
               </div>
             )}
 
+            <div className={step === 1 ? 'space-y-4' : 'hidden'}>
             <div>
               <label className="block text-sm mb-2">Full Name</label>
               <input
@@ -265,6 +301,8 @@ function RegisterPageContent() {
                 <option value="aluminum">Aluminum & Pergolas</option>
                 <option value="construction">Construction</option>
                 <option value="renovation">Renovation</option>
+                <option value="windows">Windows & Doors</option>
+                <option value="roofing">Roofing</option>
                 <option value="general">General</option>
               </select>
             </div>
@@ -311,15 +349,37 @@ function RegisterPageContent() {
               />
             </div>
 
+            </div>
+
+            {step === 2 ? (
+              <RegistrationStagesStep
+                rows={stageRows}
+                onChange={setStageRows}
+                initialTemplate={templateIdForIndustry(formData.industry)}
+                error={stageError}
+              />
+            ) : null}
+
             <button
               type="submit"
               disabled={loading}
               className="w-full px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 font-semibold transition"
             >
-              {loading ? 'Creating account...' : 'Create Account'}
+              {step === 1 ? 'Continue' : loading ? 'Creating account...' : 'Create Account'}
             </button>
 
-            <div className="relative my-6">
+            {step === 2 ? (
+              <button
+                type="button"
+                onClick={() => setStep(1)}
+                disabled={loading}
+                className="w-full px-6 py-2 rounded-lg text-white/70 hover:bg-white/10 transition"
+              >
+                Back
+              </button>
+            ) : null}
+
+            <div className={step === 1 ? 'relative my-6' : 'hidden'}>
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-white/10"></div>
               </div>
@@ -332,6 +392,7 @@ function RegisterPageContent() {
               type="button"
               onClick={handleGoogleSignup}
               disabled={loading}
+              hidden={step !== 1}
               className="w-full px-6 py-3 rounded-lg bg-white hover:bg-gray-100 disabled:bg-gray-300 text-gray-900 font-semibold transition flex items-center justify-center gap-3"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">

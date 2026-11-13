@@ -2,7 +2,7 @@
 
 import type { Deal } from '../../deal-types'
 import type { WorkType } from '../../deal-types'
-import { getStages } from '../../deal-types'
+import { useDealStages } from '../../hooks/useDealStages'
 import { useCRMTranslations } from '../../useCRMTranslations'
 import { PergolaDealForm } from './PergolaDealForm'
 import { RailingsDealForm } from './RailingsDealForm'
@@ -26,7 +26,7 @@ export function DealTemplateRenderer({
   onRailingsChange,
 }: DealTemplateRendererProps) {
   const t = useCRMTranslations()
-  const stages = getStages(t.deals)
+  const { stages } = useDealStages()
 
   if (workType === 'railings') {
     if (!railingsValue || !onRailingsChange) return null

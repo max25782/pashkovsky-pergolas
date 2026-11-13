@@ -38,7 +38,8 @@ export function filterDeals(
   })
 }
 
-export function getDealsByStage(deals: Deal[], stage: string): Deal[] {
-  return deals.filter(deal => (deal.stage || 'new') === stage)
+/** Deals in one column. `firstStage` is where deals without a stage are shown (aluminium: "new"). */
+export function getDealsByStage(deals: Deal[], stage: string, firstStage = 'new'): Deal[] {
+  return deals.filter(deal => (deal.stage || firstStage) === stage)
 }
 

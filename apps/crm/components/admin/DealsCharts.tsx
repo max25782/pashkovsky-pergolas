@@ -15,6 +15,7 @@ import {
 } from 'recharts'
 import type { Deal } from './deal-types'
 import { isRevenueDeal, type StatisticType } from './deal-utils'
+import { useDealStages } from './hooks/useDealStages'
 import { rankDealsByNetProfit, type DealFinanceContext } from '@/lib/deals/deal-profit'
 
 interface DealsChartsLabels {
@@ -50,8 +51,9 @@ const COLORS = {
 }
 
 export function DealsCharts({ deals, statisticType, labels, financeContext }: DealsChartsProps) {
+  const { roleOf } = useDealStages()
   const chartDeals = statisticType
-    ? deals.filter((deal) => isRevenueDeal(deal, statisticType))
+    ? deals.filter((deal) => isRevenueDeal(deal, statisticType, roleOf))
     : deals
 
   // Calculate totals

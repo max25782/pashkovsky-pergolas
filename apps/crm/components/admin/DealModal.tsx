@@ -3,7 +3,7 @@ import { useEffect, useState } from "react"
 import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
 import type { Deal } from './deal-types'
-import { getStages } from './deal-types'
+import { useDealStages } from './hooks/useDealStages'
 import { FileText, Loader2 } from 'lucide-react'
 import { useCRMTranslations } from './useCRMTranslations'
 import { useToast } from '@/components/ui/toast'
@@ -72,7 +72,7 @@ export function DealModal({
   const t = useCRMTranslations()
   const toast = useToast()
   const router = useRouter()
-  const stages = getStages(t.deals)
+  const { stages } = useDealStages()
   const [localDeal, setLocalDeal] = useState(deal)
   const [saving, setSaving] = useState(false)
   const [showLaundryClosetModal, setShowLaundryClosetModal] = useState(false)

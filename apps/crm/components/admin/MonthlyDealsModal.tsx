@@ -2,7 +2,7 @@
 import { useMemo } from 'react'
 import type { Deal } from './deal-types'
 import { formatCurrency, formatDate, getMonthDealRows, type StatisticType } from './deal-utils'
-import { getStages } from './deal-types'
+import { useDealStages } from './hooks/useDealStages'
 import { useCRMTranslations } from './useCRMTranslations'
 import { useTranslations } from 'next-intl'
 
@@ -27,11 +27,11 @@ export function MonthlyDealsModal({
 }: MonthlyDealsModalProps) {
   const t = useTranslations('statistics')
   const tCRM = useCRMTranslations()
-  const stages = getStages(tCRM.deals)
+  const { stages, roleOf } = useDealStages()
 
   const { rows: monthlyDeals, totals } = useMemo(
-    () => getMonthDealRows(deals, month, statisticType, paymentsByDeal ?? new Map()),
-    [deals, month, statisticType, paymentsByDeal],
+    () => getMonthDealRows(deals, month, statisticType, paymentsByDeal ?? new Map(), roleOf),
+    [deals, month, statisticType, paymentsByDeal, roleOf],
   )
 
   const getStageLabel = (stage: string | null | undefined) => {

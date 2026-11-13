@@ -1,11 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { User, Building2, Bell, Shield, Palette } from 'lucide-react'
+import Link from 'next/link'
+import { User, Building2, Bell, Shield, Palette, Columns3 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
 export default function SettingsPage() {
   const tSettings = useTranslations('settings')
+  const tStages = useTranslations('dealStages')
   const tCommon = useTranslations('common')
   const [user, setUser] = useState<{ name: string; email: string } | null>(null)
   const [loading, setLoading] = useState(true)
@@ -38,6 +40,19 @@ export default function SettingsPage() {
         </div>
 
         <div className="space-y-6">
+          <Link
+            href="/app/admin/settings/deal-stages"
+            className="flex items-center gap-4 bg-white/5 rounded-2xl border border-white/10 p-8 hover:bg-white/10 transition-all"
+          >
+            <div className="p-3 bg-emerald-500/20 rounded-xl">
+              <Columns3 className="w-6 h-6 text-emerald-400" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold">{tStages('title')}</h2>
+              <p className="text-white/60">{tStages('subtitle')}</p>
+            </div>
+          </Link>
+
           {/* Profile Section */}
           <div className="bg-white/5 rounded-2xl border border-white/10 p-8 hover:bg-white/10 transition-all">
             <div className="flex items-center gap-4 mb-6">

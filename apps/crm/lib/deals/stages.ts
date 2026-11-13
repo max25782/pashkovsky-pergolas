@@ -246,6 +246,31 @@ export function templateIdForIndustry(industry: string | null | undefined): Stag
   }
 }
 
+/**
+ * The built-in aluminium names in the four languages (same text as the `deals.stages`
+ * messages). Only the registration step needs them: it writes names into a brand-new
+ * firm's own rows, while Pashkovsky's rows keep no name and read the messages.
+ */
+const ALUMINUM_STAGE_NAMES: Record<string, Record<StageLocale, string>> = {
+  new: { he: 'חדש', ru: 'Новая', en: 'New', sr: 'Novo' },
+  measure: { he: 'מדידה', ru: 'Замер', en: 'Measure', sr: 'Merenje' },
+  offer: { he: 'הצעת מחיר', ru: 'Предложение', en: 'Offer', sr: 'Ponuda' },
+  offer_approved: { he: 'הצעת מחיר מאושרת', ru: 'Предложение утверждено', en: 'Offer Approved', sr: 'Ponuda odobrena' },
+  material_ordered: { he: 'חומר הוזמן', ru: 'Материал заказан', en: 'Material Ordered', sr: 'Materijal naručen' },
+  approved: { he: 'חומר שהגיע למפעל', ru: 'Материал на заводе', en: 'Material Received', sr: 'Materijal primljen' },
+  production: { he: 'ייצור', ru: 'Производство', en: 'Production', sr: 'Produkcija' },
+  install: { he: 'התקנה', ru: 'Установка', en: 'Installation', sr: 'Ugradnja' },
+  done: { he: 'הושלם', ru: 'Готово', en: 'Done', sr: 'Završeno' },
+}
+
+/** A template as a new firm's starting list: every column carries its names, none relies on defaults. */
+export function stagesForNewFirm(id: StageTemplateId): DealStageDef[] {
+  return stagesFromTemplate(id).map((stage) => ({
+    ...stage,
+    labels: stage.labels ?? ALUMINUM_STAGE_NAMES[stage.key] ?? null,
+  }))
+}
+
 export function stagesFromTemplate(id: StageTemplateId): DealStageDef[] {
   return STAGE_TEMPLATES[id].map((t, index) => ({
     key: t.key,
@@ -405,6 +430,8 @@ export interface StageValidationResult {
 const MAX_LABEL_LENGTH = 60
 
 function hasName(draft: StageDraft): boolean {
+  // A built-in aluminium column without a stored name shows its translated default.
+  if (draft.key && isLegacyAluminumKey(draft.key)) return true
   if (draft.label?.trim()) return true
   return STAGE_LOCALES.some((locale) => draft.labels?.[locale]?.trim())
 }

@@ -71,7 +71,8 @@ export interface Deal {
   shading_ratio?: '40/20' | '50/20' | '70/20' | null
   finish_type?: 'ral' | 'wood' | null
   finish_value?: string | null
-  stage?: 'new' | 'measure' | 'offer' | 'offer_approved' | 'material_ordered' | 'approved' | 'production' | 'install' | 'done' | null
+  /** Key of one of the firm's kanban columns (aluminium: new ... done). */
+  stage?: string | null
   notes?: string | null
   files?: any
   manager?: string | null
@@ -102,6 +103,8 @@ export interface Deal {
   fence_notes?: string | null
 }
 
+// Aluminium columns, only for code that has no firm columns at hand. The board, filters
+// and forms read the firm's own columns (useDealStages).
 // Base stages with colors (labels will be translated)
 export const STAGES_BASE = [
   { id: 'new', color: 'bg-gray-500' },

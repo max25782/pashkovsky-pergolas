@@ -1,5 +1,5 @@
 import type { Deal } from './deal-types'
-import { getStages } from './deal-types'
+import { useDealStages } from './hooks/useDealStages'
 import { formatDate, formatCurrency, formatDimensions } from './deal-utils'
 import { useCRMTranslations } from './useCRMTranslations'
 
@@ -19,7 +19,6 @@ export function DealsTableView({
   onDealDelete
 }: DealsTableViewProps) {
   const t = useCRMTranslations()
-  const stages = getStages(t.deals)
   return (
     <div className="overflow-x-auto rounded-lg border border-white/10 bg-white/5">
       <table className="min-w-full text-sm">
@@ -71,8 +70,8 @@ function DealTableRow({
   onDelete: () => void
 }) {
   const t = useCRMTranslations()
-  const stages = getStages(t.deals)
-  const stage = stages.find(s => s.id === deal.stage)
+  const { stages, columnOf } = useDealStages()
+  const stage = stages.find(s => s.id === columnOf(deal.stage))
   return (
     <tr 
       className={`border-t transition-colors cursor-pointer ${
@@ -123,7 +122,7 @@ function DealTableRow({
         <span className={`px-2 py-1 rounded text-xs font-medium ${
           stage?.color || 'bg-gray-500'
         } text-white`}>
-          {stage?.label || t.deals.stages.new}
+          {stage?.label || deal.stage || '-'}
         </span>
       </td>
       <td className="p-3 text-white/70">{deal.manager || '-'}</td>

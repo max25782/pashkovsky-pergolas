@@ -1,7 +1,7 @@
 "use client"
 import { useState } from "react"
 import type { Deal } from './deal-types'
-import { getStages } from './deal-types'
+import { useDealStages } from './hooks/useDealStages'
 import { useCRMTranslations } from './useCRMTranslations'
 import { useToast } from '@/components/ui/toast'
 import { RailingsFormFields, type RailingsFormValue } from './RailingsFormFields'
@@ -26,7 +26,7 @@ export function CreateDealModal({
 }: CreateDealModalProps) {
   const t = useCRMTranslations()
   const toast = useToast();
-  const stages = getStages(t.deals)
+  const { stages, firstKey } = useDealStages()
   const [customerType, setCustomerType] = useState<'private' | 'contractor'>('private')
   const [productLines, setProductLines] = useState<DealProductLine[]>(['pergola'])
   const [pricingModel, setPricingModel] = useState<'fixed' | 'per_meter' | 'per_sqm' | 'custom'>('fixed')
@@ -47,8 +47,9 @@ export function CreateDealModal({
     color: '',
     notes: '',
   })
+  // stage stays null until the user picks one; a new deal then goes to the firm's first column.
   const [dealData, setDealData] = useState<Partial<Deal>>({
-    stage: 'new',
+    stage: null,
     project_type: null,
     customer_name: null,
     customer_phone: null,
@@ -150,6 +151,7 @@ export function CreateDealModal({
     try {
       const dealToCreate: Record<string, unknown> = {
         ...dealData,
+        stage: dealData.stage ?? firstKey,
         customer_type: customerType,
         work_type: deriveWorkTypeFromProductLines(productLines),
         project_config: mergeProjectConfigProductLines(null, productLines),
@@ -402,8 +404,8 @@ export function CreateDealModal({
               <div>
                 <label className="block text-sm font-medium text-white/70 mb-2">{t.deals.stage}</label>
                 <select
-                  value={dealData.stage || ''}
-                  onChange={(e) => updateField('stage', (e.target.value || null) as any)}
+                  value={dealData.stage ?? firstKey}
+                  onChange={(e) => updateField('stage', e.target.value || null)}
                   className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/20 focus:bg-white/10 focus:outline-none"
                 >
                   <option value="">-</option>

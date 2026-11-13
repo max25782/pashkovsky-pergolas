@@ -17,6 +17,7 @@ import { LanguageSwitcher } from './LanguageSwitcher'
 import { authFetch } from '@/lib/api/auth-fetch'
 import { useLanguage } from '@/lib/language-context'
 import { useDealFinanceContext } from './hooks/useDealFinanceContext'
+import { useDealStages } from './hooks/useDealStages'
 import { aggregateMonthlyNetMetrics, sumNetMetrics } from '@/lib/deals/deal-profit'
 
 interface DealsStatisticsProps {
@@ -54,23 +55,24 @@ export function DealsStatistics({ deals, onDealClick }: DealsStatisticsProps) {
 
   // VAT payable and net profit need the company VAT rate and worker cost per deal.
   const financeContext = useDealFinanceContext()
+  const { roleOf } = useDealStages()
   const netByMonth = useMemo(
     () =>
       financeContext.isReady
-        ? aggregateMonthlyNetMetrics(deals, statisticType, paymentsByDeal, financeContext)
+        ? aggregateMonthlyNetMetrics(deals, statisticType, paymentsByDeal, financeContext, roleOf)
         : null,
-    [deals, statisticType, paymentsByDeal, financeContext],
+    [deals, statisticType, paymentsByDeal, financeContext, roleOf],
   )
   const netTotals = useMemo(() => (netByMonth ? sumNetMetrics(netByMonth.values()) : null), [netByMonth])
 
   const validDeals = useMemo(
-    () => deals.filter((deal) => isRevenueDeal(deal, statisticType)),
-    [deals, statisticType],
+    () => deals.filter((deal) => isRevenueDeal(deal, statisticType, roleOf)),
+    [deals, statisticType, roleOf],
   )
 
   const { monthlyStats, datelessCount } = useMemo(
-    () => aggregateMonthlyDealStats(deals, statisticType, paymentsByDeal, dateLocale),
-    [deals, statisticType, paymentsByDeal, dateLocale],
+    () => aggregateMonthlyDealStats(deals, statisticType, paymentsByDeal, dateLocale, roleOf),
+    [deals, statisticType, paymentsByDeal, dateLocale, roleOf],
   )
 
   const totals = useMemo(() => {

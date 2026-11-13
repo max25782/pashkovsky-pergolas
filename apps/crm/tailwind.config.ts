@@ -2,7 +2,8 @@ import type { Config } from 'tailwindcss'
 
 export default {
   darkMode: 'class',
-  content: ['./app/**/*.{ts,tsx}','./components/**/*.{ts,tsx}'],
+  // lib/deals/stages.ts holds the column colour classes the editor offers.
+  content: ['./app/**/*.{ts,tsx}','./components/**/*.{ts,tsx}','./lib/deals/stages.ts'],
   theme: {
     extend: {
       colors: {

@@ -1,4 +1,4 @@
-import { getStages } from './deal-types'
+import { useDealStages } from './hooks/useDealStages'
 import { useCRMTranslations } from './useCRMTranslations'
 
 interface DealsFiltersProps {
@@ -15,7 +15,7 @@ export function DealsFilters({
   onProjectTypeFilterChange
 }: DealsFiltersProps) {
   const t = useCRMTranslations()
-  const stages = getStages(t.deals)
+  const { stages } = useDealStages()
   return (
     <>
       <select

@@ -5,6 +5,8 @@ import {
   generateWelcomeEmailHTML,
   generateWelcomeEmailSubject,
 } from '@/lib/email/templates/early-bird'
+import { seedCompanyStages, stagesFromRegistration } from '@/lib/deals/stage-store'
+import { stagesForNewFirm, templateIdForIndustry } from '@/lib/deals/stages'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -47,7 +49,18 @@ export async function POST(req: NextRequest) {
       utm_medium,
       utm_campaign,
       referrer_url,
+      deal_stages,
     } = body
+
+    // The kanban stages the firm chose at registration. Checked before anything is created.
+    let chosenStages = null
+    if (deal_stages !== undefined) {
+      const parsed = stagesFromRegistration(deal_stages)
+      if (!parsed.ok) {
+        return NextResponse.json({ error: 'Invalid deal stages', errors: parsed.errors }, { status: 400 })
+      }
+      chosenStages = parsed.stages
+    }
 
     // Validate required fields
     if (!user_id || !email || !company_name) {
@@ -133,6 +146,19 @@ export async function POST(req: NextRequest) {
         { error: 'Failed to create membership' },
         { status: 500 }
       )
+    }
+
+    // Step 3.2: The firm's kanban columns: exactly the chosen ones, or its industry template.
+    // Best effort like the steps below: a missing deal_stages table (migration 063 not
+    // applied) must not stop a registration; the firm then sees the default columns.
+    try {
+      await seedCompanyStages(
+        supabase,
+        company.id,
+        chosenStages ?? stagesForNewFirm(templateIdForIndustry(industry)),
+      )
+    } catch (stagesError) {
+      console.error('[Setup Company] Could not create deal stages for', company.id, stagesError)
     }
 
     // Step 3.5: Atomically claim an Early Bird position. NULL = cohort full.
