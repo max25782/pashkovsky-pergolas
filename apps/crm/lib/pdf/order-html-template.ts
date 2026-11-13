@@ -1,4 +1,5 @@
-import { getHebrewFontsCss, getLogoDataUri } from './font-loader'
+import { getHebrewFontsCss } from './font-loader'
+import { defaultBranding, type PdfBranding } from './firm-branding'
 import {
   pdfT,
   resolvePdfLocale,
@@ -141,7 +142,12 @@ function groupByColor(
   return result
 }
 
-export function renderOrderHtml(order: Order, imageMap: Record<string, string> = {}, locale?: string): string {
+export function renderOrderHtml(
+  order: Order,
+  imageMap: Record<string, string> = {},
+  locale?: string,
+  branding: PdfBranding = defaultBranding(),
+): string {
   const resolved = resolvePdfLocale(locale)
   const t = pdfT[resolved]
   const dir = pdfHtmlDir(resolved)
@@ -150,7 +156,7 @@ export function renderOrderHtml(order: Order, imageMap: Record<string, string> =
   const dash = t.off_color_dash
 
   const fonts = getHebrewFontsCss()
-  const logoUri = getLogoDataUri()
+  const logoUri = branding.logoUri
 
   const dt = order.created_at ? new Date(order.created_at) : new Date()
   const date = dt.toLocaleDateString(bcp47)
@@ -178,7 +184,7 @@ export function renderOrderHtml(order: Order, imageMap: Record<string, string> =
           ${order.customer_email ? `<div class="ci-row"><span class="ci-label">${escapeHtml(t.ord_email)}:</span><span class="ci-val">${escapeHtml(order.customer_email)}</span></div>` : ''}
         </div>
         <div class="header-left">
-          ${logoUri ? `<img src="${logoUri}" class="logo" alt="${escapeHtml(t.ord_logo)}">` : `<div class="company-name">${escapeHtml(t.ord_company_fallback)}</div>`}
+          ${logoUri ? `<img src="${logoUri}" class="logo" alt="${escapeHtml(t.ord_logo)}">` : `<div class="company-name">${escapeHtml(branding.firm.name)}</div>`}
         </div>
       </div>
     </div>`

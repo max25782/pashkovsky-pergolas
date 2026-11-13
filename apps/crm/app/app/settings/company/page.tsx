@@ -10,6 +10,8 @@ import { useState, useEffect } from 'react'
 import { Building2, Upload, Save, Mail, FileText, Palette, Phone, MapPin, CreditCard } from 'lucide-react'
 import Image from 'next/image'
 import { LanguageSwitcher } from '@/components/admin/LanguageSwitcher'
+import { resetFirmProfileCache } from '@/components/admin/hooks/useFirmProfile'
+import { DEFAULT_WHATSAPP_TEMPLATE } from '@/lib/company/firm-profile'
 
 interface Company {
   id: string
@@ -28,6 +30,9 @@ interface Company {
   bank_name: string | null
   bank_account: string | null
   bank_branch: string | null
+  website: string | null
+  whatsapp_number: string | null
+  whatsapp_template: string | null
 }
 
 const strings = {
@@ -68,6 +73,16 @@ const strings = {
   emailSignatureHint: 'This signature will be appended to outgoing emails',
   pdfFooter: 'PDF Footer',
   pdfFooterHint: 'This text will appear at the bottom of generated PDFs',
+  contactSection: 'Website and WhatsApp',
+  website: 'Website',
+  websitePlaceholder: 'www.example.com',
+  whatsappNumber: 'WhatsApp number (optional)',
+  whatsappNumberPlaceholder: '972501234567',
+  whatsappNumberHint:
+    'International format, digits only. Leave empty if you do not use WhatsApp: all WhatsApp buttons and links are then hidden.',
+  whatsappTemplate: 'WhatsApp greeting',
+  whatsappTemplateHint:
+    'Placeholders: {name} (customer), {company}, {website}. Leave empty for a neutral default.',
   saving: 'Saving...',
   saveChanges: 'Save Changes',
 }
@@ -119,7 +134,7 @@ function CreateCompanyForm({ onCreated }: { onCreated: (company: Company) => voi
               type="text"
               value={name}
               onChange={e => setName(e.target.value)}
-              placeholder="Pashkovsky Group"
+              placeholder="Your company name"
               required
               className="w-full px-3 py-2 bg-neutral-700 border border-neutral-600 rounded-lg text-white placeholder-neutral-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
@@ -203,6 +218,7 @@ export default function CompanySettingsPage() {
 
       const updated = await res.json()
       setCompany(updated)
+      resetFirmProfileCache()
       showMessage('success', t('savedSuccess'))
     } catch (error: unknown) {
       showMessage('error', (error instanceof Error ? error.message : String(error)) || t('saveFailed'))
@@ -417,6 +433,50 @@ export default function CompanySettingsPage() {
               placeholder={t('addressPlaceholder')}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
+          </div>
+        </div>
+      </div>
+
+      {/* Website and WhatsApp */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+          <Phone className="h-5 w-5 text-blue-600" />
+          {t('contactSection')}
+        </h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('website')}</label>
+            <input
+              type="text"
+              value={company.website || ''}
+              onChange={(e) => updateField('website', e.target.value)}
+              placeholder={t('websitePlaceholder')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('whatsappNumber')}</label>
+            <input
+              type="tel"
+              value={company.whatsapp_number || ''}
+              onChange={(e) => updateField('whatsapp_number', e.target.value)}
+              placeholder={t('whatsappNumberPlaceholder')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            <p className="text-sm text-gray-500 mt-1">{t('whatsappNumberHint')}</p>
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('whatsappTemplate')}</label>
+            <textarea
+              value={company.whatsapp_template || ''}
+              onChange={(e) => updateField('whatsapp_template', e.target.value)}
+              placeholder={DEFAULT_WHATSAPP_TEMPLATE}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg h-24 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            <p className="text-sm text-gray-500 mt-1">{t('whatsappTemplateHint')}</p>
           </div>
         </div>
       </div>

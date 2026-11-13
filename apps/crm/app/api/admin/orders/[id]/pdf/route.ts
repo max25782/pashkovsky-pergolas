@@ -9,6 +9,7 @@ import { requireCompanyAuth } from '@/lib/middleware/require-company-auth'
 import { profilesApi } from '@/lib/profiles-api/client'
 import { generateOrderPdf, generateOrderPdfFilename } from '@/lib/pdf/generate-order-pdf'
 import { fetchCompanyPdfLocale, mergeUiPdfLocale } from '@/lib/pdf/company-pdf-locale'
+import { defaultBranding, loadBranding } from '@/lib/pdf/firm-branding'
 import type { PdfLocale } from '@/lib/pdf/pdf-locale'
 import { uploadToS3 } from '@/lib/s3-upload'
 
@@ -56,7 +57,7 @@ export async function POST(
 
     let pdfBuffer: Buffer
     try {
-      pdfBuffer = await generateOrderPdf(order, pdfLocale)
+      pdfBuffer = await generateOrderPdf(order, pdfLocale, supabase ? await loadBranding(supabase, auth.companyId) : defaultBranding())
     } catch (pdfErr: unknown) {
       const msg = pdfErr instanceof Error ? pdfErr.message : 'Unknown PDF error'
       console.error('[PDF API] PDF generation failed:', msg)

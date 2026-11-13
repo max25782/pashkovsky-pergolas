@@ -61,7 +61,8 @@ import { roundBillableAreaSqm } from '@/lib/pergolas/pergola-area-sqm'
 import { pergolaAreaSqm } from '@/lib/pergolas/pergola-area-sqm'
 import { applyPlanGeometry, type PlanGeometryInput } from '@/lib/pergolas/apply-plan-geometry'
 import { authFetch } from '@/lib/api/auth-fetch'
-import { formatPhoneForWhatsApp } from '@/lib/offer-sharing'
+import { customerWhatsAppLink } from '@/lib/company/firm-profile'
+import { useFirmProfile } from '@/components/admin/hooks/useFirmProfile'
 import {
   OfferPlanConfiguratorEmbed,
   type OfferPlanConfiguratorEmbedHandle,
@@ -311,6 +312,7 @@ function WhatsAppModal({
   const t = useTranslations('quickOffer')
   const tCommon = useTranslations('common')
   const { can } = useSubscriptionPlan()
+  const { profile: firmProfile } = useFirmProfile()
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [saving, setSaving] = useState(false)
@@ -339,11 +341,13 @@ function WhatsAppModal({
       const baseUrl =
         typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001'
       const offerUrl = `${baseUrl}/he/offers/${offerId}/approve`
-      const formattedPhone = formatPhoneForWhatsApp(phone)
-      const message = encodeURIComponent(
-        customerOfferMessage({ customerName: name, offerUrl, snapshot }),
+      const href = customerWhatsAppLink(
+        firmProfile,
+        phone,
+        customerOfferMessage({ customerName: name, offerUrl, snapshot, companyName: firmProfile.name }),
       )
-      window.open(`https://wa.me/${formattedPhone}?text=${message}`, '_blank')
+      if (!href) throw new Error(t('errorNamePhoneRequired'))
+      window.open(href, '_blank')
       onClose()
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -602,6 +606,7 @@ function ResultScreen({
   const [downloadingPdf, setDownloadingPdf] = useState(false)
   const [showSaveCrm, setShowSaveCrm] = useState(false)
   const [showWhatsApp, setShowWhatsApp] = useState(false)
+  const { hasWhatsApp: firmHasWhatsApp } = useFirmProfile()
   const [showEmail, setShowEmail] = useState(false)
   const [savedDealId, setSavedDealId] = useState<string | null>(null)
   const [offerSigned, setOfferSigned] = useState(false)
@@ -779,6 +784,7 @@ function ResultScreen({
               {t('btnDownloadPdf')}
             </button>
 
+            {firmHasWhatsApp ? (
             <button
               onClick={() => setShowWhatsApp(true)}
               className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-green-600 hover:bg-green-500 text-white text-sm font-medium transition-colors"
@@ -786,6 +792,7 @@ function ResultScreen({
               <MessageCircle className="w-4 h-4" />
               {t('btnSendWhatsApp')}
             </button>
+            ) : null}
 
             <button
               onClick={() => setShowEmail(true)}

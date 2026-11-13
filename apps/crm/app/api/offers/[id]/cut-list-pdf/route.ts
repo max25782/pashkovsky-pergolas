@@ -6,6 +6,7 @@ import { calculateCutList } from '@/lib/cut-list/calculate-cut-list'
 import { renderCutListHtml } from '@/lib/cut-list/cut-list-html-template'
 import { renderHtmlToPdfBuffer } from '@/lib/pdf/render-html-to-pdf'
 import { fetchCompanyPdfLocale, mergeUiPdfLocale } from '@/lib/pdf/company-pdf-locale'
+import { loadFirmProfile } from '@/lib/company/firm-profile'
 import type { Offer } from '@/types/offer'
 import { transformOfferFromDbRow } from '@/lib/pdf/map-offer-db-row-for-pdf'
 
@@ -60,7 +61,7 @@ export async function GET(
     const companyLocale = await fetchCompanyPdfLocale(supabase, row.company_id as string)
     const locale = mergeUiPdfLocale(searchParams.get('locale'), companyLocale)
     const cutList = calculateCutList(offer)
-    const html = renderCutListHtml(cutList, locale)
+    const html = renderCutListHtml(cutList, locale, (await loadFirmProfile(supabase, row.company_id as string)).name)
     const pdfBuffer = await renderHtmlToPdfBuffer(html)
 
     // Content-Disposition filename must be ASCII-only; use offer ID as safe fallback

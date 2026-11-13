@@ -10,6 +10,7 @@ import { createClient } from '@supabase/supabase-js'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { generateOfferPdf } from '@/lib/pdf/generate-offer-pdf'
 import { fetchPdfLocaleForOffer, mergeUiPdfLocale } from '@/lib/pdf/company-pdf-locale'
+import { loadBrandingForOffer } from '@/lib/pdf/firm-branding'
 import type { Offer } from '@/types/offer'
 import { transformOfferFromDbRow } from '@/lib/pdf/map-offer-db-row-for-pdf'
 import { OfferPdfTotalsMismatchError } from '@/lib/pdf/offer-pdf-totals'
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const { searchParams } = new URL(req.url)
     const companyLocale = await fetchPdfLocaleForOffer(supabase, params.id)
     const pdfLocale = mergeUiPdfLocale(searchParams.get('locale'), companyLocale)
-    const pdfBuffer = await generateOfferPdf(offer, pdfLocale)
+    const pdfBuffer = await generateOfferPdf(offer, pdfLocale, await loadBrandingForOffer(supabase, params.id))
     const filename = `offer_${offer.id}.pdf`
 
     return new NextResponse(new Uint8Array(pdfBuffer), {

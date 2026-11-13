@@ -9,6 +9,11 @@ import {
   snapshotShareLines,
 } from '@/lib/offers/offer-pricing-snapshot'
 import type { Offer } from '@/types/offer'
+import {
+  customerWhatsAppLink,
+  displayWebsite,
+  type FirmProfile,
+} from '@/lib/company/firm-profile'
 
 /**
  * Get public URL for offer approval page
@@ -33,46 +38,45 @@ export function formatPhoneForWhatsApp(phone: string): string {
 /**
  * Generate WhatsApp share link for offer
  */
-export function sendOfferViaWhatsApp(offer: Offer): string {
+export function sendOfferViaWhatsApp(offer: Offer, firm: FirmProfile): string {
   if (!offer.customerPhone) {
     throw new Error('Customer phone number is required')
   }
-
-  const phone = formatPhoneForWhatsApp(offer.customerPhone)
   const offerUrl = getOfferPublicUrl(offer.id)
   const snapshot = readOfferPricingSnapshot(offer)
   const messageText = snapshot
-    ? customerOfferMessage({ customerName: offer.customerName, offerUrl, snapshot })
+    ? customerOfferMessage({ customerName: offer.customerName, offerUrl, snapshot, companyName: firm.name })
     : `שלום ${offer.customerName},\n\n` +
       `הצעת המחיר שלך מוכנה!\n\n` +
       `לצפייה בהצעת מחיר מלאה:\n${offerUrl}\n\n` +
       `סכום: ₪${offer.finalPrice.toLocaleString('he-IL', { minimumFractionDigits: 2 })}\n\n` +
-      `בברכה,\nPashkovsky Group`
-  
-  const message = encodeURIComponent(messageText)
+      `בברכה,${firm.name ? `\n${firm.name}` : ''}`
 
-  return `https://wa.me/${phone}?text=${message}`
+  const link = customerWhatsAppLink(firm, offer.customerPhone, messageText)
+  if (!link) throw new Error('WhatsApp is not set up for this firm')
+  return link
 }
 
 /**
  * Open WhatsApp with pre-filled message
  */
-export function openWhatsApp(offer: Offer): void {
-  const url = sendOfferViaWhatsApp(offer)
+export function openWhatsApp(offer: Offer, firm: FirmProfile): void {
+  const url = sendOfferViaWhatsApp(offer, firm)
   window.open(url, '_blank')
 }
 
 /**
  * Get email subject for offer
  */
-export function getOfferEmailSubject(offer: Offer): string {
-  return `הצעת מחיר - ${offer.customerName} | Pashkovsky Group`
+export function getOfferEmailSubject(offer: Offer, firm: FirmProfile): string {
+  return [`הצעת מחיר - ${offer.customerName}`, firm.name].filter(Boolean).join(' | ')
 }
 
 /**
  * Get email body for offer
  */
-export function getOfferEmailBody(offer: Offer): string {
+export function getOfferEmailBody(offer: Offer, firm: FirmProfile): string {
+  const website = displayWebsite(firm.website)
   const offerUrl = getOfferPublicUrl(offer.id)
   const snapshot = readOfferPricingSnapshot(offer)
   const finalPrice = snapshot?.totals.finalPrice ?? offer.finalPrice
@@ -98,7 +102,7 @@ export function getOfferEmailBody(offer: Offer): string {
   <div class="container">
     <div class="header">
       <h1>🎉 הצעת המחיר שלך מוכנה!</h1>
-      <p>Pashkovsky Group - פתרונות אלומיניום מתקדמים</p>
+      <p>${firm.name}</p>
     </div>
     
     <div class="content">
@@ -145,19 +149,19 @@ export function getOfferEmailBody(offer: Offer): string {
       
       <p>לשאלות נוספות או לתיאום פגישה, צור קשר:</p>
       <ul>
-        <li>📞 טלפון: 050-123-4567</li>
-        <li>📧 אימייל: office@pashkovsky-group.com</li>
-        <li>🌐 אתר: www.pashkovsky-group.com</li>
+        ${firm.phone ? `<li>📞 טלפון: ${firm.phone}</li>` : ''}
+        ${firm.email ? `<li>📧 אימייל: ${firm.email}</li>` : ''}
+        ${website ? `<li>🌐 אתר: ${website}</li>` : ''}
       </ul>
       
       <p>נשמח לעמוד לשירותך!</p>
       
-      <p><strong>בברכה,<br>צוות Pashkovsky Group</strong></p>
+      <p><strong>בברכה,<br>${firm.name ? `צוות ${firm.name}` : ''}</strong></p>
     </div>
     
     <div class="footer">
-      <p>Pashkovsky Group | אזור תעשיה עמנואל</p>
-      <p>טלפון: 050-123-4567 | www.pashkovsky-group.com</p>
+      <p>${[firm.name, firm.address].filter(Boolean).join(' | ')}</p>
+      <p>${[firm.phone ? `טלפון: ${firm.phone}` : '', website ?? ''].filter(Boolean).join(' | ')}</p>
     </div>
   </div>
 </body>

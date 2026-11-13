@@ -289,6 +289,8 @@ export function customerOfferMessage(input: {
   customerName: string
   offerUrl: string
   snapshot: OfferPricingSnapshot
+  /** Signature: the issuing firm. Omitted: the message ends with the greeting only. */
+  companyName?: string
 }): string {
   const { snapshot } = input
   const lineText = snapshot.lines
@@ -305,7 +307,7 @@ export function customerOfferMessage(input: {
     discount +
     `סה״כ: ${ils(snapshot.totals.finalPrice)}\n\n` +
     `לצפייה בהצעה:\n${input.offerUrl}\n\n` +
-    `בברכה,\nPashkovsky Group`
+    `בברכה,${input.companyName?.trim() ? `\n${input.companyName.trim()}` : ''}`
   )
 }
 

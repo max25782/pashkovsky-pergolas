@@ -28,6 +28,8 @@ import { useToast } from '@/components/ui/toast'
 import { OfferPlanConfiguratorEmbed } from '@/components/offers/OfferPlanConfiguratorEmbed'
 import { useSubscriptionPlan } from '@/components/subscription/subscription-plan-context'
 import { minPlanForFeature } from '@/lib/subscription/plan-access'
+import { useFirmProfile } from '@/components/admin/hooks/useFirmProfile'
+import { customerWhatsAppLink } from '@/lib/company/firm-profile'
 import { ModuleEmptyState } from '@/components/onboarding'
 
 interface OffersListProps {
@@ -60,6 +62,7 @@ export function OffersList({
   const tSub = useTranslations('subscription')
   const { language } = useLanguage()
   const fmt = usePriceFormatter()
+  const { profile: firmProfile, hasWhatsApp: firmHasWhatsApp } = useFirmProfile()
   const { can } = useSubscriptionPlan()
   const [offers, setOffers] = useState<Offer[]>([])
   const [loading, setLoading] = useState(true)
@@ -96,11 +99,6 @@ export function OffersList({
   const handleSendWhatsApp = useCallback((offer: Offer) => {
     try {
       const offerUrl = getOfferPublicUrl(offer.id, locale)
-      const raw = offer.customerPhone?.replace(/\D/g, '') || '972524494848'
-      let phone = raw
-      if (phone.startsWith('0')) phone = `972${phone.slice(1)}`
-      else if (!phone.startsWith('972')) phone = `972${phone}`
-      phone = `+${phone}`
 
       let messageText = `שלום ${offer.customerName},\n\nהצעת המחיר שלך מוכנה!\n\n`
       if (offer.options?.notes?.trim()) {
@@ -110,14 +108,16 @@ export function OffersList({
         messageText += `תיאור:\n${shortDesc}\n\n`
       }
       messageText += `לצפייה:\n${offerUrl}\n\n` +
-        `סכום: ${fmt(offer.finalPrice)}\n\nבברכה,\nPashkovsky Group`
+        `סכום: ${fmt(offer.finalPrice)}\n\nבברכה,${firmProfile.name ? `\n${firmProfile.name}` : ''}`
 
-      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(messageText)}`, '_blank')
+      const href = customerWhatsAppLink(firmProfile, offer.customerPhone, messageText)
+      if (!href) return
+      window.open(href, '_blank')
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error'
       toast.error('שגיאה: ' + message)
     }
-  }, [locale, toast])
+  }, [locale, toast, fmt, firmProfile])
 
   const handleSendEmail = useCallback(async (offer: Offer) => {
     const email = prompt('הזן כתובת אימייל לשליחת ההצעה:')
@@ -565,7 +565,7 @@ export function OffersList({
             </button>
 
             {/* WhatsApp */}
-            {offer.customerPhone && (
+            {offer.customerPhone && firmHasWhatsApp && (
               <button
                 onClick={() => handleSendWhatsApp(offer)}
                 className="w-full sm:flex-1 flex items-center justify-center gap-1 px-2 py-2 rounded bg-green-600/20 hover:bg-green-600/30 text-green-200 text-xs font-medium transition-colors"

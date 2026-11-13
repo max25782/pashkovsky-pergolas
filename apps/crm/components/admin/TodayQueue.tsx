@@ -8,6 +8,8 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { TOUCH_RESULTS, type TouchResult, type Lead } from './lead-types'
+import { useFirmProfile } from './hooks/useFirmProfile'
+import { customerWhatsAppLink, leadGreeting } from '@/lib/company/firm-profile'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -73,10 +75,6 @@ function badgeIsLive(referenceIso: string, nowMs: number): boolean {
   return nowMs - new Date(referenceIso).getTime() < 3_600_000
 }
 
-function waLink(phone: string, name: string) {
-  const digits = phone.replace(/\D/g, '').replace(/^0/, '972')
-  return `https://wa.me/${digits}?text=${encodeURIComponent(`שלום ${name}`)}`
-}
 
 function daysDiff(iso: string) {
   return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000)
@@ -274,6 +272,13 @@ interface SlaCardProps {
 }
 
 function SlaCard({ lead, nowMs, onCall }: SlaCardProps) {
+  const { profile } = useFirmProfile()
+  // Null when the firm has no WhatsApp number: no button.
+  const waHref = customerWhatsAppLink(
+    profile,
+    lead.phone,
+    profile.whatsappTemplate ? leadGreeting(profile, lead.name) : `שלום ${lead.name}`,
+  )
   // Reference time: next_action_at if set, otherwise created_at
   const refIso = lead.next_action_at ?? lead.created_at!
   const badge = formatWaitingBadge(refIso, nowMs)
@@ -317,12 +322,14 @@ function SlaCard({ lead, nowMs, onCall }: SlaCardProps) {
           <Phone className="h-3 w-3" />
           התקשר
         </button>
-        <a href={waLink(lead.phone, lead.name)} target="_blank" rel="noopener noreferrer"
-          className="flex items-center gap-1 rounded-lg px-3 text-xs font-semibold transition-colors"
-          style={{ background: '#1a1e26', border: '1px solid #272b34', color: '#9aa1ad', paddingTop: 5, paddingBottom: 5 }}>
-          <MessageCircle className="h-3 w-3" />
-          WhatsApp
-        </a>
+        {waHref ? (
+          <a href={waHref} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-1 rounded-lg px-3 text-xs font-semibold transition-colors"
+            style={{ background: '#1a1e26', border: '1px solid #272b34', color: '#9aa1ad', paddingTop: 5, paddingBottom: 5 }}>
+            <MessageCircle className="h-3 w-3" />
+            WhatsApp
+          </a>
+        ) : null}
       </div>
     </div>
   )

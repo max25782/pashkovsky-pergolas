@@ -1,4 +1,5 @@
-import { getHebrewFontsCss, getLogoDataUri } from './font-loader'
+import { getHebrewFontsCss } from './font-loader'
+import { defaultBranding, type PdfBranding } from './firm-branding'
 import type { WorkerShift, WorkerShiftSummary } from '@/types/workers'
 import { pdfT, resolvePdfLocale, pdfHtmlDir, pdfBcp47Locale, pdfCurrencySymbol, type PdfDict } from '@/lib/pdf/offer-pdf-i18n'
 
@@ -66,7 +67,11 @@ function shiftTypeLabel(type: string, t: PdfDict): { text: string; bg: string; c
   return { text: t.ts_type_work, bg: '#16a34a22', color: '#16a34a' }
 }
 
-export function generateWorkerTimesheetHtml(data: WorkerTimesheetData, locale?: string): string {
+export function generateWorkerTimesheetHtml(
+  data: WorkerTimesheetData,
+  locale?: string,
+  branding: PdfBranding = defaultBranding(),
+): string {
   const resolved = resolvePdfLocale(locale)
   const t = pdfT[resolved]
   const dir = pdfHtmlDir(resolved)
@@ -76,7 +81,7 @@ export function generateWorkerTimesheetHtml(data: WorkerTimesheetData, locale?: 
 
   const { worker, month, shifts, summary } = data
   const fontsCss = getHebrewFontsCss()
-  const logoUri = getLogoDataUri()
+  const logoUri = branding.logoUri
   const monthLabel = formatMonthLabel(month, bcp47)
   const workerName = `${worker.firstName} ${worker.lastName}`
   const docTitle = fillTpl(t.ts_doc_title, { name: workerName, month: monthLabel })

@@ -2,15 +2,8 @@
 
 import { Phone, MessageCircle } from 'lucide-react'
 import { useCRMTranslations } from './useCRMTranslations'
-import { useCompanyName } from './hooks/useCompanyName'
-
-function toWhatsAppNumber(phone: string): string {
-  const digits = phone.replace(/\D/g, '')
-  if (digits.startsWith('0')) return '972' + digits.slice(1)
-  if (digits.startsWith('972')) return digits
-  if (digits.length === 9 && digits.startsWith('5')) return '972' + digits
-  return digits
-}
+import { useFirmProfile } from './hooks/useFirmProfile'
+import { customerWhatsAppLink, leadGreeting } from '@/lib/company/firm-profile'
 
 interface PhoneActionsProps {
   phone: string
@@ -31,16 +24,19 @@ export function PhoneActions({
   variant = 'full'
 }: PhoneActionsProps) {
   const t = useCRMTranslations()
-  const companyFromApi = useCompanyName()
-  const companyName = companyProp ?? companyFromApi
+  const { profile } = useFirmProfile()
+  const companyName = companyProp ?? profile.name
 
   if (!phone?.trim()) return <span className="text-white/50">—</span>
 
-  const waNumber = toWhatsAppNumber(phone)
-  const greeting = leadName?.trim()
-    ? t.leads.whatsappGreeting(leadName.trim(), companyName)
-    : t.leads.whatsappGreetingNoName(companyName)
-  const waLink = `https://wa.me/${waNumber}?text=${encodeURIComponent(greeting)}`
+  // The firm's own greeting when it wrote one, otherwise the neutral translated default.
+  const greeting = profile.whatsappTemplate
+    ? leadGreeting({ ...profile, name: companyName }, leadName)
+    : leadName?.trim()
+      ? t.leads.whatsappGreeting(leadName.trim(), companyName)
+      : t.leads.whatsappGreetingNoName(companyName)
+  // Null when the firm has no WhatsApp number: the button is not rendered at all.
+  const waLink = customerWhatsAppLink(profile, phone, greeting)
 
   return (
     <div className={`flex items-center gap-2 flex-wrap ${className}`}>
@@ -54,16 +50,18 @@ export function PhoneActions({
           <Phone className="w-3.5 h-3.5" />
           {variant === 'full' && <span>Позвонить</span>}
         </a>
-        <a
-          href={waLink}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 px-2 py-1 rounded bg-green-600/30 hover:bg-green-600/50 text-green-300 hover:text-green-200 text-xs transition-colors"
-          title="WhatsApp"
-        >
-          <MessageCircle className="w-3.5 h-3.5" />
-          {variant === 'full' && <span>WhatsApp</span>}
-        </a>
+        {waLink ? (
+          <a
+            href={waLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 px-2 py-1 rounded bg-green-600/30 hover:bg-green-600/50 text-green-300 hover:text-green-200 text-xs transition-colors"
+            title="WhatsApp"
+          >
+            <MessageCircle className="w-3.5 h-3.5" />
+            {variant === 'full' && <span>WhatsApp</span>}
+          </a>
+        ) : null}
       </div>
     </div>
   )

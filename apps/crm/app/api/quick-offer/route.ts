@@ -25,6 +25,7 @@ import { validateQuickFence, validateQuickRailings } from '@/lib/quick-offer-pro
 import { allocateOfferNumber } from '@/lib/offers/allocate-offer-number'
 import { syncDealPriceFromOffers } from '@/lib/deals/deal-price-sync'
 import { buildCurrentOfferTermsSnapshot } from '@/lib/offers/offer-terms-snapshot'
+import { loadFirmProfile } from '@/lib/company/firm-profile'
 import {
   CUSTOMER_NAME_REQUIRED_ERROR,
   isCustomerNameValid,
@@ -254,7 +255,7 @@ export async function POST(req: NextRequest) {
       customerName,
     }),
     offer_number: offerNumber,
-    terms_snapshot: buildCurrentOfferTermsSnapshot(),
+    terms_snapshot: buildCurrentOfferTermsSnapshot(7, await loadFirmProfile(supabase, companyId)),
   }
 
   const { data: offer, error: offerError } = await supabase

@@ -10,7 +10,7 @@ const CRMSidebar = dynamic(() => import('@/components/crm/CRMSidebar'), { ssr: f
 
 export const metadata: Metadata = {
   title: {
-    default: 'CRM | Pashkovsky Group',
+    default: 'CRM',
     template: '%s | CRM',
   },
   robots: {

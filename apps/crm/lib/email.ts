@@ -1,4 +1,8 @@
 import nodemailer from 'nodemailer'
+import { EMPTY_FIRM_PROFILE, type FirmProfile } from '@/lib/company/firm-profile'
+
+/** Name on platform e-mails that are not sent on behalf of a firm (sign-in links and the like). */
+const PLATFORM_NAME = process.env.EMAIL_FROM_NAME?.trim() || 'CRM'
 
 // Create email transporter for Zoho Mail
 export const emailClient = nodemailer.createTransport({
@@ -26,16 +30,29 @@ export interface SendEmailOptions {
   subject: string
   html: string
   text?: string
+  /** Display name of the sending firm. The SMTP account stays the platform's. */
+  fromName?: string
+  /** Where the customer's reply goes (the firm's own address). */
+  replyTo?: string
 }
 
-export async function sendEmail({ to, subject, html, text }: SendEmailOptions) {
+/** `"Name" <address>`: the address of EMAIL_FROM when set, otherwise EMAIL_USER. */
+function fromHeader(fromName: string | undefined): string {
+  const configured = process.env.EMAIL_FROM?.trim()
+  if (!fromName?.trim()) return configured || `"${PLATFORM_NAME}" <${process.env.EMAIL_USER}>`
+  const address = configured?.match(/<([^>]+)>/)?.[1] ?? configured ?? process.env.EMAIL_USER
+  return `"${fromName.replace(/["\r\n]/g, '').trim()}" <${address}>`
+}
+
+export async function sendEmail({ to, subject, html, text, fromName, replyTo }: SendEmailOptions) {
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
     throw new Error('Email configuration is missing. Please set EMAIL_USER and EMAIL_PASS in .env')
   }
 
   try {
     const info = await emailClient.sendMail({
-      from: process.env.EMAIL_FROM || `"Pashkovsky Group" <${process.env.EMAIL_USER}>`,
+      from: fromHeader(fromName),
+      ...(replyTo ? { replyTo } : {}),
       to,
       subject,
       html,
@@ -111,7 +128,7 @@ export function generateMagicLinkEmailHTML(magicLink: string, email: string) {
                     Questions? Reply to this email.
                   </p>
                   <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-                    © ${new Date().getFullYear()} Pashkovsky Group. All rights reserved.
+                    © ${new Date().getFullYear()} ${PLATFORM_NAME}. All rights reserved.
                   </p>
                 </td>
               </tr>
@@ -134,6 +151,7 @@ export function generateOfferEmailHTML(
     discountPercent: number
     lines?: { label: string; amount: number }[]
   } | null,
+  firm: FirmProfile = EMPTY_FIRM_PROFILE,
 ) {
   // Escape HTML for AI text
   const escapeHtml = (text: string) => {
@@ -162,8 +180,8 @@ export function generateOfferEmailHTML(
               <!-- Header -->
               <tr>
                 <td style="background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%); padding: 40px 20px; text-align: center;">
-                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Pashkovsky Group</h1>
-                  <p style="color: #e0e7ff; margin: 10px 0 0 0; font-size: 16px;">פרגולות | גדרות | חלונות</p>
+                  <h1 style="color: #ffffff; margin: 0; font-size: 28px;">${escapeHtml(firm.name)}</h1>
+                  ${firm.industry === 'aluminum' ? '<p style="color: #e0e7ff; margin: 10px 0 0 0; font-size: 16px;">פרגולות | גדרות | חלונות</p>' : ''}
                 </td>
               </tr>
               
@@ -231,8 +249,9 @@ export function generateOfferEmailHTML(
                   <p style="color: #6b7280; font-size: 14px; margin: 0 0 10px 0;">
                     יש לך שאלות? פשוט השב למייל הזה.
                   </p>
+                  ${firm.emailSignature ? `<p style="color: #4b5563; font-size: 14px; margin: 0 0 10px 0;">${escapeHtml(firm.emailSignature).replace(/\n/g, '<br>')}</p>` : ''}
                   <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-                    © ${new Date().getFullYear()} Pashkovsky Group. כל הזכויות שמורות.
+                    © ${new Date().getFullYear()} ${escapeHtml(firm.name)}. כל הזכויות שמורות.
                   </p>
                 </td>
               </tr>

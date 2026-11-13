@@ -7,6 +7,7 @@ import {
 } from '@/lib/email/templates/early-bird'
 import { seedCompanyStages, stagesFromRegistration } from '@/lib/deals/stage-store'
 import { stagesForNewFirm, templateIdForIndustry } from '@/lib/deals/stages'
+import { pickProfileUpdate } from '@/lib/company/profile-update'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -50,7 +51,15 @@ export async function POST(req: NextRequest) {
       utm_campaign,
       referrer_url,
       deal_stages,
+      whatsapp_number,
+      whatsapp_template,
     } = body
+
+    // Optional WhatsApp contact. Checked up front so a typo cannot leave a half-created firm.
+    const contact = pickProfileUpdate({ whatsapp_number, whatsapp_template })
+    if (contact.errors.length > 0) {
+      return NextResponse.json({ error: 'Invalid WhatsApp data', codes: contact.errors }, { status: 400 })
+    }
 
     // The kanban stages the firm chose at registration. Checked before anything is created.
     let chosenStages = null
@@ -159,6 +168,15 @@ export async function POST(req: NextRequest) {
       )
     } catch (stagesError) {
       console.error('[Setup Company] Could not create deal stages for', company.id, stagesError)
+    }
+
+    // WhatsApp number and greeting are optional; with no number the firm simply has no WhatsApp
+    // buttons. Best effort: columns from migration 064 may not exist yet.
+    if (Object.keys(contact.update).length > 0) {
+      const { error: contactError } = await supabase.from('companies').update(contact.update).eq('id', company.id)
+      if (contactError) {
+        console.error('[Setup Company] Could not save WhatsApp settings for', company.id, contactError.message)
+      }
     }
 
     // Step 3.5: Atomically claim an Early Bird position. NULL = cohort full.

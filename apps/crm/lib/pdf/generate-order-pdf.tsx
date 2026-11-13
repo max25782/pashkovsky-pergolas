@@ -1,4 +1,5 @@
 import { renderOrderHtml } from './order-html-template'
+import { defaultBranding, type PdfBranding } from './firm-branding'
 import { renderHtmlToPdfBuffer } from './render-html-to-pdf'
 
 interface Order {
@@ -76,12 +77,16 @@ async function prefetchImages(order: Order): Promise<Record<string, string>> {
  * Generates a PDF buffer for the given order using Puppeteer + Chromium
  * with proper Hebrew RTL support and embedded product images.
  */
-export async function generateOrderPdf(order: Order, locale?: string): Promise<Buffer> {
+export async function generateOrderPdf(
+  order: Order,
+  locale?: string,
+  branding: PdfBranding = defaultBranding(),
+): Promise<Buffer> {
   try {
 
     const imageMap = await prefetchImages(order)
 
-    const html = renderOrderHtml(order, imageMap, locale)
+    const html = renderOrderHtml(order, imageMap, locale, branding)
 
     const pdfBuffer = await renderHtmlToPdfBuffer(html)
 

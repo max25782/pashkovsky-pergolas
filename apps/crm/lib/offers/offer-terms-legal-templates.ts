@@ -1,4 +1,5 @@
 import type { PdfLocale } from '@/lib/pdf/pdf-locale'
+import { EMPTY_FIRM_PROFILE, firmFooterLine, industryTagline, type FirmProfile } from '@/lib/company/firm-profile'
 
 export interface OfferTermsLegalLocaleBlock {
   introTitle: string
@@ -20,16 +21,36 @@ export interface OfferTermsLegalLocaleBlock {
 
 export type OfferTermsLegalBlocks = Record<'he' | 'en' | 'ru', OfferTermsLegalLocaleBlock>
 
+/**
+ * The issuer that every offer written before per-firm profiles carries in its frozen text.
+ * Used ONLY to re-render those old documents unchanged (a stored snapshot without `legal`);
+ * new offers pass their own firm. The e-mail spelling is the one that was printed back then.
+ */
+const LEGACY_ISSUER: Pick<FirmProfile, 'name' | 'phone' | 'email' | 'industry'> = {
+  name: 'Pashkovsky Group',
+  phone: '052-449-4848',
+  email: 'office@pashkovskygroup.com',
+  industry: 'aluminum',
+}
+
 export function buildOfferTermsLegalBlocks(params: {
   advancePercent: number
   remainingPercent: number
   workingDaysFromAdvance: number
+  /** Issuing firm. Omitted only when re-rendering documents that predate firm profiles. */
+  firm?: Pick<FirmProfile, 'name' | 'phone' | 'email' | 'industry'>
 }): OfferTermsLegalBlocks {
   const { advancePercent, remainingPercent, workingDaysFromAdvance: d } = params
+  const firm = params.firm ?? LEGACY_ISSUER
+  const name = firm.name.trim()
+  const subtitle = (locale: 'he' | 'en' | 'ru') =>
+    [name, industryTagline(firm.industry, locale)].filter(Boolean).join(' · ')
+  const footer = (locale: 'he' | 'en' | 'ru') =>
+    firmFooterLine({ ...EMPTY_FIRM_PROFILE, ...firm }, industryTagline(firm.industry, locale))
 
   const he: OfferTermsLegalLocaleBlock = {
     introTitle: 'תנאים כלליים — הצעת מחיר',
-    introSubtitle: 'Pashkovsky Group · פתרונות אלומיניום',
+    introSubtitle: subtitle('he'),
     executionTitle: '1. תנאי ביצוע',
     executionItems: [
       'תחילת ייצור מותנית בביצוע מדידות סופיות בשטח, לאחר סיום טיח, חיפוי וריצוף בנקודות העיגון.',
@@ -53,7 +74,7 @@ export function buildOfferTermsLegalBlocks(params: {
     licensingTitle: '4. רישוי ואחריות משפטית',
     licensingItems: [
       'אחריות על היתרי בנייה ואישורי קונסטרוקטור לעומסי המבנה ולנקודות העיגון — חלה על המזמין בלבד.',
-      'Pashkovsky Group אינה אחראית לנושאי רישוי מול הרשות המקומית. המזמין מתחייב לבצע את כל הבירורים הנדרשים.',
+      `${name} אינה אחראית לנושאי רישוי מול הרשות המקומית. המזמין מתחייב לבצע את כל הבירורים הנדרשים.`,
       'החברה אינה אחראית לנזקים בלתי צפויים כגון: פיצוצי צנרת, נזקי מים, גז, חשמל — באחריות המזמין להודיע מראש על מצבים אלו.',
       'על המזמין להודיע לחברת הביטוח שלו על התקנת מוצרי החברה, על מנת שיכוסו בפוליסת הביטוח.',
       'הצעה זו מהווה הערכה בלבד ואינה מחייבת עד לחתימה על הזמנה רשמית.',
@@ -61,12 +82,12 @@ export function buildOfferTermsLegalBlocks(params: {
     warrantyTitle: '5. אחריות על המוצרים',
     warrantyNote:
       'האחריות חלה על פגמי ייצור וחומר בלבד. אינה כוללת נזקי מזג אוויר חריג, שימוש לא נכון, או שינויים שבוצעו על-ידי צד שלישי.',
-    footerLine: 'Pashkovsky Group · פתרונות אלומיניום · 052-449-4848 · office@pashkovskygroup.com',
+    footerLine: footer('he'),
   }
 
   const en: OfferTermsLegalLocaleBlock = {
     introTitle: 'General terms — commercial offer',
-    introSubtitle: 'Pashkovsky Group · aluminum solutions',
+    introSubtitle: subtitle('en'),
     executionTitle: '1. Execution conditions',
     executionItems: [
       'Production starts only after final on-site measurements, once plaster, cladding and flooring are finished at anchoring points.',
@@ -91,7 +112,7 @@ export function buildOfferTermsLegalBlocks(params: {
     licensingTitle: '4. Permits and legal liability',
     licensingItems: [
       'Building permits and structural engineer approvals for loads and anchor points — client’s sole responsibility.',
-      'Pashkovsky Group is not responsible for licensing with the local authority. The client undertakes to perform all required checks.',
+      `${name} is not responsible for licensing with the local authority. The client undertakes to perform all required checks.`,
       'The company is not liable for unforeseen damage such as plumbing bursts, water, gas, or electrical damage — the client must report such conditions in advance.',
       'The client must inform their insurer about installation of the company’s products so they are covered by the policy.',
       'This offer is an estimate only and is not binding until a formal order is signed.',
@@ -99,12 +120,12 @@ export function buildOfferTermsLegalBlocks(params: {
     warrantyTitle: '5. Product warranty',
     warrantyNote:
       'Warranty covers manufacturing and material defects only. It excludes extreme weather damage, improper use, or modifications by a third party.',
-    footerLine: 'Pashkovsky Group · aluminum solutions · 052-449-4848 · office@pashkovskygroup.com',
+    footerLine: footer('en'),
   }
 
   const ru: OfferTermsLegalLocaleBlock = {
     introTitle: 'Общие условия — коммерческое предложение',
-    introSubtitle: 'Pashkovsky Group · алюминиевые решения',
+    introSubtitle: subtitle('ru'),
     executionTitle: '1. Условия выполнения работ',
     executionItems: [
       'Запуск производства возможен только после финальных замеров на объекте, по завершении штукатурки, облицовки и напольного покрытия в точках крепления.',
@@ -129,7 +150,7 @@ export function buildOfferTermsLegalBlocks(params: {
     licensingTitle: '4. Разрешения и юридическая ответственность',
     licensingItems: [
       'Разрешения на строительство и заключения инженера по нагрузкам и точкам крепления — только обязанность заказчика.',
-      'Pashkovsky Group не отвечает за согласования с местными органами власти. Заказчик обязуется выполнить все необходимые проверки.',
+      `${name} не отвечает за согласования с местными органами власти. Заказчик обязуется выполнить все необходимые проверки.`,
       'Компания не несёт ответственности за непредвиденные повреждения (прорыв трубопровода, вода, газ, электрика) — заказчик заранее информирует о таких условиях.',
       'Заказчик обязан уведомить свою страховую компанию об установке продукции, чтобы она была включена в полис.',
       'Настоящее предложение носит оценочный характер и обязательно только после подписания официального заказа.',
@@ -137,7 +158,7 @@ export function buildOfferTermsLegalBlocks(params: {
     warrantyTitle: '5. Гарантия на продукцию',
     warrantyNote:
       'Гарантия распространяется только на дефекты производства и материала. Не покрывает экстремальную погоду, неправильное использование или вмешательство третьих лиц.',
-    footerLine: 'Pashkovsky Group · алюминиевые решения · 052-449-4848 · office@pashkovskygroup.com',
+    footerLine: footer('ru'),
   }
 
   void advancePercent

@@ -11,7 +11,7 @@ import type { AnalyticsMode } from './analyticsTypes'
 // Leads Analyst Prompt
 // ============================================================================
 
-export const LEADS_ANALYST_PROMPT = `Ты аналитик по лидам в CRM системе Pashkovsky Group.
+export const LEADS_ANALYST_PROMPT = `Ты аналитик по лидам в CRM-системе компании.
 
 КРИТИЧЕСКИ ВАЖНО:
 - Работай ТОЛЬКО с данными из переданного AnalyticsContext JSON
@@ -38,7 +38,7 @@ export const LEADS_ANALYST_PROMPT = `Ты аналитик по лидам в CR
 // Deals Analyst Prompt
 // ============================================================================
 
-export const DEALS_ANALYST_PROMPT = `Ты аналитик по сделкам в CRM системе Pashkovsky Group.
+export const DEALS_ANALYST_PROMPT = `Ты аналитик по сделкам в CRM-системе компании.
 
 КРИТИЧЕСКИ ВАЖНО:
 - Работай ТОЛЬКО с данными из переданного AnalyticsContext JSON
@@ -88,7 +88,7 @@ SUGGESTIONS:
 // Finance Analyst Prompt
 // ============================================================================
 
-export const FINANCE_ANALYST_PROMPT = `Ты финансовый аналитик в CRM системе Pashkovsky Group.
+export const FINANCE_ANALYST_PROMPT = `Ты финансовый аналитик в CRM-системе компании.
 
 КРИТИЧЕСКИ ВАЖНО:
 - Работай ТОЛЬКО с данными из переданного AnalyticsContext JSON
@@ -116,7 +116,7 @@ export const FINANCE_ANALYST_PROMPT = `Ты финансовый аналити�
 // Manager Analyst Prompt
 // ============================================================================
 
-export const MANAGER_ANALYST_PROMPT = `Ты стратегический аналитик-менеджер в CRM системе Pashkovsky Group.
+export const MANAGER_ANALYST_PROMPT = `Ты стратегический аналитик-менеджер в CRM-системе компании.
 
 КРИТИЧЕСКИ ВАЖНО:
 - Работай ТОЛЬКО с данными из переданного AnalyticsContext JSON

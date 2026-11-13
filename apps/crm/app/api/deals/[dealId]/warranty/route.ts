@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { requireCompanyAccess } from '@/lib/auth'
 import { getCompanyBranding, getDealById } from '@/lib/deals/get-deal-by-id'
+import { displayWebsite, loadFirmProfile } from '@/lib/company/firm-profile'
 import { buildWarrantyPdfSections, resolveProductLinesForPdf } from '@/lib/deals/deal-product-lines'
 import { buildWarrantyPdfHtml } from '@/lib/pdf/warranty-html-template'
 import { renderHtmlToPdfBuffer } from '@/lib/pdf/render-html-to-pdf'
@@ -88,10 +89,9 @@ export async function GET(
 
   const branding = await getCompanyBranding(supabase, deal.company_id)
   const companyName = branding?.name ?? 'Company'
-  const logoUrl = logoFromSettings(branding?.settings ?? null)
-  /** Optional full URL override for watermark-free PDF logo */
-  const publicLogo =
-    process.env.WARRANTY_PDF_LOGO_URL?.trim() || process.env.NEXT_PUBLIC_COMPANY_LOGO_URL?.trim() || logoUrl
+  const firm = await loadFirmProfile(supabase, deal.company_id)
+  // The firm's own logo only: a deployment-wide env logo would put one firm's logo on every firm's PDF.
+  const publicLogo = firm.logoUrl ?? logoFromSettings(branding?.settings ?? null)
 
   const clientName = deal.customer_name?.trim() ? deal.customer_name : 'לקוח'
   const addr = addressLine(deal)
@@ -105,11 +105,9 @@ export async function GET(
   const productLines = resolveProductLinesForPdf(deal.project_config, deal.work_type)
   const warrantySections = buildWarrantyPdfSections(productLines)
 
-  const footerLines = [
-    process.env.WARRANTY_FOOTER_PHONE ?? '052-449-4848',
-    process.env.WARRANTY_FOOTER_EMAIL ?? 'office@pashkovskygroup.com',
-    process.env.WARRANTY_FOOTER_WEB ?? '',
-  ].filter((line) => line.trim() !== '')
+  const footerLines = [firm.phone, firm.email, displayWebsite(firm.website)].filter(
+    (line): line is string => typeof line === 'string' && line.trim() !== '',
+  )
 
   const footer =
     footerLines.length > 0

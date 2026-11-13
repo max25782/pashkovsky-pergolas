@@ -7,7 +7,9 @@ import { generateDrawingsFromPlan, generateOfferDrawings } from '@/lib/pdf/polyg
 import { isPlanContourOrthogonal } from '@/lib/pergolas/plan-contour-orthogonal'
 import { lineAmountFromBillableArea, pergolaAreaSqm, roundBillableAreaSqm } from '@/lib/pergolas/pergola-area-sqm'
 import { planPolygonAreaSqm } from '@/lib/pdf/plan-polygon-metrics'
-import { getHebrewFontsCss, getLogoDataUri } from './font-loader'
+import { getHebrewFontsCss } from './font-loader'
+import { defaultBranding, type PdfBranding } from './firm-branding'
+import { firmContactLine } from '@/lib/company/firm-profile'
 import { pdfT, resolvePdfLocale, pdfHtmlDir, pdfBcp47Locale, pdfCurrencySymbol, type PdfDict } from '@/lib/pdf/offer-pdf-i18n'
 import { renderOfferTermsHtml } from '@/lib/pdf/offer-terms-html'
 import { resolveOfferTermsSnapshot } from '@/lib/offers/offer-terms-snapshot'
@@ -1058,7 +1060,9 @@ export async function renderOfferHtml(
   previewImageDataUrl?: string | null,
   omitSignatureSection = false,
   locale?: string,
+  branding: PdfBranding = defaultBranding(),
 ): Promise<string> {
+  const { firm } = branding
   const resolved = resolvePdfLocale(locale)
   const dict = pdfT[resolved]
   const dir = pdfHtmlDir(resolved)
@@ -1067,7 +1071,7 @@ export async function renderOfferHtml(
   const dash = dict.off_color_dash
 
   const fontsCss = getHebrewFontsCss()
-  const logoDataUri = getLogoDataUri()
+  const logoDataUri = branding.logoUri
   const notesText = offer.options?.notes?.trim() || ''
   const safeNotes = notesText ? escapeHtml(notesText) : ''
 
@@ -1397,13 +1401,13 @@ export async function renderOfferHtml(
     <div class="brand">
       ${logoDataUri ? `<img class="logo" src="${logoDataUri}" alt="" />` : ''}
       <div class="brand-text">
-        <div class="name">Pashkovsky Group</div>
-        <div class="sub">${dict.off_brand_sub}</div>
-        <div class="sub">${dict.off_brand_phone_line}</div>
+        <div class="name">${escapeHtml(firm.name)}</div>
+        ${firm.industry === 'aluminum' ? `<div class="sub">${dict.off_brand_sub}</div>` : ''}
+        ${firmContactLine(firm, dict.off_brand_phone_label) ? `<div class="sub">${escapeHtml(firmContactLine(firm, dict.off_brand_phone_label))}</div>` : ''}
       </div>
     </div>
     <div class="meta">
-      <div>${dict.off_vat_id}: <strong>320807068</strong></div>
+      ${firm.vatNumber ? `<div>${dict.off_vat_id}: <strong>${escapeHtml(firm.vatNumber)}</strong></div>` : ''}
       <div class="big">${escapeHtml(fillTpl(dict.off_quote_big, { no: offerNo }))}</div>
       <div><strong>${dict.off_date}:</strong> ${docDate}</div>
       <div><strong>${dict.off_valid_until}:</strong> ${validUntil}</div>
@@ -1480,6 +1484,7 @@ export async function renderOfferHtml(
   ${technicalAppendixHtml}
 
   ${termsHtml}
+  ${firm.pdfFooter ? `<div style="margin-top:14px;padding-top:8px;border-top:1px solid #ccc;font-size:10px;color:#555;text-align:center;white-space:pre-line;">${escapeHtml(firm.pdfFooter)}</div>` : ''}
 </body>
 </html>
 `.trim()

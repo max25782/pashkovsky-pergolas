@@ -3,7 +3,7 @@ import type { Metadata } from 'next'
 import { Providers } from '@/components/providers'
 
 export const metadata: Metadata = {
-  title: 'התחברות | Pashkovsky CRM',
+  title: 'התחברות | CRM',
   robots: {
     index: false,
     follow: false,

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Pashkovsky Group - הצעת מחיר',
+  title: 'הצעת מחיר',
   description: 'צפייה ואישור הצעת מחיר',
 }
 

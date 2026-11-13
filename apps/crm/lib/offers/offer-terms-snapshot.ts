@@ -8,6 +8,7 @@ import {
   STANDARD_INSTALLATION_REMAINING_PERCENT,
   STANDARD_INSTALLATION_WORKING_DAYS_FROM_ADVANCE,
 } from '@/lib/commercial/standard-installation-terms'
+import type { FirmProfile } from '@/lib/company/firm-profile'
 import {
   buildOfferTermsLegalBlocks,
   type OfferTermsLegalBlocks,
@@ -91,7 +92,11 @@ function currentWarrantyRows(): OfferTermsSnapshot['warrantyRows'] {
   }
 }
 
-export function buildCurrentOfferTermsSnapshot(warrantyYears = 7): OfferTermsSnapshot {
+export function buildCurrentOfferTermsSnapshot(
+  warrantyYears = 7,
+  /** Issuing firm; its name, phone and e-mail are frozen into the legal text. */
+  firm?: Pick<FirmProfile, 'name' | 'phone' | 'email' | 'industry'>,
+): OfferTermsSnapshot {
   const advancePercent = STANDARD_INSTALLATION_ADVANCE_PERCENT
   const remainingPercent = STANDARD_INSTALLATION_REMAINING_PERCENT
   const workingDaysFromAdvance = STANDARD_INSTALLATION_WORKING_DAYS_FROM_ADVANCE
@@ -106,6 +111,7 @@ export function buildCurrentOfferTermsSnapshot(warrantyYears = 7): OfferTermsSna
       advancePercent,
       remainingPercent,
       workingDaysFromAdvance,
+      firm,
     }),
   }
 }

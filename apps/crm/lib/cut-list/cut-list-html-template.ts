@@ -198,7 +198,7 @@ function orderSummaryHtml(result: CutListResult, t: PdfDict): string {
   </div>`
 }
 
-export function renderCutListHtml(result: CutListResult, locale?: string): string {
+export function renderCutListHtml(result: CutListResult, locale?: string, companyName = ''): string {
   const loc = resolvePdfLocale(locale)
   const t = pdfT[loc]
   const dir = pdfHtmlDir(loc)
@@ -363,7 +363,7 @@ th { background: #f0f4fa; font-weight: 700; color: #1a3a5c; }
   ${groupsHtml}
 
   <div class="page-foot">
-    <span>${escapeHtml(t.cut_footer)}</span>
+    <span>${escapeHtml(fillTpl(t.cut_footer, { company: companyName }).replace(/^\s*·\s*/, ''))}</span>
     <span>${date}</span>
   </div>
 </body>

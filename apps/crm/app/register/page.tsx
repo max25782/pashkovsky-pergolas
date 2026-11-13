@@ -22,6 +22,8 @@ function RegisterPageContent() {
   const [step, setStep] = useState<1 | 2>(1)
   const [stageRows, setStageRows] = useState<EditorRow[]>([])
   const [stageError, setStageError] = useState<string | null>(null)
+  const [whatsappNumber, setWhatsappNumber] = useState('')
+  const [whatsappTemplate, setWhatsappTemplate] = useState('')
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -187,6 +189,8 @@ function RegisterPageContent() {
             label,
             labels,
           })),
+          whatsapp_number:     whatsappNumber.trim() || undefined,
+          whatsapp_template:   whatsappTemplate.trim() || undefined,
           registration_source: deriveSource(utmMedium),
           utm_source:          utmSource,
           utm_medium:          utmMedium,
@@ -358,6 +362,30 @@ function RegisterPageContent() {
                 initialTemplate={templateIdForIndustry(formData.industry)}
                 error={stageError}
               />
+            ) : null}
+
+            {step === 2 ? (
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold">WhatsApp (optional) / WhatsApp (необязательно)</h3>
+                <p className="text-sm text-white/60">
+                  Leave empty if you do not use WhatsApp: WhatsApp buttons will be hidden.
+                  Оставьте пустым, если не используете WhatsApp: кнопки WhatsApp будут скрыты.
+                </p>
+                <input
+                  type="tel"
+                  value={whatsappNumber}
+                  onChange={(e) => setWhatsappNumber(e.target.value)}
+                  placeholder="972501234567"
+                  className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 focus:border-blue-500 focus:outline-none"
+                />
+                <textarea
+                  value={whatsappTemplate}
+                  onChange={(e) => setWhatsappTemplate(e.target.value)}
+                  placeholder="Hello {name}! This is {company}. How can we help you?"
+                  rows={3}
+                  className="w-full px-4 py-3 rounded-lg bg-white/10 border border-white/20 focus:border-blue-500 focus:outline-none"
+                />
+              </div>
             ) : null}
 
             <button

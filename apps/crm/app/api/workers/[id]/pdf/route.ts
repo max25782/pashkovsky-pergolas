@@ -11,6 +11,7 @@ import { requireCompanyAccess } from '@/lib/auth'
 import { renderHtmlToPdfBuffer } from '@/lib/pdf/render-html-to-pdf'
 import { generateWorkerTimesheetHtml } from '@/lib/pdf/worker-timesheet-html-template'
 import { fetchCompanyPdfLocale, mergeUiPdfLocale } from '@/lib/pdf/company-pdf-locale'
+import { loadBranding } from '@/lib/pdf/firm-branding'
 import { uploadToS3 } from '@/lib/s3-upload'
 import { applyCurrentRatesToWorkerShifts } from '@/lib/workers/calculations'
 import type { WorkerShift, WorkerShiftSummary, WorkerShiftType } from '@/types/workers'
@@ -158,6 +159,7 @@ export async function POST(
         summary,
       },
       pdfLocale,
+      await loadBranding(supabase, worker.company_id as string),
     )
 
     const pdfBuffer = await renderHtmlToPdfBuffer(html)

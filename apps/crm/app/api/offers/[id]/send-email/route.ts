@@ -3,6 +3,7 @@ import { sendEmail, generateOfferEmailHTML } from '@/lib/email'
 import { isOfferPricingSnapshot, snapshotShareLines } from '@/lib/offers/offer-pricing-snapshot'
 import { createClient } from '@supabase/supabase-js'
 import { requirePermissionAsync } from '@/lib/middleware/auth'
+import { EMPTY_FIRM_PROFILE, loadFirmProfile, type FirmProfile } from '@/lib/company/firm-profile'
 
 const supabase = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
   ? createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
@@ -97,12 +98,16 @@ export async function POST(
       }
     }
 
-    const html = generateOfferEmailHTML(finalOfferUrl, customerName || 'לקוח יקר', aiText, saved)
+    const firm: FirmProfile = await loadFirmProfile(supabase, companyId) || EMPTY_FIRM_PROFILE
+
+    const html = generateOfferEmailHTML(finalOfferUrl, customerName || 'לקוח יקר', aiText, saved, firm)
 
     await sendEmail({
       to: email,
-      subject: 'הצעת מחיר - Pashkovsky Group',
+      subject: firm.name ? `הצעת מחיר - ${firm.name}` : 'הצעת מחיר',
       html,
+      fromName: firm.name || undefined,
+      replyTo: firm.email ?? undefined,
     })
 
     return NextResponse.json({

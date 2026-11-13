@@ -4,6 +4,7 @@ import { createClient as createServiceClient, type SupabaseClient } from '@supab
 import { fetchWithTimeout, DEFAULT_SUPABASE_TIMEOUT_MS } from '@/lib/supabase/fetch-with-timeout'
 import { pdfLocaleFromCompanySettings } from '@/lib/pdf/company-pdf-locale'
 import { resolvePdfLocale, type PdfLocale } from '@/lib/pdf/pdf-locale'
+import { EMPTY_FIRM_PROFILE, firmProfileFromRow, type FirmProfile } from '@/lib/company/firm-profile'
 
 export const dynamic = 'force-dynamic'
 
@@ -111,6 +112,7 @@ export async function GET() {
       status: company.status,
       crm_intro_completed_at: chosen.crm_intro_completed_at ?? null,
       language: await readCompanyLanguage(service, company.id),
+      profile: await readFirmProfile(service, company.id),
     })
   } catch (error: unknown) {
     const e = error as Error & { stack?: string }
@@ -121,6 +123,20 @@ export async function GET() {
       { error: 'Internal Server Error' },
       { status: 500 }
     )
+  }
+}
+
+async function readFirmProfile(service: SupabaseClient, companyId: string): Promise<FirmProfile> {
+  try {
+    const { data, error } = await service.from('companies').select('*').eq('id', companyId).maybeSingle()
+    if (error) {
+      console.error('[companies/me] firm profile query:', error)
+      return EMPTY_FIRM_PROFILE
+    }
+    return firmProfileFromRow(data as Record<string, unknown> | null)
+  } catch (error) {
+    console.error('[companies/me] firm profile failed:', error)
+    return EMPTY_FIRM_PROFILE
   }
 }
 

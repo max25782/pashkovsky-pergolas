@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import type { CompanyMember } from '@/types/membership'
+import { pickProfileUpdate } from '@/lib/company/profile-update'
 
 export const dynamic = 'force-dynamic'
 
@@ -244,10 +245,15 @@ export async function PUT(request: NextRequest) {
       { auth: { autoRefreshToken: false, persistSession: false } }
     )
 
+    const { update, errors } = pickProfileUpdate(body)
+    if (errors.length > 0) {
+      return NextResponse.json({ error: 'Invalid company data', codes: errors }, { status: 400 })
+    }
+
     const { data: company, error: updateError } = await serviceClient
       .from('companies')
       .update({
-        ...body,
+        ...update,
         updated_at: new Date().toISOString(),
       })
       .eq('id', membership.company_id)

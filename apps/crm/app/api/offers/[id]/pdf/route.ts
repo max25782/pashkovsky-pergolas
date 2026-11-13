@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { generateOfferPdf, generateOfferPdfFilename } from '@/lib/pdf/generate-offer-pdf'
 import { fetchPdfLocaleForOffer, mergeUiPdfLocale } from '@/lib/pdf/company-pdf-locale'
+import { loadBrandingForOffer } from '@/lib/pdf/firm-branding'
 import type { PdfLocale } from '@/lib/pdf/pdf-locale'
 import { uploadToS3 } from '@/lib/s3-upload'
 import type { Offer } from '@/types/offer'
@@ -73,7 +74,7 @@ export async function POST(
       })
     }
 
-    const pdfBuffer = await generateOfferPdf(offer, pdfLocale)
+    const pdfBuffer = await generateOfferPdf(offer, pdfLocale, await loadBrandingForOffer(supabase, offer.id))
 
     const filename = generateOfferPdfFilename(offer)
     const key = `offers/${offer.id}/${filename}`
