@@ -3,7 +3,7 @@ import { sendEmail, generateOfferEmailHTML } from '@/lib/email'
 import { isOfferPricingSnapshot, snapshotShareLines } from '@/lib/offers/offer-pricing-snapshot'
 import { createClient } from '@supabase/supabase-js'
 import { requirePermissionAsync } from '@/lib/middleware/auth'
-import { EMPTY_FIRM_PROFILE, loadFirmProfile, type FirmProfile } from '@/lib/company/firm-profile'
+import { loadFirmProfile, type FirmProfile } from '@/lib/company/firm-profile'
 
 const supabase = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
   ? createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
@@ -98,7 +98,7 @@ export async function POST(
       }
     }
 
-    const firm: FirmProfile = await loadFirmProfile(supabase, companyId) || EMPTY_FIRM_PROFILE
+    const firm: FirmProfile = await loadFirmProfile(supabase, companyId)
 
     const html = generateOfferEmailHTML(finalOfferUrl, customerName || 'לקוח יקר', aiText, saved, firm)
 

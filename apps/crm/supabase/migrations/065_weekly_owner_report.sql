@@ -7,7 +7,8 @@
 --                        amount and an optional due date. A row without a due date is reported on
 --                        the weekly report's "no due date" line. Actual money stays in deal_payments.
 -- weekly_report_settings One row per firm, created on first save. A firm without a row uses the
---                        defaults: ON, Sunday 08:00 Asia/Jerusalem, recipients = owners and admins.
+--                        defaults: OFF, Sunday 08:00 Asia/Jerusalem, recipients = owners and admins.
+--                        Enable per firm in settings (Pashkovsky seeded enabled in production).
 -- weekly_report_log      One row per firm and week: the unique key is what stops a second send.
 --                        week_start is the Sunday that starts the week of the send date.
 
@@ -32,7 +33,7 @@ CREATE INDEX IF NOT EXISTS idx_planned_payments_deal
 
 CREATE TABLE IF NOT EXISTS public.weekly_report_settings (
   company_id uuid PRIMARY KEY REFERENCES public.companies(id) ON DELETE CASCADE,
-  enabled boolean NOT NULL DEFAULT true,
+  enabled boolean NOT NULL DEFAULT false,
   -- NULL: owners and admins of the firm. A value: that single address.
   recipient_email text,
   -- 0 = Sunday ... 6 = Saturday

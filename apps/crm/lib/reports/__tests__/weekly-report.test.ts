@@ -72,7 +72,7 @@ describe('dates', () => {
   })
 
   it('is due on the weekday from the hour on, never before and never on another day', () => {
-    const schedule = { ...DEFAULT_REPORT_SETTINGS }
+    const schedule = { ...DEFAULT_REPORT_SETTINGS, enabled: true }
     expect(isReportDue(new Date('2026-11-15T05:59:00Z'), schedule)).toBe(false) // 07:59
     expect(isReportDue(new Date('2026-11-15T06:00:00Z'), schedule)).toBe(true) // 08:00
     expect(isReportDue(new Date('2026-11-15T15:00:00Z'), schedule)).toBe(true) // catch-up, same day

@@ -126,7 +126,7 @@ function reportInput(withDeals: boolean): WeeklyReportInput {
 beforeEach(() => {
   jest.clearAllMocks()
   jest.spyOn(console, 'error').mockImplementation(() => undefined)
-  store.loadReportSettings.mockResolvedValue({ ...DEFAULT_REPORT_SETTINGS })
+  store.loadReportSettings.mockResolvedValue({ ...DEFAULT_REPORT_SETTINGS, enabled: true })
   store.loadFirmReportIdentity.mockResolvedValue({ name: 'Test Firm', currency: 'ILS', firmLanguage: 'en' })
   store.loadOwnerAdminEmails.mockResolvedValue(['owner@test.com', 'admin@test.com'])
   store.loadWeeklyReportInput.mockResolvedValue(reportInput(true))
@@ -162,7 +162,7 @@ describe('runWeeklyReports', () => {
   })
 
   it('a single recipient address replaces the owners and admins', async () => {
-    store.loadReportSettings.mockResolvedValue({ ...DEFAULT_REPORT_SETTINGS, recipientEmail: 'boss@test.com' })
+    store.loadReportSettings.mockResolvedValue({ ...DEFAULT_REPORT_SETTINGS, enabled: true, recipientEmail: 'boss@test.com' })
     const results = await runWeeklyReports(fakeSupabase(['c1'], []) as never, SUNDAY_MORNING)
     expect(results[0]).toMatchObject({ outcome: 'sent', recipients: 1 })
     expect(sendEmail).toHaveBeenCalledTimes(1)
@@ -234,7 +234,7 @@ describe('runWeeklyReports', () => {
   })
 
   it('uses each firm own language: the setting wins over the firm language', async () => {
-    store.loadReportSettings.mockResolvedValue({ ...DEFAULT_REPORT_SETTINGS, language: 'ru' })
+    store.loadReportSettings.mockResolvedValue({ ...DEFAULT_REPORT_SETTINGS, enabled: true, language: 'ru' })
     await runWeeklyReports(fakeSupabase(['c1'], []) as never, SUNDAY_MORNING)
     expect(sendEmail.mock.calls[0][0].subject).toContain('Недельный отчёт')
   })

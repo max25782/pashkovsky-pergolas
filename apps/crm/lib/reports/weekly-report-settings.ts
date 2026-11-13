@@ -20,9 +20,9 @@ export interface WeeklyReportSettings {
   language: ReportLanguage | null
 }
 
-/** A firm that never saved settings: on, Sunday 08:00, owners and admins. */
+/** A firm that never saved settings: off until an owner turns it on (Sunday 08:00 when enabled). */
 export const DEFAULT_REPORT_SETTINGS: WeeklyReportSettings = {
-  enabled: true,
+  enabled: false,
   recipientEmail: null,
   weekday: 0,
   hour: 8,

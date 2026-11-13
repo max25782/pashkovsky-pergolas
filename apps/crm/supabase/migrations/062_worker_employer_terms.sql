@@ -57,9 +57,13 @@ ALTER TABLE public.worker_rate_history ENABLE ROW LEVEL SECURITY;
 
 -- Same model as public.workers: the API uses the service role; signed-in
 -- members may read their own company's rows.
+DROP POLICY IF EXISTS "Service role can do everything on worker_rate_history"
+  ON public.worker_rate_history;
 CREATE POLICY "Service role can do everything on worker_rate_history"
   ON public.worker_rate_history AS PERMISSIVE FOR ALL TO PUBLIC
   USING (auth.role() = 'service_role'::text);
+DROP POLICY IF EXISTS "Users can view own company worker_rate_history"
+  ON public.worker_rate_history;
 CREATE POLICY "Users can view own company worker_rate_history"
   ON public.worker_rate_history AS PERMISSIVE FOR SELECT TO PUBLIC
   USING (company_id IN (SELECT cm.company_id FROM public.company_members cm WHERE cm.user_id = auth.uid()));
