@@ -430,6 +430,15 @@
     "paidLastMonth": "Last Month",
     "percentOfPrice": "% of Price",
     "addPayment": "Add Payment",
+    "plannedPayments": "Planned payments",
+    "plannedPaymentsHint": "Stage payments you expect (advance, second payment, ...). They feed the weekly report. Without a date they are listed as having no due date.",
+    "addPlannedPayment": "Add planned payment",
+    "plannedAmount": "Amount",
+    "plannedDueDate": "Due date (optional)",
+    "plannedLabel": "Label (optional)",
+    "plannedNoDate": "No date",
+    "plannedTotal": "Planned total",
+    "plannedFailed": "Could not save the planned payment",
     "paidToDate": "Paid to Date",
     "remaining": "Remaining",
     "financeClientPrice": "Project price (client)",
@@ -1475,6 +1484,32 @@
       "stage_role_locked": "The function of an existing stage cannot be changed.",
       "migration_not_applied": "The stages table is not set up on the server yet.",
       "generic": "Could not save the stages."
+    }
+  },
+  "weeklyReport": {
+    "title": "Weekly owner report",
+    "description": "An e-mail with last week's plan vs actual, next week's forecast and open deals by stage. Data comes from the CRM only.",
+    "notAvailable": "The weekly report is not available yet (database update pending).",
+    "enabled": "Send the weekly report",
+    "recipient": "Recipient e-mail (optional)",
+    "recipientPlaceholder": "Leave empty to send to owners and admins",
+    "recipientHint": "Empty: sent to the owners and admins of the company ({emails}).",
+    "weekday": "Day of the week",
+    "hour": "Hour (local time)",
+    "language": "Language",
+    "languageDefault": "Company language",
+    "save": "Save",
+    "saved": "Saved",
+    "saveFailed": "Could not save the report settings",
+    "loadFailed": "Could not load the report settings",
+    "days": {
+      "d0": "Sunday",
+      "d1": "Monday",
+      "d2": "Tuesday",
+      "d3": "Wednesday",
+      "d4": "Thursday",
+      "d5": "Friday",
+      "d6": "Saturday"
     }
   }
 }

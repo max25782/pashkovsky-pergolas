@@ -48,6 +48,7 @@ export type Permission =
   | 'tazrim:edit'
   // Kanban columns of the firm (everyone who sees deals sees the columns)
   | 'deal_stages:edit'
+  | 'weekly_report:edit'
 
 /**
  * Permission matrix for each role
@@ -105,6 +106,7 @@ export const PERMISSIONS: Record<Permission, Role[]> = {
 
   // Kanban columns: owner and admin edit; manager and salesperson only see them
   'deal_stages:edit': ['owner', 'admin'],
+  'weekly_report:edit': ['owner', 'admin'],
 }
 
 /**

@@ -430,6 +430,15 @@
     "paidLastMonth": "Prošli mesec",
     "percentOfPrice": "% cene",
     "addPayment": "Dodaj plaćanje",
+    "plannedPayments": "Planirana plaćanja",
+    "plannedPaymentsHint": "Plaćanja po fazama koja očekujete (avans, druga rata, ...). Ulaze u nedeljni izveštaj. Bez datuma se prikazuju u liniji „bez roka“.",
+    "addPlannedPayment": "Dodaj planirano plaćanje",
+    "plannedAmount": "Iznos",
+    "plannedDueDate": "Rok (opciono)",
+    "plannedLabel": "Naziv (opciono)",
+    "plannedNoDate": "Bez datuma",
+    "plannedTotal": "Ukupno planirano",
+    "plannedFailed": "Planirano plaćanje nije sačuvano",
     "paidToDate": "Plaćeno do sada",
     "remaining": "Preostalo",
     "financeClientPrice": "Cena projekta (klijent)",
@@ -1475,6 +1484,32 @@
       "stage_role_locked": "Funkcija postojeće faze ne može da se menja.",
       "migration_not_applied": "Tabela faza još nije podešena na serveru.",
       "generic": "Faze nije moguće sačuvati."
+    }
+  },
+  "weeklyReport": {
+    "title": "Nedeljni izveštaj za vlasnika",
+    "description": "E-pošta sa planom i ostvarenjem prošle nedelje, prognozom za sledeću i otvorenim poslovima po fazama. Podaci dolaze samo iz CRM-a.",
+    "notAvailable": "Nedeljni izveštaj još nije dostupan (čeka se ažuriranje baze).",
+    "enabled": "Šalji nedeljni izveštaj",
+    "recipient": "E-pošta primaoca (opciono)",
+    "recipientPlaceholder": "Prazno: šalje se vlasnicima i administratorima",
+    "recipientHint": "Prazno: šalje se vlasnicima i administratorima firme ({emails}).",
+    "weekday": "Dan u nedelji",
+    "hour": "Sat (lokalno vreme)",
+    "language": "Jezik",
+    "languageDefault": "Jezik firme",
+    "save": "Sačuvaj",
+    "saved": "Sačuvano",
+    "saveFailed": "Podešavanja izveštaja nisu sačuvana",
+    "loadFailed": "Podešavanja izveštaja nisu učitana",
+    "days": {
+      "d0": "Nedelja",
+      "d1": "Ponedeljak",
+      "d2": "Utorak",
+      "d3": "Sreda",
+      "d4": "Četvrtak",
+      "d5": "Petak",
+      "d6": "Subota"
     }
   }
 }

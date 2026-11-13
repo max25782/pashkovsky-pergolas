@@ -12,6 +12,7 @@ import Image from 'next/image'
 import { LanguageSwitcher } from '@/components/admin/LanguageSwitcher'
 import { resetFirmProfileCache } from '@/components/admin/hooks/useFirmProfile'
 import { DEFAULT_WHATSAPP_TEMPLATE } from '@/lib/company/firm-profile'
+import { WeeklyReportSettingsCard } from '@/components/settings/WeeklyReportSettingsCard'
 
 interface Company {
   id: string
@@ -480,6 +481,9 @@ export default function CompanySettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* Weekly owner report (owner and admin; renders nothing for others) */}
+      <WeeklyReportSettingsCard />
 
       {/* Banking/Invoice Info */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">

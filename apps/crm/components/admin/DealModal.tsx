@@ -15,6 +15,7 @@ import { MaterialOrdersList } from './MaterialOrdersList'
 import { RailingsFormFields, type RailingsFormValue } from './RailingsFormFields'
 import { FenceFormFields, type FenceFormValue } from './FenceFormFields'
 import { DealPaymentsWidget } from './DealPaymentsWidget'
+import { PlannedPaymentsWidget } from './PlannedPaymentsWidget'
 import { ContractorPaymentPlan } from './deals/templates/ContractorPaymentPlan'
 import {
   deriveWorkTypeFromProductLines,
@@ -981,6 +982,11 @@ export function DealModal({
                 addPayment: t.deals.addPayment,
               }}
             />
+          </div>
+
+          {/* Planned (stage) payments: feed the weekly owner report */}
+          <div className="border-t border-white/10 pt-4">
+            <PlannedPaymentsWidget dealId={deal.id} formatCurrency={formatCurrency} />
           </div>
 
           {/* Work Log Section */}
