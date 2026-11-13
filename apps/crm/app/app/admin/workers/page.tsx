@@ -111,6 +111,13 @@ export default function WorkersAdminPage() {
               </p>
             ) : null}
           </div>
+          <div className="flex items-center gap-2">
+          <Link
+            href="/app/admin/workers/pension"
+            className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white font-medium transition"
+          >
+            {tWorkers('pensionLink')}
+          </Link>
           <button
             onClick={() => setShowAddModal(true)}
             type="button"
@@ -119,6 +126,7 @@ export default function WorkersAdminPage() {
             <Plus className="w-5 h-5" />
             {tWorkers('addWorker')}
           </button>
+          </div>
         </div>
 
         <div className="mb-6 flex flex-wrap items-center gap-4">

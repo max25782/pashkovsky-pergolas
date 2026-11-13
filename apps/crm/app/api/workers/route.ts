@@ -4,7 +4,12 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import type { Worker } from '@/types/workers'
+import { workerFromDB, isSchemaMissingError, TERMS_MIGRATION_MESSAGE } from '@/lib/workers/worker-db'
+import {
+  DEFAULT_EMPLOYER_COEFFICIENT,
+  DEFAULT_PENSION_RATE,
+} from '@/lib/workers/employer-cost'
+import { validateTermsInput } from '@/lib/workers/terms-history'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { getUserContextAsync } from '@/lib/middleware/company-context'
 
@@ -14,22 +19,6 @@ const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 const supabase = SUPABASE_URL && SERVICE_KEY
   ? createClient(SUPABASE_URL, SERVICE_KEY, { db: { schema: 'public' } })
   : undefined
-
-// Transform DB row to Worker
-function transformWorkerFromDB(row: any): Worker {
-  return {
-    id: row.id,
-    firstName: row.first_name,
-    lastName: row.last_name,
-    phone: row.phone,
-    role: row.role,
-    dailyRate: parseFloat(row.daily_rate),
-    hourlyRate: row.hourly_rate != null ? parseFloat(row.hourly_rate) : null,
-    isActive: row.is_active,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  }
-}
 
 // GET - List all workers (active by default)
 export async function GET(req: NextRequest) {
@@ -71,7 +60,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch workers' }, { status: 500 })
     }
 
-    const workers = (data || []).map(transformWorkerFromDB)
+    const workers = (data || []).map(workerFromDB)
     return NextResponse.json({ workers })
   } catch (error: unknown) {
     console.error('Error in GET /api/workers:', error)
@@ -95,6 +84,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const { firstName, lastName, phone, role, dailyRate, isActive = true } = body
+    const { employerCoefficient, pensionRate, pensionExempt } = body
 
     if (!firstName || !lastName || !dailyRate) {
       return NextResponse.json(
@@ -110,6 +100,11 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    const termsErrors = validateTermsInput({ employerCoefficient, pensionRate })
+    if (Object.keys(termsErrors).length > 0) {
+      return NextResponse.json({ error: Object.values(termsErrors)[0] }, { status: 400 })
+    }
+
     // Get user context to extract company_id
     const userContext = await getUserContextAsync(req)
     const companyId = userContext?.companyId
@@ -118,9 +113,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Company ID not found' }, { status: 400 })
     }
 
+    // Only non-default terms are sent, so creating a worker keeps working
+    // before migration 062 is applied (the columns default to 25 / 12.5 / false).
+    const termsColumns: Record<string, number | boolean> = {}
+    if (employerCoefficient !== undefined && employerCoefficient !== DEFAULT_EMPLOYER_COEFFICIENT) {
+      termsColumns.employer_coefficient = employerCoefficient
+    }
+    if (pensionRate !== undefined && pensionRate !== DEFAULT_PENSION_RATE) {
+      termsColumns.pension_rate = pensionRate
+    }
+    if (pensionExempt === true) termsColumns.pension_exempt = true
+
     const { data, error } = await supabase
       .from('workers')
       .insert({
+        ...termsColumns,
         company_id: companyId, // Multi-tenant assignment
         first_name: firstName,
         last_name: lastName,
@@ -132,12 +139,16 @@ export async function POST(req: NextRequest) {
       .select()
       .single()
 
+    if (error && isSchemaMissingError(error)) {
+      return NextResponse.json({ error: TERMS_MIGRATION_MESSAGE }, { status: 409 })
+    }
+
     if (error) {
       console.error('Error creating worker:', error)
       return NextResponse.json({ error: 'Failed to create worker', details: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ worker: transformWorkerFromDB(data) })
+    return NextResponse.json({ worker: workerFromDB(data) })
   } catch (error: unknown) {
     console.error('Error in POST /api/workers:', error)
     return NextResponse.json(

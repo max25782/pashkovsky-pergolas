@@ -11,6 +11,12 @@ export interface Worker {
   dailyRate: number
   hourlyRate?: number | null
   isActive: boolean
+  /** Percent added on top of the day rate for the project cost (default 25). */
+  employerCoefficient?: number
+  /** Percent of the employer gross paid to pension and pitzuim (default 12.5). */
+  pensionRate?: number
+  /** True = no pension row is created for this worker. */
+  pensionExempt?: boolean
   createdAt: string
   updatedAt: string
 }

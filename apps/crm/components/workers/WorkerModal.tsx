@@ -12,6 +12,10 @@ import { useCRMTranslations } from '@/components/admin/useCRMTranslations'
 // shift-cost calculations already read.
 const SUBCONTRACTOR_ROLE = 'קבלן משנה'
 const DEFAULT_DAILY_RATE = 500
+// Same defaults as lib/workers/employer-cost.ts, repeated here only to keep
+// this client component free of server-side imports.
+const DEFAULT_EMPLOYER_COEFFICIENT = 25
+const DEFAULT_PENSION_RATE = 12.5
 
 interface WorkerFormData {
   firstName: string
@@ -20,6 +24,9 @@ interface WorkerFormData {
   role: string
   dailyRate: number
   isActive: boolean
+  employerCoefficient: number
+  pensionRate: number
+  pensionExempt: boolean
 }
 
 interface Props {
@@ -38,6 +45,9 @@ export function WorkerModal({ worker, onClose, onSave }: Props) {
     role: worker?.role ?? '',
     dailyRate: worker?.dailyRate ?? DEFAULT_DAILY_RATE,
     isActive: worker?.isActive ?? true,
+    employerCoefficient: worker?.employerCoefficient ?? DEFAULT_EMPLOYER_COEFFICIENT,
+    pensionRate: worker?.pensionRate ?? DEFAULT_PENSION_RATE,
+    pensionExempt: worker?.pensionExempt ?? false,
   })
   const [submitting, setSubmitting] = useState(false)
 
@@ -188,6 +198,48 @@ export function WorkerModal({ worker, onClose, onSave }: Props) {
               className="w-full px-3 py-2 rounded bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-white/80 mb-2">
+              {t.workers.employerCoefficient}
+            </label>
+            <input
+              type="number"
+              min="0"
+              max="200"
+              step="0.1"
+              value={form.employerCoefficient}
+              onChange={(e) => update('employerCoefficient', parseFloat(e.target.value) || 0)}
+              className="w-full px-3 py-2 rounded bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <p className="mt-1 text-xs text-white/50">{t.workers.employerCoefficientHint}</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-white/80 mb-2">
+              {t.workers.pensionRate}
+            </label>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="0.1"
+              value={form.pensionRate}
+              disabled={form.pensionExempt}
+              onChange={(e) => update('pensionRate', parseFloat(e.target.value) || 0)}
+              className="w-full px-3 py-2 rounded bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-40"
+            />
+          </div>
+
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.pensionExempt}
+              onChange={(e) => update('pensionExempt', e.target.checked)}
+              className="w-4 h-4 rounded"
+            />
+            <span className="text-sm text-white/80">{t.workers.pensionExempt}</span>
+          </label>
 
           <label className="flex items-center gap-2 cursor-pointer">
             <input

@@ -4,7 +4,15 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import type { Worker } from '@/types/workers'
+import { workerFromDB, isSchemaMissingError, TERMS_MIGRATION_MESSAGE } from '@/lib/workers/worker-db'
+import {
+  currentTermsValues,
+  planTermsHistory,
+  sameTerms,
+  validateTermsInput,
+  type EmployerTermsValues,
+} from '@/lib/workers/terms-history'
+import { todayInIsrael } from '@/lib/tazrim/format'
 import { requireAuth, verifyResourceOwnership } from '@/lib/auth'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
@@ -13,22 +21,6 @@ const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 const supabase = SUPABASE_URL && SERVICE_KEY
   ? createClient(SUPABASE_URL, SERVICE_KEY, { db: { schema: 'public' } })
   : undefined
-
-// Transform DB row to Worker
-function transformWorkerFromDB(row: any): Worker {
-  return {
-    id: row.id,
-    firstName: row.first_name,
-    lastName: row.last_name,
-    phone: row.phone,
-    role: row.role,
-    dailyRate: parseFloat(row.daily_rate),
-    hourlyRate: row.hourly_rate != null ? parseFloat(row.hourly_rate) : null,
-    isActive: row.is_active,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  }
-}
 
 // PATCH - Update worker
 export async function PATCH(
@@ -68,6 +60,44 @@ export async function PATCH(
     }
     if (body.isActive !== undefined) updates.is_active = body.isActive
 
+    // Employer terms: validate, and note whether they actually change so the
+    // history (used for per-day costing) is only written on a real change.
+    const termsErrors = validateTermsInput({
+      employerCoefficient: body.employerCoefficient,
+      pensionRate: body.pensionRate,
+    })
+    if (Object.keys(termsErrors).length > 0) {
+      return NextResponse.json({ error: Object.values(termsErrors)[0] }, { status: 400 })
+    }
+
+    const touchesTerms =
+      body.employerCoefficient !== undefined ||
+      body.pensionRate !== undefined ||
+      body.pensionExempt !== undefined
+
+    let termsBefore: EmployerTermsValues | null = null
+    let termsAfter: EmployerTermsValues | null = null
+    if (touchesTerms) {
+      let existing = supabase.from('workers').select('*').eq('id', params.id)
+      if (auth.user.companyId !== 'admin') existing = existing.eq('company_id', auth.user.companyId)
+      const { data: existingRow, error: existingError } = await existing.single()
+      if (existingError || !existingRow) {
+        console.error('Error loading worker before update:', existingError)
+        return NextResponse.json({ error: 'Failed to update worker' }, { status: 500 })
+      }
+      termsBefore = currentTermsValues(existingRow)
+      termsAfter = {
+        employerCoefficient: body.employerCoefficient ?? termsBefore.employerCoefficient,
+        pensionRate: body.pensionRate ?? termsBefore.pensionRate,
+        pensionExempt: body.pensionExempt ?? termsBefore.pensionExempt,
+      }
+      if (!sameTerms(termsBefore, termsAfter)) {
+        updates.employer_coefficient = termsAfter.employerCoefficient
+        updates.pension_rate = termsAfter.pensionRate
+        updates.pension_exempt = termsAfter.pensionExempt
+      }
+    }
+
     const { data, error } = await supabase
       .from('workers')
       .update(updates)
@@ -77,12 +107,51 @@ export async function PATCH(
       .select()
       .single()
 
+    if (error && isSchemaMissingError(error)) {
+      return NextResponse.json({ error: TERMS_MIGRATION_MESSAGE }, { status: 409 })
+    }
+
     if (error) {
       console.error('Error updating worker:', error)
       return NextResponse.json({ error: 'Failed to update worker' }, { status: 500 })
     }
 
-    return NextResponse.json({ worker: transformWorkerFromDB(data) })
+    if (termsBefore && termsAfter) {
+      const { count, error: historyCountError } = await supabase
+        .from('worker_rate_history')
+        .select('id', { count: 'exact', head: true })
+        .eq('worker_id', params.id)
+      if (historyCountError) {
+        console.error('Error reading worker_rate_history:', historyCountError)
+        return NextResponse.json({ error: 'Saved, but failed to record the terms history' }, { status: 500 })
+      }
+
+      const historyRows = planTermsHistory({
+        before: termsBefore,
+        after: termsAfter,
+        hasHistory: (count ?? 0) > 0,
+        today: todayInIsrael(),
+      })
+      if (historyRows.length > 0) {
+        const { error: historyError } = await supabase
+          .from('worker_rate_history')
+          .upsert(
+            historyRows.map((row) => ({
+              ...row,
+              company_id: data.company_id,
+              worker_id: params.id,
+              created_by: auth.user.userId ?? null,
+            })),
+            { onConflict: 'worker_id,effective_from' },
+          )
+        if (historyError) {
+          console.error('Error writing worker_rate_history:', historyError)
+          return NextResponse.json({ error: 'Saved, but failed to record the terms history' }, { status: 500 })
+        }
+      }
+    }
+
+    return NextResponse.json({ worker: workerFromDB(data) })
   } catch (error: unknown) {
     console.error('Error in PATCH /api/workers/[id]:', error)
     return NextResponse.json(
