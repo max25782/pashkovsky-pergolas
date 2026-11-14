@@ -1511,5 +1511,27 @@
       "d5": "Friday",
       "d6": "Saturday"
     }
+  },
+  "tazrimCalc": {
+    "vat_payable": "VAT payable",
+    "vat_refund": "VAT refund",
+    "pension": "Pension and pitzuim",
+    "calculated": "calculated",
+    "replaced_by_manual": "replaced by a manual entry",
+    "no_materials": "no materials",
+    "total": "Total",
+    "col_deal": "Deal",
+    "col_payment": "Payment",
+    "col_date": "Date",
+    "col_vat_on_payment": "VAT on payment",
+    "col_materials_deduction": "Materials VAT deduction",
+    "col_vat_payable": "VAT payable",
+    "col_worker": "Worker",
+    "col_days": "Days",
+    "col_gross": "Gross",
+    "col_rate": "Rate",
+    "col_pension": "Pension and pitzuim",
+    "expand": "Breakdown",
+    "collapse": "Collapse"
   }
 }

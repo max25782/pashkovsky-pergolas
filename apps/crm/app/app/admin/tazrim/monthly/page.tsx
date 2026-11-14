@@ -25,6 +25,10 @@ import {
 } from "@/lib/tazrim/format";
 import { NavTabs } from "../components/NavTabs";
 import {
+  CompactCalcFlowRow,
+  CompactIncomeCalcRow,
+} from "../components/calc-flow-row";
+import {
   BackLink,
   Card,
   PageHeader,
@@ -352,17 +356,7 @@ export default async function MonthlyCashFlowPage() {
               <table className="w-full">
                 <tbody>
                   {income.map((f) => (
-                    <tr key={f.key} className="border-t border-zinc-800">
-                      <td className="w-[70px] py-2.5 text-sm text-zinc-400">
-                        {formatShortDate(f.date)}
-                      </td>
-                      <td className="py-2.5 text-sm text-zinc-300">
-                        {flowTitle(f)}
-                      </td>
-                      <td className="py-2.5 text-left text-sm font-semibold text-emerald-400">
-                        {flowAmount(f)}
-                      </td>
-                    </tr>
+                    <CompactIncomeCalcRow key={f.key} flow={f} />
                   ))}
                 </tbody>
               </table>
@@ -424,27 +418,7 @@ export default async function MonthlyCashFlowPage() {
             <table className="w-full">
               <tbody>
                 {expenses.map((f) => (
-                  <tr
-                    key={f.key}
-                    className="border-t border-zinc-800 hover:bg-zinc-800/40"
-                  >
-                    <td className="w-[70px] p-0 text-sm text-zinc-400">
-                      <Link href={f.sourceHref} className="block py-2.5">
-                        {formatShortDate(f.date)}
-                      </Link>
-                    </td>
-                    <td className="p-0 text-sm text-zinc-300">
-                      <Link href={f.sourceHref} className="block py-2.5">
-                        {flowTitle(f)}
-                        <Tag>{f.typeLabel}</Tag>
-                      </Link>
-                    </td>
-                    <td className="p-0 text-left text-sm font-semibold text-zinc-100">
-                      <Link href={f.sourceHref} className="block py-2.5">
-                        {flowAmount(f)}
-                      </Link>
-                    </td>
-                  </tr>
+                  <CompactCalcFlowRow key={f.key} flow={f} />
                 ))}
               </tbody>
             </table>

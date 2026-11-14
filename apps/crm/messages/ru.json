@@ -1511,5 +1511,27 @@
       "d5": "Пятница",
       "d6": "Суббота"
     }
+  },
+  "tazrimCalc": {
+    "vat_payable": "НДС к уплате",
+    "vat_refund": "Возмещение НДС",
+    "pension": "Пенсия и пицуим",
+    "calculated": "расчётный",
+    "replaced_by_manual": "заменена ручной записью",
+    "no_materials": "нет материалов",
+    "total": "Итого",
+    "col_deal": "Сделка",
+    "col_payment": "Платёж",
+    "col_date": "Дата",
+    "col_vat_on_payment": "НДС с платежа",
+    "col_materials_deduction": "Вычет НДС с материалов",
+    "col_vat_payable": "НДС к уплате",
+    "col_worker": "Рабочий",
+    "col_days": "Дни",
+    "col_gross": "Брутто",
+    "col_rate": "Ставка",
+    "col_pension": "Пенсия и пицуим",
+    "expand": "Расшифровка",
+    "collapse": "Свернуть"
   }
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireTazrimAccess } from "@/lib/tazrim/guard";
+import { displayCashNotes } from "@/lib/tazrim/calc-meta";
 import { formatFullDate, formatMoney } from "@/lib/tazrim/format";
 import { PAYROLL_APPROVED_SOURCE, PAYROLL_SOURCES } from "@/lib/tazrim/payroll";
 import { approvePayrollExpense, syncAluminCRM } from "./actions";
@@ -59,12 +60,14 @@ function IncomeTable({ title, rows }: IncomeTableProps) {
                   key={r.id}
                   className="border-b border-zinc-800 last:border-0"
                 >
-                  <td className="px-5 py-3 font-medium">{r.notes ?? "—"}</td>
+                  <td className="px-5 py-3 font-medium">
+                    {displayCashNotes(r.notes) ?? "—"}
+                  </td>
                   <td className="px-5 py-3 font-semibold text-emerald-400">
                     {formatMoney(r.amount)}
                   </td>
                   <td className="px-5 py-3 text-zinc-400">
-                    {formatFullDate(r.due_date)}
+                    <bdi>{formatFullDate(r.due_date)}</bdi>
                   </td>
                 </tr>
               ))}
@@ -111,12 +114,14 @@ function PayrollTable({ rows }: { rows: PayrollRow[] }) {
                     key={r.id}
                     className="border-b border-zinc-800 last:border-0"
                   >
-                    <td className="px-5 py-3 font-medium">{r.notes ?? "—"}</td>
+                    <td className="px-5 py-3 font-medium">
+                      {displayCashNotes(r.notes) ?? "—"}
+                    </td>
                     <td className="px-5 py-3 font-semibold text-warn">
                       {formatMoney(r.amount)}
                     </td>
                     <td className="px-5 py-3 text-zinc-400">
-                      {formatFullDate(r.due_date)}
+                      <bdi>{formatFullDate(r.due_date)}</bdi>
                     </td>
                     <td className="px-5 py-3">
                       <form

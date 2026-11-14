@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { displayCashNotes } from "@/lib/tazrim/calc-meta";
 import { DeleteButton } from "../components/DeleteButton";
 import { deleteExpense, updateExpense } from "./actions";
 
@@ -31,6 +32,7 @@ export function ExpenseRow({ expense, vendors, paymentMethods }: ExpenseRowProps
   const methodLabel =
     paymentMethods.find((m) => m.value === expense.payment_method)?.label ??
     expense.payment_method;
+  const visibleNotes = displayCashNotes(expense.notes);
 
   function handleSubmit(formData: FormData) {
     setError(null);
@@ -48,9 +50,11 @@ export function ExpenseRow({ expense, vendors, paymentMethods }: ExpenseRowProps
         <td className="px-5 py-3 text-zinc-400">
           ₪{Number(expense.amount).toLocaleString("he-IL")}
         </td>
-        <td className="px-5 py-3 text-zinc-400">{expense.due_date}</td>
+        <td className="px-5 py-3 text-zinc-400">
+          <bdi dir="ltr">{expense.due_date}</bdi>
+        </td>
         <td className="px-5 py-3 text-zinc-400">{methodLabel}</td>
-        <td className="px-5 py-3 text-zinc-400">{expense.notes ?? "—"}</td>
+        <td className="px-5 py-3 text-zinc-400">{visibleNotes ?? "—"}</td>
         <td className="px-5 py-3">
           <div className="flex items-start justify-end gap-2">
             <button
@@ -137,7 +141,7 @@ export function ExpenseRow({ expense, vendors, paymentMethods }: ExpenseRowProps
         <input
           name="notes"
           form={formId}
-          defaultValue={expense.notes ?? ""}
+          defaultValue={visibleNotes ?? ""}
           aria-label="הערות"
           className={INPUT_CLASS}
         />

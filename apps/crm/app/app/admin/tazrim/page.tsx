@@ -22,13 +22,17 @@ import {
 import { addQuickExpense } from "./expenses/actions";
 import { NavTabs } from "./components/NavTabs";
 import {
+  CompactIncomeCalcRow,
+  MainExpenseCalcMobileItem,
+  MainExpenseCalcRow,
+} from "./components/calc-flow-row";
+import {
   Card,
   INPUT_CLASS,
   PageHeader,
   RISK_STYLES,
   StatCard,
   StatusChip,
-  Tag,
 } from "./components/dashboard-ui";
 
 const WEEK_DAYS = 7;
@@ -341,65 +345,21 @@ export default async function DashboardPage() {
                   </thead>
                   <tbody>
                     {upcomingExpenses.map((f) => (
-                      <tr
+                      <MainExpenseCalcRow
                         key={f.key}
-                        className="border-t border-zinc-800 hover:bg-zinc-800/40"
-                      >
-                        <td className="whitespace-nowrap p-0 text-sm text-zinc-300">
-                          <Link href={f.sourceHref} className="block py-2.5">
-                            {formatShortDate(f.date)}
-                          </Link>
-                        </td>
-                        <td className="p-0 text-sm text-zinc-300">
-                          <Link href={f.sourceHref} className="block py-2.5">
-                            {flowTitle(f)}
-                            <Tag>{f.typeLabel}</Tag>
-                          </Link>
-                        </td>
-                        <td className="whitespace-nowrap p-0 text-sm font-semibold text-zinc-100">
-                          <Link href={f.sourceHref} className="block py-2.5">
-                            {flowAmount(f)}
-                          </Link>
-                        </td>
-                        <td className="p-0 text-xs text-warn">
-                          <Link href={f.sourceHref} className="block py-2.5">
-                            {riskDates.has(f.date) ? "⚑" : ""}
-                          </Link>
-                        </td>
-                      </tr>
+                        flow={f}
+                        flagged={riskDates.has(f.date)}
+                      />
                     ))}
                   </tbody>
                 </table>
                 <ul className="md:hidden">
                   {upcomingExpenses.map((f) => (
-                    <li key={f.key} className="border-t border-zinc-800">
-                      <Link
-                        href={f.sourceHref}
-                        className="flex items-center justify-between py-[9px]"
-                      >
-                        <div className="flex flex-col gap-[3px]">
-                          <div className="text-[13.5px] text-zinc-100">
-                            {flowTitle(f)}
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[11.5px] text-zinc-400">
-                              {formatShortDate(f.date)}
-                            </span>
-                            <span className="rounded-full border border-zinc-800 bg-zinc-950 px-2 py-0.5 text-[10.5px] text-zinc-400">
-                              {f.typeLabel}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          {riskDates.has(f.date) && (
-                            <span className="text-xs text-warn">⚑</span>
-                          )}
-                          <span className="whitespace-nowrap text-sm font-bold text-zinc-100">
-                            {flowAmount(f)}
-                          </span>
-                        </div>
-                      </Link>
-                    </li>
+                    <MainExpenseCalcMobileItem
+                      key={f.key}
+                      flow={f}
+                      flagged={riskDates.has(f.date)}
+                    />
                   ))}
                 </ul>
               </>
@@ -422,17 +382,11 @@ export default async function DashboardPage() {
                   </thead>
                   <tbody>
                     {upcomingIncome.map((f) => (
-                      <tr key={f.key} className="border-t border-zinc-800">
-                        <td className="py-2.5 text-sm text-zinc-300">
-                          {flowTitle(f)}
-                        </td>
-                        <td className="py-2.5 text-sm text-zinc-300">
-                          {formatShortDate(f.date)}
-                        </td>
-                        <td className="py-2.5 text-sm font-semibold text-emerald-400">
-                          {flowAmount(f)}
-                        </td>
-                      </tr>
+                      <CompactIncomeCalcRow
+                        key={f.key}
+                        flow={f}
+                        dateFirst={false}
+                      />
                     ))}
                   </tbody>
                 </table>

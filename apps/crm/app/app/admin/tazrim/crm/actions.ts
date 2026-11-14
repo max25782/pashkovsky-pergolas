@@ -24,6 +24,7 @@ import {
   CALCULATED_SOURCES,
   buildPensionRows,
   buildVatRows,
+  toCashEventInsert,
   type CalculatedCashRow,
   type VatDealInput,
 } from "@/lib/tazrim/vat-pension-rows";
@@ -279,7 +280,9 @@ export async function syncAluminCRM() {
   if (calculatedRows.length > 0) {
     const { error: calculatedError } = await supabase
       .from("tz_cash_events")
-      .upsert(calculatedRows, { onConflict: "company_id,external_source,external_id" });
+      .upsert(calculatedRows.map(toCashEventInsert), {
+        onConflict: "company_id,external_source,external_id",
+      });
     if (calculatedError) {
       throw new Error(`Не удалось записать НДС и пенсию в Tazrim: ${calculatedError.message}`);
     }
@@ -492,7 +495,7 @@ interface PayrollRow {
 async function buildCalculatedRows(
   crm: SupabaseClient,
   tazrimCompanyId: string,
-  deals: Array<{ id: unknown; price: unknown; my_cost: unknown }>,
+  deals: Array<{ id: unknown; price: unknown; my_cost: unknown; customer_name?: unknown }>,
   paymentsByDeal: Map<string, DealPayment[]>,
   fallbackDates: Map<string, string>,
 ): Promise<CalculatedCashRow[]> {
@@ -510,6 +513,7 @@ async function buildCalculatedRows(
     const id = deal.id as string;
     return {
       id,
+      customerName: String(deal.customer_name ?? "").trim() || "—",
       price: deal.price as number,
       my_cost: deal.my_cost as number | string | null,
       labor: labor[id] ?? 0,

@@ -19,11 +19,14 @@ import {
 } from "@/lib/tazrim/format";
 import { NavTabs } from "../components/NavTabs";
 import {
+  CompactCalcFlowRow,
+  CompactIncomeCalcRow,
+} from "../components/calc-flow-row";
+import {
   BackLink,
   Card,
   PageHeader,
   RISK_STYLES,
-  Tag,
 } from "../components/dashboard-ui";
 import Link from "next/link";
 
@@ -207,18 +210,7 @@ export default async function WeeklyReportPage() {
               <table className="w-full">
                 <tbody>
                   {weekExpenses.map((f) => (
-                    <tr key={f.key} className="border-t border-zinc-800">
-                      <td className="w-[70px] py-2.5 text-sm text-zinc-400">
-                        {formatShortDate(f.date)}
-                      </td>
-                      <td className="py-2.5 text-sm text-zinc-300">
-                        <Link href={f.sourceHref}>{flowTitle(f)}</Link>
-                        <Tag>{f.typeLabel}</Tag>
-                      </td>
-                      <td className="py-2.5 text-left text-sm font-semibold text-zinc-100">
-                        {flowAmount(f)}
-                      </td>
-                    </tr>
+                    <CompactCalcFlowRow key={f.key} flow={f} />
                   ))}
                 </tbody>
               </table>
@@ -232,17 +224,7 @@ export default async function WeeklyReportPage() {
               <table className="w-full">
                 <tbody>
                   {weekIncome.map((f) => (
-                    <tr key={f.key} className="border-t border-zinc-800">
-                      <td className="w-[70px] py-2.5 text-sm text-zinc-400">
-                        {formatShortDate(f.date)}
-                      </td>
-                      <td className="py-2.5 text-sm text-zinc-300">
-                        {flowTitle(f)}
-                      </td>
-                      <td className="py-2.5 text-left text-sm font-semibold text-emerald-400">
-                        {flowAmount(f)}
-                      </td>
-                    </tr>
+                    <CompactIncomeCalcRow key={f.key} flow={f} />
                   ))}
                 </tbody>
               </table>

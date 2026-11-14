@@ -1,5 +1,11 @@
 import { addDays, formatMoney } from "@/lib/tazrim/format";
 import { ruleOccurrences } from "@/lib/tazrim/recurring-schedule";
+import {
+  calcMetaTitleHe,
+  displayCashNotes,
+  resolveCalcMeta,
+  type CalcMeta,
+} from "@/lib/tazrim/calc-meta";
 
 export type RiskLevel = "red" | "amber" | "green";
 export type FlowDirection = "in" | "out";
@@ -19,6 +25,8 @@ export interface CashFlowItem {
   amountEstimate: number | null;
   typeLabel: string;
   sourceHref: string;
+  /** Locale-neutral calculated VAT / pension payload, when notes hold CalcMeta JSON. */
+  calcMeta: CalcMeta | null;
 }
 
 export interface EventRow {
@@ -28,6 +36,8 @@ export interface EventRow {
   due_date: string;
   status: string;
   notes: string | null;
+  /** jsonb calc breakdown when present (preferred over JSON-in-notes). */
+  calc_meta?: unknown;
   payment_method: string | null;
   recurring_rule_id: string | null;
   debt_id: string | null;
@@ -115,16 +125,24 @@ export function buildFlows(
 ): CashFlowItem[] {
   const fromEvents = events.map((e): CashFlowItem => {
     const typeLabel = getEventTypeLabel(e);
+    const calcMeta = resolveCalcMeta({ calc_meta: e.calc_meta, notes: e.notes });
+    // Never surface CalcMeta JSON (or English kind keys) as the list title.
+    const plainNotes = displayCashNotes(e.notes);
+    const vendorName =
+      e.vendors?.name ??
+      plainNotes ??
+      (calcMeta ? calcMetaTitleHe(calcMeta) : "—");
     return {
       key: `event-${e.id}`,
       date: e.due_date,
       direction: e.type === "income" ? "in" : "out",
-      vendorName: e.vendors?.name ?? e.notes ?? "—",
-      description: e.vendors?.name ? e.notes : null,
+      vendorName,
+      description: e.vendors?.name ? plainNotes : null,
       amount: Number(e.amount),
       amountEstimate: null,
       typeLabel,
       sourceHref: hrefForType(typeLabel),
+      calcMeta,
     };
   });
 
@@ -154,6 +172,7 @@ export function buildFlows(
           amountEstimate: isUnknown ? rawAmount : null,
           typeLabel,
           sourceHref: hrefForType(typeLabel),
+          calcMeta: null,
         };
       })
   );
@@ -180,6 +199,7 @@ export function buildPlannedFlows(
 }
 
 export function flowTitle(f: CashFlowItem): string {
+  if (f.calcMeta) return calcMetaTitleHe(f.calcMeta);
   return f.description ? `${f.vendorName} · ${f.description}` : f.vendorName;
 }
 

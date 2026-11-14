@@ -1511,5 +1511,27 @@
       "d5": "Petak",
       "d6": "Subota"
     }
+  },
+  "tazrimCalc": {
+    "vat_payable": "PDV za uplatu",
+    "vat_refund": "Povraćaj PDV-a",
+    "pension": "Penzija i pitzuim",
+    "calculated": "obračunski",
+    "replaced_by_manual": "zamenjena ručnim unosom",
+    "no_materials": "nema materijala",
+    "total": "Ukupno",
+    "col_deal": "Posao",
+    "col_payment": "Uplata",
+    "col_date": "Datum",
+    "col_vat_on_payment": "PDV na uplatu",
+    "col_materials_deduction": "Odbitak PDV na materijale",
+    "col_vat_payable": "PDV za uplatu",
+    "col_worker": "Radnik",
+    "col_days": "Dana",
+    "col_gross": "Bruto",
+    "col_rate": "Stopa",
+    "col_pension": "Penzija i pitzuim",
+    "expand": "Razrada",
+    "collapse": "Skupi"
   }
 }

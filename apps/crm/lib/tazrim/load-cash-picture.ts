@@ -47,7 +47,7 @@ export async function loadCashPicture(
     supabase
       .from("tz_cash_events")
       .select(
-        "id, type, amount, due_date, status, notes, payment_method, recurring_rule_id, debt_id, vendors:tz_vendors(name), checks:tz_checks(check_number, bank_name)"
+        "id, type, amount, due_date, status, notes, calc_meta, payment_method, recurring_rule_id, debt_id, vendors:tz_vendors(name), checks:tz_checks(check_number, bank_name)"
       )
       .in("status", ["planned", "cleared"])
       .gte("due_date", today)
@@ -132,7 +132,7 @@ export async function loadRecurringMonth(
     supabase
       .from("tz_cash_events")
       .select(
-        "id, type, amount, due_date, status, notes, payment_method, recurring_rule_id, debt_id, vendors:tz_vendors(name), checks:tz_checks(check_number, bank_name)"
+        "id, type, amount, due_date, status, notes, calc_meta, payment_method, recurring_rule_id, debt_id, vendors:tz_vendors(name), checks:tz_checks(check_number, bank_name)"
       )
       .not("recurring_rule_id", "is", null)
       .in("status", ["planned", "cleared"])

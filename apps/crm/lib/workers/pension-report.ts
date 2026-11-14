@@ -10,7 +10,10 @@
  */
 
 import { roundMoney } from '@/lib/finance/money'
-import { computeWorkerMonthPension } from '@/lib/workers/employer-cost'
+import {
+  DEFAULT_PENSION_RATE,
+  computeWorkerMonthPension,
+} from '@/lib/workers/employer-cost'
 import type { WorkerCostBook, WorkerShiftRow } from '@/lib/workers/load-cost-book'
 
 export interface PensionReportRow {
@@ -21,6 +24,8 @@ export interface PensionReportRow {
   /** Share of the month's gross, per day with that day's pension rate. */
   pension: number
   days: number
+  /** Effective rate for display: pension / gross × 100 (falls back to default). */
+  pensionRate: number
 }
 
 export interface PensionReport {
@@ -64,6 +69,10 @@ export function buildMonthPensionReport(
       gross: result.gross,
       pension: result.pension,
       days: result.days,
+      pensionRate:
+        result.gross > 0
+          ? roundMoney((result.pension / result.gross) * 100)
+          : DEFAULT_PENSION_RATE,
     })
   }
 

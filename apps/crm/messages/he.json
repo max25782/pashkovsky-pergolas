@@ -1511,5 +1511,27 @@
       "d5": "שישי",
       "d6": "שבת"
     }
+  },
+  "tazrimCalc": {
+    "vat_payable": "מע״מ לתשלום",
+    "vat_refund": "החזר מע״מ",
+    "pension": "פנסיה ופיצויים",
+    "calculated": "חישובי",
+    "replaced_by_manual": "הוחלפה ברישום ידני",
+    "no_materials": "אין חומרים",
+    "total": "סה״כ",
+    "col_deal": "עסקה",
+    "col_payment": "תשלום",
+    "col_date": "תאריך",
+    "col_vat_on_payment": "מע״מ על התשלום",
+    "col_materials_deduction": "ניכוי מע״מ על חומרים",
+    "col_vat_payable": "מע״מ לתשלום",
+    "col_worker": "עובד",
+    "col_days": "ימים",
+    "col_gross": "ברוטו",
+    "col_rate": "שיעור",
+    "col_pension": "פנסיה ופיצויים",
+    "expand": "פירוט",
+    "collapse": "סגור"
   }
 }

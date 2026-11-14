@@ -14,6 +14,7 @@ const TODAY = "2026-11-13";
 
 function deal(overrides: Partial<VatDealInput> & { id: string }): VatDealInput {
   return {
+    customerName: "Customer",
     price: 118000,
     my_cost: 59000,
     labor: 10000,
@@ -46,9 +47,14 @@ describe("buildVatRows", () => {
       source: VAT_SOURCE,
       external_source: "alumincrm",
       external_id: vatExternalId(COMPANY, "2026-12"),
+      notes: null,
     });
-    expect(rows[0].notes).toContain("НДС к уплате");
-    expect(rows[0].notes).toContain("расчётный");
+    expect(rows[0].calc_meta).toMatchObject({
+      kind: "vat_payable",
+      sourceMonth: "2026-11",
+      total: 9000,
+    });
+    expect(rows[0].calc_meta.lines).toHaveLength(1);
   });
 
   it("splits a staged deal over the due months of its payments", () => {
@@ -66,22 +72,24 @@ describe("buildVatRows", () => {
         }),
       ],
     });
-    // October money is due on 15 Nov (still ahead on the 13th), November money on 15 Dec.
     expect(rows.map((r) => [r.due_date, r.amount])).toEqual([
       ["2026-11-15", 3600],
       ["2026-12-15", 5400],
     ]);
+    expect(rows[0].calc_meta.sourceMonth).toBe("2026-10");
+    expect(rows[1].calc_meta.sourceMonth).toBe("2026-11");
   });
 
-  it("sums several deals of one month into a single row", () => {
+  it("sums several deals of one month into a single row with per-deal lines", () => {
     const rows = buildVatRows({
       companyId: COMPANY,
       today: TODAY,
       vatPercent: 18,
       deals: [
-        deal({ id: "a", payments: [{ id: "p1", amount: 118000, paid_at: "2026-11-05" }] }),
+        deal({ id: "a", customerName: "A", payments: [{ id: "p1", amount: 118000, paid_at: "2026-11-05" }] }),
         deal({
           id: "b",
+          customerName: "B",
           price: 59000,
           my_cost: null,
           payments: [{ id: "p2", amount: 59000, paid_at: "2026-11-20" }],
@@ -90,6 +98,14 @@ describe("buildVatRows", () => {
     });
     expect(rows).toHaveLength(1);
     expect(rows[0].amount).toBe(18000);
+    expect(rows[0].notes).toBeNull();
+    const meta = rows[0].calc_meta;
+    expect(meta.kind).toBe("vat_payable");
+    if (meta.kind === "vat_payable" || meta.kind === "vat_refund") {
+      expect(meta.lines).toHaveLength(2);
+      expect(meta.lines.find((l) => l.dealId === "b")?.noMaterials).toBe(true);
+      expect(meta.lines.reduce((s, l) => s + l.vatPayable, 0)).toBeCloseTo(18000, 2);
+    }
   });
 
   it("shows a month where materials exceed sales as an explicit refund, not zero", () => {
@@ -107,8 +123,8 @@ describe("buildVatRows", () => {
       ],
     });
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ type: "income", amount: 7200 });
-    expect(rows[0].notes).toContain("НДС к возмещению");
+    expect(rows[0]).toMatchObject({ type: "income", amount: 7200, notes: null });
+    expect(rows[0].calc_meta.kind).toBe("vat_refund");
   });
 
   it("uses the forecast date for a deal that has no payments yet", () => {
@@ -209,7 +225,7 @@ describe("buildPensionRows", () => {
     ]);
     const report = buildMonthPensionReport(shifts("w1", "2026-10", 21), book, "2026-10");
     expect(report.rows).toHaveLength(1);
-    expect(report.rows[0]).toMatchObject({ gross: 13125, pension: 1640.63, days: 21 });
+    expect(report.rows[0]).toMatchObject({ gross: 13125, pension: 1640.63, days: 21, pensionRate: 12.5 });
 
     const rows = buildPensionRows({ companyId: COMPANY, today: TODAY, reports: [report] });
     expect(rows).toHaveLength(1);
@@ -218,9 +234,19 @@ describe("buildPensionRows", () => {
       amount: 1640.63,
       due_date: "2026-11-15",
       source: PENSION_SOURCE,
+      notes: null,
     });
-    expect(rows[0].notes).toContain("Пенсия и пицуим");
-    expect(rows[0].notes).toContain("расчётный");
+    expect(rows[0].calc_meta).toMatchObject({ kind: "pension", sourceMonth: "2026-10", total: 1640.63 });
+    expect(rows[0].calc_meta.lines).toEqual([
+      expect.objectContaining({
+        workerId: "w1",
+        workerName: "Dan Levi",
+        days: 21,
+        gross: 13125,
+        pension: 1640.63,
+        pensionRate: 12.5,
+      }),
+    ]);
   });
 
   it("sums the workers into one row and leaves out workers without pension", () => {
@@ -232,9 +258,10 @@ describe("buildPensionRows", () => {
     const all = [...shifts("w1", "2026-10", 10), ...shifts("w2", "2026-10", 10), ...shifts("w3", "2026-10", 10)];
     const report = buildMonthPensionReport(all, book, "2026-10");
     expect(report.rows.map((r) => r.workerId)).toEqual(["w1", "w2"]);
-    // 10 x 625 x 12.5% = 781.25 ; 10 x 500 x 12.5% = 625
     expect(report.total).toBe(1406.25);
-    expect(buildPensionRows({ companyId: COMPANY, today: TODAY, reports: [report] })[0].amount).toBe(1406.25);
+    const row = buildPensionRows({ companyId: COMPANY, today: TODAY, reports: [report] })[0];
+    expect(row.amount).toBe(1406.25);
+    expect(row.calc_meta.lines.map((l) => l.workerId)).toEqual(["w1", "w2"]);
   });
 
   it("produces no row when nobody is owed pension", () => {
