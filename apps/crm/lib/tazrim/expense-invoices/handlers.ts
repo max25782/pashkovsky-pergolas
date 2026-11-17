@@ -106,12 +106,26 @@ function vendorName(value: ExpenseRow['vendors']): string | null {
   return value.name ?? null
 }
 
+const INVOICE_RULE_ERRORS = [
+  'not_creditable_document',
+  'monthly_tax_invoice_has_deal',
+  'monthly_preliminary_needs_deal',
+] as const
+
+function invoiceRuleError(message: string | undefined): (typeof INVOICE_RULE_ERRORS)[number] | null {
+  const first = message?.split('\n')[0]?.trim()
+  if (!first) return null
+  return INVOICE_RULE_ERRORS.find((code) => code === first) ?? null
+}
+
 function dbError(error: { code?: string; message?: string } | null): HandlerResult | null {
   if (!error) return null
   if (error.code === '23505') {
     return { status: 409, body: { error: 'duplicate', issues: [{ code: 'duplicate_invoice', blocking: true }] } }
   }
   if (error.code === 'P0002') return { status: 404, body: { error: 'not_found' } }
+  const rule = error.code === 'P0001' ? invoiceRuleError(error.message) : null
+  if (rule) return { status: 422, body: { error: 'invalid', issues: [{ code: rule, blocking: true }] } }
   console.error('[tazrim] expense invoice write failed', { code: error.code })
   return { status: 500, body: { error: 'save_failed' } }
 }
@@ -253,6 +267,20 @@ async function matchVendorByName(
   return matches.length === 1 ? matches[0] : null
 }
 
+/** Stored kind at upload. A deal-card file for a monthly supplier is always preliminary. */
+export function docKindForUpload(input: {
+  vendorMonthly: boolean
+  knownVendor: boolean
+  dealId: string | null
+  requestedKind: 'preliminary' | 'tax_invoice' | null
+}): 'preliminary' | 'tax_invoice' {
+  if (input.dealId && input.vendorMonthly && input.requestedKind === 'tax_invoice') return 'preliminary'
+  if (input.dealId && input.vendorMonthly) return 'preliminary'
+  if (input.vendorMonthly) return 'preliminary'
+  if (input.knownVendor) return 'tax_invoice'
+  return 'preliminary'
+}
+
 async function ownDealId(ctx: TazrimContext, dealId: string | null | undefined): Promise<string | null> {
   if (!dealId) return null
   const { data, error } = await invoiceDb(ctx)
@@ -268,7 +296,13 @@ async function ownDealId(ctx: TazrimContext, dealId: string | null | undefined):
 
 export async function uploadExpenseDocument(
   ctx: TazrimContext,
-  file: { filename: string; mimeType: string; bytes: Uint8Array; dealId?: string | null },
+  file: {
+    filename: string
+    mimeType: string
+    bytes: Uint8Array
+    dealId?: string | null
+    docKind?: 'preliminary' | 'tax_invoice' | null
+  },
 ): Promise<HandlerResult> {
   const mime = resolveInvoiceMime(file.filename, file.mimeType)
   if (!mime) return { status: 415, body: { error: 'unsupported_type' } }
@@ -328,7 +362,12 @@ export async function uploadExpenseDocument(
   const issues = validateInvoiceDraft(draft, { existingConfirmed: await confirmedKeys(ctx), mode: 'review' })
   const vendor = await matchVendorByName(ctx, draft.supplierName)
   const dealId = await ownDealId(ctx, file.dealId)
-  const docKind = vendor?.issues_monthly_invoice ? 'preliminary' : vendor ? 'tax_invoice' : 'preliminary'
+  const docKind = docKindForUpload({
+    vendorMonthly: vendor?.issues_monthly_invoice === true,
+    knownVendor: Boolean(vendor),
+    dealId,
+    requestedKind: file.docKind ?? null,
+  })
   const invoiceInsert = await invoiceDb(ctx)
     .from('tz_expense_invoices')
     .insert({
@@ -395,7 +434,12 @@ export async function createDirectInvoiceUpload(
 
 export async function completeDirectInvoiceUpload(
   ctx: TazrimContext,
-  input: { path: string; filename: string; dealId?: string | null },
+  input: {
+    path: string
+    filename: string
+    dealId?: string | null
+    docKind?: 'preliminary' | 'tax_invoice' | null
+  },
 ): Promise<HandlerResult> {
   if (!pathAllowed(ctx.companyId, input.path) || !input.path.endsWith('.pdf')) {
     return { status: 404, body: { error: 'not_found' } }
@@ -442,7 +486,12 @@ export async function completeDirectInvoiceUpload(
   const draft = draftFromExtraction(extraction, 100)
   const vendor = await matchVendorByName(ctx, draft.supplierName)
   const dealId = await ownDealId(ctx, input.dealId)
-  const docKind = vendor?.issues_monthly_invoice ? 'preliminary' : vendor ? 'tax_invoice' : 'preliminary'
+  const docKind = docKindForUpload({
+    vendorMonthly: vendor?.issues_monthly_invoice === true,
+    knownVendor: Boolean(vendor),
+    dealId,
+    requestedKind: input.docKind ?? null,
+  })
   const invoiceInsert = await invoiceDb(ctx)
     .from('tz_expense_invoices')
     .insert({
@@ -504,15 +553,28 @@ export async function confirmExpenseInvoice(
 
   const percent = draft.docType === 'receipt' ? 0 : draft.vatRecognizedPercent
   const vendor = draft.vendorId ? await matchVendorById(ctx, draft.vendorId) : null
+  const monthly = vendor?.issues_monthly_invoice === true
+  const docKind: 'preliminary' | 'tax_invoice' =
+    draft.docType === 'tax_invoice' && vendor && !monthly
+      ? 'tax_invoice'
+      : draft.docKind === 'tax_invoice' && draft.docType === 'tax_invoice'
+        ? 'tax_invoice'
+        : 'preliminary'
+  if (vendor && !monthly && draft.docType !== 'tax_invoice') {
+    return { status: 422, body: { error: 'invalid', issues: [{ code: 'not_creditable_document', blocking: true }] } }
+  }
+  if (monthly && docKind === 'tax_invoice' && draft.dealId) {
+    return { status: 422, body: { error: 'invalid', issues: [{ code: 'monthly_tax_invoice_has_deal', blocking: true }] } }
+  }
+  if (monthly && docKind === 'preliminary' && !draft.dealId) {
+    return { status: 422, body: { error: 'invalid', issues: [{ code: 'monthly_preliminary_needs_deal', blocking: true }] } }
+  }
   const normalized: InvoiceDraft = {
     ...draft,
     supplierTaxId: normalizeSupplierTaxId(draft.supplierTaxId),
     invoiceNumber: normalizeInvoiceNumber(draft.invoiceNumber),
     vatRecognizedPercent: percent,
-    docKind:
-      vendor && !vendor.issues_monthly_invoice && draft.docType === 'tax_invoice'
-        ? 'tax_invoice'
-        : draft.docKind,
+    docKind,
   }
   const period = resolveVatPeriod(normalized.invoiceDate, normalized.vatPeriod)
   if (period && (await periodIsClosed(ctx, period))) {
@@ -528,7 +590,6 @@ export async function confirmExpenseInvoice(
     return { status: 422, body: { error: 'invalid', issues } }
   }
 
-  const docKind = normalized.docKind === 'tax_invoice' ? 'tax_invoice' : 'preliminary'
   const applied = await applyInvoiceRpc(ctx, row.id, 'confirm', {
     supplier_name: normalized.supplierName.trim(),
     supplier_tax_id: normalized.supplierTaxId,

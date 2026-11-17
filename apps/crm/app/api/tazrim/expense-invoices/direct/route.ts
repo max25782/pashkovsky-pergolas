@@ -17,7 +17,8 @@ export async function POST(req: NextRequest) {
     const path = typeof body.path === 'string' ? body.path : ''
     const filename = typeof body.filename === 'string' ? body.filename : 'invoice.pdf'
     const dealId = typeof body.dealId === 'string' ? body.dealId : null
-    const result = await completeDirectInvoiceUpload(auth.ctx, { path, filename, dealId })
+    const docKind = body.docKind === 'tax_invoice' || body.docKind === 'preliminary' ? body.docKind : null
+    const result = await completeDirectInvoiceUpload(auth.ctx, { path, filename, dealId, docKind })
     return NextResponse.json(result.body, { status: result.status })
   }
   return NextResponse.json({ error: 'invalid' }, { status: 400 })

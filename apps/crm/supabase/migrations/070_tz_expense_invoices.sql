@@ -282,6 +282,7 @@ declare
   v_company uuid;
   v_kind text;
   v_vendor uuid;
+  v_deal uuid;
   v_period text;
   v_document uuid;
   v_monthly boolean;
@@ -312,11 +313,26 @@ begin
         raise exception 'invoice_not_found' using errcode = 'P0002';
       end if;
     end if;
+    -- A fuel receipt or any other non-tax document never becomes a preliminary
+    -- credit. Only a tax invoice from a supplier who does not send a monthly
+    -- invoice enters input VAT.
+    if v_monthly is false and coalesce(p_row->>'doc_type', '') is distinct from 'tax_invoice' then
+      raise exception 'not_creditable_document' using errcode = 'P0001';
+    end if;
+    v_deal := nullif(p_row->>'deal_id', '')::uuid;
     v_kind := case
       when p_row->>'doc_type' = 'tax_invoice' and v_vendor is not null and v_monthly is false then 'tax_invoice'
       when p_row->>'doc_kind' = 'tax_invoice' and p_row->>'doc_type' = 'tax_invoice' then 'tax_invoice'
       else 'preliminary'
     end;
+    -- Panda: the general invoice covers the month and has no deal.
+    -- A per-deal document stays preliminary and must name the deal.
+    if v_monthly is true and v_kind = 'tax_invoice' and v_deal is not null then
+      raise exception 'monthly_tax_invoice_has_deal' using errcode = 'P0001';
+    end if;
+    if v_monthly is true and v_kind = 'preliminary' and v_deal is null then
+      raise exception 'monthly_preliminary_needs_deal' using errcode = 'P0001';
+    end if;
 
     update public.tz_expense_invoices set
       supplier_name = p_row->>'supplier_name',
@@ -383,8 +399,28 @@ begin
     return p_invoice_id;
   end if;
 
+  -- Another confirmed general invoice for the same supplier and month keeps
+  -- the preliminary documents superseded. Clear the link only when none remain.
+  v_existing := null;
+  select vendor_id, vat_period into v_vendor, v_period
+  from public.tz_expense_invoices
+  where id = p_invoice_id
+    and company_id = p_company_id;
+  if v_vendor is not null and v_period is not null then
+    select id into v_existing
+    from public.tz_expense_invoices
+    where company_id = p_company_id
+      and vendor_id = v_vendor
+      and vat_period = v_period
+      and doc_kind = 'tax_invoice'
+      and doc_type = 'tax_invoice'
+      and confirmed_at is not null
+      and id <> p_invoice_id
+    order by confirmed_at desc, id desc
+    limit 1;
+  end if;
   update public.tz_expense_invoices
-    set superseded_by = null
+    set superseded_by = v_existing
     where company_id = p_company_id
       and superseded_by = p_invoice_id;
 

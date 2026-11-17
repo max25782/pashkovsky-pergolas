@@ -18,11 +18,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'file_required' }, { status: 400 })
   }
   const dealId = form.get('dealId')
+  const docKind = form.get('docKind')
   const result = await uploadExpenseDocument(auth.ctx, {
     filename: file.name,
     mimeType: file.type,
     bytes: new Uint8Array(await file.arrayBuffer()),
     dealId: typeof dealId === 'string' ? dealId : null,
+    docKind: docKind === 'tax_invoice' || docKind === 'preliminary' ? docKind : null,
   })
   return NextResponse.json(result.body, { status: result.status })
 }

@@ -30,6 +30,9 @@ const ISSUE_TEXT: Record<string, string> = {
   awaiting_general_invoice: "יש חשבון מקדים בלי חשבון מס כללי. סמנו סגירה בלי חשבון מס כללי.",
   missing_vendor: "חסר ספק",
   kind_not_tax_invoice: "חשבונית מס כללית אפשרית רק כשסוג המסמך הוא חשבונית מס",
+  not_creditable_document: "מסמך שאינו חשבונית מס לא נכנס למע״מ",
+  monthly_tax_invoice_has_deal: "חשבונית מס כללית של ספק חודשי לא יכולה להיות קשורה לעסקה",
+  monthly_preliminary_needs_deal: "חשבונית מקדימה של ספק חודשי חייבת להיות קשורה לעסקה",
   heic_unreadable: "לא ניתן לקרוא HEIC. שמרו כ-JPEG או PDF",
   original_missing: "אין סכום מקורי לשחזור",
   period_closed: "התקופה סגורה. פתחו אותה מחדש כדי לשנות",
@@ -235,6 +238,9 @@ export function DraftCard({
           חשבון כללי {monthly.taxTotal} ₪ · מקדימות {monthly.preliminaryTotal} ₪ · הפרש לא משויך {monthly.unallocated} ₪.
           המע״מ נלקח מהחשבון הכללי.
         </p>
+      ) : null}
+      {vendor && vendor.issues_monthly_invoice !== true && docType !== "tax_invoice" ? (
+        <p className="mt-2 text-xs text-amber-200">מסמך שאינו חשבונית מס לא נכנס למע״מ</p>
       ) : null}
       {docType === "receipt" ? <p className="mt-2 text-xs text-amber-200">קבלה — המע״מ לא ייזקף.</p> : null}
       <Issues result={result} />

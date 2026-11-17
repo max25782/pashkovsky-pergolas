@@ -107,13 +107,24 @@ function applyInvoiceRpc(store: Store, name: string, args: Record<string, unknow
   )
     if (action === 'confirm') {
     const vendor = store.tables.tz_vendors.find((row) => row.id === patch.vendor_id && row.company_id === companyId)
+    if (patch.vendor_id && !vendor) return Promise.resolve({ data: null, error: { code: 'P0002' } })
     const monthly = vendor?.issues_monthly_invoice === true
+    if (vendor && vendor.issues_monthly_invoice === false && patch.doc_type !== 'tax_invoice') {
+      return Promise.resolve({ data: null, error: { code: 'P0001', message: 'not_creditable_document' } })
+    }
     const docKind =
       patch.doc_type === 'tax_invoice' && vendor && !monthly
         ? 'tax_invoice'
         : patch.doc_kind === 'tax_invoice' && patch.doc_type === 'tax_invoice'
           ? 'tax_invoice'
           : 'preliminary'
+    const dealId = patch.deal_id || null
+    if (monthly && docKind === 'tax_invoice' && dealId) {
+      return Promise.resolve({ data: null, error: { code: 'P0001', message: 'monthly_tax_invoice_has_deal' } })
+    }
+    if (monthly && docKind === 'preliminary' && !dealId) {
+      return Promise.resolve({ data: null, error: { code: 'P0001', message: 'monthly_preliminary_needs_deal' } })
+    }
     Object.assign(invoice, {
       supplier_name: patch.supplier_name,
       supplier_tax_id: patch.supplier_tax_id,
@@ -168,8 +179,26 @@ function applyInvoiceRpc(store: Store, name: string, args: Record<string, unknow
     return Promise.resolve({ data: invoice.id, error: null })
   }
   if (action === 'release' || action === 'delete') {
+    const replacement = invoices
+      .filter(
+        (other) =>
+          other.id !== invoice.id &&
+          other.company_id === companyId &&
+          other.vendor_id === invoice.vendor_id &&
+          other.vat_period === invoice.vat_period &&
+          other.doc_kind === 'tax_invoice' &&
+          other.doc_type === 'tax_invoice' &&
+          other.confirmed_at,
+      )
+      .sort(
+        (left, right) =>
+          String(right.confirmed_at).localeCompare(String(left.confirmed_at)) ||
+          String(right.id).localeCompare(String(left.id)),
+      )[0]
     for (const other of invoices) {
-      if (other.company_id === companyId && other.superseded_by === invoiceId) other.superseded_by = null
+      if (other.company_id === companyId && other.superseded_by === invoiceId) {
+        other.superseded_by = replacement?.id ?? null
+      }
     }
   }
   if (action === 'release') {
@@ -716,5 +745,309 @@ describe('expense invoice handlers, company A vs company B', () => {
     )
     expect(confirm.status).toBe(200)
     expect(store.tables.tz_expense_invoices.find((row) => row.id === 'panda-late')?.superseded_by).toBe('panda-tax')
+  })
+
+  it('rejects a fuel receipt instead of storing it as a preliminary', async () => {
+    signIn(store, COMPANY_A)
+    store.tables.tz_vendors.push({
+      id: 'fuel',
+      company_id: COMPANY_A,
+      name: 'Delek',
+      issues_monthly_invoice: false,
+    })
+    store.tables.tz_expense_documents.push({ id: 'doc-gas', company_id: COMPANY_A, status: 'extracted' })
+    store.tables.tz_expense_invoices.push({
+      id: 'gas-receipt',
+      company_id: COMPANY_A,
+      document_id: 'doc-gas',
+      doc_kind: 'preliminary',
+      doc_type: 'receipt',
+      confirmed_at: null,
+      superseded_by: null,
+    })
+    const confirm = await confirmInvoice(
+      new NextRequest('http://localhost/api/tazrim/expense-invoices/gas-receipt', {
+        method: 'POST',
+        body: JSON.stringify({
+          supplierName: 'Delek',
+          supplierTaxId: '514111111',
+          invoiceNumber: 'GAS-1',
+          invoiceDate: '2026-11-04',
+          vatPeriod: '2026-11',
+          docType: 'receipt',
+          docKind: 'preliminary',
+          currency: 'ILS',
+          netAmount: 100,
+          vatRate: 18,
+          vatAmount: 18,
+          totalAmount: 118,
+          vatRecognizedPercent: 0,
+          vendorId: 'fuel',
+          dealId: 'deal-1',
+        }),
+      }),
+      { params: { id: 'gas-receipt' } },
+    )
+    expect(confirm.status).toBe(422)
+    const body = (await confirm.json()) as { issues: Array<{ code: string }> }
+    expect(body.issues.map((issue) => issue.code)).toContain('not_creditable_document')
+    const saved = store.tables.tz_expense_invoices.find((row) => row.id === 'gas-receipt')
+    expect(saved?.confirmed_at ?? null).toBeNull()
+    expect(saved?.doc_kind).toBe('preliminary')
+  })
+
+  it('rejects an other document for a non-monthly supplier', async () => {
+    signIn(store, COMPANY_A)
+    store.tables.tz_vendors.push({
+      id: 'fuel',
+      company_id: COMPANY_A,
+      name: 'Delek',
+      issues_monthly_invoice: false,
+    })
+    store.tables.tz_expense_documents.push({ id: 'doc-other', company_id: COMPANY_A, status: 'extracted' })
+    store.tables.tz_expense_invoices.push({
+      id: 'fuel-other',
+      company_id: COMPANY_A,
+      document_id: 'doc-other',
+      doc_kind: 'tax_invoice',
+      doc_type: 'other',
+      confirmed_at: null,
+    })
+    const confirm = await confirmInvoice(
+      new NextRequest('http://localhost/api/tazrim/expense-invoices/fuel-other', {
+        method: 'POST',
+        body: JSON.stringify({
+          supplierName: 'Delek',
+          supplierTaxId: '514111111',
+          invoiceNumber: 'O-1',
+          invoiceDate: '2026-11-04',
+          docType: 'other',
+          docKind: 'tax_invoice',
+          currency: 'ILS',
+          netAmount: 100,
+          vatRate: 18,
+          vatAmount: 18,
+          totalAmount: 118,
+          vendorId: 'fuel',
+        }),
+      }),
+      { params: { id: 'fuel-other' } },
+    )
+    expect(confirm.status).toBe(422)
+    const body = (await confirm.json()) as { issues: Array<{ code: string }> }
+    expect(body.issues.map((issue) => issue.code)).toEqual(['not_creditable_document'])
+    expect(store.tables.tz_expense_invoices.find((row) => row.id === 'fuel-other')?.confirmed_at ?? null).toBeNull()
+  })
+
+  it('allows a monthly tax invoice only without a deal and a preliminary only with one', async () => {
+    signIn(store, COMPANY_A)
+    store.tables.tz_vendors.push({
+      id: 'panda',
+      company_id: COMPANY_A,
+      name: 'Panda',
+      issues_monthly_invoice: true,
+    })
+    store.tables.deals.push({ id: 'deal-1', company_id: COMPANY_A })
+    store.tables.tz_expense_documents.push({ id: 'doc-panda', company_id: COMPANY_A, status: 'extracted' })
+    store.tables.tz_expense_invoices.push(
+      {
+        id: 'panda-tax-deal',
+        company_id: COMPANY_A,
+        document_id: 'doc-panda',
+        doc_kind: 'tax_invoice',
+        doc_type: 'tax_invoice',
+        confirmed_at: null,
+      },
+      {
+        id: 'panda-pre-open',
+        company_id: COMPANY_A,
+        document_id: 'doc-panda',
+        doc_kind: 'preliminary',
+        doc_type: 'tax_invoice',
+        confirmed_at: null,
+      },
+      {
+        id: 'panda-tax-open',
+        company_id: COMPANY_A,
+        document_id: 'doc-panda',
+        doc_kind: 'preliminary',
+        doc_type: 'tax_invoice',
+        confirmed_at: null,
+      },
+      {
+        id: 'panda-pre-deal',
+        company_id: COMPANY_A,
+        document_id: 'doc-panda',
+        doc_kind: 'preliminary',
+        doc_type: 'tax_invoice',
+        confirmed_at: null,
+      },
+    )
+    const fields = {
+      supplierName: 'Panda',
+      supplierTaxId: '514111111',
+      invoiceDate: '2026-11-12',
+      vatPeriod: '2026-11',
+      docType: 'tax_invoice',
+      currency: 'ILS',
+      netAmount: 100,
+      vatRate: 18,
+      vatAmount: 18,
+      totalAmount: 118,
+      vatRecognizedPercent: 100,
+      vendorId: 'panda',
+      allocationNumber: '9',
+    }
+    const post = (id: string, extra: Record<string, unknown>) =>
+      confirmInvoice(
+        new NextRequest(`http://localhost/api/tazrim/expense-invoices/${id}`, {
+          method: 'POST',
+          body: JSON.stringify({ ...fields, invoiceNumber: id, ...extra }),
+        }),
+        { params: { id } },
+      )
+    const withDeal = await post('panda-tax-deal', { docKind: 'tax_invoice', dealId: 'deal-1' })
+    expect(withDeal.status).toBe(422)
+    expect(((await withDeal.json()) as { issues: Array<{ code: string }> }).issues[0]?.code).toBe(
+      'monthly_tax_invoice_has_deal',
+    )
+    expect(store.tables.tz_expense_invoices.find((row) => row.id === 'panda-tax-deal')?.confirmed_at ?? null).toBeNull()
+
+    const withoutDeal = await post('panda-pre-open', { docKind: 'preliminary', dealId: null })
+    expect(withoutDeal.status).toBe(422)
+    expect(((await withoutDeal.json()) as { issues: Array<{ code: string }> }).issues[0]?.code).toBe(
+      'monthly_preliminary_needs_deal',
+    )
+
+    const tax = await post('panda-tax-open', { docKind: 'tax_invoice', dealId: null })
+    expect(tax.status).toBe(200)
+    expect(store.tables.tz_expense_invoices.find((row) => row.id === 'panda-tax-open')?.doc_kind).toBe('tax_invoice')
+    expect(store.tables.tz_expense_invoices.find((row) => row.id === 'panda-tax-open')?.deal_id ?? null).toBeNull()
+
+    const preliminary = await post('panda-pre-deal', { docKind: 'preliminary', dealId: 'deal-1' })
+    expect(preliminary.status).toBe(200)
+    const savedPreliminary = store.tables.tz_expense_invoices.find((row) => row.id === 'panda-pre-deal')
+    expect(savedPreliminary?.doc_kind).toBe('preliminary')
+    expect(savedPreliminary?.deal_id).toBe('deal-1')
+    expect(savedPreliminary?.superseded_by).toBe('panda-tax-open')
+  })
+
+  it('stores a deal-card upload for a monthly supplier as preliminary', async () => {
+    signIn(store, COMPANY_A)
+    store.tables.tz_vendors.push({
+      id: 'panda',
+      company_id: COMPANY_A,
+      name: 'Delek',
+      issues_monthly_invoice: true,
+    })
+    store.tables.deals.push({ id: 'deal-1', company_id: COMPANY_A, customer_name: 'Yard' })
+    const form = new FormData()
+    form.append('file', new File([new Uint8Array([37, 80, 68, 70, 45])], 'panda.pdf', { type: 'application/pdf' }))
+    form.append('dealId', 'deal-1')
+    form.append('docKind', 'tax_invoice')
+    form.append('docType', 'receipt')
+    const response = await uploadInvoice(new NextRequest('http://localhost/api/tazrim/expense-invoices', { method: 'POST', body: form }))
+    expect(response.status).toBe(201)
+    const saved = store.tables.tz_expense_invoices.find((row) => row.company_id === COMPANY_A)
+    expect(saved?.vendor_id).toBe('panda')
+    expect(saved?.deal_id).toBe('deal-1')
+    expect(saved?.doc_kind).toBe('preliminary')
+  })
+
+  it('keeps preliminary rows superseded when another general invoice remains', async () => {
+    signIn(store, COMPANY_A)
+    store.tables.tz_vendors.push({
+      id: 'panda',
+      company_id: COMPANY_A,
+      name: 'Panda',
+      issues_monthly_invoice: true,
+    })
+    store.tables.tz_expense_documents.push({ id: 'doc-two', company_id: COMPANY_A, status: 'extracted' })
+    store.tables.tz_expense_invoices.push(
+      {
+        id: 'pre-keep',
+        company_id: COMPANY_A,
+        document_id: 'doc-two',
+        vendor_id: 'panda',
+        deal_id: 'deal-1',
+        vat_period: '2026-11',
+        doc_kind: 'preliminary',
+        doc_type: 'tax_invoice',
+        confirmed_at: '2026-11-02T00:00:00Z',
+        superseded_by: null,
+      },
+      {
+        id: 'tax-keep',
+        company_id: COMPANY_A,
+        document_id: 'doc-two',
+        doc_kind: 'preliminary',
+        doc_type: 'tax_invoice',
+        confirmed_at: null,
+        superseded_by: null,
+      },
+      {
+        id: 'tax-drop',
+        company_id: COMPANY_A,
+        document_id: 'doc-two',
+        doc_kind: 'preliminary',
+        doc_type: 'tax_invoice',
+        confirmed_at: null,
+        superseded_by: null,
+      },
+    )
+    const fields = {
+      supplierName: 'Panda',
+      supplierTaxId: '514111111',
+      invoiceDate: '2026-11-20',
+      vatPeriod: '2026-11',
+      docType: 'tax_invoice',
+      docKind: 'tax_invoice',
+      currency: 'ILS',
+      netAmount: 100,
+      vatRate: 18,
+      vatAmount: 18,
+      totalAmount: 118,
+      vatRecognizedPercent: 100,
+      vendorId: 'panda',
+      allocationNumber: '1',
+    }
+    const first = await confirmInvoice(
+      new NextRequest('http://localhost/api/tazrim/expense-invoices/tax-keep', {
+        method: 'POST',
+        body: JSON.stringify({ ...fields, invoiceNumber: 'G-1' }),
+      }),
+      { params: { id: 'tax-keep' } },
+    )
+    expect(first.status).toBe(200)
+    const second = await confirmInvoice(
+      new NextRequest('http://localhost/api/tazrim/expense-invoices/tax-drop', {
+        method: 'POST',
+        body: JSON.stringify({ ...fields, invoiceNumber: 'G-2' }),
+      }),
+      { params: { id: 'tax-drop' } },
+    )
+    expect(second.status).toBe(200)
+    expect(store.tables.tz_expense_invoices.find((row) => row.id === 'pre-keep')?.superseded_by).toBe('tax-drop')
+
+    const removed = await confirmInvoice(
+      new NextRequest('http://localhost/api/tazrim/expense-invoices/tax-drop', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'delete' }),
+      }),
+      { params: { id: 'tax-drop' } },
+    )
+    expect(removed.status).toBe(200)
+    expect(store.tables.tz_expense_invoices.find((row) => row.id === 'tax-drop')).toBeUndefined()
+    expect(store.tables.tz_expense_invoices.find((row) => row.id === 'pre-keep')?.superseded_by).toBe('tax-keep')
+
+    const released = await confirmInvoice(
+      new NextRequest('http://localhost/api/tazrim/expense-invoices/tax-keep', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'unconfirm' }),
+      }),
+      { params: { id: 'tax-keep' } },
+    )
+    expect(released.status).toBe(200)
+    expect(store.tables.tz_expense_invoices.find((row) => row.id === 'pre-keep')?.superseded_by).toBeNull()
   })
 })

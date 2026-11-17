@@ -166,6 +166,39 @@ describe("forecast and close VAT", () => {
     expect(fuel.recognizedFromPreliminary).toBe(0);
   });
 
+  it("does not add VAT for a fuel receipt", () => {
+    const forecast = computeForecastVat({
+      vatOnSales: 18000,
+      vatPercent: 18,
+      deals: [{ dealId: "deal-a", materialsVat: 9000 }],
+      invoices: [
+        invoice({
+          vendorId: "fuel",
+          issuesMonthlyInvoice: false,
+          docType: "receipt",
+          docKind: "preliminary",
+          dealId: null,
+          vatAmount: 1800,
+          netAmount: 10000,
+        }),
+        invoice({
+          vendorId: "fuel",
+          issuesMonthlyInvoice: false,
+          docType: "other",
+          docKind: "preliminary",
+          dealId: null,
+          vatAmount: 1800,
+          netAmount: 10000,
+        }),
+      ],
+      period: "2026-11",
+    });
+    expect(forecast.inputVat).toBe(9000);
+    expect(forecast.recognizedFromPreliminary).toBe(0);
+    expect(forecast.recognizedFromTaxInvoices).toBe(0);
+    expect(forecast.basis).toBe("estimate");
+  });
+
   it("leaves receipts and other document types out of the forecast", () => {
     const forecast = computeForecastVat({
       vatOnSales: 0,
