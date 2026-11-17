@@ -1532,6 +1532,8 @@
     "col_rate": "Rate",
     "col_pension": "Pension and pitzuim",
     "expand": "Breakdown",
-    "collapse": "Collapse"
+    "collapse": "Collapse",
+    "estimate": "estimate",
+    "input_from_invoices": "Input VAT from invoices"
   }
 }

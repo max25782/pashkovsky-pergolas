@@ -11,6 +11,7 @@ const TABS = [
   { href: "/app/admin/tazrim/recurring", label: "חיובים קבועים" },
   { href: "/app/admin/tazrim/debts", label: "חובות" },
   { href: "/app/admin/tazrim/expenses", label: "הוצאות" },
+  { href: "/app/admin/tazrim/invoices", label: "חשבוניות" },
 ];
 
 export function NavTabs({ active }: { active: string }) {

@@ -209,6 +209,9 @@ export function buildVatRows(input: BuildVatRowsInput): CalculatedCashRow[] {
       vatPercent: input.vatPercent,
       lines: monthLines,
       total: Math.abs(total),
+      inputVatBasis: 'estimate',
+      inputVatRecognized: roundMoney(monthLines.reduce((sum, line) => sum + line.materialsVatDeduction, 0)),
+      estimated: true,
     }
     rows.push({
       company_id: input.companyId,

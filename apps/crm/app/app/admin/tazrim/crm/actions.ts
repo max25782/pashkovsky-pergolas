@@ -24,10 +24,14 @@ import {
   CALCULATED_SOURCES,
   buildPensionRows,
   buildVatRows,
+  nextMonth,
   toCashEventInsert,
+  vatExternalId,
   type CalculatedCashRow,
   type VatDealInput,
 } from "@/lib/tazrim/vat-pension-rows";
+import { applyPeriodVat, withoutLockedPeriods } from "@/lib/tazrim/expense-invoices/period-vat";
+import { loadInvoiceVatState } from "@/lib/tazrim/expense-invoices/load-invoice-vat";
 import {
   PAYROLL_APPROVED_SOURCE,
   PAYROLL_CATEGORY,
@@ -269,18 +273,19 @@ export async function syncAluminCRM() {
     }
   }
 
-  const calculatedRows = await buildCalculatedRows(
+  const calculated = await buildCalculatedRows(
     crm,
+    supabase,
     tazrimCompanyId,
     deals,
     paymentsByDeal,
     fallbackDates,
   );
 
-  if (calculatedRows.length > 0) {
+  if (calculated.rows.length > 0) {
     const { error: calculatedError } = await supabase
       .from("tz_cash_events")
-      .upsert(calculatedRows.map(toCashEventInsert), {
+      .upsert(calculated.rows.map(toCashEventInsert), {
         onConflict: "company_id,external_source,external_id",
       });
     if (calculatedError) {
@@ -309,7 +314,10 @@ export async function syncAluminCRM() {
   // Calculated VAT / pension rows that no longer apply (a payment was removed,
   // a worker flagged "no pension"). Only planned rows from this month on are
   // touched: earlier months are history and manual rows have other sources.
-  const calculatedIds = calculatedRows.map((r) => r.external_id);
+  const calculatedIds = [
+    ...calculated.rows.map((r) => r.external_id),
+    ...calculated.lockedExternalIds,
+  ];
   const { error: calculatedCleanupError } = await supabase
     .from("tz_cash_events")
     .delete()
@@ -342,7 +350,7 @@ export async function syncAluminCRM() {
         deals_count: deals.length,
         payments_count: payments?.length ?? 0,
         payroll_rows: payrollRows.length,
-        calculated_rows: calculatedRows.length,
+        calculated_rows: calculated.rows.length,
         reversed_payments: reversedPayments,
         payments_needing_account: rows.filter((r) => r.needs_account).length,
         crm_default_account_id: defaultAccountId,
@@ -494,11 +502,12 @@ interface PayrollRow {
 // payments are never read or changed here.
 async function buildCalculatedRows(
   crm: SupabaseClient,
+  supabase: TazrimSupabase,
   tazrimCompanyId: string,
   deals: Array<{ id: unknown; price: unknown; my_cost: unknown; customer_name?: unknown }>,
   paymentsByDeal: Map<string, DealPayment[]>,
   fallbackDates: Map<string, string>,
-): Promise<CalculatedCashRow[]> {
+): Promise<{ rows: CalculatedCashRow[]; lockedExternalIds: string[] }> {
   const today = todayInIsrael();
   const currentMonth = monthOf(today);
 
@@ -541,7 +550,18 @@ async function buildCalculatedRows(
     reports: pensionMonths.map((month) => buildMonthPensionReport(shifts, book, month)),
   });
 
-  return [...vatRows, ...pensionRows];
+  const invoiceState = await loadInvoiceVatState(supabase, tazrimCompanyId);
+  if (!invoiceState) return { rows: [...vatRows, ...pensionRows], lockedExternalIds: [] };
+
+  const locked = withoutLockedPeriods(vatRows, invoiceState.closed);
+  const adjusted = locked.writable.map((row) => applyPeriodVat(row, invoiceState.invoices));
+  const closedIds = [...invoiceState.closed].map((month) =>
+    vatExternalId(tazrimCompanyId, nextMonth(month)),
+  );
+  return {
+    rows: [...adjusted, ...pensionRows],
+    lockedExternalIds: [...new Set([...locked.lockedExternalIds, ...closedIds])],
+  };
 }
 
 // Worker wages from AluminCRM shifts: one expense per worker per month, due on

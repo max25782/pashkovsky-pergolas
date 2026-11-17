@@ -1532,6 +1532,8 @@
     "col_rate": "שיעור",
     "col_pension": "פנסיה ופיצויים",
     "expand": "פירוט",
-    "collapse": "סגור"
+    "collapse": "סגור",
+    "estimate": "הערכה",
+    "input_from_invoices": "מע״מ תשומות מחשבוניות"
   }
 }

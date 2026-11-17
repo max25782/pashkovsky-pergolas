@@ -1532,6 +1532,8 @@
     "col_rate": "Ставка",
     "col_pension": "Пенсия и пицуим",
     "expand": "Расшифровка",
-    "collapse": "Свернуть"
+    "collapse": "Свернуть",
+    "estimate": "оценка",
+    "input_from_invoices": "НДС по входящим счетам"
   }
 }

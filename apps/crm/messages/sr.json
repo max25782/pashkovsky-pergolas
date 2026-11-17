@@ -1532,6 +1532,8 @@
     "col_rate": "Stopa",
     "col_pension": "Penzija i pitzuim",
     "expand": "Razrada",
-    "collapse": "Skupi"
+    "collapse": "Skupi",
+    "estimate": "procena",
+    "input_from_invoices": "Ulazni PDV iz računa"
   }
 }

@@ -119,11 +119,26 @@ function VatBreakdown({ meta }: { meta: VatCalcMeta }) {
           <tr className="border-t border-zinc-700">
             <td className="py-2 font-bold text-zinc-100" colSpan={5}>
               {t("total")}
+              {meta.estimated ? (
+                <span className="ms-2 rounded border border-amber-700/60 bg-amber-950/40 px-1.5 py-0.5 text-[10.5px] font-medium text-amber-200">
+                  {t("estimate")}
+                </span>
+              ) : null}
             </td>
             <td className="py-2 font-extrabold text-zinc-100">
-              <Money value={Math.abs(linesTotal) || meta.total} locale={locale} />
+              <Money
+                value={meta.inputVatBasis === "invoices" ? meta.total : Math.abs(linesTotal) || meta.total}
+                locale={locale}
+              />
             </td>
           </tr>
+          {meta.inputVatBasis === "invoices" ? (
+            <tr>
+              <td className="pb-1 text-zinc-400" colSpan={6}>
+                {t("input_from_invoices")}: <Money value={meta.inputVatRecognized ?? 0} locale={locale} />
+              </td>
+            </tr>
+          ) : null}
         </tbody>
       </table>
     </div>
@@ -219,6 +234,11 @@ export function CalcTitle({ flow, open, onToggle, trailing, className = "" }: Ca
       <span className="text-amber-500 hover:text-amber-400">
         <LocalizedCalcLabel flow={flow} t={t} />
       </span>
+      {flow.calcMeta.kind !== "pension" && flow.calcMeta.estimated ? (
+        <span className="ms-1.5 rounded border border-amber-700/60 bg-amber-950/40 px-1.5 py-0.5 text-[10.5px] text-amber-200">
+          {t("estimate")}
+        </span>
+      ) : null}
       <span className="ms-1.5 text-[10.5px] text-zinc-500">
         {open ? t("collapse") : t("expand")}
       </span>

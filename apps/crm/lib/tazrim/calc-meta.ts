@@ -39,6 +39,15 @@ export interface VatCalcMeta {
   vatPercent: number
   lines: VatCalcLine[]
   total: number
+  /**
+   * 'estimate' — input VAT is still the materials figure from the deal.
+   * 'invoices' — input VAT is confirmed supplier invoices for sourceMonth.
+   */
+  inputVatBasis?: 'estimate' | 'invoices'
+  /** Deduction used for the period (materials estimate or recognized invoice VAT). */
+  inputVatRecognized?: number
+  /** True while the deduction is the materials estimate, not confirmed invoices. */
+  estimated?: boolean
 }
 
 export interface PensionCalcMeta {
