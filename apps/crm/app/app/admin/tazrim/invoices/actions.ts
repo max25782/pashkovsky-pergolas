@@ -7,6 +7,7 @@ import {
   closeVatPeriod,
   confirmExpenseInvoice,
   createExpenseFromInvoice,
+  createSupplierVendor,
   parseDraftBody,
   rejectExpenseInvoice,
   reopenVatPeriod,
@@ -39,6 +40,25 @@ export async function confirmInvoiceAction(formData: FormData): Promise<InvoiceA
   }
   refresh();
   return { issues: Array.isArray(result.body.issues) ? (result.body.issues as ValidationIssue[]) : undefined };
+}
+
+export async function createSupplierVendorAction(input: {
+  name: string
+  invoiceId: string
+}): Promise<{ vendorId?: string; name?: string; error?: string; vendors?: Array<{ id: string; name: string }> }> {
+  const ctx = await requireTazrimActionContext()
+  const result = await createSupplierVendor(ctx, input)
+  if (result.status >= 400) {
+    const vendors = Array.isArray(result.body.vendors)
+      ? (result.body.vendors as Array<{ id: string; name: string }>)
+      : undefined
+    return { error: String(result.body.error ?? 'save_failed'), vendors }
+  }
+  refresh()
+  return {
+    vendorId: typeof result.body.vendorId === 'string' ? result.body.vendorId : undefined,
+    name: typeof result.body.name === 'string' ? result.body.name : input.name.trim(),
+  }
 }
 
 export async function rejectInvoiceAction(formData: FormData): Promise<InvoiceActionResult> {

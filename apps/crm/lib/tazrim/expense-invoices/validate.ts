@@ -99,6 +99,18 @@ export function amountsClose(a: number, b: number, tolerance = VAT_AGOROT_TOLERA
   return Math.abs(roundMoney(a) - roundMoney(b)) <= tolerance + 1e-9
 }
 
+/** Receipts and other documents never credit VAT. A tax invoice with VAT but no seller עוסק starts at 0%. */
+export function recognizedPercentDefault(input: {
+  docType: InvoiceDocType
+  vatAmount: number | null
+  sellerTaxIdAbsent: boolean
+  categoryPercent: number
+}): number {
+  if (input.docType !== 'tax_invoice') return 0
+  if (input.sellerTaxIdAbsent && input.vatAmount !== null && input.vatAmount !== 0) return 0
+  return input.categoryPercent
+}
+
 /**
  * VAT that actually reduces the period's payment.
  * Receipts are never creditable. Unconfirmed rows contribute nothing.
@@ -147,7 +159,12 @@ export function validateInvoiceDraft(
   if (confirm && !draft.supplierName.trim()) {
     issues.push({ code: 'missing_supplier', blocking: true })
   }
-  if (confirm && !normalizeSupplierTaxId(draft.supplierTaxId)) {
+  const vatWithoutSeller =
+    draft.docType === 'tax_invoice' &&
+    draft.vatAmount !== null &&
+    draft.vatAmount !== 0 &&
+    !normalizeSupplierTaxId(draft.supplierTaxId)
+  if (confirm && !normalizeSupplierTaxId(draft.supplierTaxId) && !vatWithoutSeller) {
     issues.push({ code: 'missing_tax_id', blocking: true })
   }
   if (confirm && !normalizeInvoiceNumber(draft.invoiceNumber)) {

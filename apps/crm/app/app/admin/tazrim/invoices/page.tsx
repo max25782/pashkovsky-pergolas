@@ -43,6 +43,7 @@ interface InvoiceDb {
   estimated_amount: number | string | null;
   variance_amount: number | string | null;
   extraction_confidence: number | string | null;
+  extraction_json: unknown;
   confirmed_at: string | null;
 }
 
@@ -71,6 +72,17 @@ function asNumber(value: number | string | null): number | null {
 function vendorLabel(value: ExpenseDb["vendors"]): string | null {
   if (!value) return null;
   return Array.isArray(value) ? (value[0]?.name ?? null) : value.name;
+}
+
+function extractionFlags(row: InvoiceDb): { taxInvoiceWordsAbsent: boolean; sellerTaxIdAbsent: boolean } {
+  if (!row.extraction_json || typeof row.extraction_json !== "object") {
+    return { taxInvoiceWordsAbsent: false, sellerTaxIdAbsent: false };
+  }
+  const record = row.extraction_json as Record<string, unknown>;
+  return {
+    taxInvoiceWordsAbsent: record.taxInvoiceWordsAbsent === true,
+    sellerTaxIdAbsent: record.sellerTaxIdAbsent === true,
+  };
 }
 
 function toDraft(row: InvoiceDb): InvoiceDraft {
@@ -155,6 +167,7 @@ export default async function InvoicesPage({
     .filter((row) => !row.confirmed_at)
     .map((row) => {
       const draft = toDraft(row);
+      const flags = extractionFlags(row);
       const issues = validateInvoiceDraft(draft, { existingConfirmed: confirmedKeys, selfId: row.id, mode: "review" });
       return {
         invoiceId: row.id,
@@ -178,6 +191,8 @@ export default async function InvoicesPage({
         vatPeriod: draft.vatPeriod || draft.invoiceDate.slice(0, 7),
         confidence: row.extraction_confidence === null ? "" : String(row.extraction_confidence),
         issues: issues.map((issue) => issue.code),
+        taxInvoiceWordsAbsent: flags.taxInvoiceWordsAbsent,
+        sellerTaxIdAbsent: flags.sellerTaxIdAbsent,
       };
     });
 

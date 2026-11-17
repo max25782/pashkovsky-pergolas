@@ -43,6 +43,7 @@ jest.mock('@/lib/tazrim/expense-invoices/extract', () => ({
 
 import { GET as listInvoices, POST as uploadInvoice } from '../route'
 import { POST as confirmInvoice } from '../[id]/route'
+import { POST as createVendor } from '../vendors/route'
 import { GET as readFile } from '../[id]/file/route'
 import { GET as reconcile, POST as changeMatch } from '../reconcile/route'
 import { POST as changePeriod } from '../period/route'
@@ -397,9 +398,15 @@ describe('expense invoice handlers, company A vs company B', () => {
           body: JSON.stringify({ period: '2026-10', action: 'reopen', note: 'x' }),
         }),
       ),
+      createVendor(
+        new NextRequest('http://localhost/api/tazrim/expense-invoices/vendors', {
+          method: 'POST',
+          body: JSON.stringify({ name: 'Paz', companyId: COMPANY_B }),
+        }),
+      ),
     ]
     const statuses = await Promise.all(routes.map(async (response) => (await response).status))
-    expect(statuses).toEqual([401, 401, 401, 401, 401, 401])
+    expect(statuses).toEqual([401, 401, 401, 401, 401, 401, 401])
     expect(store.tables.tz_vat_period_closures).toHaveLength(1)
   })
 
@@ -789,7 +796,8 @@ describe('expense invoice handlers, company A vs company B', () => {
       { params: { id: 'gas-receipt' } },
     )
     expect(confirm.status).toBe(422)
-    const body = (await confirm.json()) as { issues: Array<{ code: string }> }
+    const body = (await confirm.json()) as { error: string; issues: Array<{ code: string }> }
+    expect(body.error).toBe('not_creditable_document')
     expect(body.issues.map((issue) => issue.code)).toContain('not_creditable_document')
     const saved = store.tables.tz_expense_invoices.find((row) => row.id === 'gas-receipt')
     expect(saved?.confirmed_at ?? null).toBeNull()
@@ -1049,5 +1057,54 @@ describe('expense invoice handlers, company A vs company B', () => {
     )
     expect(released.status).toBe(200)
     expect(store.tables.tz_expense_invoices.find((row) => row.id === 'pre-keep')?.superseded_by).toBeNull()
+  })
+
+  it('creates a one-time supplier in the session company and links the invoice', async () => {
+    signIn(store, COMPANY_A)
+    store.tables.tz_vendors.push({
+      id: 'vendor-b',
+      company_id: COMPANY_B,
+      name: 'Glass Shop',
+      issues_monthly_invoice: false,
+    })
+    store.tables.tz_expense_invoices.push({
+      id: 'inv-new',
+      company_id: COMPANY_A,
+      vendor_id: null,
+      confirmed_at: null,
+    })
+    const response = await createVendor(
+      new NextRequest('http://localhost/api/tazrim/expense-invoices/vendors', {
+        method: 'POST',
+        body: JSON.stringify({ name: 'Glass Shop', companyId: COMPANY_B, invoiceId: 'inv-new' }),
+      }),
+    )
+    expect(response.status).toBe(201)
+    const created = store.tables.tz_vendors.filter((row) => row.name === 'Glass Shop' && row.company_id === COMPANY_A)
+    expect(created).toHaveLength(1)
+    expect(created[0].issues_monthly_invoice).toBe(false)
+    expect(store.tables.tz_expense_invoices.find((row) => row.id === 'inv-new')?.vendor_id).toBe(created[0].id)
+    expect(store.tables.tz_vendors.filter((row) => row.company_id === COMPANY_B)).toHaveLength(1)
+  })
+
+  it('does not create a duplicate when a similar supplier already exists', async () => {
+    signIn(store, COMPANY_A)
+    store.tables.tz_vendors.push({
+      id: 'paz',
+      company_id: COMPANY_A,
+      name: 'Paz Ashdod',
+      issues_monthly_invoice: false,
+    })
+    const response = await createVendor(
+      new NextRequest('http://localhost/api/tazrim/expense-invoices/vendors', {
+        method: 'POST',
+        body: JSON.stringify({ name: 'Paz' }),
+      }),
+    )
+    expect(response.status).toBe(409)
+    const body = (await response.json()) as { error: string; vendors: Array<{ id: string; name: string }> }
+    expect(body.error).toBe('similar_vendor')
+    expect(body.vendors.map((vendor) => vendor.id)).toEqual(['paz'])
+    expect(store.tables.tz_vendors).toHaveLength(1)
   })
 })

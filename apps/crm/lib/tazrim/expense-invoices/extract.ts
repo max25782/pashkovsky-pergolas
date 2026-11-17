@@ -24,6 +24,10 @@ export interface InvoiceExtraction {
   allocationNumber: string | null
   confidence: number | null
   unavailable: boolean
+  /** The printed document does not contain the words חשבונית מס. Stored on the invoice extraction. */
+  taxInvoiceWordsAbsent: boolean
+  /** The seller עוסק / ח.פ. number is not on the document. Stored on the invoice extraction. */
+  sellerTaxIdAbsent: boolean
   /** Set when a HEIC/HEIF file could not be turned into JPEG. Nothing else is logged. */
   failure: 'heic_unreadable' | null
 }
@@ -39,16 +43,25 @@ export interface ExtractInvoiceDeps {
 
 const MODEL = () => process.env.GEMINI_INVOICE_MODEL?.trim() || 'gemini-2.5-flash'
 
-const PROMPT = [
-  'Read this Israeli supplier invoice (חשבונית מס) or receipt (קבלה).',
+export const INVOICE_READ_PROMPT = [
+  'Read this Israeli supplier document.',
+  'It may be a tax invoice (חשבונית מס), a tax invoice receipt (חשבונית מס קבלה),',
+  'a store, gas-station or other till document that prints a VAT amount without those words, or a plain receipt (קבלה).',
   'Reply with JSON only, no markdown, using exactly these keys:',
   'supplierName, supplierTaxId, invoiceNumber, invoiceDate (YYYY-MM-DD),',
-  'docType (tax_invoice, receipt, or other), currency (ISO code, ILS if shekel),',
+  'docType (tax_invoice, receipt, or other — your reading of the title, before the rules below),',
+  'mentionsTaxInvoiceWords (boolean: true only when the printed page contains the words חשבונית מס, including inside חשבונית מס קבלה),',
+  'taxInvoiceReceipt (boolean: true when the document is חשבונית מס קבלה),',
+  'currency (ISO code, ILS if shekel),',
   'netAmount, vatRate (percent, number), vatAmount, totalAmount, allocationNumber, confidence (0 to 1).',
-  'supplierTaxId is ח.פ. or ע.מ., digits only.',
+  'supplierTaxId is the seller עוסק, ח.פ. or ע.מ., digits only.',
   'allocationNumber is מספר הקצאה, or null when it is not printed.',
-  'Use null for any field you cannot see. Do not invent values.',
+  'חשבונית מס קבלה is always a tax invoice.',
+  'A document that shows a VAT amount and the seller עוסק number is a tax invoice even when the words חשבונית מס are not printed.',
+  'Use null for any field you cannot see. Do not invent a tax id, a VAT amount, or the words חשבונית מס.',
 ].join(' ')
+
+const PROMPT = INVOICE_READ_PROMPT
 
 export function emptyExtraction(): InvoiceExtraction {
   return {
@@ -65,8 +78,32 @@ export function emptyExtraction(): InvoiceExtraction {
     allocationNumber: null,
     confidence: null,
     unavailable: true,
+    taxInvoiceWordsAbsent: false,
+    sellerTaxIdAbsent: false,
     failure: null,
   }
+}
+
+export interface ClassifiedSupplierDocument {
+  docType: InvoiceDocType
+  taxInvoiceWordsAbsent: boolean
+  sellerTaxIdAbsent: boolean
+}
+
+/** VAT plus the seller's עוסק number is a tax invoice. חשבונית מס קבלה always is. */
+export function classifySupplierDocument(input: {
+  modelDocType: InvoiceDocType
+  vatAmount: number | null
+  supplierTaxId: string | null
+  mentionsTaxInvoiceWords: boolean | null
+  taxInvoiceReceipt: boolean
+}): ClassifiedSupplierDocument {
+  const sellerTaxIdAbsent = !input.supplierTaxId
+  const vatPresent = input.vatAmount !== null && input.vatAmount !== 0
+  let docType: InvoiceDocType = input.modelDocType
+  if (input.taxInvoiceReceipt || (vatPresent && !sellerTaxIdAbsent)) docType = 'tax_invoice'
+  const taxInvoiceWordsAbsent = input.taxInvoiceReceipt ? false : input.mentionsTaxInvoiceWords === false
+  return { docType, taxInvoiceWordsAbsent, sellerTaxIdAbsent }
 }
 
 function asNumber(value: unknown): number | null {
@@ -99,17 +136,27 @@ export function parseInvoiceModelJson(raw: string): InvoiceExtraction {
   }
   if (!parsed || typeof parsed !== 'object') return emptyExtraction()
   const row = parsed as Record<string, unknown>
-  const docType = typeof row.docType === 'string' && isInvoiceDocType(row.docType) ? row.docType : 'other'
+  const modelDocType = typeof row.docType === 'string' && isInvoiceDocType(row.docType) ? row.docType : 'other'
   const confidence = asNumber(row.confidence)
   const tax = typeof row.supplierTaxId === 'string' ? digitsOnly(row.supplierTaxId) : ''
   const number = typeof row.invoiceNumber === 'string' ? normalizeInvoiceNumber(row.invoiceNumber) : ''
   const allocation = typeof row.allocationNumber === 'string' ? row.allocationNumber.trim() : ''
+  const vatAmount = asNumber(row.vatAmount)
+  const classified = classifySupplierDocument({
+    modelDocType,
+    vatAmount,
+    supplierTaxId: tax || null,
+    mentionsTaxInvoiceWords: typeof row.mentionsTaxInvoiceWords === 'boolean' ? row.mentionsTaxInvoiceWords : null,
+    taxInvoiceReceipt: row.taxInvoiceReceipt === true,
+  })
   return {
     supplierName: typeof row.supplierName === 'string' && row.supplierName.trim() ? row.supplierName.trim() : null,
     supplierTaxId: tax || null,
     invoiceNumber: number || null,
     invoiceDate: asDate(row.invoiceDate),
-    docType,
+    docType: classified.docType,
+    taxInvoiceWordsAbsent: classified.taxInvoiceWordsAbsent,
+    sellerTaxIdAbsent: classified.sellerTaxIdAbsent,
     currency: typeof row.currency === 'string' && row.currency.trim() ? row.currency.trim().toUpperCase() : 'ILS',
     netAmount: asNumber(row.netAmount),
     vatRate: asNumber(row.vatRate),

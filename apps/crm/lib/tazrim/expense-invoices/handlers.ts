@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto'
 import type { TazrimContext } from '@/lib/tazrim/guard'
 import { invoiceDb } from '@/lib/tazrim/expense-invoices/service'
 import { extractInvoice, prepareInvoiceBytes, type InvoiceExtraction } from '@/lib/tazrim/expense-invoices/extract'
+import { vendorNameSuggestions } from '@/lib/tazrim/expense-invoices/vendor-match'
 import {
   EXPENSE_INVOICE_BUCKET,
   MAX_INVOICE_BYTES,
@@ -28,6 +29,7 @@ import {
   normalizeInvoiceNumber,
   normalizeSupplierName,
   normalizeSupplierTaxId,
+  recognizedPercentDefault,
   resolveVatPeriod,
   validateInvoiceDraft,
   vatPeriodFromDate,
@@ -149,7 +151,12 @@ async function periodIsClosed(ctx: TazrimContext, period: string): Promise<boole
 }
 
 function draftFromExtraction(extraction: InvoiceExtraction, categoryPercent: number): InvoiceDraft {
-  const percent = extraction.docType === 'receipt' ? 0 : categoryPercent
+  const percent = recognizedPercentDefault({
+    docType: extraction.docType,
+    vatAmount: extraction.vatAmount,
+    sellerTaxIdAbsent: extraction.sellerTaxIdAbsent,
+    categoryPercent,
+  })
   return {
     supplierName: extraction.supplierName ?? '',
     supplierTaxId: extraction.supplierTaxId ?? '',
@@ -265,6 +272,68 @@ async function matchVendorByName(
     (vendor) => vendor.company_id === ctx.companyId && normalizeSupplierName(vendor.name) === wanted,
   )
   return matches.length === 1 ? matches[0] : null
+}
+
+export async function createSupplierVendor(
+  ctx: TazrimContext,
+  input: { name: string; invoiceId?: string | null },
+): Promise<HandlerResult> {
+  if (ctx.role !== 'owner' && ctx.role !== 'admin') return { status: 403, body: { error: 'forbidden' } }
+  const name = input.name.trim()
+  if (!name) return { status: 400, body: { error: 'name_required' } }
+  if (input.invoiceId) {
+    const invoice = await loadOwnInvoice(ctx, input.invoiceId)
+    if (!invoice) return { status: 404, body: { error: 'not_found' } }
+  }
+  const { data, error } = await invoiceDb(ctx)
+    .from('tz_vendors')
+    .select('id, name, company_id')
+    .eq('company_id', ctx.companyId)
+  if (error) return dbError(error) ?? { status: 500, body: { error: 'save_failed' } }
+  const own = (data as Array<{ id: string; name: string; company_id: string }>).filter(
+    (vendor) => vendor.company_id === ctx.companyId,
+  )
+  const hits = vendorNameSuggestions(name, own)
+  const exact = hits.filter((hit) => hit.exact)
+  if (exact.length > 1 || hits.some((hit) => !hit.exact)) {
+    return {
+      status: 409,
+      body: {
+        error: 'similar_vendor',
+        vendors: hits.map((hit) => ({ id: hit.id, name: hit.name, exact: hit.exact })),
+      },
+    }
+  }
+  const vendorId = exact[0]?.id ?? null
+  let created = false
+  let linkedId = vendorId
+  if (!linkedId) {
+    const inserted = await invoiceDb(ctx)
+      .from('tz_vendors')
+      .insert({
+        company_id: ctx.companyId,
+        name,
+        vendor_type: 'other',
+        issues_monthly_invoice: false,
+      })
+      .select('id, company_id')
+      .single()
+    if (inserted.error || !inserted.data) return dbError(inserted.error) ?? { status: 500, body: { error: 'save_failed' } }
+    const row = inserted.data as { id: string; company_id: string }
+    if (row.company_id !== ctx.companyId) return { status: 500, body: { error: 'save_failed' } }
+    linkedId = row.id
+    created = true
+  }
+  if (input.invoiceId) {
+    const updated = await invoiceDb(ctx)
+      .from('tz_expense_invoices')
+      .update({ vendor_id: linkedId })
+      .eq('id', input.invoiceId)
+      .eq('company_id', ctx.companyId)
+      .select('id')
+    if (!updated.data || updated.data.length === 0) return { status: 404, body: { error: 'not_found' } }
+  }
+  return { status: created ? 201 : 200, body: { vendorId: linkedId, created, name } }
 }
 
 /** Stored kind at upload. A deal-card file for a monthly supplier is always preliminary. */
@@ -561,7 +630,10 @@ export async function confirmExpenseInvoice(
         ? 'tax_invoice'
         : 'preliminary'
   if (vendor && !monthly && draft.docType !== 'tax_invoice') {
-    return { status: 422, body: { error: 'invalid', issues: [{ code: 'not_creditable_document', blocking: true }] } }
+    return {
+      status: 422,
+      body: { error: 'not_creditable_document', issues: [{ code: 'not_creditable_document', blocking: true }] },
+    }
   }
   if (monthly && docKind === 'tax_invoice' && draft.dealId) {
     return { status: 422, body: { error: 'invalid', issues: [{ code: 'monthly_tax_invoice_has_deal', blocking: true }] } }

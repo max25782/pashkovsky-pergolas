@@ -90,6 +90,15 @@ describe("invoice validation", () => {
     ).toBe(0);
   });
 
+  it("does not block a tax invoice that has VAT but no seller number", () => {
+    const issues = validateInvoiceDraft(
+      draft({ supplierTaxId: "", vendorId: "vendor-1", docKind: "tax_invoice", vatRecognizedPercent: 0 }),
+      { existingConfirmed: [], mode: "confirm" },
+    );
+    expect(issues.filter((issue) => issue.blocking).map((issue) => issue.code)).not.toContain("missing_tax_id");
+    expect(issues.some((issue) => issue.code === "missing_tax_id" && issue.blocking)).toBe(false);
+  });
+
   it("recognizes only the accountant's percent of a confirmed tax invoice", () => {
     expect(
       recognizedVatAmount({

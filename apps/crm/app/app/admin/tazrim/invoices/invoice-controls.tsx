@@ -1,12 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import {
+  AWAIT_TAX_INVOICE_MESSAGE,
+  DOC_TYPE_LABELS,
+  SELLER_TAX_ID_WARNING,
+  TAX_INVOICE_WORDS_WARNING,
+} from "@/lib/tazrim/expense-invoices/document-copy";
 import { supplierMonthVariance } from "@/lib/tazrim/expense-invoices/supplier-month";
+import { vendorNameSuggestions } from "@/lib/tazrim/expense-invoices/vendor-match";
 import {
   applyMatchAction,
   closePeriodAction,
   confirmInvoiceAction,
   createExpenseAction,
+  createSupplierVendorAction,
   rejectInvoiceAction,
   reopenPeriodAction,
   unlinkMatchAction,
@@ -30,7 +38,7 @@ const ISSUE_TEXT: Record<string, string> = {
   awaiting_general_invoice: "יש חשבון מקדים בלי חשבון מס כללי. סמנו סגירה בלי חשבון מס כללי.",
   missing_vendor: "חסר ספק",
   kind_not_tax_invoice: "חשבונית מס כללית אפשרית רק כשסוג המסמך הוא חשבונית מס",
-  not_creditable_document: "מסמך שאינו חשבונית מס לא נכנס למע״מ",
+  not_creditable_document: AWAIT_TAX_INVOICE_MESSAGE,
   monthly_tax_invoice_has_deal: "חשבונית מס כללית של ספק חודשי לא יכולה להיות קשורה לעסקה",
   monthly_preliminary_needs_deal: "חשבונית מקדימה של ספק חודשי חייבת להיות קשורה לעסקה",
   heic_unreadable: "לא ניתן לקרוא HEIC. שמרו כ-JPEG או PDF",
@@ -76,6 +84,8 @@ export interface DraftFields {
   vatPeriod: string;
   confidence: string;
   issues: string[];
+  taxInvoiceWordsAbsent: boolean;
+  sellerTaxIdAbsent: boolean;
 }
 
 const fieldClass =
@@ -99,10 +109,21 @@ export function DraftCard({
   const [docKind, setDocKind] = useState(draft.docKind || "preliminary");
   const [categoryId, setCategoryId] = useState(draft.categoryId);
   const [vendorId, setVendorId] = useState(draft.vendorId);
+  const [supplierName, setSupplierName] = useState(draft.supplierName);
+  const [addedVendors, setAddedVendors] = useState<Array<{ id: string; name: string; issues_monthly_invoice: false }>>([]);
+  const [vendorNotice, setVendorNotice] = useState<string | null>(null);
   const [vatPeriod, setVatPeriod] = useState(draft.vatPeriod || draft.invoiceDate.slice(0, 7));
   const [percent, setPercent] = useState(draft.vatRecognizedPercent);
+  const [percentTouched, setPercentTouched] = useState(false);
   const categoryPercent = categories.find((category) => category.id === categoryId)?.vat_recognized_percent;
-  const vendor = vendors.find((item) => item.id === vendorId);
+  const vendorOptions = [
+    ...vendors,
+    ...addedVendors.filter((item) => !vendors.some((vendor) => vendor.id === item.id)),
+  ];
+  const vendor = vendorOptions.find((item) => item.id === vendorId);
+  const vatAmount = Number(draft.vatAmount);
+  const holdZeroPercent = draft.sellerTaxIdAbsent && Number.isFinite(vatAmount) && vatAmount !== 0;
+  const suggestions = vendorId ? [] : vendorNameSuggestions(supplierName, vendorOptions);
   const month = /^\d{4}-\d{2}$/.test(vatPeriod) ? vatPeriod : draft.invoiceDate.slice(0, 7);
   const monthly =
     docKind === "tax_invoice" && vendorId && /^\d{4}-\d{2}$/.test(month)
@@ -130,7 +151,13 @@ export function DraftCard({
         ))}
       </ul>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <input name="supplierName" defaultValue={draft.supplierName} placeholder="ספק" className={fieldClass} />
+        <input
+          name="supplierName"
+          value={supplierName}
+          onChange={(event) => setSupplierName(event.target.value)}
+          placeholder="ספק"
+          className={fieldClass}
+        />
         <input name="supplierTaxId" defaultValue={draft.supplierTaxId} placeholder="ח.פ. / ע.מ." className={fieldClass} />
         <input name="invoiceNumber" defaultValue={draft.invoiceNumber} placeholder="מספר חשבונית" className={fieldClass} />
         <input name="invoiceDate" type="date" defaultValue={draft.invoiceDate} aria-label="תאריך" className={fieldClass} />
@@ -149,9 +176,9 @@ export function DraftCard({
           aria-label="סוג מסמך"
           className={fieldClass}
         >
-          <option value="tax_invoice">חשבונית מס</option>
-          <option value="receipt">קבלה</option>
-          <option value="other">אחר</option>
+          <option value="tax_invoice">{DOC_TYPE_LABELS.tax_invoice}</option>
+          <option value="receipt">{DOC_TYPE_LABELS.receipt}</option>
+          <option value="other">{DOC_TYPE_LABELS.other}</option>
         </select>
         <select
           name="docKind"
@@ -180,7 +207,10 @@ export function DraftCard({
         <input
           name="vatRecognizedPercent"
           value={docType === "receipt" ? "0" : percent}
-          onChange={(event) => setPercent(event.target.value)}
+          onChange={(event) => {
+            setPercentTouched(true);
+            setPercent(event.target.value);
+          }}
           placeholder="אחוז זיכוי"
           aria-label="אחוז זיכוי"
           className={fieldClass}
@@ -193,7 +223,7 @@ export function DraftCard({
           className={fieldClass}
         >
           <option value="">ספק במערכת</option>
-          {vendors.map((item) => (
+          {vendorOptions.map((item) => (
             <option key={item.id} value={item.id}>
               {item.name}
               {item.issues_monthly_invoice ? " · חשבון חודשי" : ""}
@@ -207,7 +237,9 @@ export function DraftCard({
             const next = event.target.value;
             setCategoryId(next);
             const found = categories.find((category) => category.id === next);
-            if (found && docType !== "receipt") setPercent(String(found.vat_recognized_percent));
+            if (found && docType !== "receipt" && !(holdZeroPercent && !percentTouched)) {
+              setPercent(String(found.vat_recognized_percent));
+            }
           }}
           aria-label="קטגוריה"
           className={fieldClass}
@@ -239,10 +271,59 @@ export function DraftCard({
           המע״מ נלקח מהחשבון הכללי.
         </p>
       ) : null}
-      {vendor && vendor.issues_monthly_invoice !== true && docType !== "tax_invoice" ? (
-        <p className="mt-2 text-xs text-amber-200">מסמך שאינו חשבונית מס לא נכנס למע״מ</p>
+      {docType === "tax_invoice" && draft.taxInvoiceWordsAbsent ? (
+        <p className="mt-2 text-xs text-amber-200">{TAX_INVOICE_WORDS_WARNING}</p>
       ) : null}
-      {docType === "receipt" ? <p className="mt-2 text-xs text-amber-200">קבלה — המע״מ לא ייזקף.</p> : null}
+      {docType === "tax_invoice" && holdZeroPercent ? (
+        <p className="mt-3 rounded-lg border border-amber-400 bg-amber-500/15 p-3 text-sm font-semibold text-amber-100">
+          {SELLER_TAX_ID_WARNING}
+        </p>
+      ) : null}
+      {vendor && vendor.issues_monthly_invoice !== true && docType !== "tax_invoice" ? (
+        <p className="mt-2 text-sm text-amber-200">{AWAIT_TAX_INVOICE_MESSAGE}</p>
+      ) : docType === "receipt" ? (
+        <p className="mt-2 text-xs text-amber-200">קבלה — המע״מ לא ייזקף.</p>
+      ) : null}
+      {!vendorId && supplierName.trim() ? (
+        <div className="mt-3 space-y-2 text-sm">
+          {suggestions.length > 0 ? (
+            <div className="space-y-1">
+              <p className="text-zinc-300">נמצא ספק דומה. בחר אותו כדי לא ליצור כפילות.</p>
+              {suggestions.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className="block rounded-lg border border-zinc-600 px-3 py-1.5 text-zinc-100"
+                  onClick={() => setVendorId(item.id)}
+                >
+                  שייך אל {item.name}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="rounded-lg border border-amber-500 px-3 py-1.5 text-amber-200"
+              onClick={async () => {
+                const created = await createSupplierVendorAction({ name: supplierName, invoiceId: draft.invoiceId });
+                if (created.vendorId) {
+                  setAddedVendors((current) => [
+                    ...current,
+                    { id: created.vendorId as string, name: created.name || supplierName, issues_monthly_invoice: false },
+                  ]);
+                  setVendorId(created.vendorId);
+                  setVendorNotice(null);
+                  return;
+                }
+                setVendorNotice(created.vendors?.length ? "יש ספק דומה. בחר אותו מהרשימה." : (created.error ?? "save_failed"));
+              }}
+            >
+              צור ספק ושייך
+            </button>
+          )}
+          {vendorNotice ? <p className="text-xs text-amber-200">{vendorNotice}</p> : null}
+        </div>
+      ) : null}
       <Issues result={result} />
       <div className="mt-4 flex gap-2">
         <button type="submit" className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-zinc-950">
