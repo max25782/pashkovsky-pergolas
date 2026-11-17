@@ -45,22 +45,21 @@ describe("invoice reconciliation", () => {
     expect(matchInvoice(invoice({ totalAmount: 200 }), [expense({ amount: 100 })]).status).toBe("none");
   });
 
-  it("reports a duplicate when two expenses are equally close and assigns neither", () => {
-    const tied = { dueDate: "2026-11-03" };
+  it("offers every compatible expense and does not pick one", () => {
     const result = matchInvoice(invoice({ invoiceDate: "2026-11-03" }), [
-      expense({ id: "exp-1", ...tied }),
-      expense({ id: "exp-2", ...tied }),
+      expense({ id: "exp-1", amount: 118, dueDate: "2026-11-03" }),
+      expense({ id: "exp-2", amount: 114, dueDate: "2026-11-03" }),
     ]);
-    expect(result.status).toBe("duplicate");
-    if (result.status === "duplicate") {
+    expect(result.status).toBe("choice");
+    if (result.status === "choice") {
       expect(result.expenseIds.sort()).toEqual(["exp-1", "exp-2"]);
     }
     const month = reconcileInvoices(
       [invoice()],
       [expense({ id: "exp-1" }), expense({ id: "exp-2" })],
     );
-    expect(month.matches[0].status).toBe("duplicate");
-    expect(month.expensesWithoutInvoice.map((row) => row.id).sort()).toEqual(["exp-1", "exp-2"]);
+    expect(month.matches[0].status).toBe("choice");
+    expect(month.expensesWithoutInvoice).toEqual([]);
   });
 
   it("does not match an expense that belongs to another company", () => {
@@ -68,7 +67,7 @@ describe("invoice reconciliation", () => {
     expect(result.status).toBe("none");
   });
 
-  it("lets the closer invoice keep a shared expense and marks the other as a duplicate", () => {
+  it("keeps both invoices as suggestions when they fit the same expense", () => {
     const month = reconcileInvoices(
       [
         invoice({ id: "near", totalAmount: 118 }),
@@ -76,9 +75,13 @@ describe("invoice reconciliation", () => {
       ],
       [expense({ amount: 118 })],
     );
-    const near = month.matches.find((row) => row.invoiceId === "near");
-    const far = month.matches.find((row) => row.invoiceId === "far");
-    expect(near).toMatchObject({ status: "matched", expenseId: "exp-1" });
-    expect(far?.status).toBe("duplicate");
+    expect(month.matches.find((row) => row.invoiceId === "near")).toMatchObject({
+      status: "matched",
+      expenseId: "exp-1",
+    });
+    expect(month.matches.find((row) => row.invoiceId === "far")).toMatchObject({
+      status: "matched",
+      expenseId: "exp-1",
+    });
   });
 });

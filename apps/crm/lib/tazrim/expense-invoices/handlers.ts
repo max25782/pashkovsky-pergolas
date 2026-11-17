@@ -1,5 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto'
 import type { TazrimContext } from '@/lib/tazrim/guard'
+import { invoiceDb } from '@/lib/tazrim/expense-invoices/service'
+import { extractInvoice, prepareInvoiceBytes, type InvoiceExtraction } from '@/lib/tazrim/expense-invoices/extract'
 import {
   EXPENSE_INVOICE_BUCKET,
   MAX_INVOICE_BYTES,
@@ -8,7 +10,6 @@ import {
   safeOriginalFilename,
   type InvoiceDocType,
 } from '@/lib/tazrim/expense-invoices/constants'
-import { extractInvoice, type InvoiceExtraction } from '@/lib/tazrim/expense-invoices/extract'
 import {
   expenseCompatible,
   isPreliminaryExpense,
@@ -17,6 +18,10 @@ import {
   type MatchExpense,
   type MatchInvoice,
 } from '@/lib/tazrim/expense-invoices/match'
+import { readExpenseMatch, withExpenseMatch, withoutExpenseMatch } from '@/lib/tazrim/expense-invoices/expense-match'
+import { applyCloseVat, type PeriodInvoiceInput } from '@/lib/tazrim/expense-invoices/period-vat'
+import { isCalcMeta } from '@/lib/tazrim/calc-meta'
+import { nextMonth, vatExternalId, type CalculatedCashRow } from '@/lib/tazrim/vat-pension-rows'
 import {
   isInvoiceDocType,
   normalizeInvoiceNumber,
@@ -53,6 +58,7 @@ interface InvoiceRow {
   invoice_number: string | null
   invoice_date: string | null
   doc_type: string
+  doc_kind: string | null
   currency: string
   net_amount: number | null
   vat_rate: number | null
@@ -63,6 +69,9 @@ interface InvoiceRow {
   vat_period: string | null
   category_id: string | null
   vendor_id: string | null
+  deal_id: string | null
+  is_monthly: boolean | null
+  superseded_by: string | null
   matched_cash_event_id: string | null
   estimated_amount: number | null
   variance_amount: number | null
@@ -78,6 +87,7 @@ interface ExpenseRow {
   due_date: string
   source: string
   vendor_id: string | null
+  calc_meta: unknown
   vendors: { name: string } | { name: string }[] | null
 }
 
@@ -107,7 +117,7 @@ function pathAllowed(companyId: string, storagePath: string): boolean {
 }
 
 async function periodIsClosed(ctx: TazrimContext, period: string): Promise<boolean> {
-  const { data, error } = await ctx.supabase
+  const { data, error } = await invoiceDb(ctx)
     .from('tz_vat_period_closures')
     .select('vat_period')
     .eq('company_id', ctx.companyId)
@@ -137,6 +147,8 @@ function draftFromExtraction(extraction: InvoiceExtraction, categoryPercent: num
     vatRecognizedPercent: percent,
     categoryId: null,
     vendorId: null,
+    docKind: 'preliminary',
+    dealId: null,
   }
 }
 
@@ -156,6 +168,9 @@ function draftFromRow(row: InvoiceRow): InvoiceDraft {
     vatRecognizedPercent: num(row.vat_recognized_percent) ?? 100,
     categoryId: row.category_id,
     vendorId: row.vendor_id,
+    docKind: row.doc_kind === 'tax_invoice' ? 'tax_invoice' : 'preliminary',
+    dealId: row.deal_id,
+    isMonthly: Boolean(row.is_monthly),
   }
 }
 
@@ -178,11 +193,14 @@ export function parseDraftBody(body: Record<string, unknown>): InvoiceDraft | nu
     vatRecognizedPercent: percent ?? Number.NaN,
     categoryId: typeof body.categoryId === 'string' && body.categoryId ? body.categoryId : null,
     vendorId: typeof body.vendorId === 'string' && body.vendorId ? body.vendorId : null,
+    docKind: body.docKind === 'tax_invoice' ? 'tax_invoice' : 'preliminary',
+    dealId: typeof body.dealId === 'string' && body.dealId ? body.dealId : null,
+    isMonthly: body.isMonthly === true || body.isMonthly === 'true' || body.isMonthly === 'on',
   }
 }
 
 async function confirmedKeys(ctx: TazrimContext): Promise<Array<{ id: string; supplierTaxId: string; invoiceNumber: string }>> {
-  const { data, error } = await ctx.supabase
+  const { data, error } = await invoiceDb(ctx)
     .from('tz_expense_invoices')
     .select('id, supplier_tax_id, invoice_number')
     .eq('company_id', ctx.companyId)
@@ -206,8 +224,13 @@ export async function uploadExpenseDocument(
   if (file.bytes.byteLength === 0) return { status: 400, body: { error: 'empty_file' } }
   if (file.bytes.byteLength > MAX_INVOICE_BYTES) return { status: 413, body: { error: 'file_too_large' } }
 
+  const prepared = await prepareInvoiceBytes(file.bytes, mime)
+  if (!prepared.ok) return { status: 422, body: { error: prepared.error } }
+  const storedMime = prepared.mimeType
+  const storedBytes = prepared.bytes
+
   const sha256 = createHash('sha256').update(file.bytes).digest('hex')
-  const { data: existing, error: existingError } = await ctx.supabase
+  const { data: existing, error: existingError } = await invoiceDb(ctx)
     .from('tz_expense_documents')
     .select('id, status')
     .eq('company_id', ctx.companyId)
@@ -219,9 +242,9 @@ export async function uploadExpenseDocument(
   }
 
   const id = randomUUID()
-  const storagePath = `${ctx.companyId}/${id}.${extensionForMime(mime)}`
-  const uploaded = await ctx.supabase.storage.from(EXPENSE_INVOICE_BUCKET).upload(storagePath, file.bytes, {
-    contentType: mime,
+  const storagePath = `${ctx.companyId}/${id}.${extensionForMime(storedMime)}`
+  const uploaded = await invoiceDb(ctx).storage.from(EXPENSE_INVOICE_BUCKET).upload(storagePath, storedBytes, {
+    contentType: storedMime,
     upsert: false,
   })
   if (uploaded.error) {
@@ -229,15 +252,15 @@ export async function uploadExpenseDocument(
     return { status: 500, body: { error: 'upload_failed' } }
   }
 
-  const inserted = await ctx.supabase
+  const inserted = await invoiceDb(ctx)
     .from('tz_expense_documents')
     .insert({
       id,
       company_id: ctx.companyId,
       storage_path: storagePath,
       original_filename: safeOriginalFilename(file.filename),
-      mime_type: mime,
-      size: file.bytes.byteLength,
+      mime_type: storedMime,
+      size: storedBytes.byteLength,
       sha256,
       status: 'uploaded',
       uploaded_by: ctx.userId,
@@ -245,14 +268,14 @@ export async function uploadExpenseDocument(
     .select('id')
     .single()
   if (inserted.error) {
-    await ctx.supabase.storage.from(EXPENSE_INVOICE_BUCKET).remove([storagePath])
+    await invoiceDb(ctx).storage.from(EXPENSE_INVOICE_BUCKET).remove([storagePath])
     return dbError(inserted.error) ?? { status: 500, body: { error: 'save_failed' } }
   }
 
-  const extraction = await extractInvoice({ bytes: file.bytes, mimeType: mime })
+  const extraction = await extractInvoice({ bytes: storedBytes, mimeType: storedMime })
   const draft = draftFromExtraction(extraction, 100)
   const issues = validateInvoiceDraft(draft, { existingConfirmed: await confirmedKeys(ctx), mode: 'review' })
-  const invoiceInsert = await ctx.supabase
+  const invoiceInsert = await invoiceDb(ctx)
     .from('tz_expense_invoices')
     .insert({
       company_id: ctx.companyId,
@@ -262,6 +285,9 @@ export async function uploadExpenseDocument(
       invoice_number: normalizeInvoiceNumber(draft.invoiceNumber) || null,
       invoice_date: vatPeriodFromDate(draft.invoiceDate) ? draft.invoiceDate : null,
       doc_type: draft.docType,
+      doc_kind: 'preliminary',
+      deal_id: null,
+      is_monthly: false,
       currency: draft.currency,
       net_amount: draft.netAmount,
       vat_rate: draft.vatRate,
@@ -276,7 +302,7 @@ export async function uploadExpenseDocument(
     .select('id')
     .single()
 
-  await ctx.supabase
+  await invoiceDb(ctx)
     .from('tz_expense_documents')
     .update({ status: extraction.unavailable ? 'uploaded' : 'extracted' })
     .eq('id', id)
@@ -295,7 +321,7 @@ export async function uploadExpenseDocument(
 }
 
 async function loadOwnInvoice(ctx: TazrimContext, invoiceId: string): Promise<InvoiceRow | null> {
-  const { data, error } = await ctx.supabase
+  const { data, error } = await invoiceDb(ctx)
     .from('tz_expense_invoices')
     .select('*')
     .eq('id', invoiceId)
@@ -336,7 +362,8 @@ export async function confirmExpenseInvoice(
     return { status: 422, body: { error: 'invalid', issues } }
   }
 
-  const updated = await ctx.supabase
+  const docKind = normalized.docKind === 'tax_invoice' ? 'tax_invoice' : 'preliminary'
+  const updated = await invoiceDb(ctx)
     .from('tz_expense_invoices')
     .update({
       supplier_name: normalized.supplierName.trim(),
@@ -344,6 +371,7 @@ export async function confirmExpenseInvoice(
       invoice_number: normalized.invoiceNumber,
       invoice_date: normalized.invoiceDate,
       doc_type: normalized.docType,
+      doc_kind: docKind,
       currency: normalized.currency,
       net_amount: normalized.netAmount,
       vat_rate: normalized.vatRate,
@@ -354,6 +382,9 @@ export async function confirmExpenseInvoice(
       vat_period: period,
       category_id: normalized.categoryId,
       vendor_id: normalized.vendorId,
+      deal_id: normalized.dealId ?? null,
+      is_monthly: docKind === 'tax_invoice' && normalized.isMonthly === true,
+      superseded_by: null,
       confirmed_at: new Date().toISOString(),
       confirmed_by: ctx.userId,
     })
@@ -364,11 +395,23 @@ export async function confirmExpenseInvoice(
   if (failed) return failed
   if (!updated.data || updated.data.length === 0) return { status: 404, body: { error: 'not_found' } }
 
-  await ctx.supabase
+  await invoiceDb(ctx)
     .from('tz_expense_documents')
     .update({ status: 'confirmed' })
     .eq('id', row.document_id)
     .eq('company_id', ctx.companyId)
+
+  if (docKind === 'tax_invoice' && normalized.vendorId && period) {
+    await invoiceDb(ctx)
+      .from('tz_expense_invoices')
+      .update({ superseded_by: row.id })
+      .eq('company_id', ctx.companyId)
+      .eq('vendor_id', normalized.vendorId)
+      .eq('vat_period', period)
+      .eq('doc_kind', 'preliminary')
+      .not('confirmed_at', 'is', null)
+      .neq('id', row.id)
+  }
 
   return { status: 200, body: { invoiceId: row.id, issues } }
 }
@@ -377,7 +420,7 @@ export async function rejectExpenseInvoice(ctx: TazrimContext, invoiceId: string
   const row = await loadOwnInvoice(ctx, invoiceId)
   if (!row) return { status: 404, body: { error: 'not_found' } }
   if (row.confirmed_at) return { status: 409, body: { error: 'already_confirmed' } }
-  const updated = await ctx.supabase
+  const updated = await invoiceDb(ctx)
     .from('tz_expense_documents')
     .update({ status: 'rejected' })
     .eq('id', row.document_id)
@@ -388,7 +431,7 @@ export async function rejectExpenseInvoice(ctx: TazrimContext, invoiceId: string
 }
 
 export async function listExpenseInvoices(ctx: TazrimContext): Promise<HandlerResult> {
-  const { data, error } = await ctx.supabase
+  const { data, error } = await invoiceDb(ctx)
     .from('tz_expense_invoices')
     .select('id, company_id, document_id, supplier_name, invoice_number, vat_period, doc_type, confirmed_at, matched_cash_event_id')
     .eq('company_id', ctx.companyId)
@@ -398,7 +441,7 @@ export async function listExpenseInvoices(ctx: TazrimContext): Promise<HandlerRe
 }
 
 export async function signedInvoiceUrl(ctx: TazrimContext, documentId: string): Promise<HandlerResult> {
-  const { data, error } = await ctx.supabase
+  const { data, error } = await invoiceDb(ctx)
     .from('tz_expense_documents')
     .select('id, company_id, storage_path')
     .eq('id', documentId)
@@ -409,7 +452,7 @@ export async function signedInvoiceUrl(ctx: TazrimContext, documentId: string): 
   if (row.company_id !== ctx.companyId || !pathAllowed(ctx.companyId, row.storage_path)) {
     return { status: 404, body: { error: 'not_found' } }
   }
-  const signed = await ctx.supabase.storage.from(EXPENSE_INVOICE_BUCKET).createSignedUrl(row.storage_path, 120)
+  const signed = await invoiceDb(ctx).storage.from(EXPENSE_INVOICE_BUCKET).createSignedUrl(row.storage_path, 120)
   if (signed.error || !signed.data?.signedUrl) return { status: 404, body: { error: 'not_found' } }
   return { status: 200, body: { url: signed.data.signedUrl } }
 }
@@ -444,19 +487,19 @@ export async function loadReconciliation(ctx: TazrimContext, period: string): Pr
   if (!bounds) return { status: 400, body: { error: 'bad_period' } }
 
   const [documentsResult, invoicesResult, expensesResult, closureResult] = await Promise.all([
-    ctx.supabase
+    invoiceDb(ctx)
       .from('tz_expense_documents')
       .select('id, company_id, status, created_at')
       .eq('company_id', ctx.companyId),
-    ctx.supabase.from('tz_expense_invoices').select('*').eq('company_id', ctx.companyId).eq('vat_period', period),
-    ctx.supabase
+    invoiceDb(ctx).from('tz_expense_invoices').select('*').eq('company_id', ctx.companyId).eq('vat_period', period),
+    invoiceDb(ctx)
       .from('tz_cash_events')
       .select('id, company_id, type, amount, due_date, source, vendor_id, vendors:tz_vendors(name)')
       .eq('company_id', ctx.companyId)
       .eq('type', 'expense')
       .gte('due_date', bounds.from)
       .lte('due_date', bounds.to),
-    ctx.supabase
+    invoiceDb(ctx)
       .from('tz_vat_period_closures')
       .select('vat_period, closed_at, note')
       .eq('company_id', ctx.companyId)
@@ -484,7 +527,9 @@ export async function loadReconciliation(ctx: TazrimContext, period: string): Pr
     .map(toMatchExpense)
   const reconciliation = reconcileInvoices(matchInputs, expenseInputs)
   const matchedIds = new Set(
-    reconciliation.matches.flatMap((match) => (match.status === 'matched' ? [match.expenseId] : [])),
+    reconciliation.matches.flatMap((match) =>
+      match.status === 'matched' ? [match.expenseId] : match.status === 'choice' ? match.expenseIds : [],
+    ),
   )
   const alreadyLinked = new Set(
     confirmedRows.flatMap((row) => (row.matched_cash_event_id ? [row.matched_cash_event_id] : [])),
@@ -524,9 +569,9 @@ export async function applyInvoiceMatch(
   const period = invoice.vat_period ?? ''
   if (period && (await periodIsClosed(ctx, period))) return { status: 409, body: { error: 'period_closed' } }
 
-  const { data: expense, error } = await ctx.supabase
+  const { data: expense, error } = await invoiceDb(ctx)
     .from('tz_cash_events')
-    .select('id, company_id, type, amount, due_date, source, vendor_id, vendors:tz_vendors(name)')
+    .select('id, company_id, type, amount, due_date, source, vendor_id, calc_meta, vendors:tz_vendors(name)')
     .eq('id', expenseId)
     .eq('company_id', ctx.companyId)
     .maybeSingle()
@@ -539,7 +584,7 @@ export async function applyInvoiceMatch(
     return { status: 409, body: { error: 'not_a_match' } }
   }
 
-  const { data: taken } = await ctx.supabase
+  const { data: taken } = await invoiceDb(ctx)
     .from('tz_expense_invoices')
     .select('id')
     .eq('company_id', ctx.companyId)
@@ -549,20 +594,26 @@ export async function applyInvoiceMatch(
 
   const estimated = num(expenseRow.amount) ?? 0
   const actual = num(invoice.total_amount) ?? 0
-  const amountUpdate = await ctx.supabase
+  const already = readExpenseMatch(expenseRow.calc_meta)
+  const originalAmount = already?.originalAmount ?? estimated
+  const amountUpdate = await invoiceDb(ctx)
     .from('tz_cash_events')
-    .update({ amount: actual, vendor_id: invoice.vendor_id ?? expenseRow.vendor_id })
+    .update({
+      amount: actual,
+      vendor_id: invoice.vendor_id ?? expenseRow.vendor_id,
+      calc_meta: withExpenseMatch(expenseRow.calc_meta, originalAmount, invoice.id),
+    })
     .eq('id', expenseId)
     .eq('company_id', ctx.companyId)
     .select('id')
   if (!amountUpdate.data || amountUpdate.data.length === 0) return { status: 404, body: { error: 'not_found' } }
 
-  const link = await ctx.supabase
+  const link = await invoiceDb(ctx)
     .from('tz_expense_invoices')
     .update({
       matched_cash_event_id: expenseId,
-      estimated_amount: estimated,
-      variance_amount: Math.round((actual - estimated) * 100) / 100,
+      estimated_amount: originalAmount,
+      variance_amount: Math.round((actual - originalAmount) * 100) / 100,
       vendor_id: invoice.vendor_id ?? expenseRow.vendor_id,
     })
     .eq('id', invoice.id)
@@ -571,8 +622,44 @@ export async function applyInvoiceMatch(
   if (!link.data || link.data.length === 0) return { status: 404, body: { error: 'not_found' } }
   return {
     status: 200,
-    body: { invoiceId: invoice.id, expenseId, estimatedAmount: estimated, varianceAmount: actual - estimated },
+    body: { invoiceId: invoice.id, expenseId, estimatedAmount: originalAmount, varianceAmount: actual - originalAmount },
   }
+}
+
+export async function unlinkExpenseMatch(ctx: TazrimContext, invoiceId: string): Promise<HandlerResult> {
+  const invoice = await loadOwnInvoice(ctx, invoiceId)
+  if (!invoice || !invoice.matched_cash_event_id) return { status: 404, body: { error: 'not_found' } }
+  if (invoice.vat_period && (await periodIsClosed(ctx, invoice.vat_period))) {
+    return { status: 409, body: { error: 'period_closed' } }
+  }
+  const expenseId = invoice.matched_cash_event_id
+  const { data: expense, error } = await invoiceDb(ctx)
+    .from('tz_cash_events')
+    .select('id, company_id, amount, calc_meta')
+    .eq('id', expenseId)
+    .eq('company_id', ctx.companyId)
+    .maybeSingle()
+  if (error || !expense) return { status: 404, body: { error: 'not_found' } }
+  const row = expense as { company_id: string; calc_meta: unknown }
+  if (row.company_id !== ctx.companyId) return { status: 404, body: { error: 'not_found' } }
+  const recorded = readExpenseMatch(row.calc_meta)
+  const original = recorded?.originalAmount ?? num(invoice.estimated_amount)
+  if (original === null) return { status: 409, body: { error: 'original_missing' } }
+
+  const restored = await invoiceDb(ctx)
+    .from('tz_cash_events')
+    .update({ amount: original, calc_meta: withoutExpenseMatch(row.calc_meta) })
+    .eq('id', expenseId)
+    .eq('company_id', ctx.companyId)
+    .select('id')
+  if (!restored.data || restored.data.length === 0) return { status: 404, body: { error: 'not_found' } }
+
+  await invoiceDb(ctx)
+    .from('tz_expense_invoices')
+    .update({ matched_cash_event_id: null, estimated_amount: null, variance_amount: null })
+    .eq('id', invoice.id)
+    .eq('company_id', ctx.companyId)
+  return { status: 200, body: { invoiceId: invoice.id, expenseId, restoredAmount: original } }
 }
 
 export async function createExpenseFromInvoice(ctx: TazrimContext, invoiceId: string): Promise<HandlerResult> {
@@ -585,7 +672,7 @@ export async function createExpenseFromInvoice(ctx: TazrimContext, invoiceId: st
   }
   if (invoice.matched_cash_event_id) return { status: 409, body: { error: 'already_matched' } }
 
-  const created = await ctx.supabase
+  const created = await invoiceDb(ctx)
     .from('tz_cash_events')
     .insert({
       company_id: ctx.companyId,
@@ -605,7 +692,7 @@ export async function createExpenseFromInvoice(ctx: TazrimContext, invoiceId: st
   if (failed) return failed
   if (!created.data) return { status: 500, body: { error: 'save_failed' } }
 
-  await ctx.supabase
+  await invoiceDb(ctx)
     .from('tz_expense_invoices')
     .update({
       matched_cash_event_id: created.data.id,
@@ -624,7 +711,7 @@ async function writePeriodAudit(
   recordId: string,
   payload: Record<string, unknown>,
 ): Promise<void> {
-  await ctx.supabase.from('tz_audit_log').insert({
+  await invoiceDb(ctx).from('tz_audit_log').insert({
     company_id: ctx.companyId,
     table_name: 'tz_vat_period_closures',
     record_id: recordId,
@@ -636,18 +723,18 @@ async function writePeriodAudit(
 
 export async function closeVatPeriod(ctx: TazrimContext, period: string, note: string): Promise<HandlerResult> {
   if (!/^\d{4}-\d{2}$/.test(period)) return { status: 400, body: { error: 'bad_period' } }
-  const { data: invoices } = await ctx.supabase
+  const { data: invoices } = await invoiceDb(ctx)
     .from('tz_expense_invoices')
-    .select('vat_amount, vat_recognized_percent, doc_type, confirmed_at')
+    .select('id, vat_amount, vat_recognized_percent, doc_type, doc_kind, confirmed_at, vat_period, vendor_id, deal_id, net_amount, superseded_by')
     .eq('company_id', ctx.companyId)
     .eq('vat_period', period)
     .not('confirmed_at', 'is', null)
-  const recognized = ((invoices ?? []) as InvoiceRow[]).reduce((sum, row) => {
-    if (!row.confirmed_at || row.doc_type === 'receipt') return sum
-    return sum + ((num(row.vat_amount) ?? 0) * (num(row.vat_recognized_percent) ?? 0)) / 100
-  }, 0)
+  const periodInvoices = ((invoices ?? []) as InvoiceRow[]).map(toPeriodInvoice)
+  const recognized = periodInvoices
+    .filter((row) => row.docKind === 'tax_invoice' && row.docType !== 'receipt')
+    .reduce((sum, row) => sum + ((row.vatAmount ?? 0) * row.vatRecognizedPercent) / 100, 0)
 
-  const inserted = await ctx.supabase
+  const inserted = await invoiceDb(ctx)
     .from('tz_vat_period_closures')
     .insert({
       company_id: ctx.companyId,
@@ -664,15 +751,84 @@ export async function closeVatPeriod(ctx: TazrimContext, period: string, note: s
   await writePeriodAudit(ctx, 'vat_period_close', inserted.data.id, {
     vat_period: period,
     recognized_input_vat: Math.round(recognized * 100) / 100,
-    invoice_count: (invoices ?? []).length,
+    tax_invoice_count: periodInvoices.filter((row) => row.docKind === 'tax_invoice').length,
+    preliminary_ignored: periodInvoices.filter((row) => row.docKind === 'preliminary').length,
   })
+  await writeClosedVatRow(ctx, period, periodInvoices)
   return { status: 200, body: { period, closed: true } }
+}
+
+function toPeriodInvoice(row: InvoiceRow): PeriodInvoiceInput {
+  const docType = isInvoiceDocType(row.doc_type) ? row.doc_type : 'other'
+  return {
+    id: row.id,
+    vatPeriod: row.vat_period ?? '',
+    docType,
+    docKind: row.doc_kind === 'tax_invoice' ? 'tax_invoice' : 'preliminary',
+    vendorId: row.vendor_id,
+    dealId: row.deal_id,
+    netAmount: num(row.net_amount),
+    vatAmount: num(row.vat_amount),
+    vatRecognizedPercent: num(row.vat_recognized_percent) ?? 100,
+    confirmed: Boolean(row.confirmed_at),
+    superseded: Boolean(row.superseded_by),
+  }
+}
+
+async function writeClosedVatRow(
+  ctx: TazrimContext,
+  period: string,
+  invoices: readonly PeriodInvoiceInput[],
+): Promise<void> {
+  const externalId = vatExternalId(ctx.companyId, nextMonth(period))
+  const { data, error } = await invoiceDb(ctx)
+    .from('tz_cash_events')
+    .select('id, company_id, type, amount, currency, due_date, status, source, external_source, external_id, calc_meta')
+    .eq('company_id', ctx.companyId)
+    .eq('external_id', externalId)
+    .maybeSingle()
+  if (error || !data) return
+  const event = data as {
+    id: string
+    company_id: string
+    type: string
+    amount: number | string
+    currency: string
+    due_date: string
+    status: string
+    source: string
+    external_source: string | null
+    external_id: string
+    calc_meta: unknown
+  }
+  if (event.company_id !== ctx.companyId || !isCalcMeta(event.calc_meta)) return
+  if (event.calc_meta.kind === 'pension') return
+  const current: CalculatedCashRow = {
+    company_id: ctx.companyId,
+    type: event.type === 'income' ? 'income' : 'expense',
+    amount: num(event.amount) ?? 0,
+    currency: event.currency || 'ILS',
+    due_date: event.due_date,
+    status: event.status === 'cleared' ? 'cleared' : 'planned',
+    cleared_date: null,
+    source: event.source,
+    external_source: event.external_source || 'alumincrm',
+    external_id: event.external_id,
+    notes: null,
+    calc_meta: event.calc_meta,
+  }
+  const closed = applyCloseVat(current, invoices)
+  await invoiceDb(ctx)
+    .from('tz_cash_events')
+    .update({ amount: closed.amount, type: closed.type, calc_meta: closed.calc_meta })
+    .eq('id', event.id)
+    .eq('company_id', ctx.companyId)
 }
 
 export async function reopenVatPeriod(ctx: TazrimContext, period: string, note: string): Promise<HandlerResult> {
   if (!/^\d{4}-\d{2}$/.test(period)) return { status: 400, body: { error: 'bad_period' } }
   if (!note.trim()) return { status: 400, body: { error: 'note_required' } }
-  const { data: existing } = await ctx.supabase
+  const { data: existing } = await invoiceDb(ctx)
     .from('tz_vat_period_closures')
     .select('id, company_id')
     .eq('company_id', ctx.companyId)
@@ -683,7 +839,7 @@ export async function reopenVatPeriod(ctx: TazrimContext, period: string, note: 
   }
   const id = (existing as { id: string }).id
   await writePeriodAudit(ctx, 'vat_period_reopen', id, { vat_period: period })
-  const removed = await ctx.supabase
+  const removed = await invoiceDb(ctx)
     .from('tz_vat_period_closures')
     .delete()
     .eq('id', id)

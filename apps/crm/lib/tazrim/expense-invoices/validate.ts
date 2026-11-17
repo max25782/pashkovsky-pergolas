@@ -20,6 +20,10 @@ export interface InvoiceDraft {
   vatRecognizedPercent: number
   categoryId: string | null
   vendorId: string | null
+  /** Omitted on an extraction draft. Set before confirm. */
+  docKind?: 'preliminary' | 'tax_invoice'
+  dealId?: string | null
+  isMonthly?: boolean
 }
 
 export interface ConfirmedInvoiceKey {
@@ -40,6 +44,8 @@ export type InvoiceIssueCode =
   | 'missing_amounts'
   | 'bad_percent'
   | 'allocation_missing'
+  | 'missing_deal'
+  | 'missing_vendor'
 
 export interface ValidationIssue {
   code: InvoiceIssueCode
@@ -184,6 +190,13 @@ export function validateInvoiceDraft(
 
   if (draft.docType === 'tax_invoice' && !draft.allocationNumber?.trim()) {
     issues.push({ code: 'allocation_missing', blocking: false })
+  }
+
+  if (confirm && draft.docKind === 'preliminary' && !draft.dealId) {
+    issues.push({ code: 'missing_deal', blocking: true })
+  }
+  if (confirm && (draft.docKind === 'preliminary' || draft.docKind === 'tax_invoice') && !draft.vendorId) {
+    issues.push({ code: 'missing_vendor', blocking: true })
   }
 
   return issues

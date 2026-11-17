@@ -84,49 +84,29 @@ export type InvoiceMatch =
       varianceAmount: number
     }
   | { invoiceId: string; status: 'none' }
-  | { invoiceId: string; status: 'duplicate'; expenseIds: string[] }
+  | { invoiceId: string; status: 'choice'; expenseIds: string[] }
 
-interface Scored {
-  expense: MatchExpense
-  amountDiff: number
-  dateDiff: number
-}
-
-function score(invoice: MatchInvoice, expense: MatchExpense): Scored {
-  return {
-    expense,
-    amountDiff: Math.abs(roundMoney(invoice.totalAmount) - roundMoney(expense.amount)),
-    dateDiff: daysApart(invoice.invoiceDate, expense.dueDate),
-  }
-}
-
-function tiedBest(invoice: MatchInvoice, expenses: readonly MatchExpense[]): MatchExpense[] {
-  const scored = expenses
+function compatibleExpenses(invoice: MatchInvoice, expenses: readonly MatchExpense[]): MatchExpense[] {
+  return expenses
     .filter((expense) => expenseCompatible(invoice, expense))
-    .map((expense) => score(invoice, expense))
-    .sort((a, b) => a.amountDiff - b.amountDiff || a.dateDiff - b.dateDiff || a.expense.id.localeCompare(b.expense.id))
-  if (scored.length === 0) return []
-  const best = scored[0]
-  return scored
-    .filter((row) => row.amountDiff === best.amountDiff && row.dateDiff === best.dateDiff)
-    .map((row) => row.expense)
+    .sort((a, b) => a.id.localeCompare(b.id))
 }
 
 /**
- * One confirmed invoice against the month's preliminary expenses.
- * A tie (two expenses equally close) is a duplicate: nothing is auto-assigned.
+ * Suggestions only. Several compatible expenses are a choice: nothing is picked.
+ * The cash-event amount changes later, when the user confirms one of them.
  * Expenses of another company never match.
  */
 export function matchInvoice(
   invoice: MatchInvoice,
   expenses: readonly MatchExpense[],
 ): InvoiceMatch {
-  const best = tiedBest(invoice, expenses)
-  if (best.length === 0) return { invoiceId: invoice.id, status: 'none' }
-  if (best.length > 1) {
-    return { invoiceId: invoice.id, status: 'duplicate', expenseIds: best.map((row) => row.id) }
+  const found = compatibleExpenses(invoice, expenses)
+  if (found.length === 0) return { invoiceId: invoice.id, status: 'none' }
+  if (found.length > 1) {
+    return { invoiceId: invoice.id, status: 'choice', expenseIds: found.map((row) => row.id) }
   }
-  const expense = best[0]
+  const expense = found[0]
   return {
     invoiceId: invoice.id,
     status: 'matched',
@@ -142,63 +122,25 @@ export interface Reconciliation {
 }
 
 /**
- * Assigns each invoice at most one expense and each expense at most one invoice.
- * When two invoices want the same expense, the closer pair wins and the other
- * invoice is reported as a duplicate so the user picks.
+ * Suggestions for the month. Does not choose among several fits, and does not
+ * write. Two invoices may both suggest the same expense; confirming one of
+ * them is what reserves it.
  */
 export function reconcileInvoices(
   invoices: readonly MatchInvoice[],
   expenses: readonly MatchExpense[],
 ): Reconciliation {
   const preliminary = expenses.filter((expense) => isPreliminaryExpense(expense.source))
-  const singles: Array<{ invoice: MatchInvoice; expense: MatchExpense; amountDiff: number; dateDiff: number }> = []
-  const results = new Map<string, InvoiceMatch>()
-
-  for (const invoice of invoices) {
-    const best = tiedBest(invoice, preliminary)
-    if (best.length === 0) {
-      results.set(invoice.id, { invoiceId: invoice.id, status: 'none' })
-      continue
-    }
-    if (best.length > 1) {
-      results.set(invoice.id, {
-        invoiceId: invoice.id,
-        status: 'duplicate',
-        expenseIds: best.map((row) => row.id),
-      })
-      continue
-    }
-    const scored = score(invoice, best[0])
-    singles.push({ invoice, expense: best[0], amountDiff: scored.amountDiff, dateDiff: scored.dateDiff })
-  }
-
-  singles.sort(
-    (a, b) => a.amountDiff - b.amountDiff || a.dateDiff - b.dateDiff || a.invoice.id.localeCompare(b.invoice.id),
+  const matches = invoices.map((invoice) => matchInvoice(invoice, preliminary))
+  const suggested = new Set(
+    matches.flatMap((match) =>
+      match.status === 'matched' ? [match.expenseId] : match.status === 'choice' ? match.expenseIds : [],
+    ),
   )
-
-  const usedExpenses = new Set<string>()
-  for (const pair of singles) {
-    if (usedExpenses.has(pair.expense.id)) {
-      results.set(pair.invoice.id, {
-        invoiceId: pair.invoice.id,
-        status: 'duplicate',
-        expenseIds: [pair.expense.id],
-      })
-      continue
-    }
-    usedExpenses.add(pair.expense.id)
-    results.set(pair.invoice.id, {
-      invoiceId: pair.invoice.id,
-      status: 'matched',
-      expenseId: pair.expense.id,
-      estimatedAmount: roundMoney(pair.expense.amount),
-      varianceAmount: roundMoney(pair.invoice.totalAmount - pair.expense.amount),
-    })
+  return {
+    matches,
+    expensesWithoutInvoice: preliminary.filter((expense) => !suggested.has(expense.id)),
   }
-
-  const matches = invoices.map((invoice) => results.get(invoice.id) ?? { invoiceId: invoice.id, status: 'none' as const })
-  const expensesWithoutInvoice = preliminary.filter((expense) => !usedExpenses.has(expense.id))
-  return { matches, expensesWithoutInvoice }
 }
 
 export function monthBounds(period: string): { from: string; to: string } | null {

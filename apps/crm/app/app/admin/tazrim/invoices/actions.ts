@@ -10,6 +10,7 @@ import {
   parseDraftBody,
   rejectExpenseInvoice,
   reopenVatPeriod,
+  unlinkExpenseMatch,
 } from "@/lib/tazrim/expense-invoices/handlers";
 import type { ValidationIssue } from "@/lib/tazrim/expense-invoices/validate";
 
@@ -64,6 +65,14 @@ export async function applyMatchAction(formData: FormData): Promise<InvoiceActio
 export async function createExpenseAction(formData: FormData): Promise<InvoiceActionResult> {
   const ctx = await requireTazrimActionContext();
   const result = await createExpenseFromInvoice(ctx, String(formData.get("invoiceId") ?? ""));
+  if (result.status >= 400) return { error: String(result.body.error ?? "save_failed") };
+  refresh();
+  return {};
+}
+
+export async function unlinkMatchAction(formData: FormData): Promise<InvoiceActionResult> {
+  const ctx = await requireTazrimActionContext();
+  const result = await unlinkExpenseMatch(ctx, String(formData.get("invoiceId") ?? ""));
   if (result.status >= 400) return { error: String(result.body.error ?? "save_failed") };
   refresh();
   return {};

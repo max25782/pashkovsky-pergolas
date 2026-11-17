@@ -1,14 +1,12 @@
--- Rollback for supabase/migrations/069_tz_expense_invoices.sql
+-- Rollback for supabase/migrations/070_tz_expense_invoices.sql
 --
 -- NOT APPLIED. Kept outside supabase/migrations so `supabase db push` never
 -- runs it. Run by hand only to undo the feature.
 --
--- Drops supplier-invoice files, the private bucket, and the three tables.
--- Invoice rows and stored files are deleted. Cash events that were updated to
--- an actual invoice amount are NOT reverted (the previous amount is on
--- tz_expense_invoices.estimated_amount until this drop). VAT rows written by
--- a later sync go back to the materials estimate once the invoice tables are
--- gone. tz_audit_log entries for close/reopen are left in place.
+-- Cash-event amounts that were replaced are restored from calc_meta.expenseMatch
+-- only by the unlink action, not by this script. After the invoice table is
+-- gone, that previous amount is no longer on estimated_amount. tz_audit_log
+-- rows for close/reopen are left in place.
 
 begin;
 
@@ -20,11 +18,16 @@ drop policy if exists tz_expense_invoices_delete on storage.objects;
 delete from storage.objects where bucket_id = 'tz-expense-invoices';
 delete from storage.buckets where id = 'tz-expense-invoices';
 
-drop function if exists public.tz_storage_company_id(text);
-
 drop table if exists public.tz_expense_invoices;
 drop table if exists public.tz_expense_documents;
 drop table if exists public.tz_vat_period_closures;
+
+drop index if exists public.tz_vendors_id_company_uq;
+drop index if exists public.tz_expense_categories_id_company_uq;
+drop index if exists public.tz_cash_events_id_company_uq;
+drop index if exists public.deals_id_company_uq;
+
+alter table public.tz_vendors drop column if exists issues_monthly_invoice;
 
 alter table public.tz_expense_categories
   drop constraint if exists tz_expense_categories_vat_recognized_percent_chk;

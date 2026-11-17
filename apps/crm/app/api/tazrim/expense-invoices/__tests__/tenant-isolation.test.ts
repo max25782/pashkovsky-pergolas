@@ -36,7 +36,9 @@ jest.mock('@/lib/tazrim/expense-invoices/extract', () => ({
     allocationNumber: null,
     confidence: 0.8,
     unavailable: false,
+    failure: null,
   }),
+  prepareInvoiceBytes: async (bytes: Uint8Array, mimeType: string) => ({ ok: true, bytes, mimeType }),
 }))
 
 import { GET as listInvoices, POST as uploadInvoice } from '../route'
@@ -178,9 +180,11 @@ function query(store: Store, table: string) {
 }
 
 function signIn(store: Store, companyId: string) {
+  const client = store.client()
   mockGetUser.mockResolvedValue({ data: { user: { id: `user-${companyId}` } }, error: null })
   mockGetTazrimContext.mockResolvedValue({
-    supabase: store.client(),
+    supabase: client,
+    db: client,
     userId: `user-${companyId}`,
     companyId,
     role: 'owner',
@@ -339,5 +343,51 @@ describe('expense invoice handlers, company A vs company B', () => {
     )
     expect(reopen.status).toBe(404)
     expect(store.tables.tz_vat_period_closures.find((row) => row.id === 'close-b')).toBeDefined()
+  })
+
+  it('puts the original expense amount back when the invoice is unlinked', async () => {
+    signIn(store, COMPANY_A)
+    store.tables.tz_expense_invoices.push({
+      id: 'inv-a',
+      company_id: COMPANY_A,
+      confirmed_at: '2026-11-03T00:00:00Z',
+      invoice_date: '2026-11-03',
+      vat_period: '2026-11',
+      total_amount: 118,
+      supplier_name: 'Delek',
+      vendor_id: 'vendor-1',
+      doc_type: 'tax_invoice',
+      doc_kind: 'tax_invoice',
+      matched_cash_event_id: null,
+    })
+    store.tables.tz_cash_events.push({
+      id: 'exp-a',
+      company_id: COMPANY_A,
+      type: 'expense',
+      amount: 114,
+      due_date: '2026-11-04',
+      source: 'manual',
+      vendor_id: 'vendor-1',
+      vendors: { name: 'Delek' },
+      calc_meta: null,
+    })
+    const match = await changeMatch(
+      new NextRequest('http://localhost/api/tazrim/expense-invoices/reconcile', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'match', invoiceId: 'inv-a', expenseId: 'exp-a' }),
+      }),
+    )
+    expect(match.status).toBe(200)
+    expect(store.tables.tz_cash_events.find((row) => row.id === 'exp-a')?.amount).toBe(118)
+
+    const unlink = await changeMatch(
+      new NextRequest('http://localhost/api/tazrim/expense-invoices/reconcile', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'unlink', invoiceId: 'inv-a' }),
+      }),
+    )
+    expect(unlink.status).toBe(200)
+    expect(store.tables.tz_cash_events.find((row) => row.id === 'exp-a')?.amount).toBe(114)
+    expect(store.tables.tz_expense_invoices.find((row) => row.id === 'inv-a')?.matched_cash_event_id).toBeNull()
   })
 })

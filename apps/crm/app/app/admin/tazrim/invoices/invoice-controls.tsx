@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { supplierMonthVariance } from "@/lib/tazrim/expense-invoices/supplier-month";
 import {
   applyMatchAction,
   closePeriodAction,
@@ -8,6 +9,7 @@ import {
   createExpenseAction,
   rejectInvoiceAction,
   reopenPeriodAction,
+  unlinkMatchAction,
   type InvoiceActionResult,
 } from "./actions";
 
@@ -23,6 +25,10 @@ const ISSUE_TEXT: Record<string, string> = {
   missing_amounts: "חסרים סכומים",
   bad_percent: "אחוז הזיכוי חייב להיות בין 0 ל-100",
   allocation_missing: "אין מספר הקצאה. סף החובה נקבע על ידי רואה החשבון, אין חסימה אוטומטית",
+  missing_deal: "חשבונית מקדימה חייבת להיות קשורה לעסקה",
+  missing_vendor: "חסר ספק",
+  heic_unreadable: "לא ניתן לקרוא HEIC. שמרו כ-JPEG או PDF",
+  original_missing: "אין סכום מקורי לשחזור",
   period_closed: "התקופה סגורה. פתחו אותה מחדש כדי לשנות",
   not_a_match: "ההוצאה לא מתאימה לספק, לסכום או לחלון התאריכים",
   duplicate: "ההוצאה כבר שויכה לחשבונית אחרת",
@@ -58,6 +64,9 @@ export interface DraftFields {
   vatRecognizedPercent: string;
   categoryId: string;
   vendorId: string;
+  docKind: string;
+  dealId: string;
+  isMonthly: boolean;
   confidence: string;
   issues: string[];
 }
@@ -69,16 +78,33 @@ export function DraftCard({
   draft,
   vendors,
   categories,
+  deals,
+  preliminary,
 }: {
   draft: DraftFields;
-  vendors: Array<{ id: string; name: string }>;
+  vendors: Array<{ id: string; name: string; issues_monthly_invoice?: boolean }>;
   categories: Array<{ id: string; name: string; vat_recognized_percent: number }>;
+  deals: Array<{ id: string; name: string }>;
+  preliminary: Array<{ vendorId: string | null; vatPeriod: string | null; total: number }>;
 }) {
   const [result, setResult] = useState<InvoiceActionResult | null>(null);
   const [docType, setDocType] = useState(draft.docType);
+  const [docKind, setDocKind] = useState(draft.docKind || "preliminary");
   const [categoryId, setCategoryId] = useState(draft.categoryId);
+  const [vendorId, setVendorId] = useState(draft.vendorId);
   const [percent, setPercent] = useState(draft.vatRecognizedPercent);
   const categoryPercent = categories.find((category) => category.id === categoryId)?.vat_recognized_percent;
+  const vendor = vendors.find((item) => item.id === vendorId);
+  const month = draft.invoiceDate.slice(0, 7);
+  const monthly =
+    docKind === "tax_invoice" && vendorId && /^\d{4}-\d{2}$/.test(month)
+      ? supplierMonthVariance({
+          taxTotal: Number(draft.totalAmount) || 0,
+          preliminaryTotals: preliminary
+            .filter((row) => row.vendorId === vendorId && row.vatPeriod === month)
+            .map((row) => row.total),
+        })
+      : null;
 
   return (
     <form
@@ -111,6 +137,24 @@ export function DraftCard({
           <option value="receipt">קבלה</option>
           <option value="other">אחר</option>
         </select>
+        <select
+          name="docKind"
+          value={docKind}
+          onChange={(event) => setDocKind(event.target.value)}
+          aria-label="סוג לחישוב"
+          className={fieldClass}
+        >
+          <option value="preliminary">מקדימה לעסקה (תחזית בלבד)</option>
+          <option value="tax_invoice">חשבונית מס / חשבון חודשי</option>
+        </select>
+        <select name="dealId" defaultValue={draft.dealId} aria-label="עסקה" className={fieldClass}>
+          <option value="">עסקה</option>
+          {deals.map((deal) => (
+            <option key={deal.id} value={deal.id}>
+              {deal.name}
+            </option>
+          ))}
+        </select>
         <input name="currency" defaultValue={draft.currency || "ILS"} aria-label="מטבע" className={fieldClass} />
         <input name="netAmount" defaultValue={draft.netAmount} placeholder="לפני מע״מ" className={fieldClass} />
         <input name="vatRate" defaultValue={draft.vatRate} placeholder="שיעור מע״מ %" className={fieldClass} />
@@ -125,11 +169,18 @@ export function DraftCard({
           aria-label="אחוז זיכוי"
           className={fieldClass}
         />
-        <select name="vendorId" defaultValue={draft.vendorId} aria-label="ספק" className={fieldClass}>
+        <select
+          name="vendorId"
+          value={vendorId}
+          onChange={(event) => setVendorId(event.target.value)}
+          aria-label="ספק"
+          className={fieldClass}
+        >
           <option value="">ספק במערכת</option>
-          {vendors.map((vendor) => (
-            <option key={vendor.id} value={vendor.id}>
-              {vendor.name}
+          {vendors.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.name}
+              {item.issues_monthly_invoice ? " · חשבון חודשי" : ""}
             </option>
           ))}
         </select>
@@ -154,7 +205,23 @@ export function DraftCard({
         </select>
       </div>
       {categoryPercent !== undefined && docType !== "receipt" ? (
-        <p className="mt-2 text-xs text-zinc-500">אחוז הזיכוי לפי הקטגוריה: {categoryPercent}. אפשר לשנות ידנית.</p>
+        <p className="mt-2 text-xs text-zinc-500">
+          אחוז הזיכוי לפי הקטגוריה: {categoryPercent}. ברירת המחדל 100 — לאשר מול רואה החשבון. אפשר לשנות ידנית.
+        </p>
+      ) : (
+        <p className="mt-2 text-xs text-zinc-500">אחוז הזיכוי: ברירת מחדל, לאשר מול רואה החשבון.</p>
+      )}
+      {docKind === "tax_invoice" ? (
+        <label className="mt-2 flex items-center gap-2 text-xs text-zinc-300">
+          <input type="checkbox" name="isMonthly" defaultChecked={draft.isMonthly || vendor?.issues_monthly_invoice === true} />
+          חשבון חודשי של הספק (מחליף את המקדימות של אותו ספק וחודש)
+        </label>
+      ) : null}
+      {monthly ? (
+        <p className="mt-2 text-xs text-zinc-300">
+          חשבון כללי {monthly.taxTotal} ₪ · מקדימות {monthly.preliminaryTotal} ₪ · הפרש לא משויך {monthly.unallocated} ₪.
+          המע״מ נלקח מהחשבון הכללי.
+        </p>
       ) : null}
       {docType === "receipt" ? <p className="mt-2 text-xs text-amber-200">קבלה — המע״מ לא ייזקף.</p> : null}
       <Issues result={result} />
@@ -206,6 +273,21 @@ export function MatchButtons({
           </button>
         </form>
       )}
+      <Issues result={result} />
+    </div>
+  );
+}
+
+export function UnlinkButton({ invoiceId }: { invoiceId: string }) {
+  const [result, setResult] = useState<InvoiceActionResult | null>(null);
+  return (
+    <div>
+      <form action={async (formData) => setResult(await unlinkMatchAction(formData))}>
+        <input type="hidden" name="invoiceId" value={invoiceId} />
+        <button type="submit" className="rounded-lg border border-zinc-600 px-3 py-1.5 text-xs text-zinc-200">
+          נתק והחזר סכום
+        </button>
+      </form>
       <Issues result={result} />
     </div>
   );

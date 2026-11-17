@@ -40,13 +40,15 @@ export interface VatCalcMeta {
   lines: VatCalcLine[]
   total: number
   /**
-   * 'estimate' — input VAT is still the materials figure from the deal.
-   * 'invoices' — input VAT is confirmed supplier invoices for sourceMonth.
+   * 'estimate' — every deal still uses the materials figure.
+   * 'forecast' — open month: preliminary documents per deal, plus estimates for the rest.
+   * 'invoices' — period close, or a forecast with no materials estimate left.
+   *              Only confirmed tax invoices count; preliminary documents do not.
    */
-  inputVatBasis?: 'estimate' | 'invoices'
-  /** Deduction used for the period (materials estimate or recognized invoice VAT). */
+  inputVatBasis?: 'estimate' | 'forecast' | 'invoices'
+  /** Deduction used for the period. */
   inputVatRecognized?: number
-  /** True while the deduction is the materials estimate, not confirmed invoices. */
+  /** True while any deal in the month still uses a materials estimate. */
   estimated?: boolean
 }
 

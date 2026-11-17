@@ -78,7 +78,7 @@ export function UploadInvoices() {
         <input
           type="file"
           multiple
-          accept="application/pdf,image/jpeg,image/png,image/webp,image/heic,image/heif,.pdf,.jpg,.jpeg,.png,.webp,.heic,.heif"
+          accept="application/pdf,image/jpeg,image/png,image/webp,.pdf,.jpg,.jpeg,.png,.webp"
           className="sr-only"
           onChange={(event) => {
             void onFiles(event.target.files);
@@ -86,7 +86,7 @@ export function UploadInvoices() {
           }}
         />
       </label>
-      <p className="mt-2 text-xs text-zinc-500">אפשר לבחור כמה קבצים, גם מהטלפון. PDF, JPG, PNG, WEBP, HEIC.</p>
+      <p className="mt-2 text-xs text-zinc-500">אפשר לבחור כמה קבצים, גם מהטלפון. PDF, JPG, PNG, WEBP.</p>
       <ul className="mt-4 space-y-2">
         {items.map((item) => (
           <li key={`${item.name}-${item.state}`} className="text-sm text-zinc-300">

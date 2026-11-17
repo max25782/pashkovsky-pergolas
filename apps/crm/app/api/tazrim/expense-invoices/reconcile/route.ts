@@ -4,6 +4,7 @@ import {
   applyInvoiceMatch,
   createExpenseFromInvoice,
   loadReconciliation,
+  unlinkExpenseMatch,
 } from '@/lib/tazrim/expense-invoices/handlers'
 
 export async function GET(req: NextRequest) {
@@ -27,6 +28,10 @@ export async function POST(req: NextRequest) {
   }
   if (body.action === 'match' && typeof body.expenseId === 'string') {
     const result = await applyInvoiceMatch(auth.ctx, body.invoiceId, body.expenseId)
+    return NextResponse.json(result.body, { status: result.status })
+  }
+  if (body.action === 'unlink') {
+    const result = await unlinkExpenseMatch(auth.ctx, body.invoiceId)
     return NextResponse.json(result.body, { status: result.status })
   }
   return NextResponse.json({ error: 'invalid' }, { status: 400 })

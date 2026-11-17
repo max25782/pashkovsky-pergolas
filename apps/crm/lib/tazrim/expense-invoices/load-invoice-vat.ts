@@ -6,9 +6,14 @@ import { isInvoiceDocType } from '@/lib/tazrim/expense-invoices/validate'
 interface InvoiceVatRow {
   vat_period: string | null
   doc_type: string
+  doc_kind: string | null
+  vendor_id: string | null
+  deal_id: string | null
+  net_amount: number | string | null
   vat_amount: number | string | null
   vat_recognized_percent: number | string | null
   confirmed_at: string | null
+  superseded_by: string | null
 }
 
 function isMissingRelation(error: { code?: string; message?: string }): boolean {
@@ -25,7 +30,7 @@ function toNumber(value: number | string | null): number | null {
 
 /**
  * Confirmed invoices and closed periods for the VAT sync.
- * Returns null when migration 069 is not applied yet, so the sync keeps the
+ * Returns null when migration 070 is not applied yet, so the sync keeps the
  * materials estimate. Errors are logged by code only.
  */
 export async function loadInvoiceVatState(
@@ -35,7 +40,7 @@ export async function loadInvoiceVatState(
   const [invoicesResult, closuresResult] = await Promise.all([
     supabase
       .from('tz_expense_invoices')
-      .select('vat_period, doc_type, vat_amount, vat_recognized_percent, confirmed_at')
+      .select('vat_period, doc_type, doc_kind, vendor_id, deal_id, net_amount, vat_amount, vat_recognized_percent, confirmed_at, superseded_by')
       .eq('company_id', companyId)
       .not('confirmed_at', 'is', null),
     supabase.from('tz_vat_period_closures').select('vat_period').eq('company_id', companyId),
@@ -57,9 +62,14 @@ export async function loadInvoiceVatState(
     .map((row) => ({
       vatPeriod: row.vat_period as string,
       docType: row.doc_type as PeriodInvoiceInput['docType'],
+      docKind: row.doc_kind === 'tax_invoice' ? 'tax_invoice' : 'preliminary',
+      vendorId: row.vendor_id,
+      dealId: row.deal_id,
+      netAmount: toNumber(row.net_amount),
       vatAmount: toNumber(row.vat_amount),
       vatRecognizedPercent: toNumber(row.vat_recognized_percent) ?? 100,
       confirmed: Boolean(row.confirmed_at),
+      superseded: Boolean(row.superseded_by),
     }))
 
   const closed = new Set<string>(

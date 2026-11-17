@@ -15,7 +15,7 @@ import {
   type InvoiceDraft,
 } from "@/lib/tazrim/expense-invoices/validate";
 import { UploadInvoices } from "./upload-invoices";
-import { DraftCard, MatchButtons, PeriodClose, type DraftFields } from "./invoice-controls";
+import { DraftCard, MatchButtons, PeriodClose, UnlinkButton, type DraftFields } from "./invoice-controls";
 
 interface InvoiceDb {
   id: string;
@@ -35,6 +35,9 @@ interface InvoiceDb {
   vat_period: string | null;
   category_id: string | null;
   vendor_id: string | null;
+  deal_id: string | null;
+  doc_kind: string | null;
+  is_monthly: boolean | null;
   matched_cash_event_id: string | null;
   estimated_amount: number | string | null;
   variance_amount: number | string | null;
@@ -85,6 +88,9 @@ function toDraft(row: InvoiceDb): InvoiceDraft {
     vatRecognizedPercent: asNumber(row.vat_recognized_percent) ?? 100,
     categoryId: row.category_id,
     vendorId: row.vendor_id,
+    docKind: row.doc_kind === "tax_invoice" ? "tax_invoice" : "preliminary",
+    dealId: row.deal_id,
+    isMonthly: Boolean(row.is_monthly),
   };
 }
 
@@ -98,9 +104,9 @@ export default async function InvoicesPage({
   const period = /^\d{4}-\d{2}$/.test(searchParams.period ?? "") ? (searchParams.period as string) : today.slice(0, 7);
   const bounds = monthBounds(period);
 
-  const [vendorsResult, categoriesResult, documentsResult, invoicesResult, expensesResult, closureResult] =
+  const [vendorsResult, categoriesResult, documentsResult, invoicesResult, expensesResult, closureResult, dealsResult] =
     await Promise.all([
-      supabase.from("tz_vendors").select("id, name").eq("company_id", companyId).order("name"),
+      supabase.from("tz_vendors").select("id, name, issues_monthly_invoice").eq("company_id", companyId).order("name"),
       supabase
         .from("tz_expense_categories")
         .select("id, name, vat_recognized_percent")
@@ -123,9 +129,10 @@ export default async function InvoicesPage({
         .eq("company_id", companyId)
         .eq("vat_period", period)
         .maybeSingle(),
+      supabase.from("deals").select("id, customer_name").eq("company_id", companyId).order("customer_name").limit(200),
     ]);
 
-  const vendors = (vendorsResult.data ?? []) as Array<{ id: string; name: string }>;
+  const vendors = (vendorsResult.data ?? []) as Array<{ id: string; name: string; issues_monthly_invoice?: boolean }>;
   const categories = (categoriesResult.data ?? []) as Array<{
     id: string;
     name: string;
@@ -163,11 +170,25 @@ export default async function InvoicesPage({
         vatRecognizedPercent: String(draft.vatRecognizedPercent),
         categoryId: draft.categoryId ?? "",
         vendorId: draft.vendorId ?? "",
+        docKind: draft.docKind ?? "preliminary",
+        dealId: draft.dealId ?? "",
+        isMonthly: draft.isMonthly === true,
         confidence: row.extraction_confidence === null ? "" : String(row.extraction_confidence),
         issues: issues.map((issue) => issue.code),
       };
     });
 
+  const deals = ((dealsResult.data ?? []) as Array<{ id: string; customer_name: string | null }>).map((deal) => ({
+    id: deal.id,
+    name: deal.customer_name || deal.id,
+  }));
+  const preliminaryForHint = invoices
+    .filter((row) => row.doc_kind !== "tax_invoice" && row.confirmed_at)
+    .map((row) => ({
+      vendorId: row.vendor_id,
+      vatPeriod: row.vat_period,
+      total: asNumber(row.total_amount) ?? 0,
+    }));
   const periodInvoices = invoices.filter((row) => row.vat_period === period || vatPeriodFromDate(row.invoice_date) === period);
   const confirmed = periodInvoices.filter((row) => row.confirmed_at);
   const awaiting = periodInvoices.filter((row) => !row.confirmed_at).length;
@@ -201,7 +222,9 @@ export default async function InvoicesPage({
   const reconciliation = reconcileInvoices(matchInvoices, matchExpenses);
   const linked = new Set(confirmed.flatMap((row) => (row.matched_cash_event_id ? [row.matched_cash_event_id] : [])));
   const proposed = new Set(
-    reconciliation.matches.flatMap((match) => (match.status === "matched" ? [match.expenseId] : [])),
+    reconciliation.matches.flatMap((match) =>
+      match.status === "matched" ? [match.expenseId] : match.status === "choice" ? match.expenseIds : [],
+    ),
   );
   const withoutInvoice = monthExpenses.filter(
     (row) => isPreliminaryExpense(row.source) && !linked.has(row.id) && !proposed.has(row.id),
@@ -241,7 +264,7 @@ export default async function InvoicesPage({
             <Stat label="בלי חשבונית" value={withoutInvoice.length} />
           </div>
           <p className="mt-3 text-xs text-zinc-500">
-            הוצאה בלי חשבונית לא נכנסת לזיכוי המע״מ. כשאין חשבוניות מאושרות לחודש, ניכוי המע״מ נשאר הערכה לפי עלות החומרים.
+            הוצאה בלי חשבונית מס לא נכנסת לזיכוי בסגירת התקופה. תחזית באמצע החודש משתמשת בחשבוניות מקדימות של אותה עסקה בלבד; עסקה בלי מסמך נשארת הערכה.
           </p>
           <div className="mt-4">
             <PeriodClose period={period} closed={closed} />
@@ -255,7 +278,14 @@ export default async function InvoicesPage({
           <section className="mb-8 space-y-4">
             <h2 className="text-lg font-semibold">ממתינות לאישור</h2>
             {drafts.map((draft) => (
-              <DraftCard key={draft.invoiceId} draft={draft} vendors={vendors} categories={categories} />
+            <DraftCard
+              key={draft.invoiceId}
+              draft={draft}
+              vendors={vendors}
+              categories={categories}
+              deals={deals}
+              preliminary={preliminaryForHint}
+            />
             ))}
           </section>
         ) : null}
@@ -273,15 +303,15 @@ export default async function InvoicesPage({
                   <div className="font-medium">{invoice?.supplier_name || "ספק"} · {invoice?.invoice_number}</div>
                   <div className="text-zinc-400">
                     {match.status === "matched"
-                      ? `נמצאה הוצאה ${expense ? vendorLabel(expense.vendors) ?? "" : ""} ${match.estimatedAmount} ₪, הפרש ${match.varianceAmount} ₪`
-                      : match.status === "duplicate"
-                        ? "כמה הוצאות מתאימות באותה מידה. בחרו ידנית."
+                      ? `נמצאה הוצאה ${expense ? vendorLabel(expense.vendors) ?? "" : ""} ${match.estimatedAmount} ₪, הפרש ${match.varianceAmount} ₪. הסכום ישתנה רק אחרי אישור.`
+                      : match.status === "choice"
+                        ? "כמה הוצאות מתאימות. בחרו אחת. הסכום לא משתנה עד האישור."
                         : "לא נמצאה הוצאה מתאימה."}
                   </div>
                   <div className="mt-2">
                     {match.status === "matched" ? (
                       <MatchButtons invoiceId={match.invoiceId} expenseId={match.expenseId} label="החלף בסכום בפועל" />
-                    ) : match.status === "duplicate" ? (
+                    ) : match.status === "choice" ? (
                       <div className="flex flex-wrap gap-2">
                         {match.expenseIds.map((expenseId) => (
                           <MatchButtons key={expenseId} invoiceId={match.invoiceId} expenseId={expenseId} label="שייך הוצאה זו" />
@@ -294,6 +324,24 @@ export default async function InvoicesPage({
                 </div>
               );
             })
+          )}
+        </section>
+
+        <section className="mb-8 space-y-3">
+          <h2 className="text-lg font-semibold">משויכות</h2>
+          {confirmed.filter((row) => row.matched_cash_event_id).length === 0 ? (
+            <p className="text-sm text-zinc-500">אין חשבוניות משויכות להוצאה.</p>
+          ) : (
+            confirmed
+              .filter((row) => row.matched_cash_event_id)
+              .map((row) => (
+                <div key={row.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-zinc-800 bg-zinc-900 p-4 text-sm">
+                  <span>
+                    {row.supplier_name || "ספק"} · {row.invoice_number} · הפרש {row.variance_amount ?? 0} ₪
+                  </span>
+                  <UnlinkButton invoiceId={row.id} />
+                </div>
+              ))
           )}
         </section>
 

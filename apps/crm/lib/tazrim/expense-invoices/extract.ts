@@ -24,6 +24,8 @@ export interface InvoiceExtraction {
   allocationNumber: string | null
   confidence: number | null
   unavailable: boolean
+  /** Set when a HEIC/HEIF file could not be turned into JPEG. Nothing else is logged. */
+  failure: 'heic_unreadable' | null
 }
 
 export interface ExtractInvoiceInput {
@@ -63,6 +65,7 @@ export function emptyExtraction(): InvoiceExtraction {
     allocationNumber: null,
     confidence: null,
     unavailable: true,
+    failure: null,
   }
 }
 
@@ -115,17 +118,27 @@ export function parseInvoiceModelJson(raw: string): InvoiceExtraction {
     allocationNumber: allocation || null,
     confidence: confidence === null ? null : Math.min(1, Math.max(0, confidence)),
     unavailable: false,
+    failure: null,
   }
 }
 
-async function bytesForModel(bytes: Uint8Array, mimeType: string): Promise<{ bytes: Uint8Array; mimeType: string }> {
-  if (mimeType !== 'image/heic' && mimeType !== 'image/heif') return { bytes, mimeType }
+/**
+ * HEIC/HEIF is not offered in the upload dialog (iOS sends JPEG).
+ * If a HEIC file still arrives, convert it with sharp. The default sharp
+ * binary on Vercel is built without HEVC, so this often fails there: the
+ * caller then shows heic_unreadable and does not send the file to the model.
+ */
+export async function prepareInvoiceBytes(
+  bytes: Uint8Array,
+  mimeType: string,
+): Promise<{ ok: true; bytes: Uint8Array; mimeType: string } | { ok: false; error: 'heic_unreadable' }> {
+  if (mimeType !== 'image/heic' && mimeType !== 'image/heif') return { ok: true, bytes, mimeType }
   try {
     const sharp = (await import('sharp')).default
     const jpeg = await sharp(Buffer.from(bytes)).rotate().jpeg({ quality: 85 }).toBuffer()
-    return { bytes: new Uint8Array(jpeg), mimeType: 'image/jpeg' }
+    return { ok: true, bytes: new Uint8Array(jpeg), mimeType: 'image/jpeg' }
   } catch {
-    return { bytes, mimeType }
+    return { ok: false, error: 'heic_unreadable' }
   }
 }
 
@@ -136,7 +149,8 @@ export async function extractInvoice(
   const apiKey = process.env.GEMINI_API_KEY?.trim()
   if (!apiKey) return emptyExtraction()
 
-  const prepared = await bytesForModel(input.bytes, input.mimeType)
+  const prepared = await prepareInvoiceBytes(input.bytes, input.mimeType)
+  if (!prepared.ok) return { ...emptyExtraction(), failure: 'heic_unreadable' }
   const fetchImpl = deps.fetch ?? fetch
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL()}:generateContent?key=${apiKey}`
 
