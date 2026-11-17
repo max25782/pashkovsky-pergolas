@@ -264,7 +264,7 @@ export default async function InvoicesPage({
             <Stat label="בלי חשבונית" value={withoutInvoice.length} />
           </div>
           <p className="mt-3 text-xs text-zinc-500">
-            הוצאה בלי חשבונית מס לא נכנסת לזיכוי בסגירת התקופה. תחזית באמצע החודש משתמשת בחשבוניות מקדימות של אותה עסקה בלבד; עסקה בלי מסמך נשארת הערכה.
+            תחזית המע״מ על חומרים היא הגבוה מבין הערכת החודש לבין חשבוניות המס בפועל. חשבונית מס כללית מחליפה את המקדימות של אותו ספק ואותו חודש, בלי לחבר אותן. סגירת התקופה לוקחת רק חשבונית מס.
           </p>
           <div className="mt-4">
             <PeriodClose period={period} closed={closed} />

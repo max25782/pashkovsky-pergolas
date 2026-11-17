@@ -80,8 +80,87 @@ class Store {
           }
         },
       },
+      rpc(name: string, args: Record<string, unknown>) {
+        return applyInvoiceRpc(store, name, args)
+      },
     }
   }
+}
+
+function applyInvoiceRpc(store: Store, name: string, args: Record<string, unknown>) {
+  if (name !== 'tz_apply_expense_invoice') {
+    return Promise.resolve({ data: null, error: { code: '42883' } })
+  }
+  const companyId = args.p_company_id
+  const invoiceId = args.p_invoice_id
+  const action = args.p_action
+  const patch = (args.p_row ?? {}) as Row
+  const invoices = store.tables.tz_expense_invoices
+  const invoice = invoices.find((row) => row.id === invoiceId)
+  if (!invoice || invoice.company_id !== companyId) {
+    return Promise.resolve({ data: null, error: { code: 'P0002' } })
+  }
+  const document = store.tables.tz_expense_documents.find(
+    (row) => row.id === invoice.document_id && row.company_id === companyId,
+  )
+  if (action === 'confirm') {
+    Object.assign(invoice, {
+      supplier_name: patch.supplier_name,
+      supplier_tax_id: patch.supplier_tax_id,
+      invoice_number: patch.invoice_number,
+      invoice_date: patch.invoice_date,
+      doc_type: patch.doc_type,
+      doc_kind: patch.doc_kind,
+      currency: patch.currency,
+      net_amount: patch.net_amount,
+      vat_rate: patch.vat_rate,
+      vat_amount: patch.vat_amount,
+      total_amount: patch.total_amount,
+      allocation_number: patch.allocation_number,
+      vat_recognized_percent: patch.vat_recognized_percent,
+      vat_period: patch.vat_period,
+      category_id: patch.category_id,
+      vendor_id: patch.vendor_id,
+      deal_id: patch.deal_id,
+      is_monthly: patch.is_monthly,
+      company_id: companyId,
+      confirmed_at: new Date().toISOString(),
+      confirmed_by: patch.confirmed_by,
+      superseded_by: null,
+    })
+    if (document) document.status = 'confirmed'
+    if (invoice.doc_kind === 'tax_invoice' && invoice.vendor_id && invoice.vat_period) {
+      for (const other of invoices) {
+        if (
+          other.id !== invoice.id &&
+          other.company_id === companyId &&
+          other.vendor_id === invoice.vendor_id &&
+          other.vat_period === invoice.vat_period &&
+          other.doc_kind === 'preliminary' &&
+          other.confirmed_at
+        ) {
+          other.superseded_by = invoice.id
+        }
+      }
+    }
+    return Promise.resolve({ data: invoice.id, error: null })
+  }
+  if (action === 'release' || action === 'delete') {
+    for (const other of invoices) {
+      if (other.company_id === companyId && other.superseded_by === invoiceId) other.superseded_by = null
+    }
+  }
+  if (action === 'release') {
+    invoice.confirmed_at = null
+    invoice.confirmed_by = null
+    if (document) document.status = patch.document_status === 'rejected' ? 'rejected' : 'extracted'
+    return Promise.resolve({ data: invoice.id, error: null })
+  }
+  if (action === 'delete') {
+    store.tables.tz_expense_invoices = invoices.filter((row) => row.id !== invoiceId)
+    return Promise.resolve({ data: invoiceId, error: null })
+  }
+  return Promise.resolve({ data: null, error: { code: '22023' } })
 }
 
 function query(store: Store, table: string) {
@@ -389,5 +468,108 @@ describe('expense invoice handlers, company A vs company B', () => {
     expect(unlink.status).toBe(200)
     expect(store.tables.tz_cash_events.find((row) => row.id === 'exp-a')?.amount).toBe(114)
     expect(store.tables.tz_expense_invoices.find((row) => row.id === 'inv-a')?.matched_cash_event_id).toBeNull()
+  })
+
+  it('supersedes preliminary rows in the confirm call and clears them on unconfirm and delete', async () => {
+    signIn(store, COMPANY_A)
+    const vendor = 'vendor-1'
+    store.tables.tz_expense_documents.push(
+      { id: 'doc-pre', company_id: COMPANY_A, status: 'confirmed' },
+      { id: 'doc-tax', company_id: COMPANY_A, status: 'extracted' },
+      { id: 'doc-b', company_id: COMPANY_B, status: 'confirmed' },
+    )
+    store.tables.tz_expense_invoices.push(
+      {
+        id: 'pre-a',
+        company_id: COMPANY_A,
+        document_id: 'doc-pre',
+        vendor_id: vendor,
+        vat_period: '2026-11',
+        doc_kind: 'preliminary',
+        doc_type: 'tax_invoice',
+        confirmed_at: '2026-11-02T00:00:00Z',
+        supplier_tax_id: '514111111',
+        invoice_number: 'P-1',
+        superseded_by: null,
+      },
+      {
+        id: 'pre-b',
+        company_id: COMPANY_B,
+        document_id: 'doc-b',
+        vendor_id: vendor,
+        vat_period: '2026-11',
+        doc_kind: 'preliminary',
+        doc_type: 'tax_invoice',
+        confirmed_at: '2026-11-02T00:00:00Z',
+        superseded_by: null,
+      },
+      {
+        id: 'tax-a',
+        company_id: COMPANY_A,
+        document_id: 'doc-tax',
+        doc_kind: 'preliminary',
+        doc_type: 'other',
+        confirmed_at: null,
+        superseded_by: null,
+      },
+    )
+    const body = {
+      supplierName: 'Delek',
+      supplierTaxId: '514111111',
+      invoiceNumber: 'M-1',
+      invoiceDate: '2026-11-20',
+      docType: 'tax_invoice',
+      docKind: 'tax_invoice',
+      currency: 'ILS',
+      netAmount: 100,
+      vatRate: 18,
+      vatAmount: 18,
+      totalAmount: 118,
+      vatRecognizedPercent: 100,
+      vendorId: vendor,
+      isMonthly: true,
+      allocationNumber: '1',
+    }
+    const confirm = await confirmInvoice(
+      new NextRequest('http://localhost/api/tazrim/expense-invoices/tax-a', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+      { params: Promise.resolve({ id: 'tax-a' }) },
+    )
+    expect(confirm.status).toBe(200)
+    expect(store.tables.tz_expense_invoices.find((row) => row.id === 'pre-a')?.superseded_by).toBe('tax-a')
+    expect(store.tables.tz_expense_invoices.find((row) => row.id === 'pre-b')?.superseded_by).toBeNull()
+
+    const unconfirm = await confirmInvoice(
+      new NextRequest('http://localhost/api/tazrim/expense-invoices/tax-a', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'unconfirm' }),
+      }),
+      { params: Promise.resolve({ id: 'tax-a' }) },
+    )
+    expect(unconfirm.status).toBe(200)
+    expect(store.tables.tz_expense_invoices.find((row) => row.id === 'pre-a')?.superseded_by).toBeNull()
+
+    const again = await confirmInvoice(
+      new NextRequest('http://localhost/api/tazrim/expense-invoices/tax-a', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+      { params: Promise.resolve({ id: 'tax-a' }) },
+    )
+    expect(again.status).toBe(200)
+    expect(store.tables.tz_expense_invoices.find((row) => row.id === 'pre-a')?.superseded_by).toBe('tax-a')
+
+    const removed = await confirmInvoice(
+      new NextRequest('http://localhost/api/tazrim/expense-invoices/tax-a', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'delete' }),
+      }),
+      { params: Promise.resolve({ id: 'tax-a' }) },
+    )
+    expect(removed.status).toBe(200)
+    expect(store.tables.tz_expense_invoices.find((row) => row.id === 'tax-a')).toBeUndefined()
+    expect(store.tables.tz_expense_invoices.find((row) => row.id === 'pre-a')?.superseded_by).toBeNull()
   })
 })

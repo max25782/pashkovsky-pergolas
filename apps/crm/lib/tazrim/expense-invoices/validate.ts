@@ -46,6 +46,7 @@ export type InvoiceIssueCode =
   | 'allocation_missing'
   | 'missing_deal'
   | 'missing_vendor'
+  | 'kind_not_tax_invoice'
 
 export interface ValidationIssue {
   code: InvoiceIssueCode
@@ -100,7 +101,7 @@ export function recognizedVatAmount(input: {
   vatRecognizedPercent: number
   confirmed: boolean
 }): number {
-  if (!input.confirmed || input.docType === 'receipt') return 0
+  if (!input.confirmed || input.docType !== 'tax_invoice') return 0
   const vat = input.vatAmount ?? 0
   if (!Number.isFinite(vat) || vat === 0) return 0
   const percent = Number.isFinite(input.vatRecognizedPercent) ? input.vatRecognizedPercent : 0
@@ -197,6 +198,9 @@ export function validateInvoiceDraft(
   }
   if (confirm && (draft.docKind === 'preliminary' || draft.docKind === 'tax_invoice') && !draft.vendorId) {
     issues.push({ code: 'missing_vendor', blocking: true })
+  }
+  if (draft.docKind === 'tax_invoice' && draft.docType !== 'tax_invoice') {
+    issues.push({ code: 'kind_not_tax_invoice', blocking: true })
   }
 
   return issues

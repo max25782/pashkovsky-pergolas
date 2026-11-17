@@ -17,6 +17,8 @@
 -- supabase/rollbacks/070_tz_expense_invoices_down.sql (outside migrations, so
 -- `supabase db push` will not run it).
 
+begin;
+
 -- ---------------------------------------------------------------------------
 -- Category percent. Default 100 is a placeholder: confirm it with the accountant.
 -- ---------------------------------------------------------------------------
@@ -116,13 +118,66 @@ create table if not exists public.tz_expense_invoices (
   constraint tz_expense_invoices_preliminary_link_chk
     check (confirmed_at is null or doc_kind <> 'preliminary' or (deal_id is not null and vendor_id is not null)),
   constraint tz_expense_invoices_tax_link_chk
-    check (confirmed_at is null or doc_kind <> 'tax_invoice' or (vendor_id is not null and vat_period is not null))
+    check (confirmed_at is null or doc_kind <> 'tax_invoice' or (vendor_id is not null and vat_period is not null)),
+  constraint tz_expense_invoices_kind_type_chk
+    check (doc_kind <> 'tax_invoice' or doc_type = 'tax_invoice')
 );
 
 create unique index if not exists tz_expense_invoices_id_company_uq
   on public.tz_expense_invoices (id, company_id);
 
+alter table public.tz_expense_invoices
+  drop constraint if exists tz_expense_invoices_kind_type_chk;
+alter table public.tz_expense_invoices
+  add constraint tz_expense_invoices_kind_type_chk
+  check (doc_kind <> 'tax_invoice' or doc_type = 'tax_invoice');
+
+alter table public.tz_expense_invoices
+  drop constraint if exists tz_expense_invoices_doc_kind_chk;
+alter table public.tz_expense_invoices
+  add constraint tz_expense_invoices_doc_kind_chk
+  check (doc_kind in ('preliminary', 'tax_invoice'));
+
+alter table public.tz_expense_invoices
+  drop constraint if exists tz_expense_invoices_preliminary_link_chk;
+alter table public.tz_expense_invoices
+  add constraint tz_expense_invoices_preliminary_link_chk
+  check (confirmed_at is null or doc_kind <> 'preliminary' or (deal_id is not null and vendor_id is not null));
+
+alter table public.tz_expense_invoices
+  drop constraint if exists tz_expense_invoices_tax_link_chk;
+alter table public.tz_expense_invoices
+  add constraint tz_expense_invoices_tax_link_chk
+  check (confirmed_at is null or doc_kind <> 'tax_invoice' or (vendor_id is not null and vat_period is not null));
+
 -- Parents must expose (id, company_id) so a child cannot point at another company's row.
+do $$
+begin
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'tz_vendors' and column_name = 'company_id'
+  ) then
+    raise exception 'tz_vendors.company_id is required';
+  end if;
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'tz_expense_categories' and column_name = 'company_id'
+  ) then
+    raise exception 'tz_expense_categories.company_id is required';
+  end if;
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'tz_cash_events' and column_name = 'company_id'
+  ) then
+    raise exception 'tz_cash_events.company_id is required';
+  end if;
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'deals' and column_name = 'company_id'
+  ) then
+    raise exception 'deals.company_id is required';
+  end if;
+end $$;
 create unique index if not exists tz_vendors_id_company_uq
   on public.tz_vendors (id, company_id);
 create unique index if not exists tz_expense_categories_id_company_uq
@@ -180,7 +235,8 @@ alter table public.tz_expense_invoices
   references public.tz_expense_invoices (id, company_id)
   on delete set null (superseded_by);
 
-create unique index if not exists tz_expense_invoices_confirmed_supplier_number_uq
+drop index if exists public.tz_expense_invoices_confirmed_supplier_number_uq;
+create unique index tz_expense_invoices_confirmed_supplier_number_uq
   on public.tz_expense_invoices (company_id, supplier_tax_id, invoice_number)
   where confirmed_at is not null
     and supplier_tax_id is not null
@@ -212,6 +268,112 @@ create table if not exists public.tz_vat_period_closures (
   constraint tz_vat_period_closures_company_period_key unique (company_id, vat_period)
 );
 
+create or replace function public.tz_apply_expense_invoice(
+  p_company_id uuid,
+  p_invoice_id uuid,
+  p_action text,
+  p_row jsonb default '{}'::jsonb
+) returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_company uuid;
+  v_kind text;
+  v_vendor uuid;
+  v_period text;
+  v_document uuid;
+begin
+  if p_company_id is null or p_invoice_id is null or p_action not in ('confirm', 'release', 'delete') then
+    raise exception 'bad invoice action' using errcode = '22023';
+  end if;
+
+  select company_id into v_company
+  from public.tz_expense_invoices
+  where id = p_invoice_id
+  for update;
+
+  if v_company is null or v_company <> p_company_id then
+    raise exception 'invoice_not_found' using errcode = 'P0002';
+  end if;
+
+  if p_action = 'confirm' then
+    update public.tz_expense_invoices set
+      supplier_name = p_row->>'supplier_name',
+      supplier_tax_id = nullif(p_row->>'supplier_tax_id', ''),
+      invoice_number = nullif(p_row->>'invoice_number', ''),
+      invoice_date = nullif(p_row->>'invoice_date', '')::date,
+      doc_type = p_row->>'doc_type',
+      doc_kind = case when p_row->>'doc_kind' = 'tax_invoice' then 'tax_invoice' else 'preliminary' end,
+      currency = coalesce(nullif(p_row->>'currency', ''), 'ILS'),
+      net_amount = (p_row->>'net_amount')::numeric,
+      vat_rate = (p_row->>'vat_rate')::numeric,
+      vat_amount = (p_row->>'vat_amount')::numeric,
+      total_amount = (p_row->>'total_amount')::numeric,
+      allocation_number = nullif(p_row->>'allocation_number', ''),
+      vat_recognized_percent = coalesce((p_row->>'vat_recognized_percent')::numeric, 100),
+      vat_period = nullif(p_row->>'vat_period', ''),
+      category_id = nullif(p_row->>'category_id', '')::uuid,
+      vendor_id = nullif(p_row->>'vendor_id', '')::uuid,
+      deal_id = nullif(p_row->>'deal_id', '')::uuid,
+      is_monthly = coalesce((p_row->>'is_monthly')::boolean, false),
+      company_id = p_company_id,
+      superseded_by = null,
+      confirmed_at = pg_catalog.now(),
+      confirmed_by = nullif(p_row->>'confirmed_by', '')::uuid
+    where id = p_invoice_id
+      and company_id = p_company_id
+    returning doc_kind, vendor_id, vat_period, document_id
+      into v_kind, v_vendor, v_period, v_document;
+
+    update public.tz_expense_documents
+      set status = 'confirmed'
+      where id = v_document
+        and company_id = p_company_id;
+
+    if v_kind = 'tax_invoice' and v_vendor is not null and v_period is not null then
+      update public.tz_expense_invoices
+        set superseded_by = p_invoice_id
+        where company_id = p_company_id
+          and vendor_id = v_vendor
+          and vat_period = v_period
+          and doc_kind = 'preliminary'
+          and confirmed_at is not null
+          and id <> p_invoice_id;
+    end if;
+    return p_invoice_id;
+  end if;
+
+  update public.tz_expense_invoices
+    set superseded_by = null
+    where company_id = p_company_id
+      and superseded_by = p_invoice_id;
+
+  if p_action = 'release' then
+    update public.tz_expense_invoices
+      set confirmed_at = null,
+          confirmed_by = null
+      where id = p_invoice_id
+        and company_id = p_company_id
+      returning document_id into v_document;
+    update public.tz_expense_documents
+      set status = case when p_row->>'document_status' = 'rejected' then 'rejected' else 'extracted' end
+      where id = v_document
+        and company_id = p_company_id;
+    return p_invoice_id;
+  end if;
+
+  delete from public.tz_expense_invoices
+    where id = p_invoice_id
+      and company_id = p_company_id;
+  return p_invoice_id;
+end;
+$$;
+
+revoke all on function public.tz_apply_expense_invoice(uuid, uuid, text, jsonb) from public, anon, authenticated;
+grant execute on function public.tz_apply_expense_invoice(uuid, uuid, text, jsonb) to service_role;
+
 -- ---------------------------------------------------------------------------
 -- RLS: authenticated may SELECT rows of a company they own or admin.
 -- No write policy. service_role bypasses RLS and is the only writer.
@@ -227,8 +389,9 @@ declare
 begin
   foreach t in array tables loop
     execute format('alter table public.%I enable row level security', t);
-    execute format('revoke all on public.%I from public, anon, authenticated', t);
-    execute format('grant select on public.%I to authenticated', t);
+    execute format('revoke all on table public.%I from anon, authenticated', t);
+    execute format('revoke all on table public.%I from public', t);
+    execute format('grant select on table public.%I to authenticated', t);
     execute format('grant select, insert, update, delete on public.%I to service_role', t);
     execute format('drop policy if exists tz_member_all on public.%I', t);
     execute format('drop policy if exists tz_member_select on public.%I', t);
@@ -263,10 +426,34 @@ drop policy if exists tz_expense_invoices_insert on storage.objects;
 drop policy if exists tz_expense_invoices_update on storage.objects;
 drop policy if exists tz_expense_invoices_delete on storage.objects;
 
+do $$
+declare
+  r record;
+begin
+  for r in
+    select pol.polname as name
+    from pg_policy pol
+    join pg_class cls on cls.oid = pol.polrelid
+    join pg_namespace nsp on nsp.oid = cls.relnamespace
+    where nsp.nspname = 'storage'
+      and cls.relname = 'objects'
+      and (
+        pol.polname like 'tz_expense_invoices_%'
+        or pg_get_expr(pol.polqual, pol.polrelid) ilike '%tz-expense-invoices%'
+        or coalesce(pg_get_expr(pol.polwithcheck, pol.polrelid), '') ilike '%tz-expense-invoices%'
+      )
+  loop
+    execute format('drop policy if exists %I on storage.objects', r.name);
+  end loop;
+end $$;
+
+commit;
+
 -- ---------------------------------------------------------------------------
 -- ROLLBACK (do not execute as part of this migration)
 --
 -- begin;
+-- drop function if exists public.tz_apply_expense_invoice(uuid, uuid, text, jsonb);
 -- drop policy if exists tz_expense_invoices_select on storage.objects;
 -- drop policy if exists tz_expense_invoices_insert on storage.objects;
 -- drop policy if exists tz_expense_invoices_update on storage.objects;

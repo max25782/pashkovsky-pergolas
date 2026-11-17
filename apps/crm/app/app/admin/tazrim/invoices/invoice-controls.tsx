@@ -27,6 +27,7 @@ const ISSUE_TEXT: Record<string, string> = {
   allocation_missing: "אין מספר הקצאה. סף החובה נקבע על ידי רואה החשבון, אין חסימה אוטומטית",
   missing_deal: "חשבונית מקדימה חייבת להיות קשורה לעסקה",
   missing_vendor: "חסר ספק",
+  kind_not_tax_invoice: "חשבונית מס כללית אפשרית רק כשסוג המסמך הוא חשבונית מס",
   heic_unreadable: "לא ניתן לקרוא HEIC. שמרו כ-JPEG או PDF",
   original_missing: "אין סכום מקורי לשחזור",
   period_closed: "התקופה סגורה. פתחו אותה מחדש כדי לשנות",

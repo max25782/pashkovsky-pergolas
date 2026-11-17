@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { resolveTazrimApi } from '@/lib/tazrim/expense-invoices/api-auth'
 import {
   confirmExpenseInvoice,
+  deleteExpenseInvoice,
   parseDraftBody,
   rejectExpenseInvoice,
+  unconfirmExpenseInvoice,
 } from '@/lib/tazrim/expense-invoices/handlers'
 
 export async function POST(
@@ -17,6 +19,14 @@ export async function POST(
   if (!body) return NextResponse.json({ error: 'invalid' }, { status: 400 })
   if (body.action === 'reject') {
     const result = await rejectExpenseInvoice(auth.ctx, id)
+    return NextResponse.json(result.body, { status: result.status })
+  }
+  if (body.action === 'unconfirm') {
+    const result = await unconfirmExpenseInvoice(auth.ctx, id)
+    return NextResponse.json(result.body, { status: result.status })
+  }
+  if (body.action === 'delete') {
+    const result = await deleteExpenseInvoice(auth.ctx, id)
     return NextResponse.json(result.body, { status: result.status })
   }
   const draft = parseDraftBody(body)

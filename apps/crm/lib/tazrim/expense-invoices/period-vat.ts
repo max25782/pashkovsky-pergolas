@@ -31,11 +31,11 @@ export interface DealMonthInput {
 
 export interface DealForecast {
   dealId: string
-  /** Materials VAT still estimated after subtracting this deal's preliminary net. */
+  /** This deal's materials estimate. It is part of E and is not reduced by invoices. */
   estimatedVat: number
-  /** Recognized VAT of preliminary documents that a monthly tax invoice has not replaced. */
+  /** Always 0. Deal links are for cost, not for the VAT forecast. */
   preliminaryVat: number
-  /** True while this deal still contributes an estimate. Other deals are not affected. */
+  /** True while this deal still has a materials estimate. */
   estimated: boolean
 }
 
@@ -79,25 +79,6 @@ export function supplierMonthKey(vendorId: string, period: string): string {
   return `${vendorId}|${period}`
 }
 
-/** Confirmed tax invoices (not receipts) for this supplier and month replace that supplier's preliminary. */
-export function taxInvoiceSupplierMonths(
-  invoices: readonly PeriodInvoiceInput[],
-  period: string,
-): Set<string> {
-  const keys = new Set<string>()
-  for (const invoice of invoices) {
-    if (!active(invoice) || invoice.vatPeriod !== period) continue
-    if (invoice.docKind !== 'tax_invoice' || invoice.docType === 'receipt' || !invoice.vendorId) continue
-    keys.add(supplierMonthKey(invoice.vendorId, period))
-  }
-  return keys
-}
-
-export function preliminaryIsSuperseded(invoice: PeriodInvoiceInput, taxKeys: ReadonlySet<string>): boolean {
-  if (invoice.docKind !== 'preliminary' || !invoice.vendorId) return false
-  return taxKeys.has(supplierMonthKey(invoice.vendorId, invoice.vatPeriod))
-}
-
 export function dealMaterialsVat(meta: VatCalcMeta): DealMonthInput[] {
   const byDeal = new Map<string, number>()
   for (const line of meta.lines) {
@@ -107,12 +88,47 @@ export function dealMaterialsVat(meta: VatCalcMeta): DealMonthInput[] {
 }
 
 /**
- * Open-period forecast.
- * A deal with no document keeps its materials VAT and stays marked estimated.
- * A preliminary document reduces that deal's materials net (not below zero) and
- * adds its own recognized VAT. A tax invoice for the same supplier and month
- * replaces those preliminary amounts: they are not added again. A tax invoice
- * of another month does not. Other deals are left as they were.
+ * Actual input VAT for one month.
+ * For each supplier, a tax invoice replaces that supplier's preliminary
+ * documents. Superseded preliminary documents are skipped. Receipts and
+ * other document types contribute nothing. Deal links are ignored.
+ */
+export function actualInvoiceVat(
+  invoices: readonly PeriodInvoiceInput[],
+  period: string,
+): { preliminary: number; tax: number; total: number } {
+  const groups = new Map<string, PeriodInvoiceInput[]>()
+  for (const invoice of invoices) {
+    if (!active(invoice) || invoice.vatPeriod !== period || invoice.docType !== 'tax_invoice' || !invoice.vendorId) {
+      continue
+    }
+    const key = supplierMonthKey(invoice.vendorId, period)
+    const list = groups.get(key) ?? []
+    list.push(invoice)
+    groups.set(key, list)
+  }
+  let preliminary = 0
+  let tax = 0
+  for (const group of groups.values()) {
+    const taxRows = group.filter((invoice) => invoice.docKind === 'tax_invoice')
+    if (taxRows.length > 0) {
+      tax += taxRows.reduce((sum, invoice) => sum + credited(invoice), 0)
+      continue
+    }
+    preliminary += group
+      .filter((invoice) => invoice.docKind === 'preliminary')
+      .reduce((sum, invoice) => sum + credited(invoice), 0)
+  }
+  preliminary = roundMoney(preliminary)
+  tax = roundMoney(tax)
+  return { preliminary, tax, total: roundMoney(preliminary + tax) }
+}
+
+/**
+ * Open-period materials forecast for the whole month: max(E, A).
+ * E is the sum of deal material estimates. A is actualInvoiceVat.
+ * Invoices are not added on top of the estimate, and one invoice does not
+ * reduce another deal. A tax invoice from another month is not in A.
  */
 export function computeForecastVat(input: {
   vatOnSales: number
@@ -122,66 +138,15 @@ export function computeForecastVat(input: {
   period: string
 }): ForecastVat {
   const vatOnSales = roundMoney(input.vatOnSales)
-  const rate = input.vatPercent > 0 ? input.vatPercent / 100 : 0
-  const periodInvoices = input.invoices.filter((invoice) => invoice.vatPeriod === input.period)
-  const taxKeys = taxInvoiceSupplierMonths(periodInvoices, input.period)
-  const seen = new Set(input.deals.map((deal) => deal.dealId))
-
+  const estimatedInput = roundMoney(input.deals.reduce((sum, deal) => sum + deal.materialsVat, 0))
+  const actual = actualInvoiceVat(input.invoices, input.period)
+  const inputVat = roundMoney(Math.max(estimatedInput, actual.total))
+  const basis: ForecastVat['basis'] =
+    actual.total === 0 ? 'estimate' : actual.total < estimatedInput ? 'forecast' : 'invoices'
   const deals: DealForecast[] = input.deals.map((deal) => {
-    const materialsVat = roundMoney(deal.materialsVat)
-    const materialsNet = rate > 0 ? roundMoney(materialsVat / rate) : 0
-    const prelims = periodInvoices.filter(
-      (invoice) =>
-        active(invoice) &&
-        invoice.docKind === 'preliminary' &&
-        invoice.dealId === deal.dealId &&
-        invoice.docType !== 'receipt',
-    )
-    const coveredNet = roundMoney(prelims.reduce((sum, invoice) => sum + (invoice.netAmount ?? 0), 0))
-    const preliminaryVat = roundMoney(
-      prelims
-        .filter((invoice) => !preliminaryIsSuperseded(invoice, taxKeys))
-        .reduce((sum, invoice) => sum + credited(invoice), 0),
-    )
-    const estimatedVat =
-      coveredNet > 0 && rate > 0
-        ? roundMoney(Math.max(0, roundMoney(materialsNet - coveredNet)) * rate)
-        : materialsVat
-    return {
-      dealId: deal.dealId,
-      estimatedVat,
-      preliminaryVat,
-      estimated: estimatedVat > 0,
-    }
+    const estimatedVat = roundMoney(deal.materialsVat)
+    return { dealId: deal.dealId, estimatedVat, preliminaryVat: 0, estimated: estimatedVat > 0 }
   })
-
-  const orphanPreliminary = roundMoney(
-    periodInvoices
-      .filter(
-        (invoice) =>
-          active(invoice) &&
-          invoice.docKind === 'preliminary' &&
-          invoice.docType !== 'receipt' &&
-          invoice.dealId !== null &&
-          !seen.has(invoice.dealId) &&
-          !preliminaryIsSuperseded(invoice, taxKeys),
-      )
-      .reduce((sum, invoice) => sum + credited(invoice), 0),
-  )
-
-  const recognizedFromTaxInvoices = roundMoney(
-    periodInvoices
-      .filter((invoice) => active(invoice) && invoice.docKind === 'tax_invoice' && invoice.docType !== 'receipt')
-      .reduce((sum, invoice) => sum + credited(invoice), 0),
-  )
-  const recognizedFromPreliminary = roundMoney(
-    deals.reduce((sum, deal) => sum + deal.preliminaryVat, 0) + orphanPreliminary,
-  )
-  const estimatedInput = roundMoney(deals.reduce((sum, deal) => sum + deal.estimatedVat, 0))
-  const inputVat = roundMoney(estimatedInput + recognizedFromPreliminary + recognizedFromTaxInvoices)
-  const anyEstimate = deals.some((deal) => deal.estimated)
-  const anyDocument = recognizedFromPreliminary > 0 || recognizedFromTaxInvoices > 0
-  const basis: ForecastVat['basis'] = !anyDocument ? 'estimate' : anyEstimate ? 'forecast' : 'invoices'
 
   return {
     vatOnSales,
@@ -189,8 +154,8 @@ export function computeForecastVat(input: {
     vatPayable: roundMoney(vatOnSales - inputVat),
     basis,
     estimated: basis !== 'invoices',
-    recognizedFromPreliminary,
-    recognizedFromTaxInvoices,
+    recognizedFromPreliminary: actual.preliminary,
+    recognizedFromTaxInvoices: actual.tax,
     deals,
   }
 }
@@ -215,7 +180,7 @@ export function computeCloseVat(input: {
   )
   const inputVat = roundMoney(
     periodInvoices
-      .filter((invoice) => invoice.docKind === 'tax_invoice' && invoice.docType !== 'receipt')
+      .filter((invoice) => invoice.docKind === 'tax_invoice' && invoice.docType === 'tax_invoice')
       .reduce((sum, invoice) => sum + credited(invoice), 0),
   )
   return {

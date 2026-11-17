@@ -108,6 +108,7 @@ function dbError(error: { code?: string; message?: string } | null): HandlerResu
   if (error.code === '23505') {
     return { status: 409, body: { error: 'duplicate', issues: [{ code: 'duplicate_invoice', blocking: true }] } }
   }
+  if (error.code === 'P0002') return { status: 404, body: { error: 'not_found' } }
   console.error('[tazrim] expense invoice write failed', { code: error.code })
   return { status: 500, body: { error: 'save_failed' } }
 }
@@ -363,63 +364,57 @@ export async function confirmExpenseInvoice(
   }
 
   const docKind = normalized.docKind === 'tax_invoice' ? 'tax_invoice' : 'preliminary'
-  const updated = await invoiceDb(ctx)
-    .from('tz_expense_invoices')
-    .update({
-      supplier_name: normalized.supplierName.trim(),
-      supplier_tax_id: normalized.supplierTaxId,
-      invoice_number: normalized.invoiceNumber,
-      invoice_date: normalized.invoiceDate,
-      doc_type: normalized.docType,
-      doc_kind: docKind,
-      currency: normalized.currency,
-      net_amount: normalized.netAmount,
-      vat_rate: normalized.vatRate,
-      vat_amount: normalized.vatAmount,
-      total_amount: normalized.totalAmount,
-      allocation_number: normalized.allocationNumber?.trim() || null,
-      vat_recognized_percent: normalized.vatRecognizedPercent,
-      vat_period: period,
-      category_id: normalized.categoryId,
-      vendor_id: normalized.vendorId,
-      deal_id: normalized.dealId ?? null,
-      is_monthly: docKind === 'tax_invoice' && normalized.isMonthly === true,
-      superseded_by: null,
-      confirmed_at: new Date().toISOString(),
-      confirmed_by: ctx.userId,
-    })
-    .eq('id', row.id)
-    .eq('company_id', ctx.companyId)
-    .select('id')
-  const failed = dbError(updated.error)
-  if (failed) return failed
-  if (!updated.data || updated.data.length === 0) return { status: 404, body: { error: 'not_found' } }
-
-  await invoiceDb(ctx)
-    .from('tz_expense_documents')
-    .update({ status: 'confirmed' })
-    .eq('id', row.document_id)
-    .eq('company_id', ctx.companyId)
-
-  if (docKind === 'tax_invoice' && normalized.vendorId && period) {
-    await invoiceDb(ctx)
-      .from('tz_expense_invoices')
-      .update({ superseded_by: row.id })
-      .eq('company_id', ctx.companyId)
-      .eq('vendor_id', normalized.vendorId)
-      .eq('vat_period', period)
-      .eq('doc_kind', 'preliminary')
-      .not('confirmed_at', 'is', null)
-      .neq('id', row.id)
-  }
-
+  const applied = await applyInvoiceRpc(ctx, row.id, 'confirm', {
+    supplier_name: normalized.supplierName.trim(),
+    supplier_tax_id: normalized.supplierTaxId,
+    invoice_number: normalized.invoiceNumber,
+    invoice_date: normalized.invoiceDate,
+    doc_type: normalized.docType,
+    doc_kind: docKind,
+    currency: normalized.currency,
+    net_amount: normalized.netAmount,
+    vat_rate: normalized.vatRate,
+    vat_amount: normalized.vatAmount,
+    total_amount: normalized.totalAmount,
+    allocation_number: normalized.allocationNumber?.trim() || null,
+    vat_recognized_percent: normalized.vatRecognizedPercent,
+    vat_period: period,
+    category_id: normalized.categoryId,
+    vendor_id: normalized.vendorId,
+    deal_id: normalized.dealId ?? null,
+    is_monthly: docKind === 'tax_invoice' && normalized.isMonthly === true,
+    confirmed_by: ctx.userId,
+  })
+  if (applied) return applied
   return { status: 200, body: { invoiceId: row.id, issues } }
+}
+
+async function applyInvoiceRpc(
+  ctx: TazrimContext,
+  invoiceId: string,
+  action: 'confirm' | 'release' | 'delete',
+  row: Record<string, unknown>,
+): Promise<HandlerResult | null> {
+  const { data, error } = await invoiceDb(ctx).rpc('tz_apply_expense_invoice', {
+    p_company_id: ctx.companyId,
+    p_invoice_id: invoiceId,
+    p_action: action,
+    p_row: row,
+  })
+  const failed = dbError(error)
+  if (failed) return failed
+  if (!data) return { status: 404, body: { error: 'not_found' } }
+  return null
 }
 
 export async function rejectExpenseInvoice(ctx: TazrimContext, invoiceId: string): Promise<HandlerResult> {
   const row = await loadOwnInvoice(ctx, invoiceId)
   if (!row) return { status: 404, body: { error: 'not_found' } }
-  if (row.confirmed_at) return { status: 409, body: { error: 'already_confirmed' } }
+  if (row.confirmed_at) {
+    const applied = await applyInvoiceRpc(ctx, row.id, 'release', { document_status: 'rejected' })
+    if (applied) return applied
+    return { status: 200, body: { invoiceId: row.id, status: 'rejected' } }
+  }
   const updated = await invoiceDb(ctx)
     .from('tz_expense_documents')
     .update({ status: 'rejected' })
@@ -428,6 +423,23 @@ export async function rejectExpenseInvoice(ctx: TazrimContext, invoiceId: string
     .select('id')
   if (!updated.data || updated.data.length === 0) return { status: 404, body: { error: 'not_found' } }
   return { status: 200, body: { invoiceId: row.id, status: 'rejected' } }
+}
+
+export async function unconfirmExpenseInvoice(ctx: TazrimContext, invoiceId: string): Promise<HandlerResult> {
+  const row = await loadOwnInvoice(ctx, invoiceId)
+  if (!row) return { status: 404, body: { error: 'not_found' } }
+  if (!row.confirmed_at) return { status: 409, body: { error: 'not_confirmed' } }
+  const applied = await applyInvoiceRpc(ctx, row.id, 'release', { document_status: 'extracted' })
+  if (applied) return applied
+  return { status: 200, body: { invoiceId: row.id, status: 'extracted' } }
+}
+
+export async function deleteExpenseInvoice(ctx: TazrimContext, invoiceId: string): Promise<HandlerResult> {
+  const row = await loadOwnInvoice(ctx, invoiceId)
+  if (!row) return { status: 404, body: { error: 'not_found' } }
+  const applied = await applyInvoiceRpc(ctx, row.id, 'delete', {})
+  if (applied) return applied
+  return { status: 200, body: { invoiceId: row.id, status: 'deleted' } }
 }
 
 export async function listExpenseInvoices(ctx: TazrimContext): Promise<HandlerResult> {
@@ -731,7 +743,7 @@ export async function closeVatPeriod(ctx: TazrimContext, period: string, note: s
     .not('confirmed_at', 'is', null)
   const periodInvoices = ((invoices ?? []) as InvoiceRow[]).map(toPeriodInvoice)
   const recognized = periodInvoices
-    .filter((row) => row.docKind === 'tax_invoice' && row.docType !== 'receipt')
+    .filter((row) => row.docKind === 'tax_invoice' && row.docType === 'tax_invoice')
     .reduce((sum, row) => sum + ((row.vatAmount ?? 0) * row.vatRecognizedPercent) / 100, 0)
 
   const inserted = await invoiceDb(ctx)

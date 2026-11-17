@@ -10,6 +10,8 @@
 
 begin;
 
+drop function if exists public.tz_apply_expense_invoice(uuid, uuid, text, jsonb);
+
 drop policy if exists tz_expense_invoices_select on storage.objects;
 drop policy if exists tz_expense_invoices_insert on storage.objects;
 drop policy if exists tz_expense_invoices_update on storage.objects;

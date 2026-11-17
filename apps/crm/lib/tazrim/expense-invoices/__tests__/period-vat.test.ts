@@ -32,7 +32,7 @@ const deals = [
 ];
 
 describe("forecast and close VAT", () => {
-  it("keeps the other deals on their estimate when one deal has a preliminary invoice", () => {
+  it("keeps the month estimate when one preliminary invoice is smaller", () => {
     const forecast = computeForecastVat({
       vatOnSales: 54000,
       vatPercent: 18,
@@ -40,21 +40,13 @@ describe("forecast and close VAT", () => {
       invoices: [invoice()],
       period: "2026-11",
     });
+    expect(forecast.inputVat).toBe(27000);
     expect(forecast.vatPayable).toBe(27000);
-    expect(forecast.deals.find((deal) => deal.dealId === "deal-b")).toMatchObject({
-      estimatedVat: 9000,
-      preliminaryVat: 0,
-      estimated: true,
-    });
-    expect(forecast.deals.find((deal) => deal.dealId === "deal-c")?.estimatedVat).toBe(9000);
-    expect(forecast.deals.find((deal) => deal.dealId === "deal-a")).toMatchObject({
-      estimatedVat: 7200,
-      preliminaryVat: 1800,
-    });
-    expect(forecast.estimated).toBe(true);
+    expect(forecast.recognizedFromPreliminary).toBe(1800);
+    expect(forecast.deals.map((deal) => deal.estimatedVat)).toEqual([9000, 9000, 9000]);
   });
 
-  it("counts a monthly tax invoice once and does not add the preliminary it replaces", () => {
+  it("does not add a smaller monthly tax invoice on top of the estimate", () => {
     const forecast = computeForecastVat({
       vatOnSales: 54000,
       vatPercent: 18,
@@ -74,11 +66,30 @@ describe("forecast and close VAT", () => {
     });
     expect(forecast.recognizedFromPreliminary).toBe(0);
     expect(forecast.recognizedFromTaxInvoices).toBe(2500);
-    expect(forecast.deals.find((deal) => deal.dealId === "deal-b")?.estimatedVat).toBe(9000);
-    expect(forecast.inputVat).toBe(27700);
+    expect(forecast.inputVat).toBe(27000);
   });
 
-  it("does not let a tax invoice of another month replace this month's preliminary", () => {
+  it("uses the monthly tax invoice when it is larger than the estimate", () => {
+    const forecast = computeForecastVat({
+      vatOnSales: 54000,
+      vatPercent: 18,
+      deals,
+      invoices: [
+        invoice(),
+        invoice({
+          docKind: "tax_invoice",
+          dealId: null,
+          vatAmount: 30000,
+          netAmount: 166666.67,
+        }),
+      ],
+      period: "2026-11",
+    });
+    expect(forecast.inputVat).toBe(30000);
+    expect(forecast.recognizedFromPreliminary).toBe(0);
+  });
+
+  it("does not let a tax invoice of another month change this month", () => {
     const invoices = [
       invoice(),
       invoice({
@@ -96,7 +107,7 @@ describe("forecast and close VAT", () => {
       invoices,
       period: "2026-11",
     });
-    expect(november.recognizedFromPreliminary).toBe(1800);
+    expect(november.inputVat).toBe(27000);
     expect(november.recognizedFromTaxInvoices).toBe(0);
     const december = computeForecastVat({
       vatOnSales: 0,
@@ -105,8 +116,22 @@ describe("forecast and close VAT", () => {
       invoices,
       period: "2026-12",
     });
-    expect(december.recognizedFromTaxInvoices).toBe(2500);
+    expect(december.inputVat).toBe(2500);
     expect(december.recognizedFromPreliminary).toBe(0);
+  });
+
+  it("leaves receipts and other document types out of the forecast", () => {
+    const forecast = computeForecastVat({
+      vatOnSales: 0,
+      vatPercent: 18,
+      deals: [],
+      invoices: [
+        invoice({ docType: "receipt", vatAmount: 1800 }),
+        invoice({ docType: "other", vatAmount: 1800 }),
+      ],
+      period: "2026-11",
+    });
+    expect(forecast.inputVat).toBe(0);
   });
 
   it("ignores preliminary documents when the period is closed", () => {
