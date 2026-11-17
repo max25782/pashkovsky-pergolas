@@ -116,7 +116,7 @@ create table if not exists public.tz_expense_invoices (
   -- Drafts may omit the link. A confirmed preliminary belongs to a deal and a supplier.
   -- A confirmed tax invoice belongs to a supplier and a month.
   constraint tz_expense_invoices_preliminary_link_chk
-    check (confirmed_at is null or doc_kind <> 'preliminary' or (deal_id is not null and vendor_id is not null)),
+    check (confirmed_at is null or doc_kind <> 'preliminary' or (deal_id is not null and vendor_id is not null and vat_period is not null)),
   constraint tz_expense_invoices_tax_link_chk
     check (confirmed_at is null or doc_kind <> 'tax_invoice' or (vendor_id is not null and vat_period is not null)),
   constraint tz_expense_invoices_kind_type_chk
@@ -142,7 +142,7 @@ alter table public.tz_expense_invoices
   drop constraint if exists tz_expense_invoices_preliminary_link_chk;
 alter table public.tz_expense_invoices
   add constraint tz_expense_invoices_preliminary_link_chk
-  check (confirmed_at is null or doc_kind <> 'preliminary' or (deal_id is not null and vendor_id is not null));
+  check (confirmed_at is null or doc_kind <> 'preliminary' or (deal_id is not null and vendor_id is not null and vat_period is not null));
 
 alter table public.tz_expense_invoices
   drop constraint if exists tz_expense_invoices_tax_link_chk;
@@ -284,6 +284,8 @@ declare
   v_vendor uuid;
   v_period text;
   v_document uuid;
+  v_monthly boolean;
+  v_existing uuid;
 begin
   if p_company_id is null or p_invoice_id is null or p_action not in ('confirm', 'release', 'delete') then
     raise exception 'bad invoice action' using errcode = '22023';
@@ -299,13 +301,30 @@ begin
   end if;
 
   if p_action = 'confirm' then
+    v_vendor := nullif(p_row->>'vendor_id', '')::uuid;
+    v_monthly := null;
+    if v_vendor is not null then
+      select issues_monthly_invoice into v_monthly
+      from public.tz_vendors
+      where id = v_vendor
+        and company_id = p_company_id;
+      if v_monthly is null then
+        raise exception 'invoice_not_found' using errcode = 'P0002';
+      end if;
+    end if;
+    v_kind := case
+      when p_row->>'doc_type' = 'tax_invoice' and v_vendor is not null and v_monthly is false then 'tax_invoice'
+      when p_row->>'doc_kind' = 'tax_invoice' and p_row->>'doc_type' = 'tax_invoice' then 'tax_invoice'
+      else 'preliminary'
+    end;
+
     update public.tz_expense_invoices set
       supplier_name = p_row->>'supplier_name',
       supplier_tax_id = nullif(p_row->>'supplier_tax_id', ''),
       invoice_number = nullif(p_row->>'invoice_number', ''),
       invoice_date = nullif(p_row->>'invoice_date', '')::date,
       doc_type = p_row->>'doc_type',
-      doc_kind = case when p_row->>'doc_kind' = 'tax_invoice' then 'tax_invoice' else 'preliminary' end,
+      doc_kind = v_kind,
       currency = coalesce(nullif(p_row->>'currency', ''), 'ILS'),
       net_amount = (p_row->>'net_amount')::numeric,
       vat_rate = (p_row->>'vat_rate')::numeric,
@@ -332,7 +351,7 @@ begin
       where id = v_document
         and company_id = p_company_id;
 
-    if v_kind = 'tax_invoice' and v_vendor is not null and v_period is not null then
+    if v_kind = 'tax_invoice' and v_monthly is true and v_vendor is not null and v_period is not null then
       update public.tz_expense_invoices
         set superseded_by = p_invoice_id
         where company_id = p_company_id
@@ -341,6 +360,25 @@ begin
           and doc_kind = 'preliminary'
           and confirmed_at is not null
           and id <> p_invoice_id;
+    end if;
+
+    if v_kind = 'preliminary' and v_monthly is true and v_vendor is not null and v_period is not null then
+      select id into v_existing
+      from public.tz_expense_invoices
+      where company_id = p_company_id
+        and vendor_id = v_vendor
+        and vat_period = v_period
+        and doc_kind = 'tax_invoice'
+        and confirmed_at is not null
+        and id <> p_invoice_id
+      order by confirmed_at desc
+      limit 1;
+      if v_existing is not null then
+        update public.tz_expense_invoices
+          set superseded_by = v_existing
+          where id = p_invoice_id
+            and company_id = p_company_id;
+      end if;
     end if;
     return p_invoice_id;
   end if;
@@ -458,8 +496,8 @@ commit;
 -- drop policy if exists tz_expense_invoices_insert on storage.objects;
 -- drop policy if exists tz_expense_invoices_update on storage.objects;
 -- drop policy if exists tz_expense_invoices_delete on storage.objects;
--- delete from storage.objects where bucket_id = 'tz-expense-invoices';
--- delete from storage.buckets where id = 'tz-expense-invoices';
+-- Files in bucket tz-expense-invoices are removed through the Storage API or the dashboard.
+-- A direct delete from storage.objects or storage.buckets is rejected by a Supabase trigger.
 -- drop table if exists public.tz_expense_invoices;
 -- drop table if exists public.tz_expense_documents;
 -- drop table if exists public.tz_vat_period_closures;

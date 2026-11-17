@@ -17,8 +17,8 @@ drop policy if exists tz_expense_invoices_insert on storage.objects;
 drop policy if exists tz_expense_invoices_update on storage.objects;
 drop policy if exists tz_expense_invoices_delete on storage.objects;
 
-delete from storage.objects where bucket_id = 'tz-expense-invoices';
-delete from storage.buckets where id = 'tz-expense-invoices';
+-- Files in bucket tz-expense-invoices are removed through the Storage API or the dashboard.
+-- A direct delete from storage.objects or storage.buckets is rejected by a Supabase trigger.
 
 drop table if exists public.tz_expense_invoices;
 drop table if exists public.tz_expense_documents;

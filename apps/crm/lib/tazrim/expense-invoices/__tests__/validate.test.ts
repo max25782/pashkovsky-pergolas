@@ -5,6 +5,7 @@ import {
   normalizeSupplierName,
   normalizeSupplierTaxId,
   recognizedVatAmount,
+  resolveVatPeriod,
   validateInvoiceDraft,
   vatPeriodFromDate,
   type InvoiceDraft,
@@ -36,6 +37,8 @@ describe("invoice normalization", () => {
     expect(normalizeInvoiceNumber(" a 100 ")).toBe("A100");
     expect(normalizeSupplierName("  דלק  בע\"מ ")).toBe("דלק בעמ");
     expect(vatPeriodFromDate("2026-11-03")).toBe("2026-11");
+    expect(resolveVatPeriod("2026-12-02", "2026-11")).toBe("2026-11");
+    expect(resolveVatPeriod("2026-12-02", null)).toBe("2026-12");
     expect(vatPeriodFromDate("03/11/2026")).toBe("");
   });
 });

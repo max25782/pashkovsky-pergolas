@@ -80,7 +80,9 @@ export async function unlinkMatchAction(formData: FormData): Promise<InvoiceActi
 
 export async function closePeriodAction(formData: FormData): Promise<InvoiceActionResult> {
   const ctx = await requireTazrimActionContext();
-  const result = await closeVatPeriod(ctx, String(formData.get("period") ?? ""), String(formData.get("note") ?? ""));
+  const result = await closeVatPeriod(ctx, String(formData.get("period") ?? ""), String(formData.get("note") ?? ""), {
+    confirmWithoutGeneral: formData.get("confirmWithoutGeneral") === "true",
+  });
   if (result.status >= 400) return { error: String(result.body.error ?? "save_failed") };
   refresh();
   return {};

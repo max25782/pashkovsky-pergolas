@@ -3,6 +3,8 @@ export const EXPENSE_INVOICE_BUCKET = 'tz-expense-invoices'
 
 /** 15 MiB. Phone photos of a invoice page fit; the bucket enforces the same cap. */
 export const MAX_INVOICE_BYTES = 15 * 1024 * 1024
+/** Stay under the Vercel request body limit of about 4.5 MB, including multipart overhead. */
+export const REQUEST_BODY_BYTES = 4 * 1024 * 1024
 
 export const ALLOWED_INVOICE_MIME = [
   'application/pdf',

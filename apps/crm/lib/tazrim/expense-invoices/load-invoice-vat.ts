@@ -37,13 +37,14 @@ export async function loadInvoiceVatState(
   supabase: SupabaseClient,
   companyId: string,
 ): Promise<{ invoices: PeriodInvoiceInput[]; closed: Set<string> } | null> {
-  const [invoicesResult, closuresResult] = await Promise.all([
+  const [invoicesResult, closuresResult, vendorsResult] = await Promise.all([
     supabase
       .from('tz_expense_invoices')
       .select('vat_period, doc_type, doc_kind, vendor_id, deal_id, net_amount, vat_amount, vat_recognized_percent, confirmed_at, superseded_by')
       .eq('company_id', companyId)
       .not('confirmed_at', 'is', null),
     supabase.from('tz_vat_period_closures').select('vat_period').eq('company_id', companyId),
+    supabase.from('tz_vendors').select('id, issues_monthly_invoice').eq('company_id', companyId),
   ])
 
   if (invoicesResult.error) {
@@ -56,7 +57,17 @@ export async function loadInvoiceVatState(
     console.error('[tazrim] vat period read failed', { code: closuresResult.error.code })
     throw new Error('Не удалось прочитать закрытые периоды НДС')
   }
+  if (vendorsResult.error) {
+    if (isMissingRelation(vendorsResult.error) || vendorsResult.error.code === '42703') return null
+    console.error('[tazrim] vendor vat flag read failed', { code: vendorsResult.error.code })
+    throw new Error('Не удалось прочитать поставщиков')
+  }
 
+  const monthlyVendors = new Set(
+    ((vendorsResult.data ?? []) as Array<{ id: string; issues_monthly_invoice?: boolean }>)
+      .filter((vendor) => vendor.issues_monthly_invoice === true)
+      .map((vendor) => vendor.id),
+  )
   const invoices: PeriodInvoiceInput[] = ((invoicesResult.data ?? []) as InvoiceVatRow[])
     .filter((row) => row.vat_period && isInvoiceDocType(row.doc_type))
     .map((row) => ({
@@ -70,6 +81,7 @@ export async function loadInvoiceVatState(
       vatRecognizedPercent: toNumber(row.vat_recognized_percent) ?? 100,
       confirmed: Boolean(row.confirmed_at),
       superseded: Boolean(row.superseded_by),
+      issuesMonthlyInvoice: row.vendor_id ? monthlyVendors.has(row.vendor_id) : false,
     }))
 
   const closed = new Set<string>(

@@ -4,6 +4,7 @@ import {
   applyPeriodVat,
   computeCloseVat,
   computeForecastVat,
+  pendingGeneralInvoices,
   supplierMonthVariance,
   withoutLockedPeriods,
   type PeriodInvoiceInput,
@@ -21,6 +22,7 @@ function invoice(overrides: Partial<PeriodInvoiceInput> = {}): PeriodInvoiceInpu
     vatRecognizedPercent: 100,
     confirmed: true,
     superseded: false,
+    issuesMonthlyInvoice: true,
     ...overrides,
   };
 }
@@ -120,6 +122,50 @@ describe("forecast and close VAT", () => {
     expect(december.recognizedFromPreliminary).toBe(0);
   });
 
+  it("sums every monthly tax invoice and leaves a later preliminary out", () => {
+    const forecast = computeForecastVat({
+      vatOnSales: 0,
+      vatPercent: 18,
+      deals: [],
+      invoices: [
+        invoice({ id: "tax-1", docKind: "tax_invoice", dealId: null, vatAmount: 1000, netAmount: 5555.56 }),
+        invoice({ id: "tax-2", docKind: "tax_invoice", dealId: null, vatAmount: 1500, netAmount: 8333.33 }),
+        invoice({ id: "late", vatAmount: 1800, superseded: false }),
+      ],
+      period: "2026-11",
+    });
+    expect(forecast.recognizedFromTaxInvoices).toBe(2500);
+    expect(forecast.recognizedFromPreliminary).toBe(0);
+    expect(forecast.inputVat).toBe(2500);
+  });
+
+  it("keeps a non-monthly supplier invoice and ignores its preliminary documents", () => {
+    const fuel = computeForecastVat({
+      vatOnSales: 0,
+      vatPercent: 18,
+      deals: [],
+      invoices: [
+        invoice({
+          vendorId: "fuel",
+          issuesMonthlyInvoice: false,
+          docKind: "tax_invoice",
+          dealId: null,
+          vatAmount: 90,
+          netAmount: 500,
+        }),
+        invoice({
+          vendorId: "fuel",
+          issuesMonthlyInvoice: false,
+          docKind: "preliminary",
+          vatAmount: 1800,
+        }),
+      ],
+      period: "2026-11",
+    });
+    expect(fuel.inputVat).toBe(90);
+    expect(fuel.recognizedFromPreliminary).toBe(0);
+  });
+
   it("leaves receipts and other document types out of the forecast", () => {
     const forecast = computeForecastVat({
       vatOnSales: 0,
@@ -132,6 +178,27 @@ describe("forecast and close VAT", () => {
       period: "2026-11",
     });
     expect(forecast.inputVat).toBe(0);
+  });
+
+  it("asks for the general invoice only while a monthly supplier has no tax invoice", () => {
+    const vendors = [
+      { id: "vendor-a", name: "Panda", issuesMonthlyInvoice: true },
+      { id: "fuel", name: "Delek", issuesMonthlyInvoice: false },
+    ];
+    expect(
+      pendingGeneralInvoices({
+        period: "2026-11",
+        vendors,
+        invoices: [invoice(), invoice({ vendorId: "fuel", issuesMonthlyInvoice: false, docKind: "tax_invoice", dealId: null })],
+      }),
+    ).toEqual([{ vendorId: "vendor-a", name: "Panda", period: "2026-11" }]);
+    expect(
+      pendingGeneralInvoices({
+        period: "2026-11",
+        vendors,
+        invoices: [invoice(), invoice({ docKind: "tax_invoice", dealId: null, vatAmount: 2500, netAmount: 13888.89 })],
+      }),
+    ).toEqual([]);
   });
 
   it("ignores preliminary documents when the period is closed", () => {

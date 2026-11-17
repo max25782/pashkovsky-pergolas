@@ -29,6 +29,7 @@ import { useLanguage } from '@/lib/language-context'
 import { FinanceBlock } from './deals/FinanceBlock'
 import { CollapsibleSection } from './deals/CollapsibleSection'
 import { DealQuickActions } from './deals/DealQuickActions'
+import { UploadInvoices } from '@/app/app/admin/tazrim/invoices/upload-invoices'
 import { DealPriceSource } from './deals/DealPriceSource'
 import { buildQuickOfferHref } from '@/lib/quick-offer/deal-prefill'
 
@@ -486,6 +487,9 @@ export function DealModal({
               financeProfitFootnote: t.deals.financeProfitFootnote,
             }}
           />
+          <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-white">
+            <UploadInvoices dealId={deal.id} />
+          </div>
           <DealQuickActions
             labelExpense={t.deals.addExpense}
             labelWorkDay={t.deals.addWorkDay}

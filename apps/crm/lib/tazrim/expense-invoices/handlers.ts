@@ -5,6 +5,7 @@ import { extractInvoice, prepareInvoiceBytes, type InvoiceExtraction } from '@/l
 import {
   EXPENSE_INVOICE_BUCKET,
   MAX_INVOICE_BYTES,
+  REQUEST_BODY_BYTES,
   extensionForMime,
   resolveInvoiceMime,
   safeOriginalFilename,
@@ -19,13 +20,15 @@ import {
   type MatchInvoice,
 } from '@/lib/tazrim/expense-invoices/match'
 import { readExpenseMatch, withExpenseMatch, withoutExpenseMatch } from '@/lib/tazrim/expense-invoices/expense-match'
-import { applyCloseVat, type PeriodInvoiceInput } from '@/lib/tazrim/expense-invoices/period-vat'
+import { applyCloseVat, pendingGeneralInvoices, type PeriodInvoiceInput } from '@/lib/tazrim/expense-invoices/period-vat'
 import { isCalcMeta } from '@/lib/tazrim/calc-meta'
 import { nextMonth, vatExternalId, type CalculatedCashRow } from '@/lib/tazrim/vat-pension-rows'
 import {
   isInvoiceDocType,
   normalizeInvoiceNumber,
+  normalizeSupplierName,
   normalizeSupplierTaxId,
+  resolveVatPeriod,
   validateInvoiceDraft,
   vatPeriodFromDate,
   type InvoiceDraft,
@@ -172,6 +175,7 @@ function draftFromRow(row: InvoiceRow): InvoiceDraft {
     docKind: row.doc_kind === 'tax_invoice' ? 'tax_invoice' : 'preliminary',
     dealId: row.deal_id,
     isMonthly: Boolean(row.is_monthly),
+    vatPeriod: row.vat_period,
   }
 }
 
@@ -197,6 +201,7 @@ export function parseDraftBody(body: Record<string, unknown>): InvoiceDraft | nu
     docKind: body.docKind === 'tax_invoice' ? 'tax_invoice' : 'preliminary',
     dealId: typeof body.dealId === 'string' && body.dealId ? body.dealId : null,
     isMonthly: body.isMonthly === true || body.isMonthly === 'true' || body.isMonthly === 'on',
+    vatPeriod: typeof body.vatPeriod === 'string' ? body.vatPeriod : null,
   }
 }
 
@@ -216,9 +221,54 @@ async function confirmedKeys(ctx: TazrimContext): Promise<Array<{ id: string; su
   )
 }
 
+async function matchVendorById(
+  ctx: TazrimContext,
+  vendorId: string,
+): Promise<{ id: string; issues_monthly_invoice: boolean } | null> {
+  const { data, error } = await invoiceDb(ctx)
+    .from('tz_vendors')
+    .select('id, issues_monthly_invoice, company_id')
+    .eq('id', vendorId)
+    .eq('company_id', ctx.companyId)
+    .maybeSingle()
+  if (error || !data) return null
+  const row = data as { id: string; issues_monthly_invoice: boolean; company_id: string }
+  return row.company_id === ctx.companyId ? row : null
+}
+
+async function matchVendorByName(
+  ctx: TazrimContext,
+  supplierName: string,
+): Promise<{ id: string; issues_monthly_invoice: boolean } | null> {
+  const wanted = normalizeSupplierName(supplierName)
+  if (!wanted) return null
+  const { data, error } = await invoiceDb(ctx)
+    .from('tz_vendors')
+    .select('id, name, issues_monthly_invoice, company_id')
+    .eq('company_id', ctx.companyId)
+  if (error || !data) return null
+  const matches = (data as Array<{ id: string; name: string; issues_monthly_invoice: boolean; company_id: string }>).filter(
+    (vendor) => vendor.company_id === ctx.companyId && normalizeSupplierName(vendor.name) === wanted,
+  )
+  return matches.length === 1 ? matches[0] : null
+}
+
+async function ownDealId(ctx: TazrimContext, dealId: string | null | undefined): Promise<string | null> {
+  if (!dealId) return null
+  const { data, error } = await invoiceDb(ctx)
+    .from('deals')
+    .select('id, company_id')
+    .eq('id', dealId)
+    .eq('company_id', ctx.companyId)
+    .maybeSingle()
+  if (error || !data) return null
+  const row = data as { id: string; company_id: string }
+  return row.company_id === ctx.companyId ? row.id : null
+}
+
 export async function uploadExpenseDocument(
   ctx: TazrimContext,
-  file: { filename: string; mimeType: string; bytes: Uint8Array },
+  file: { filename: string; mimeType: string; bytes: Uint8Array; dealId?: string | null },
 ): Promise<HandlerResult> {
   const mime = resolveInvoiceMime(file.filename, file.mimeType)
   if (!mime) return { status: 415, body: { error: 'unsupported_type' } }
@@ -276,6 +326,9 @@ export async function uploadExpenseDocument(
   const extraction = await extractInvoice({ bytes: storedBytes, mimeType: storedMime })
   const draft = draftFromExtraction(extraction, 100)
   const issues = validateInvoiceDraft(draft, { existingConfirmed: await confirmedKeys(ctx), mode: 'review' })
+  const vendor = await matchVendorByName(ctx, draft.supplierName)
+  const dealId = await ownDealId(ctx, file.dealId)
+  const docKind = vendor?.issues_monthly_invoice ? 'preliminary' : vendor ? 'tax_invoice' : 'preliminary'
   const invoiceInsert = await invoiceDb(ctx)
     .from('tz_expense_invoices')
     .insert({
@@ -286,8 +339,9 @@ export async function uploadExpenseDocument(
       invoice_number: normalizeInvoiceNumber(draft.invoiceNumber) || null,
       invoice_date: vatPeriodFromDate(draft.invoiceDate) ? draft.invoiceDate : null,
       doc_type: draft.docType,
-      doc_kind: 'preliminary',
-      deal_id: null,
+      doc_kind: docKind,
+      vendor_id: vendor?.id ?? null,
+      deal_id: dealId,
       is_monthly: false,
       currency: draft.currency,
       net_amount: draft.netAmount,
@@ -321,6 +375,112 @@ export async function uploadExpenseDocument(
   }
 }
 
+export async function createDirectInvoiceUpload(
+  ctx: TazrimContext,
+  input: { filename: string; size: number },
+): Promise<HandlerResult> {
+  const mime = resolveInvoiceMime(input.filename, 'application/pdf')
+  if (mime !== 'application/pdf') return { status: 415, body: { error: 'pdf_only' } }
+  if (input.size <= REQUEST_BODY_BYTES || input.size > MAX_INVOICE_BYTES) {
+    return { status: 413, body: { error: 'file_too_large' } }
+  }
+  const path = `${ctx.companyId}/${randomUUID()}.pdf`
+  const signed = await invoiceDb(ctx).storage.from(EXPENSE_INVOICE_BUCKET).createSignedUploadUrl(path)
+  if (signed.error || !signed.data?.signedUrl || !signed.data.token) {
+    console.error('[tazrim] signed invoice upload failed', { code: signed.error?.name })
+    return { status: 500, body: { error: 'upload_failed' } }
+  }
+  return { status: 200, body: { path: signed.data.path, token: signed.data.token, signedUrl: signed.data.signedUrl } }
+}
+
+export async function completeDirectInvoiceUpload(
+  ctx: TazrimContext,
+  input: { path: string; filename: string; dealId?: string | null },
+): Promise<HandlerResult> {
+  if (!pathAllowed(ctx.companyId, input.path) || !input.path.endsWith('.pdf')) {
+    return { status: 404, body: { error: 'not_found' } }
+  }
+  const downloaded = await invoiceDb(ctx).storage.from(EXPENSE_INVOICE_BUCKET).download(input.path)
+  if (downloaded.error || !downloaded.data) return { status: 404, body: { error: 'not_found' } }
+  const bytes = new Uint8Array(await downloaded.data.arrayBuffer())
+  if (bytes.byteLength > MAX_INVOICE_BYTES) {
+    await invoiceDb(ctx).storage.from(EXPENSE_INVOICE_BUCKET).remove([input.path])
+    return { status: 413, body: { error: 'file_too_large' } }
+  }
+  const sha256 = createHash('sha256').update(bytes).digest('hex')
+  const { data: existing } = await invoiceDb(ctx)
+    .from('tz_expense_documents')
+    .select('id, status')
+    .eq('company_id', ctx.companyId)
+    .eq('sha256', sha256)
+    .maybeSingle()
+  if (existing) {
+    await invoiceDb(ctx).storage.from(EXPENSE_INVOICE_BUCKET).remove([input.path])
+    return { status: 200, body: { documentId: existing.id, duplicate: true, status: existing.status } }
+  }
+  const id = input.path.split('/').pop()?.replace(/\.pdf$/, '') || randomUUID()
+  const inserted = await invoiceDb(ctx)
+    .from('tz_expense_documents')
+    .insert({
+      id,
+      company_id: ctx.companyId,
+      storage_path: input.path,
+      original_filename: safeOriginalFilename(input.filename),
+      mime_type: 'application/pdf',
+      size: bytes.byteLength,
+      sha256,
+      status: 'uploaded',
+      uploaded_by: ctx.userId,
+    })
+    .select('id')
+    .single()
+  if (inserted.error) {
+    await invoiceDb(ctx).storage.from(EXPENSE_INVOICE_BUCKET).remove([input.path])
+    return dbError(inserted.error) ?? { status: 500, body: { error: 'save_failed' } }
+  }
+  const extraction = await extractInvoice({ bytes, mimeType: 'application/pdf' })
+  const draft = draftFromExtraction(extraction, 100)
+  const vendor = await matchVendorByName(ctx, draft.supplierName)
+  const dealId = await ownDealId(ctx, input.dealId)
+  const docKind = vendor?.issues_monthly_invoice ? 'preliminary' : vendor ? 'tax_invoice' : 'preliminary'
+  const invoiceInsert = await invoiceDb(ctx)
+    .from('tz_expense_invoices')
+    .insert({
+      company_id: ctx.companyId,
+      document_id: id,
+      supplier_name: draft.supplierName || null,
+      supplier_tax_id: normalizeSupplierTaxId(draft.supplierTaxId) || null,
+      invoice_number: normalizeInvoiceNumber(draft.invoiceNumber) || null,
+      invoice_date: vatPeriodFromDate(draft.invoiceDate) ? draft.invoiceDate : null,
+      doc_type: draft.docType,
+      doc_kind: docKind,
+      vendor_id: vendor?.id ?? null,
+      deal_id: dealId,
+      is_monthly: false,
+      currency: draft.currency,
+      net_amount: draft.netAmount,
+      vat_rate: draft.vatRate,
+      vat_amount: draft.vatAmount,
+      total_amount: draft.totalAmount,
+      allocation_number: draft.allocationNumber,
+      vat_recognized_percent: draft.vatRecognizedPercent,
+      vat_period: vatPeriodFromDate(draft.invoiceDate) || null,
+      extraction_json: extraction,
+      extraction_confidence: extraction.confidence,
+    })
+    .select('id')
+    .single()
+  await invoiceDb(ctx)
+    .from('tz_expense_documents')
+    .update({ status: extraction.unavailable ? 'uploaded' : 'extracted' })
+    .eq('id', id)
+    .eq('company_id', ctx.companyId)
+  return {
+    status: 201,
+    body: { documentId: id, invoiceId: invoiceInsert.data?.id ?? null, duplicate: false },
+  }
+}
+
 async function loadOwnInvoice(ctx: TazrimContext, invoiceId: string): Promise<InvoiceRow | null> {
   const { data, error } = await invoiceDb(ctx)
     .from('tz_expense_invoices')
@@ -343,13 +503,18 @@ export async function confirmExpenseInvoice(
   if (!row) return { status: 404, body: { error: 'not_found' } }
 
   const percent = draft.docType === 'receipt' ? 0 : draft.vatRecognizedPercent
+  const vendor = draft.vendorId ? await matchVendorById(ctx, draft.vendorId) : null
   const normalized: InvoiceDraft = {
     ...draft,
     supplierTaxId: normalizeSupplierTaxId(draft.supplierTaxId),
     invoiceNumber: normalizeInvoiceNumber(draft.invoiceNumber),
     vatRecognizedPercent: percent,
+    docKind:
+      vendor && !vendor.issues_monthly_invoice && draft.docType === 'tax_invoice'
+        ? 'tax_invoice'
+        : draft.docKind,
   }
-  const period = vatPeriodFromDate(normalized.invoiceDate)
+  const period = resolveVatPeriod(normalized.invoiceDate, normalized.vatPeriod)
   if (period && (await periodIsClosed(ctx, period))) {
     return { status: 409, body: { error: 'period_closed' } }
   }
@@ -733,15 +898,43 @@ async function writePeriodAudit(
   })
 }
 
-export async function closeVatPeriod(ctx: TazrimContext, period: string, note: string): Promise<HandlerResult> {
+export async function closeVatPeriod(
+  ctx: TazrimContext,
+  period: string,
+  note: string,
+  options?: { confirmWithoutGeneral?: boolean },
+): Promise<HandlerResult> {
   if (!/^\d{4}-\d{2}$/.test(period)) return { status: 400, body: { error: 'bad_period' } }
+  const { data: vendorRows } = await invoiceDb(ctx)
+    .from('tz_vendors')
+    .select('id, name, issues_monthly_invoice, company_id')
+    .eq('company_id', ctx.companyId)
+  const vendors = ((vendorRows ?? []) as Array<{ id: string; name: string; issues_monthly_invoice: boolean; company_id: string }>)
+    .filter((vendor) => vendor.company_id === ctx.companyId)
+    .map((vendor) => ({
+      id: vendor.id,
+      name: vendor.name,
+      issuesMonthlyInvoice: vendor.issues_monthly_invoice === true,
+    }))
   const { data: invoices } = await invoiceDb(ctx)
     .from('tz_expense_invoices')
     .select('id, vat_amount, vat_recognized_percent, doc_type, doc_kind, confirmed_at, vat_period, vendor_id, deal_id, net_amount, superseded_by')
     .eq('company_id', ctx.companyId)
     .eq('vat_period', period)
     .not('confirmed_at', 'is', null)
-  const periodInvoices = ((invoices ?? []) as InvoiceRow[]).map(toPeriodInvoice)
+  const periodInvoices = ((invoices ?? []) as InvoiceRow[]).map((row) =>
+    toPeriodInvoice(row, new Set(vendors.filter((vendor) => vendor.issuesMonthlyInvoice).map((vendor) => vendor.id))),
+  )
+  const awaiting = pendingGeneralInvoices({ period, invoices: periodInvoices, vendors })
+  if (awaiting.length > 0 && options?.confirmWithoutGeneral !== true) {
+    return {
+      status: 409,
+      body: {
+        error: 'awaiting_general_invoice',
+        vendors: awaiting.map((row) => ({ name: row.name, period: row.period })),
+      },
+    }
+  }
   const recognized = periodInvoices
     .filter((row) => row.docKind === 'tax_invoice' && row.docType === 'tax_invoice')
     .reduce((sum, row) => sum + ((row.vatAmount ?? 0) * row.vatRecognizedPercent) / 100, 0)
@@ -770,7 +963,7 @@ export async function closeVatPeriod(ctx: TazrimContext, period: string, note: s
   return { status: 200, body: { period, closed: true } }
 }
 
-function toPeriodInvoice(row: InvoiceRow): PeriodInvoiceInput {
+function toPeriodInvoice(row: InvoiceRow, monthlyVendorIds: ReadonlySet<string> = new Set()): PeriodInvoiceInput {
   const docType = isInvoiceDocType(row.doc_type) ? row.doc_type : 'other'
   return {
     id: row.id,
@@ -784,6 +977,7 @@ function toPeriodInvoice(row: InvoiceRow): PeriodInvoiceInput {
     vatRecognizedPercent: num(row.vat_recognized_percent) ?? 100,
     confirmed: Boolean(row.confirmed_at),
     superseded: Boolean(row.superseded_by),
+    issuesMonthlyInvoice: row.vendor_id ? monthlyVendorIds.has(row.vendor_id) : false,
   }
 }
 

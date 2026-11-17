@@ -17,10 +17,12 @@ export async function POST(req: NextRequest) {
   if (!(file instanceof File)) {
     return NextResponse.json({ error: 'file_required' }, { status: 400 })
   }
+  const dealId = form.get('dealId')
   const result = await uploadExpenseDocument(auth.ctx, {
     filename: file.name,
     mimeType: file.type,
     bytes: new Uint8Array(await file.arrayBuffer()),
+    dealId: typeof dealId === 'string' ? dealId : null,
   })
   return NextResponse.json(result.body, { status: result.status })
 }

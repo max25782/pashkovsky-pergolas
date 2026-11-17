@@ -26,6 +26,8 @@ const ISSUE_TEXT: Record<string, string> = {
   bad_percent: "אחוז הזיכוי חייב להיות בין 0 ל-100",
   allocation_missing: "אין מספר הקצאה. סף החובה נקבע על ידי רואה החשבון, אין חסימה אוטומטית",
   missing_deal: "חשבונית מקדימה חייבת להיות קשורה לעסקה",
+  missing_period: "חסר חודש המע״מ",
+  awaiting_general_invoice: "יש חשבון מקדים בלי חשבון מס כללי. סמנו סגירה בלי חשבון מס כללי.",
   missing_vendor: "חסר ספק",
   kind_not_tax_invoice: "חשבונית מס כללית אפשרית רק כשסוג המסמך הוא חשבונית מס",
   heic_unreadable: "לא ניתן לקרוא HEIC. שמרו כ-JPEG או PDF",
@@ -68,6 +70,7 @@ export interface DraftFields {
   docKind: string;
   dealId: string;
   isMonthly: boolean;
+  vatPeriod: string;
   confidence: string;
   issues: string[];
 }
@@ -93,10 +96,11 @@ export function DraftCard({
   const [docKind, setDocKind] = useState(draft.docKind || "preliminary");
   const [categoryId, setCategoryId] = useState(draft.categoryId);
   const [vendorId, setVendorId] = useState(draft.vendorId);
+  const [vatPeriod, setVatPeriod] = useState(draft.vatPeriod || draft.invoiceDate.slice(0, 7));
   const [percent, setPercent] = useState(draft.vatRecognizedPercent);
   const categoryPercent = categories.find((category) => category.id === categoryId)?.vat_recognized_percent;
   const vendor = vendors.find((item) => item.id === vendorId);
-  const month = draft.invoiceDate.slice(0, 7);
+  const month = /^\d{4}-\d{2}$/.test(vatPeriod) ? vatPeriod : draft.invoiceDate.slice(0, 7);
   const monthly =
     docKind === "tax_invoice" && vendorId && /^\d{4}-\d{2}$/.test(month)
       ? supplierMonthVariance({
@@ -127,6 +131,14 @@ export function DraftCard({
         <input name="supplierTaxId" defaultValue={draft.supplierTaxId} placeholder="ח.פ. / ע.מ." className={fieldClass} />
         <input name="invoiceNumber" defaultValue={draft.invoiceNumber} placeholder="מספר חשבונית" className={fieldClass} />
         <input name="invoiceDate" type="date" defaultValue={draft.invoiceDate} aria-label="תאריך" className={fieldClass} />
+        <input
+          name="vatPeriod"
+          type="month"
+          value={vatPeriod}
+          onChange={(event) => setVatPeriod(event.target.value)}
+          aria-label="חודש מע״מ"
+          className={fieldClass}
+        />
         <select
           name="docType"
           value={docType}
@@ -212,11 +224,11 @@ export function DraftCard({
       ) : (
         <p className="mt-2 text-xs text-zinc-500">אחוז הזיכוי: ברירת מחדל, לאשר מול רואה החשבון.</p>
       )}
-      {docKind === "tax_invoice" ? (
-        <label className="mt-2 flex items-center gap-2 text-xs text-zinc-300">
-          <input type="checkbox" name="isMonthly" defaultChecked={draft.isMonthly || vendor?.issues_monthly_invoice === true} />
-          חשבון חודשי של הספק (מחליף את המקדימות של אותו ספק וחודש)
-        </label>
+      {vendor && vendor.issues_monthly_invoice !== true && docKind === "preliminary" && docType === "tax_invoice" ? (
+        <p className="mt-2 text-xs text-zinc-400">ספק זה לא מוציא חשבון חודשי. באישור המסמך יישמר כחשבונית מס וייכנס לחישוב.</p>
+      ) : null}
+      {vendor?.issues_monthly_invoice && docKind === "tax_invoice" ? (
+        <p className="mt-2 text-xs text-zinc-400">חשבון מס של ספק חודשי מחליף את המקדימות של אותו ספק ואותו חודש.</p>
       ) : null}
       {monthly ? (
         <p className="mt-2 text-xs text-zinc-300">
@@ -294,18 +306,41 @@ export function UnlinkButton({ invoiceId }: { invoiceId: string }) {
   );
 }
 
-export function PeriodClose({ period, closed }: { period: string; closed: boolean }) {
+export function PeriodClose({
+  period,
+  closed,
+  awaiting,
+}: {
+  period: string;
+  closed: boolean;
+  awaiting: Array<{ name: string; period: string }>;
+}) {
   const [result, setResult] = useState<InvoiceActionResult | null>(null);
   return (
     <form
-      className="flex flex-col gap-2 sm:flex-row sm:items-center"
+      className="flex flex-col gap-2"
       action={async (formData) => setResult(await (closed ? reopenPeriodAction(formData) : closePeriodAction(formData)))}
     >
-      <input type="hidden" name="period" value={period} />
-      <input name="note" placeholder={closed ? "סיבת פתיחה מחדש" : "הערה (אופציונלי)"} className={fieldClass} />
-      <button type="submit" className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-zinc-950">
-        {closed ? "פתיחה מחדש" : "סגירת תקופה"}
-      </button>
+      {awaiting.length > 0 ? (
+        <ul className="space-y-1 rounded-lg border border-amber-700/60 bg-amber-950/40 p-3 text-sm text-amber-100">
+          {awaiting.map((row) => (
+            <li key={`${row.name}-${row.period}`}>ממתין לחשבון מס כללי של {row.name} לחודש {row.period}</li>
+          ))}
+        </ul>
+      ) : null}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <input type="hidden" name="period" value={period} />
+        <input name="note" placeholder={closed ? "סיבת פתיחה מחדש" : "הערה (אופציונלי)"} className={fieldClass} />
+        {!closed && awaiting.length > 0 ? (
+          <label className="flex items-center gap-2 text-xs text-amber-100">
+            <input type="checkbox" name="confirmWithoutGeneral" value="true" />
+            סגירה בלי חשבון מס כללי
+          </label>
+        ) : null}
+        <button type="submit" className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-zinc-950">
+          {closed ? "פתיחה מחדש" : "סגירת תקופה"}
+        </button>
+      </div>
       <Issues result={result} />
     </form>
   );

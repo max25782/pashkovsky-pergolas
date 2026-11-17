@@ -14,6 +14,7 @@ import {
   vatPeriodFromDate,
   type InvoiceDraft,
 } from "@/lib/tazrim/expense-invoices/validate";
+import { pendingGeneralInvoices } from "@/lib/tazrim/expense-invoices/period-vat";
 import { UploadInvoices } from "./upload-invoices";
 import { DraftCard, MatchButtons, PeriodClose, UnlinkButton, type DraftFields } from "./invoice-controls";
 
@@ -91,6 +92,7 @@ function toDraft(row: InvoiceDb): InvoiceDraft {
     docKind: row.doc_kind === "tax_invoice" ? "tax_invoice" : "preliminary",
     dealId: row.deal_id,
     isMonthly: Boolean(row.is_monthly),
+    vatPeriod: row.vat_period,
   };
 }
 
@@ -173,6 +175,7 @@ export default async function InvoicesPage({
         docKind: draft.docKind ?? "preliminary",
         dealId: draft.dealId ?? "",
         isMonthly: draft.isMonthly === true,
+        vatPeriod: draft.vatPeriod || draft.invoiceDate.slice(0, 7),
         confidence: row.extraction_confidence === null ? "" : String(row.extraction_confidence),
         issues: issues.map((issue) => issue.code),
       };
@@ -232,6 +235,29 @@ export default async function InvoicesPage({
   const variances = confirmed.filter((row) => asNumber(row.variance_amount) !== null && asNumber(row.variance_amount) !== 0);
   const expenseById = new Map(monthExpenses.map((row) => [row.id, row]));
   const closed = Boolean(closureResult.data);
+  const awaitingGeneral = pendingGeneralInvoices({
+    period,
+    vendors: vendors.map((vendor) => ({
+      id: vendor.id,
+      name: vendor.name,
+      issuesMonthlyInvoice: vendor.issues_monthly_invoice === true,
+    })),
+    invoices: invoices
+      .filter((row) => row.confirmed_at && isInvoiceDocType(row.doc_type))
+      .map((row) => ({
+        vatPeriod: row.vat_period ?? "",
+        docType: row.doc_type as "tax_invoice" | "receipt" | "other",
+        docKind: row.doc_kind === "tax_invoice" ? ("tax_invoice" as const) : ("preliminary" as const),
+        vendorId: row.vendor_id,
+        dealId: row.deal_id,
+        netAmount: null,
+        vatAmount: null,
+        vatRecognizedPercent: 100,
+        confirmed: true,
+        superseded: false,
+        issuesMonthlyInvoice: vendors.find((vendor) => vendor.id === row.vendor_id)?.issues_monthly_invoice === true,
+      })),
+  });
 
   return (
     <div dir="rtl" className="min-h-screen bg-zinc-950 text-zinc-100">
@@ -267,7 +293,7 @@ export default async function InvoicesPage({
             תחזית המע״מ על חומרים היא הגבוה מבין הערכת החודש לבין חשבוניות המס בפועל. חשבונית מס כללית מחליפה את המקדימות של אותו ספק ואותו חודש, בלי לחבר אותן. סגירת התקופה לוקחת רק חשבונית מס.
           </p>
           <div className="mt-4">
-            <PeriodClose period={period} closed={closed} />
+            <PeriodClose period={period} closed={closed} awaiting={awaitingGeneral} />
             {closed && closureResult.data?.closed_at ? (
               <p className="mt-2 text-xs text-zinc-500">התקופה סגורה. מע״מ התקופה לא משתנה עד פתיחה מחדש.</p>
             ) : null}

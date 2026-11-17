@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { prepareUploadFile, sendInvoiceFile } from "./prepare-upload-file";
 
 interface UploadItem {
   name: string;
@@ -10,7 +11,7 @@ interface UploadItem {
   detail?: string;
 }
 
-export function UploadInvoices() {
+export function UploadInvoices({ dealId }: { dealId?: string }) {
   const router = useRouter();
   const [items, setItems] = useState<UploadItem[]>([]);
 
@@ -18,43 +19,23 @@ export function UploadInvoices() {
     setItems((current) => current.map((item) => (item.name === name ? { ...item, ...next } : item)));
   }
 
-  function uploadOne(file: File): Promise<void> {
-    return new Promise((resolve) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open("POST", "/api/tazrim/expense-invoices");
-      xhr.upload.onprogress = (event) => {
-        if (!event.lengthComputable) return;
-        patch(file.name, { progress: Math.round((event.loaded / event.total) * 100) });
-      };
-      xhr.onload = () => {
-        if (xhr.status === 401 || xhr.status === 403) {
-          patch(file.name, { state: "error", detail: "אין הרשאה" });
-          resolve();
-          return;
-        }
-        let body: { duplicate?: boolean; error?: string } = {};
-        try {
-          body = JSON.parse(xhr.responseText) as { duplicate?: boolean; error?: string };
-        } catch {
-          body = {};
-        }
-        if (xhr.status >= 400) {
-          patch(file.name, { state: "error", detail: body.error ?? "שגיאה" });
-        } else if (body.duplicate) {
-          patch(file.name, { state: "duplicate", progress: 100, detail: "כבר הועלה" });
-        } else {
-          patch(file.name, { state: "done", progress: 100 });
-        }
-        resolve();
-      };
-      xhr.onerror = () => {
-        patch(file.name, { state: "error", detail: "שגיאת רשת" });
-        resolve();
-      };
-      const form = new FormData();
-      form.append("file", file);
-      xhr.send(form);
-    });
+  async function uploadOne(file: File): Promise<void> {
+    const prepared = await prepareUploadFile(file);
+    if (!prepared.file) {
+      patch(file.name, { state: "error", detail: prepared.error });
+      return;
+    }
+    patch(file.name, { progress: 40 });
+    const result = await sendInvoiceFile(prepared.file, dealId);
+    if (!result.ok) {
+      patch(file.name, { state: "error", detail: result.detail ?? "שגיאה" });
+      return;
+    }
+    if (result.detail === "כבר הועלה") {
+      patch(file.name, { state: "duplicate", progress: 100, detail: result.detail });
+      return;
+    }
+    patch(file.name, { state: "done", progress: 100 });
   }
 
   async function onFiles(list: FileList | null) {
@@ -68,13 +49,14 @@ export function UploadInvoices() {
       await uploadOne(file);
     }
     router.refresh();
+    if (dealId) router.push("/app/admin/tazrim/invoices");
   }
 
   return (
-    <section className="mb-8 rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
-      <div className="mb-3 text-sm font-semibold">העלאת חשבוניות</div>
+    <section className={dealId ? "" : "mb-8 rounded-2xl border border-zinc-800 bg-zinc-900 p-5"}>
+      <div className="mb-3 text-sm font-semibold">{dealId ? "העלאת חשבונית" : "העלאת חשבוניות"}</div>
       <label className="inline-flex cursor-pointer rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-amber-400">
-        העלאת חשבוניות
+        {dealId ? "העלאת חשבונית" : "העלאת חשבוניות"}
         <input
           type="file"
           multiple
@@ -86,7 +68,9 @@ export function UploadInvoices() {
           }}
         />
       </label>
-      <p className="mt-2 text-xs text-zinc-500">אפשר לבחור כמה קבצים, גם מהטלפון. PDF, JPG, PNG, WEBP.</p>
+      <p className="mt-2 text-xs text-zinc-500">
+        אפשר לבחור כמה קבצים, גם מהטלפון. PDF, JPG, PNG, WEBP. תמונות נדחסות לפני השליחה. PDF גדול עולה ישירות.
+      </p>
       <ul className="mt-4 space-y-2">
         {items.map((item) => (
           <li key={`${item.name}-${item.state}`} className="text-sm text-zinc-300">

@@ -24,6 +24,8 @@ export interface InvoiceDraft {
   docKind?: 'preliminary' | 'tax_invoice'
   dealId?: string | null
   isMonthly?: boolean
+  /** Month the invoice covers. Defaults to the invoice date. Upload date is not used. */
+  vatPeriod?: string | null
 }
 
 export interface ConfirmedInvoiceKey {
@@ -46,6 +48,7 @@ export type InvoiceIssueCode =
   | 'allocation_missing'
   | 'missing_deal'
   | 'missing_vendor'
+  | 'missing_period'
   | 'kind_not_tax_invoice'
 
 export interface ValidationIssue {
@@ -80,6 +83,12 @@ export function vatPeriodFromDate(isoDate: string | null | undefined): string {
   if (!isoDate) return ''
   const day = isoDate.slice(0, 10)
   return /^\d{4}-\d{2}-\d{2}$/.test(day) ? day.slice(0, 7) : ''
+}
+
+/** The month the invoice covers. A manual period wins. The upload date is not an input. */
+export function resolveVatPeriod(invoiceDate: string | null | undefined, override?: string | null): string {
+  if (override && /^\d{4}-\d{2}$/.test(override)) return override
+  return vatPeriodFromDate(invoiceDate)
 }
 
 export function isInvoiceDocType(value: string): value is InvoiceDocType {
@@ -198,6 +207,9 @@ export function validateInvoiceDraft(
   }
   if (confirm && (draft.docKind === 'preliminary' || draft.docKind === 'tax_invoice') && !draft.vendorId) {
     issues.push({ code: 'missing_vendor', blocking: true })
+  }
+  if (confirm && draft.docKind === 'preliminary' && !resolveVatPeriod(draft.invoiceDate, draft.vatPeriod)) {
+    issues.push({ code: 'missing_period', blocking: true })
   }
   if (draft.docKind === 'tax_invoice' && draft.docType !== 'tax_invoice') {
     issues.push({ code: 'kind_not_tax_invoice', blocking: true })

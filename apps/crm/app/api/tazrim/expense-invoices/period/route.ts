@@ -13,6 +13,8 @@ export async function POST(req: NextRequest) {
   const result =
     body.action === 'reopen'
       ? await reopenVatPeriod(auth.ctx, body.period, note)
-      : await closeVatPeriod(auth.ctx, body.period, note)
+      : await closeVatPeriod(auth.ctx, body.period, note, {
+          confirmWithoutGeneral: body.confirmWithoutGeneral === true,
+        })
   return NextResponse.json(result.body, { status: result.status })
 }

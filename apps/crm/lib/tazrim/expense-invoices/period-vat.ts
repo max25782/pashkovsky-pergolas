@@ -21,6 +21,8 @@ export interface PeriodInvoiceInput {
   vatRecognizedPercent: number
   confirmed: boolean
   superseded: boolean
+  /** Vendor sends one monthly tax invoice. Preliminary rows of other vendors never enter A. */
+  issuesMonthlyInvoice?: boolean
 }
 
 export interface DealMonthInput {
@@ -89,9 +91,11 @@ export function dealMaterialsVat(meta: VatCalcMeta): DealMonthInput[] {
 
 /**
  * Actual input VAT for one month.
- * For each supplier, a tax invoice replaces that supplier's preliminary
- * documents. Superseded preliminary documents are skipped. Receipts and
- * other document types contribute nothing. Deal links are ignored.
+ * A monthly supplier (Panda) contributes its tax invoices when any exist,
+ * otherwise its preliminary documents. Several tax invoices are summed.
+ * A preliminary confirmed after that tax invoice is left out.
+ * Every other supplier contributes only tax invoices. Their preliminary
+ * documents never enter the total. Receipts and other types contribute nothing.
  */
 export function actualInvoiceVat(
   invoices: readonly PeriodInvoiceInput[],
@@ -116,12 +120,40 @@ export function actualInvoiceVat(
       continue
     }
     preliminary += group
-      .filter((invoice) => invoice.docKind === 'preliminary')
+      .filter((invoice) => invoice.docKind === 'preliminary' && invoice.issuesMonthlyInvoice === true)
       .reduce((sum, invoice) => sum + credited(invoice), 0)
   }
   preliminary = roundMoney(preliminary)
   tax = roundMoney(tax)
   return { preliminary, tax, total: roundMoney(preliminary + tax) }
+}
+
+export interface PendingGeneralInvoice {
+  vendorId: string
+  name: string
+  period: string
+}
+
+/** Monthly supplier with a confirmed preliminary and no tax invoice for this month. */
+export function pendingGeneralInvoices(input: {
+  period: string
+  invoices: readonly PeriodInvoiceInput[]
+  vendors: readonly { id: string; name: string; issuesMonthlyInvoice: boolean }[]
+}): PendingGeneralInvoice[] {
+  return input.vendors
+    .filter((vendor) => vendor.issuesMonthlyInvoice)
+    .flatMap((vendor) => {
+      const rows = input.invoices.filter(
+        (invoice) =>
+          invoice.confirmed &&
+          invoice.vatPeriod === input.period &&
+          invoice.vendorId === vendor.id &&
+          invoice.docType === 'tax_invoice',
+      )
+      const hasTax = rows.some((invoice) => invoice.docKind === 'tax_invoice')
+      const hasPreliminary = rows.some((invoice) => invoice.docKind === 'preliminary')
+      return hasPreliminary && !hasTax ? [{ vendorId: vendor.id, name: vendor.name, period: input.period }] : []
+    })
 }
 
 /**
