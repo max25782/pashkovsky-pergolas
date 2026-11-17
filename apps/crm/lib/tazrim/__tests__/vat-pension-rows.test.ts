@@ -237,7 +237,9 @@ describe("buildPensionRows", () => {
       notes: null,
     });
     expect(rows[0].calc_meta).toMatchObject({ kind: "pension", sourceMonth: "2026-10", total: 1640.63 });
-    expect(rows[0].calc_meta.lines).toEqual([
+    const meta = rows[0].calc_meta;
+    if (meta.kind !== "pension") throw new Error("expected pension meta");
+    expect(meta.lines).toEqual([
       expect.objectContaining({
         workerId: "w1",
         workerName: "Dan Levi",
@@ -261,7 +263,9 @@ describe("buildPensionRows", () => {
     expect(report.total).toBe(1406.25);
     const row = buildPensionRows({ companyId: COMPANY, today: TODAY, reports: [report] })[0];
     expect(row.amount).toBe(1406.25);
-    expect(row.calc_meta.lines.map((l) => l.workerId)).toEqual(["w1", "w2"]);
+    const meta = row.calc_meta;
+    if (meta.kind !== "pension") throw new Error("expected pension meta");
+    expect(meta.lines.map((l) => l.workerId)).toEqual(["w1", "w2"]);
   });
 
   it("produces no row when nobody is owed pension", () => {
