@@ -1,8 +1,15 @@
 'use client'
 
+import { ChatMarkdown } from '@/components/ai/chat-markdown'
 import { useToast } from '@/components/ui/toast'
 import { useState, useEffect, useRef } from 'react'
 import { authFetch } from '@/lib/api/auth-fetch'
+import {
+  AI_DIRECTOR_CLIENT_TIMEOUT_MS,
+  DIRECTOR_RETRY_LABEL,
+  DIRECTOR_TIMEOUT_MESSAGE,
+  isDirectorTimeout,
+} from '@/lib/ai/director-timeout'
 import { Brain, Send, Loader2, Sparkles } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
@@ -20,6 +27,8 @@ export default function AIDirectorPage() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [sessionId, setSessionId] = useState<string | null>(null)
+  const [retryMessage, setRetryMessage] = useState<string | null>(null)
+  const [showTimeout, setShowTimeout] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   
   // Auto-scroll to bottom
@@ -63,22 +72,22 @@ export default function AIDirectorPage() {
     }
   }
   
-  async function sendMessage() {
-    if (!input.trim() || loading) return
-    
+  async function submit(text: string) {
+    const userMessage = text.trim()
+    if (!userMessage || loading) return
+
+    setShowTimeout(false)
     setLoading(true)
-    const userMessage = input.trim()
     setInput('')
-    
+
     // Optimistic update
     setMessages(prev => [...prev, { role: 'user', content: userMessage }])
-    
+
     try {
       const res = await authFetch('/api/ai-director/chat', {
         method: 'POST',
         body: JSON.stringify({ message: userMessage, sessionId }),
-        // Bedrock plus its data calls outlive the 10s lookup timeout.
-        timeoutMs: 60_000,
+        timeoutMs: AI_DIRECTOR_CLIENT_TIMEOUT_MS,
       })
       
       if (!res.ok) {
@@ -105,19 +114,32 @@ export default function AIDirectorPage() {
       }
       
       const data = await res.json()
-      
-      // Add AI response
+
+      setRetryMessage(null)
       setMessages(prev => [...prev, { role: 'assistant', content: data.response }])
       setSessionId(data.sessionId)
     } catch (error) {
       console.error('Error:', error)
-      // The server may already have stored the question. Reload instead of
-      // dropping it, so a timeout does not disagree with the saved thread.
       await loadHistory()
+      if (isDirectorTimeout(error)) {
+        setRetryMessage(userMessage)
+        setShowTimeout(true)
+        return
+      }
+      setRetryMessage(null)
       toastError(error instanceof Error ? error.message : t('error'))
     } finally {
       setLoading(false)
     }
+  }
+
+  function sendMessage() {
+    void submit(input)
+  }
+
+  function retryLast() {
+    if (!retryMessage) return
+    void submit(retryMessage)
   }
   
   function handleKeyPress(e: React.KeyboardEvent) {
@@ -175,7 +197,11 @@ export default function AIDirectorPage() {
                 ? 'bg-blue-600 text-white' 
                 : 'bg-white text-gray-900 shadow-sm border'
             }`}>
-              <div dir="auto" className="whitespace-pre-wrap break-words text-start">{msg.content}</div>
+              {msg.role === 'assistant' ? (
+                <ChatMarkdown text={msg.content} />
+              ) : (
+                <div dir="auto" className="whitespace-pre-wrap break-words text-start">{msg.content}</div>
+              )}
               {msg.created_at && (
                 <div className={`text-xs mt-1 ${msg.role === 'user' ? 'text-blue-100' : 'text-gray-400'}`}>
                   {new Date(msg.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
@@ -199,6 +225,19 @@ export default function AIDirectorPage() {
       
       {/* Input */}
       <div className="bg-white border-t p-4 shadow-lg">
+        {showTimeout ? (
+          <div className="max-w-4xl mx-auto mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+            <p>{DIRECTOR_TIMEOUT_MESSAGE}</p>
+            <button
+              type="button"
+              onClick={retryLast}
+              disabled={loading || !retryMessage}
+              className="rounded-lg bg-amber-700 px-4 py-2 text-white hover:bg-amber-800 disabled:opacity-50"
+            >
+              {DIRECTOR_RETRY_LABEL}
+            </button>
+          </div>
+        ) : null}
         <div className="max-w-4xl mx-auto flex gap-2">
           <textarea
             value={input}

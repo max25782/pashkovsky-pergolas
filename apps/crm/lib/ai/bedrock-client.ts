@@ -1,3 +1,5 @@
+import { drainAgentCompletion } from '@/lib/ai/drain-agent-completion'
+
 /**
  * Amazon Bedrock Client — AI Director (CRM assistant only).
  *
@@ -141,17 +143,17 @@ export async function callBedrockAgent({
         invocationInputs?: any[]
       } | null = null
 
+      // InvokeAgent returns a stream. Do not answer, and do not attach an abort
+      // signal, until every chunk of this round has arrived.
       if (response.completion) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        for await (const chunk of response.completion as AsyncIterable<any>) {
-          if (chunk.chunk?.bytes) {
-            const decoder = new TextDecoder()
-            responseText += decoder.decode(chunk.chunk.bytes)
-          }
-          if (chunk.returnControl) {
-            returnControlPayload = chunk.returnControl
-          }
-        }
+        const drained = await drainAgentCompletion(
+          response.completion as AsyncIterable<{
+            chunk?: { bytes?: Uint8Array }
+            returnControl?: { invocationId?: string; invocationInputs?: unknown[] }
+          }>,
+        )
+        responseText = drained.text
+        returnControlPayload = (drained.returnControl ?? null) as typeof returnControlPayload
       }
 
       if (responseText) {

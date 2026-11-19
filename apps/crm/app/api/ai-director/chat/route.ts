@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { checkAIDirectorAccess } from '@/lib/middleware/ai-director-subscription'
 import { callBedrockAgent } from '@/lib/ai/bedrock-client'
+import { AI_DIRECTOR_MAX_DURATION_SEC } from '@/lib/ai/director-timeout'
 import { createClient } from '@supabase/supabase-js'
 import { aiDirectorLimiter, checkLimit } from '@/lib/middleware/rate-limit'
 
@@ -386,6 +387,8 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Force dynamic rendering. The agent call is allowed to outlast the 10s UI lookup.
+// Hobby team. 60s is inside the 300s platform default and is the limit for this route.
+// The browser waits 90s, so it does not abort the request before the function ends.
+// The Bedrock stream is read to the end inside callBedrockAgent before this JSON is sent.
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+export const maxDuration = AI_DIRECTOR_MAX_DURATION_SEC
