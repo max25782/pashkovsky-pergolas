@@ -1,6 +1,6 @@
 import { buildBusinessSnapshot, clearSnapshotCache, readSnapshotCache, writeSnapshotCache } from '../business-snapshot'
 import { takeSseEvents } from '../director-sse'
-import { micErrorKind, readSpeechLang, speechSupported, writeSpeechLang } from '../speech-prefs'
+import { micErrorKind, readSpeechLang, speechHost, speechSupported, writeSpeechLang } from '../speech-prefs'
 import { parseChatMarkdown, softenStreamingMarkdown } from '../chat-markdown'
 import { drainAgentCompletion } from '../drain-agent-completion'
 import {
@@ -110,6 +110,8 @@ describe('dictation preferences', () => {
     expect(micErrorKind('not-allowed')).toBe('denied')
     expect(micErrorKind('network')).toBe('network')
     expect(micErrorKind('no-speech')).toBeNull()
+    expect(speechHost('Mozilla/5.0 Chrome/120.0.0.0')).toBe('ok')
+    expect(speechHost('Mozilla/5.0 Cursor/3.0 Electron/42.0')).toBe('embedded')
   })
 
   it('keeps a partial SSE buffer until the event ends', () => {

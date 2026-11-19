@@ -12,7 +12,7 @@ import {
   DIRECTOR_TIMEOUT_MESSAGE,
   isDirectorTimeout,
 } from '@/lib/ai/director-timeout'
-import { micErrorKind, readSpeechLang, speechSupported, writeSpeechLang, type MicHint, type SpeechLang } from '@/lib/ai/speech-prefs'
+import { micErrorKind, readSpeechLang, speechHost, speechSupported, writeSpeechLang, type MicHint, type SpeechLang } from '@/lib/ai/speech-prefs'
 import { Brain, Loader2, Mic, Send, Sparkles, Square } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
@@ -283,6 +283,10 @@ export default function AIDirectorPage() {
     }
     const recognitionCtor = browserWindow.SpeechRecognition ?? browserWindow.webkitSpeechRecognition
     const support = speechSupported(Boolean(recognitionCtor), secure)
+    if (speechHost(navigator.userAgent) === 'embedded') {
+      setSpeechHint('embedded')
+      return
+    }
     if (support === 'insecure') {
       setSpeechHint('https')
       return
@@ -514,7 +518,8 @@ export default function AIDirectorPage() {
           </label>
         </div>
         {speechHint === 'https' ? <p className="max-w-4xl mx-auto mb-2 text-sm text-amber-800">המיקרופון זמין רק בחיבור מאובטח (HTTPS).</p> : null}
-        {speechHint === 'browser' ? <p className="max-w-4xl mx-auto mb-2 text-sm text-amber-800">הדפדפן הזה לא תומך בזיהוי דיבור. פתחו את העמוד ב-Chrome.</p> : null}
+        {speechHint === 'browser' ? <p className="max-w-4xl mx-auto mb-2 text-sm text-amber-800">הדפדפן הזה לא תומך בזיהוי דיבור. פתחו את העמוד ב-Chrome או ב-Safari.</p> : null}
+        {speechHint === 'embedded' ? <p className="max-w-4xl mx-auto mb-2 text-sm text-amber-800">חלון Cursor לא מפעיל את המיקרופון. פתחו את אותו עמוד ב-Chrome או ב-Safari.</p> : null}
         {speechHint === 'denied' ? <p className="max-w-4xl mx-auto mb-2 text-sm text-amber-800">הגישה למיקרופון נדחתה. אשרו אותה בדפדפן ובהגדרות המערכת.</p> : null}
         {speechHint === 'no-device' ? <p className="max-w-4xl mx-auto mb-2 text-sm text-amber-800">לא נמצא מיקרופון.</p> : null}
         {speechHint === 'network' ? <p className="max-w-4xl mx-auto mb-2 text-sm text-amber-800">שירות הזיהוי של הדפדפן לא ענה. נסו Chrome.</p> : null}

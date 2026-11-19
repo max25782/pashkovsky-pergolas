@@ -26,7 +26,13 @@ export function speechSupported(hasRecognition: boolean, isSecure: boolean): 'ok
   return 'ok'
 }
 
-export type MicHint = 'https' | 'browser' | 'denied' | 'no-device' | 'network'
+export type MicHint = 'https' | 'browser' | 'embedded' | 'denied' | 'no-device' | 'network'
+
+/** Cursor's window is Electron. Its speech service always fails with a network error. */
+export function speechHost(userAgent: string): 'ok' | 'embedded' {
+  if (/Electron|Cursor\//.test(userAgent)) return 'embedded'
+  return 'ok'
+}
 
 /** Maps a SpeechRecognition error to a hint. Silence is not a failure. */
 export function micErrorKind(code: string): MicHint | null {
