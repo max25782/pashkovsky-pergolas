@@ -69,6 +69,12 @@ function detectLanguage(message: string): string {
   return 'he'
 }
 
+/** The saved message stays as typed. The model is told which language to use. */
+function promptForModel(message: string, language: string): string {
+  const instruction = language === 'ru' ? 'Ответь на русском языке.' : 'ענה בעברית.'
+  return `${instruction}\n${message}`
+}
+
 /**
  * Get or create AI Director session
  */
@@ -314,7 +320,7 @@ export async function POST(req: NextRequest) {
         bedrockResponse = await callBedrockAgentViaLambda({
           url: invokeLambdaUrl,
           secret: invokeLambdaSecret,
-          prompt: message,
+          prompt: promptForModel(message, detectedLanguage),
           sessionId: session.id,
           sessionAttributes,
         })
@@ -325,7 +331,7 @@ export async function POST(req: NextRequest) {
     } else {
       // Fallback to direct Bedrock SDK invocation
       bedrockResponse = await callBedrockAgent({
-        prompt: message,
+        prompt: promptForModel(message, detectedLanguage),
         sessionId: session.id,
         sessionAttributes,
       })
@@ -380,5 +386,6 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Force dynamic rendering
+// Force dynamic rendering. The agent call is allowed to outlast the 10s UI lookup.
 export const dynamic = 'force-dynamic'
+export const maxDuration = 60

@@ -77,6 +77,8 @@ export default function AIDirectorPage() {
       const res = await authFetch('/api/ai-director/chat', {
         method: 'POST',
         body: JSON.stringify({ message: userMessage, sessionId }),
+        // Bedrock plus its data calls outlive the 10s lookup timeout.
+        timeoutMs: 60_000,
       })
       
       if (!res.ok) {
@@ -109,8 +111,9 @@ export default function AIDirectorPage() {
       setSessionId(data.sessionId)
     } catch (error) {
       console.error('Error:', error)
-      // Remove optimistic message on error
-      setMessages(prev => prev.slice(0, -1))
+      // The server may already have stored the question. Reload instead of
+      // dropping it, so a timeout does not disagree with the saved thread.
+      await loadHistory()
       toastError(error instanceof Error ? error.message : t('error'))
     } finally {
       setLoading(false)
@@ -172,7 +175,7 @@ export default function AIDirectorPage() {
                 ? 'bg-blue-600 text-white' 
                 : 'bg-white text-gray-900 shadow-sm border'
             }`}>
-              <div className="whitespace-pre-wrap break-words">{msg.content}</div>
+              <div dir="auto" className="whitespace-pre-wrap break-words text-start">{msg.content}</div>
               {msg.created_at && (
                 <div className={`text-xs mt-1 ${msg.role === 'user' ? 'text-blue-100' : 'text-gray-400'}`}>
                   {new Date(msg.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}

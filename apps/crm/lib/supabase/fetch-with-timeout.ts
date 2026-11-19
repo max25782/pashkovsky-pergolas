@@ -25,7 +25,10 @@
 export function fetchWithTimeout(timeoutMs: number): typeof fetch {
   return (input: RequestInfo | URL, init?: RequestInit) => {
     const timeoutController = new AbortController()
-    const timeoutId = setTimeout(() => timeoutController.abort(), timeoutMs)
+    const timeoutId = setTimeout(
+      () => timeoutController.abort(new DOMException(`Request timed out after ${timeoutMs}ms`, 'TimeoutError')),
+      timeoutMs,
+    )
 
     const callerSignal = init?.signal
     if (callerSignal) {
