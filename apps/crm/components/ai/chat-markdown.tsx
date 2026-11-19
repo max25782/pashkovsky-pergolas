@@ -1,4 +1,4 @@
-import { parseChatMarkdown, type ChatInline } from '@/lib/ai/chat-markdown'
+import { parseChatMarkdown, softenStreamingMarkdown, type ChatInline } from '@/lib/ai/chat-markdown'
 
 function Inlines({ parts }: { parts: ChatInline[] }) {
   return (
@@ -10,8 +10,9 @@ function Inlines({ parts }: { parts: ChatInline[] }) {
   )
 }
 
-export function ChatMarkdown({ text }: { text: string }) {
-  const blocks = parseChatMarkdown(text)
+export function ChatMarkdown({ text, streaming = false }: { text: string; streaming?: boolean }) {
+  const source = streaming ? softenStreamingMarkdown(text) : text
+  const blocks = parseChatMarkdown(source)
   return (
     <div dir="auto" className="space-y-2 break-words text-start">
       {blocks.map((block, index) =>

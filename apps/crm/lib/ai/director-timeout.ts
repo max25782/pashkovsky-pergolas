@@ -1,11 +1,15 @@
-/** Browser wait for one AI Director reply. Longer than the function so the page does not abort first. */
-export const AI_DIRECTOR_CLIENT_TIMEOUT_MS = 90_000
+/**
+ * Browser wait for one AI Director reply (SSE).
+ * 120s reduces AbortError on CRM tool chains; Hobby maxDuration remains 300s.
+ * If the browser still times out, the page shows a Hebrew retry (not AbortError text).
+ */
+export const AI_DIRECTOR_CLIENT_TIMEOUT_MS = 120_000
 
 /**
- * Route limit. The CRM team is on Hobby. The published function default is
- * 300s on every plan, so 60s is inside the plan and matches this route.
+ * Vercel Fluid Compute (Hobby): default and maximum function duration is 300s.
+ * Pro/Enterprise can raise to 800s (or 1800s beta). This project uses the Hobby ceiling.
  */
-export const AI_DIRECTOR_MAX_DURATION_SEC = 60
+export const AI_DIRECTOR_MAX_DURATION_SEC = 300
 
 export const DIRECTOR_TIMEOUT_MESSAGE = 'התשובה לא הספיקה להגיע. הסוכן עדיין אסף נתונים מה-CRM.'
 export const DIRECTOR_RETRY_LABEL = 'נסו שוב'

@@ -32,8 +32,13 @@ const BEDROCK_AGENT_ALIAS_ID = envTrim('BEDROCK_AGENT_ALIAS_ID') || 'TSTALIASID'
 export interface BedrockCallParams {
   prompt: string
   sessionId?: string
-  /** company_id, api_base_url, api_token, user_language */
+  /** company_id, api_base_url, api_token, user_language. Never send this map to the browser. */
   sessionAttributes?: Record<string, string>
+  /** Business summary only. No token and no company id. */
+  promptSessionAttributes?: Record<string, string>
+  streamFinalResponse?: boolean
+  onStatus?: (phase: 'thinking' | 'crm') => void
+  onDelta?: (piece: string) => void
   temperature?: number
   maxTokens?: number
 }
@@ -42,6 +47,13 @@ export interface BedrockResponse {
   content: string
   sessionId?: string
   error?: string
+  /** True when the model returned one block and the browser should reveal it gradually. */
+  typewriter?: boolean
+}
+
+interface ReturnControlPayload {
+  invocationId?: string
+  invocationInputs?: unknown[]
 }
 
 const FUNCTION_TO_PATH: Record<string, string> = {
@@ -76,7 +88,7 @@ async function dispatchCRMFunction(
   try {
     const res = await fetch(url, {
       headers: { 'x-api-token': apiToken },
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(25_000),
     })
     return await res.text()
   } catch (err) {
@@ -85,11 +97,31 @@ async function dispatchCRMFunction(
   }
 }
 
-export async function callBedrockAgent({
-  prompt,
-  sessionId,
-  sessionAttributes,
-}: BedrockCallParams): Promise<BedrockResponse> {
+function streamWasRejected(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error)
+  return /streamFinalResponse|streamingConfigurations|ValidationException|Unknown parameter/i.test(message)
+}
+
+export async function callBedrockAgent(params: BedrockCallParams): Promise<BedrockResponse> {
+  const stream = params.streamFinalResponse !== false
+  const first = await invokeBedrockAgent(params, stream)
+  if (stream && first.error && streamWasRejected(new Error(first.error))) {
+    return invokeBedrockAgent({ ...params, streamFinalResponse: false }, false)
+  }
+  return first
+}
+
+async function invokeBedrockAgent(
+  {
+    prompt,
+    sessionId,
+    sessionAttributes,
+    promptSessionAttributes,
+    onStatus,
+    onDelta,
+  }: BedrockCallParams,
+  streamFinalResponse: boolean,
+): Promise<BedrockResponse> {
   if (!BEDROCK_AGENT_ID || !AWS_ACCESS_KEY_ID || !AWS_SECRET_ACCESS_KEY) {
     return {
       content: '',
@@ -117,15 +149,17 @@ export async function callBedrockAgent({
   const apiToken = sessionAttributes?.api_token || ''
   const companyId = sessionAttributes?.company_id || ''
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let commandInput: any = {
+  const sessionState = {
+    ...(sessionAttributes ? { sessionAttributes } : {}),
+    ...(promptSessionAttributes ? { promptSessionAttributes } : {}),
+  }
+  let commandInput: Record<string, unknown> = {
     agentId: BEDROCK_AGENT_ID,
     agentAliasId: BEDROCK_AGENT_ALIAS_ID,
     sessionId: currentSessionId,
     inputText: prompt,
-    ...(sessionAttributes
-      ? { sessionState: { sessionAttributes } }
-      : {}),
+    ...(streamFinalResponse ? { streamingConfigurations: { streamFinalResponse: true } } : {}),
+    ...(Object.keys(sessionState).length > 0 ? { sessionState } : {}),
   }
 
   const MAX_TOOL_CALLS = 5
@@ -133,15 +167,14 @@ export async function callBedrockAgent({
 
   try {
     while (toolCallCount <= MAX_TOOL_CALLS) {
-      const command = new InvokeAgentCommand(commandInput)
+      onStatus?.('thinking')
+      const command = new InvokeAgentCommand(
+        commandInput as unknown as ConstructorParameters<typeof InvokeAgentCommand>[0],
+      )
       const response = await client.send(command)
 
       let responseText = ''
-      let returnControlPayload: {
-        invocationId?: string
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        invocationInputs?: any[]
-      } | null = null
+      let returnControlPayload: ReturnControlPayload | null = null
 
       // InvokeAgent returns a stream. Do not answer, and do not attach an abort
       // signal, until every chunk of this round has arrived.
@@ -151,30 +184,36 @@ export async function callBedrockAgent({
             chunk?: { bytes?: Uint8Array }
             returnControl?: { invocationId?: string; invocationInputs?: unknown[] }
           }>,
+          streamFinalResponse ? onDelta : undefined,
         )
         responseText = drained.text
-        returnControlPayload = (drained.returnControl ?? null) as typeof returnControlPayload
+        returnControlPayload = drained.returnControl ?? null
       }
 
       if (responseText) {
-        return { content: responseText, sessionId: currentSessionId }
+        if (!streamFinalResponse) onDelta?.(responseText)
+        return { content: responseText, sessionId: currentSessionId, typewriter: !streamFinalResponse }
       }
 
       if (returnControlPayload && returnControlPayload.invocationId) {
         toolCallCount++
 
         const invocationId = returnControlPayload.invocationId
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const results: any[] = []
+        const results: Array<Record<string, unknown>> = []
 
         for (const input of returnControlPayload.invocationInputs ?? []) {
-          const fi = input.functionInvocationInput
+          const fi = (input as { functionInvocationInput?: {
+            function?: string
+            actionGroup?: string
+            parameters?: Array<{ name?: string; type?: string; value?: string }>
+          } }).functionInvocationInput
           if (!fi) continue
 
           const fnName: string = fi.function ?? ''
           const params: Array<{ name?: string; type?: string; value?: string }> =
             fi.parameters ?? []
 
+          onStatus?.('crm')
           const resultBody = await dispatchCRMFunction(
             fnName,
             params,
@@ -198,8 +237,10 @@ export async function callBedrockAgent({
           agentId: BEDROCK_AGENT_ID,
           agentAliasId: BEDROCK_AGENT_ALIAS_ID,
           sessionId: currentSessionId,
+          ...(streamFinalResponse ? { streamingConfigurations: { streamFinalResponse: true } } : {}),
           sessionState: {
             ...(sessionAttributes ? { sessionAttributes } : {}),
+            ...(promptSessionAttributes ? { promptSessionAttributes } : {}),
             invocationId,
             returnControlInvocationResults: results,
           },

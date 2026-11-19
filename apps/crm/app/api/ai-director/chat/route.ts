@@ -7,9 +7,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { checkAIDirectorAccess } from '@/lib/middleware/ai-director-subscription'
 import { callBedrockAgent } from '@/lib/ai/bedrock-client'
-import { AI_DIRECTOR_MAX_DURATION_SEC } from '@/lib/ai/director-timeout'
+import { buildBusinessSnapshot, readSnapshotCache, writeSnapshotCache } from '@/lib/ai/business-snapshot'
 import { createClient } from '@supabase/supabase-js'
-import { aiDirectorLimiter, checkLimit } from '@/lib/middleware/rate-limit'
+import { aiDirectorLimiter, aiDirectorUserLimiter, checkLimit } from '@/lib/middleware/rate-limit'
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -17,6 +17,65 @@ const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 const supabase = SUPABASE_URL && SERVICE_KEY
   ? createClient(SUPABASE_URL, SERVICE_KEY)
   : null
+
+async function requireDirectorRole(userId: string, companyId: string): Promise<NextResponse | null> {
+  if (!supabase) return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
+  const { data } = await supabase
+    .from('company_members')
+    .select('role')
+    .eq('user_id', userId)
+    .eq('company_id', companyId)
+    .maybeSingle()
+  if (data?.role !== 'owner' && data?.role !== 'admin') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+  return null
+}
+
+async function businessSnapshot(companyId: string, force: boolean): Promise<string> {
+  const now = Date.now()
+  if (!force) {
+    const cached = readSnapshotCache(companyId, now)
+    if (cached) return cached
+  }
+  if (!supabase) return ''
+  const since90 = new Date(now - 90 * 86_400_000).toISOString()
+  const since30 = new Date(now - 30 * 86_400_000).toISOString().slice(0, 10)
+  const [dealsRes, leadsRes, workersRes, shiftsRes, stagesRes] = await Promise.all([
+    supabase.from('deals').select('stage, price, project_type, created_at, updated_at').eq('company_id', companyId).limit(400),
+    supabase.from('leads').select('source, status, created_at').eq('company_id', companyId).gte('created_at', since90).limit(400),
+    supabase.from('workers').select('id').eq('company_id', companyId).eq('is_active', true).limit(200),
+    supabase.from('work_shifts').select('id').eq('company_id', companyId).gte('date', since30).limit(400),
+    supabase.from('deal_stages').select('key, role').eq('company_id', companyId),
+  ])
+  const closedStageKeys = (stagesRes.error ? [] : stagesRes.data ?? [])
+    .filter((row) => row.role === 'completed' && row.key)
+    .map((row) => row.key)
+  const text = buildBusinessSnapshot({
+    now: new Date(now),
+    closedStageKeys,
+    deals: (dealsRes.data ?? []).map((row) => ({
+      stage: row.stage ?? null,
+      price: row.price == null ? null : Number(row.price),
+      projectType: row.project_type ?? null,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    })),
+    leads: (leadsRes.data ?? []).map((row) => ({
+      source: row.source ?? null,
+      status: row.status ?? null,
+      createdAt: row.created_at,
+    })),
+    activeWorkers: workersRes.data?.length ?? 0,
+    shiftsLast30Days: (shiftsRes.data ?? []).length,
+  })
+  writeSnapshotCache(companyId, text, now)
+  return text
+}
+
+function sse(event: string, data: unknown): Uint8Array {
+  return new TextEncoder().encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+}
 
 /**
  * Call Bedrock via Lambda proxy (if configured)
@@ -27,6 +86,7 @@ async function callBedrockAgentViaLambda(params: {
   prompt: string
   sessionId: string
   sessionAttributes: Record<string, string>
+  promptSessionAttributes?: Record<string, string>
 }): Promise<{ content: string; sessionId?: string; error?: string }> {
   const response = await fetch(params.url, {
     method: 'POST',
@@ -38,6 +98,7 @@ async function callBedrockAgentViaLambda(params: {
       prompt: params.prompt,
       sessionId: params.sessionId,
       sessionAttributes: params.sessionAttributes,
+      promptSessionAttributes: params.promptSessionAttributes,
     }),
   })
 
@@ -57,22 +118,24 @@ async function callBedrockAgentViaLambda(params: {
   }
 }
 
-/**
- * Detect language from message content.
- * Defaults to Hebrew — the primary language of this CRM.
- * Only overrides if the message is clearly Russian (Cyrillic).
- * English input from the user does NOT switch the response to English.
- */
-function detectLanguage(message: string): string {
-  if (/[\u0400-\u04FF]/.test(message)) {
-    return 'ru'
-  }
+function detectLanguage(message: string): 'he' | 'ru' | 'en' {
+  if (/[\u0590-\u05FF]/.test(message)) return 'he'
+  if (/[\u0400-\u04FF]/.test(message)) return 'ru'
+  if (/[A-Za-z]/.test(message)) return 'en'
   return 'he'
+}
+
+function acceptedLanguage(value: unknown): 'he' | 'ru' | 'en' | null {
+  return value === 'he' || value === 'ru' || value === 'en' ? value : null
 }
 
 /** The saved message stays as typed. The model is told which language to use. */
 function promptForModel(message: string, language: string): string {
-  const instruction = language === 'ru' ? 'Ответь на русском языке.' : 'ענה בעברית.'
+  const instruction = language === 'ru'
+    ? 'Ответь на русском языке.'
+    : language === 'en'
+      ? 'Answer in English.'
+      : 'ענה בעברית.'
   return `${instruction}\n${message}`
 }
 
@@ -197,6 +260,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Company ID not found' }, { status: 400 })
     }
 
+    const roleError = await requireDirectorRole(authCheck.user.id, companyId)
+    if (roleError) return roleError
+
     const accessCheck = await checkAIDirectorAccess(authCheck.user.id)
     if (accessCheck) return accessCheck
 
@@ -250,12 +316,18 @@ export async function POST(req: NextRequest) {
   }
   
   try {
-    const { message, sessionId, language } = await req.json()
+    const body = await req.json()
+    const message = body?.message
+    const sessionId = body?.sessionId
+    const language = body?.language
     const companyId = authCheck.context?.companyId
     
     if (!companyId) {
       return NextResponse.json({ error: 'Company ID not found' }, { status: 400 })
     }
+
+    const roleError = await requireDirectorRole(authCheck.user.id, companyId)
+    if (roleError) return roleError
 
     const accessCheck = await checkAIDirectorAccess(authCheck.user.id)
     if (accessCheck) return accessCheck
@@ -272,9 +344,16 @@ export async function POST(req: NextRequest) {
         { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } },
       )
     }
+    const userRl = await checkLimit(aiDirectorUserLimiter, `director-user:${authCheck.user.id}`)
+    if (!userRl.allowed) {
+      return NextResponse.json(
+        { error: 'Too many AI Director messages. Try again later.' },
+        { status: 429, headers: { 'Retry-After': String(userRl.retryAfter) } },
+      )
+    }
 
     // Detect language from message if not provided
-    const detectedLanguage = language || detectLanguage(message)
+    const detectedLanguage = acceptedLanguage(language) ?? detectLanguage(message)
     
     // Get or create session
     const session = await getOrCreateDirectorSession(companyId, sessionId)
@@ -298,97 +377,84 @@ export async function POST(req: NextRequest) {
     }
     
     if (!sessionAttributes.api_token) {
-      console.error('[AI Director] ERROR: AI_DIRECTOR_API_TOKEN is not set in environment variables!')
-      return NextResponse.json({ 
-        error: 'AI Director is not configured',
-        details: 'AI_DIRECTOR_API_TOKEN environment variable is not set',
-        hint: 'Please set AI_DIRECTOR_API_TOKEN in your environment variables (.env.local or Vercel)',
-      }, { status: 500 })
+      console.error('[AI Director] API token is not configured')
+      return NextResponse.json({ error: 'AI Director is not configured' }, { status: 500 })
     }
 
-    // Non-blocking preflight check (logs warnings but doesn't fail)
     await preflightExternalDataApi(sessionAttributes.api_base_url)
-
-    // Check if Lambda proxy is configured
+    const snapshot = await businessSnapshot(companyId, !sessionId || body?.refreshSnapshot === true)
     const invokeLambdaUrl = process.env.AI_DIRECTOR_INVOKE_LAMBDA_URL
     const invokeLambdaSecret = process.env.AI_DIRECTOR_INVOKE_LAMBDA_SECRET
-
-    let bedrockResponse: { content: string; sessionId?: string; error?: string }
-
-    if (invokeLambdaUrl && invokeLambdaSecret) {
-      // Call intermediate Lambda for Bedrock invocation
-      try {
-        bedrockResponse = await callBedrockAgentViaLambda({
-          url: invokeLambdaUrl,
-          secret: invokeLambdaSecret,
-          prompt: promptForModel(message, detectedLanguage),
-          sessionId: session.id,
-          sessionAttributes,
-        })
-      } catch (lambdaError: any) {
-        console.error('[AI Director] Error invoking Bedrock via Lambda:', lambdaError)
-        return NextResponse.json({ error: `Failed to communicate with AI Director service: ${lambdaError.message}` }, { status: 500 })
-      }
-    } else {
-      // Fallback to direct Bedrock SDK invocation
-      bedrockResponse = await callBedrockAgent({
-        prompt: promptForModel(message, detectedLanguage),
-        sessionId: session.id,
-        sessionAttributes,
-      })
+    const promptSessionAttributes = {
+      business_snapshot: snapshot,
+      user_language: detectedLanguage,
     }
 
-    if (bedrockResponse.error) {
-      console.error('[AI Director] Bedrock error:', bedrockResponse.error)
+    const stream = new ReadableStream({
+      async start(controller) {
+        const send = (event: string, data: unknown) => controller.enqueue(sse(event, data))
+        try {
+          send('status', { phase: 'thinking' })
+          let content = ''
+          let typewriter = false
+          let returnedSession = session.id
+          if (invokeLambdaUrl && invokeLambdaSecret) {
+            const viaLambda = await callBedrockAgentViaLambda({
+              url: invokeLambdaUrl,
+              secret: invokeLambdaSecret,
+              prompt: promptForModel(message, detectedLanguage),
+              sessionId: session.id,
+              sessionAttributes,
+              promptSessionAttributes,
+            })
+            if (viaLambda.error) throw new Error('agent_failed')
+            content = viaLambda.content
+            typewriter = true
+            if (content) send('delta', { text: content })
+            returnedSession = viaLambda.sessionId || session.id
+          } else {
+            const bedrockResponse = await callBedrockAgent({
+              prompt: promptForModel(message, detectedLanguage),
+              sessionId: session.id,
+              sessionAttributes,
+              promptSessionAttributes,
+              onStatus: (phase) => send('status', { phase }),
+              onDelta: (piece) => {
+                content += piece
+                send('delta', { text: piece })
+              },
+            })
+            if (bedrockResponse.error) throw new Error('agent_failed')
+            if (!content) content = bedrockResponse.content
+            typewriter = bedrockResponse.typewriter === true
+            returnedSession = bedrockResponse.sessionId || session.id
+          }
+          if (content) await saveMessage(session.id, 'assistant', content)
+          send('done', { sessionId: returnedSession, typewriter })
+        } catch {
+          send('error', { code: 'failed' })
+        } finally {
+          controller.close()
+        }
+      },
+    })
 
-      if (
-        bedrockResponse.error.includes('security token')
-        || bedrockResponse.error.includes('token')
-        || bedrockResponse.error.includes('Unauthorized')
-      ) {
-        return NextResponse.json({
-          error: 'AI Director configuration error',
-          details: 'Bedrock Agent cannot authenticate to data API. Please verify:',
-          hints: [
-            '1. AI_DIRECTOR_API_TOKEN is set in environment variables',
-            '2. Bedrock Agent Action Groups are configured to use api_token from sessionAttributes',
-            '3. Action Groups pass x-api-token header when calling data API endpoints',
-            `Current token configured: ${process.env.AI_DIRECTOR_API_TOKEN ? 'YES' : 'NO'}`,
-          ],
-          originalError: bedrockResponse.error,
-        }, { status: 500 })
-      }
-
-      return NextResponse.json({
-        error: bedrockResponse.error,
-        hint: 'Check AWS CloudWatch logs for Bedrock Agent for more details',
-      }, { status: 500 })
-    }
-
-    // Save AI response
-    if (bedrockResponse.content) {
-      await saveMessage(session.id, 'assistant', bedrockResponse.content)
-    }
-
-    return NextResponse.json({
-      response: bedrockResponse.content || '',
-      sessionId: bedrockResponse.sessionId || session.id,
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream; charset=utf-8',
+        'Cache-Control': 'no-cache, no-transform',
+      },
     })
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error)
-    console.error('[AI Director] Chat error:', error)
+    console.error('[AI Director] Chat error:', error instanceof Error ? error.name : 'unknown')
     return NextResponse.json(
-      {
-        error: msg || 'AI Director temporarily unavailable',
-        hint: 'If this mentions credentials/region, check AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, BEDROCK_AGENT_ID on Vercel.',
-      },
+      { error: 'AI Director temporarily unavailable' },
       { status: 500 },
     )
   }
 }
 
-// Hobby team. 60s is inside the 300s platform default and is the limit for this route.
-// The browser waits 90s, so it does not abort the request before the function ends.
-// The Bedrock stream is read to the end inside callBedrockAgent before this JSON is sent.
+// Hobby Fluid Compute: maxDuration ceiling is 300s. Must be a numeric literal for Next.js.
+// Browser client waits AI_DIRECTOR_CLIENT_TIMEOUT_MS (120s).
 export const dynamic = 'force-dynamic'
-export const maxDuration = AI_DIRECTOR_MAX_DURATION_SEC
+export const maxDuration = 300

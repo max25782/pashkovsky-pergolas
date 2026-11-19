@@ -36,6 +36,7 @@ const emailVerifyLimiter = makeLimiter(5, '1 h', 'emailverify')
 export const aiImproveLimiter   = makeLimiter(30, '1 d', 'ai:improve')
 export const aiReportLimiter    = makeLimiter(3,  '1 d', 'ai:report')
 export const aiDirectorLimiter  = makeLimiter(50, '1 d', 'ai:director')
+export const aiDirectorUserLimiter = makeLimiter(20, '1 h', 'ai:director:user')
 export const aiScoreLimiter     = makeLimiter(50, '1 d', 'ai:score')
 
 // Site public limiters — per IP

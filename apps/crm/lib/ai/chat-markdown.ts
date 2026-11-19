@@ -65,6 +65,15 @@ export function parseChatMarkdown(source: string): ChatBlock[] {
   return blocks
 }
 
+/** Drop a trailing incomplete **… marker so streamed markdown does not flicker. */
+export function softenStreamingMarkdown(source: string): string {
+  const markers = source.match(/\*\*/g)?.length ?? 0
+  if (markers % 2 === 0) return source
+  const open = source.lastIndexOf('**')
+  if (open < 0) return source
+  return `${source.slice(0, open)}${source.slice(open + 2)}`
+}
+
 function parseInlines(text: string): ChatInline[] {
   const parts: ChatInline[] = []
   const pattern = /\*\*([^*]+)\*\*/g

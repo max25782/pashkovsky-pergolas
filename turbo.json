@@ -41,6 +41,8 @@
         "CRM_SITE_TOKEN",
         "DEFAULT_COMPANY_ID",
         "FB_LEADS_COMPANY_ID",
+        "FB_LEADS_VERIFY_TOKEN",
+        "TURNSTILE_SECRET_KEY",
         "ZAPIER_LEADS_SECRET",
         "NEXT_PUBLIC_APP_URL",
         "NEXT_PUBLIC_SITE_URL",
