@@ -12,29 +12,38 @@ interface MediaItem {
   type: 'image' | 'video'
 }
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
 /**
- * Fetch gallery images directly from database
- * This is more reliable than fetching from API route in production
+ * Fetch gallery images for one company only.
+ * companyId is required (from the request / site tenant mapping) — never reads the whole table.
  */
 export async function getGalleryImages(
   categoryKey: string,
   options: {
     limit?: number
     random?: boolean
-  } = {}
+    companyId: string
+  },
 ): Promise<MediaItem[]> {
   if (!supabase) {
     console.warn('[getGalleryImages] Supabase not configured')
     return []
   }
 
-  const { limit = 100, random = false } = options
+  const { limit = 100, random = false, companyId } = options
+  if (!UUID_RE.test(companyId)) {
+    console.warn('[getGalleryImages] companyId required')
+    return []
+  }
 
   try {
-    // Fetch images from database
     let query = supabase
       .from('gallery_images')
       .select('url, filename, storage_path')
+      .eq('company_id', companyId)
+      .eq('published', true)
       .eq('category_key', categoryKey)
 
     if (!random) {
@@ -51,11 +60,9 @@ export async function getGalleryImages(
     }
 
     if (!images || images.length === 0) {
-      console.warn(`[getGalleryImages] No images found for category: ${categoryKey}`)
       return []
     }
 
-    // Shuffle if random
     let processedImages = [...images]
     if (random) {
       for (let i = processedImages.length - 1; i > 0; i--) {
@@ -64,11 +71,9 @@ export async function getGalleryImages(
       }
     }
 
-    // Convert to MediaItem format
-    const mediaItems: MediaItem[] = processedImages.map(img => {
+    return processedImages.map((img) => {
       let fullUrl = img.url
 
-      // Ensure full S3 URL
       if (!fullUrl.startsWith('http://') && !fullUrl.startsWith('https://')) {
         const S3_BUCKET = process.env.AWS_S3_BUCKET_NAME || process.env.NEXT_PUBLIC_AWS_S3_BUCKET_NAME
         const S3_REGION = process.env.AWS_S3_REGION || process.env.NEXT_PUBLIC_AWS_S3_REGION || 'us-east-1'
@@ -78,23 +83,15 @@ export async function getGalleryImages(
         }
       }
 
-      // Detect video files
       const isVideo = /\.(mp4|webm|mov|avi)$/i.test(fullUrl)
 
       return {
         src: fullUrl,
-        type: isVideo ? 'video' : 'image'
+        type: isVideo ? ('video' as const) : ('image' as const),
       }
     })
-
-    return mediaItems
-
   } catch (error) {
     console.error(`[getGalleryImages] Unexpected error for ${categoryKey}:`, error)
     return []
   }
 }
-
-
-
-

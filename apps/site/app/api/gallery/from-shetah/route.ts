@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { getSiteCompanyId, siteCompanyPrefix } from '@/lib/site-company'
 import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3'
 
 export const runtime = 'nodejs'
@@ -43,7 +44,12 @@ export async function GET() {
   }
 
   try {
-    const prefix = 'images/fromShetah/'
+    const companyId = getSiteCompanyId()
+    if (!companyId) {
+      return NextResponse.json({ items: [] }, { status: 200 })
+    }
+
+    const prefix = `${siteCompanyPrefix(companyId)}fromShetah/`
 
     const command = new ListObjectsV2Command({
       Bucket: S3_BUCKET,

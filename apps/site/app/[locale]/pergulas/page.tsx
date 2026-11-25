@@ -5,16 +5,20 @@ import { DgamimCarousel } from '@/components/dgamim/dgamim-carousel'
 import ContactSection from '@/components/contact-section'
 import ArticleModal from '@/components/articleModal'
 import { createClient } from '@supabase/supabase-js'
+import { getSiteCompanyId } from '@/lib/site-company'
 
 async function fetchApiProjects() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  if (!url || !key) return []
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const companyId = getSiteCompanyId()
+  if (!url || !key || !companyId) return []
   try {
     const supabase = createClient(url, key)
     const { data } = await supabase
       .from('pergola_projects')
       .select('id, title_he, title_ru, title_en, desc_he, desc_ru, desc_en, images, created_at')
+      .eq('company_id', companyId)
+      .eq('published', true)
       .order('created_at', { ascending: false })
     return data ?? []
   } catch {

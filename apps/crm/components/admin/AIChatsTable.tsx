@@ -59,48 +59,37 @@ export function AIChatsTable() {
     fetchSessions()
   }, [fetchSessions])
   
-  // Setup realtime subscription
+  // Poll via scoped admin API only — do not subscribe to unfiltered postgres_changes
+  // (service-role leak was in the list API; realtime on open RLS could flash other tenants).
   useEffect(() => {
     const supabase = createClient()
     supabaseRef.current = supabase
-    
-    // Subscribe to new messages
+    setIsRealtime(false)
+
+    if (!selectedSession) return
+
     const messagesChannel = supabase
-      .channel('ai_messages_changes')
+      .channel(`ai_messages_${selectedSession.id}`)
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'ai_messages' },
-        (payload: any) => {
-          const newMessage = payload.new as Message
-          
-          // Update messages if viewing the same session
-          if (selectedSession && newMessage.session_id === selectedSession.id) {
-            setMessages(prev => [...prev, newMessage])
-          }
-          
-          // Refresh sessions list to update counts
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'ai_messages',
+          filter: `session_id=eq.${selectedSession.id}`,
+        },
+        (payload: { new: Message }) => {
+          const newMessage = payload.new
+          setMessages((prev) => [...prev, newMessage])
           fetchSessions()
-        }
+        },
       )
       .subscribe((status: string) => {
         setIsRealtime(status === 'SUBSCRIBED')
       })
-    
-    // Subscribe to new sessions
-    const sessionsChannel = supabase
-      .channel('ai_sessions_changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'ai_sessions' },
-        () => {
-          fetchSessions()
-        }
-      )
-      .subscribe()
-    
+
     return () => {
       messagesChannel.unsubscribe()
-      sessionsChannel.unsubscribe()
     }
   }, [selectedSession, fetchSessions])
   

@@ -9,6 +9,7 @@
  *    - NEXT_PUBLIC_AWS_S3_REGION
  *    - SUPABASE_URL
  *    - SUPABASE_SERVICE_ROLE_KEY
+ *    - COMPANY_ID (required after gallery tenant isolation)
  * 
  * 2. Запустите: node scripts/import-gallery-from-s3.js rails
  */
@@ -22,6 +23,7 @@ const S3_BUCKET = process.env.NEXT_PUBLIC_AWS_S3_BUCKET_NAME
 const S3_REGION = process.env.NEXT_PUBLIC_AWS_S3_REGION || 'eu-north-1'
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
+const COMPANY_ID = process.env.COMPANY_ID
 
 // Валидация
 if (!S3_BUCKET || !S3_REGION) {
@@ -33,6 +35,11 @@ if (!S3_BUCKET || !S3_REGION) {
 if (!SUPABASE_URL || !SERVICE_KEY) {
   console.error('❌ Ошибка: Supabase не настроен')
   console.error('   Установите SUPABASE_URL и SUPABASE_SERVICE_ROLE_KEY')
+  process.exit(1)
+}
+
+if (!COMPANY_ID) {
+  console.error('❌ Ошибка: COMPANY_ID обязателен (tenant isolation)')
   process.exit(1)
 }
 
@@ -82,6 +89,7 @@ async function listS3Images(category) {
     const url = `https://${S3_BUCKET}.s3.${S3_REGION}.amazonaws.com/${item.Key}`
     
     return {
+      company_id: COMPANY_ID,
       category_key: category,
       filename,
       url,
@@ -163,6 +171,7 @@ async function main() {
   const { data: categoryData, error: categoryError } = await supabase
     .from('gallery_categories')
     .select('key, name_he')
+    .eq('company_id', COMPANY_ID)
     .eq('key', category)
     .single()
   
@@ -189,6 +198,7 @@ async function main() {
   const { data: stats } = await supabase
     .from('gallery_images')
     .select('id', { count: 'exact', head: true })
+    .eq('company_id', COMPANY_ID)
     .eq('category_key', category)
   
   console.log(`\n📈 Всего изображений в категории '${category}': ${stats?.length || 0}`)

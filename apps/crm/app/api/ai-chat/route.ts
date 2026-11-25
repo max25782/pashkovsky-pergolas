@@ -17,6 +17,15 @@ const supabase = SUPABASE_URL && SERVICE_KEY
   ? createClient(SUPABASE_URL, SERVICE_KEY, { db: { schema: 'public' } })
   : undefined
 
+/** Server-owned tenant for CRM-hosted widget — never from client body/headers. */
+function resolveHostedChatCompanyId(): string | null {
+  const id = process.env.DEFAULT_COMPANY_ID?.trim()
+  if (!id) return null
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)
+    ? id
+    : null
+}
+
 // Generate unique client ID
 function generateClientId(): string {
   return `client_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`
@@ -88,43 +97,40 @@ async function checkRateLimit(clientId: string): Promise<{ allowed: boolean; rem
   return { allowed: true, remaining: AI_CONFIG.rateLimitPerHour - rateLimit.message_count - 1 }
 }
 
-// Get or create session
-async function getOrCreateSession(clientId: string): Promise<string> {
+// Get or create session scoped to company
+async function getOrCreateSession(clientId: string, companyId: string): Promise<string> {
   if (!supabase) throw new Error('Supabase not configured')
-  
+
   const sessionTimeout = new Date(Date.now() - AI_CONFIG.sessionTimeoutHours * 60 * 60 * 1000).toISOString()
-  
-  // Find active session
+
   const { data: existingSession } = await supabase
     .from('ai_sessions')
     .select('id, last_activity')
+    .eq('company_id', companyId)
     .eq('client_id', clientId)
     .gte('last_activity', sessionTimeout)
     .order('last_activity', { ascending: false })
     .limit(1)
-    .single()
-  
+    .maybeSingle()
+
   if (existingSession) {
-    // Update last activity
     await supabase
       .from('ai_sessions')
       .update({ last_activity: new Date().toISOString() })
       .eq('id', existingSession.id)
+      .eq('company_id', companyId)
     return existingSession.id
   }
-  
-  // Create new session
+
   const { data: newSession, error } = await supabase
     .from('ai_sessions')
-    .insert({ client_id: clientId })
+    .insert({ client_id: clientId, company_id: companyId })
     .select('id')
     .single()
-  
+
   if (error || !newSession) {
     console.error('[AI Chat] Supabase error while creating session:', {
       message: error?.message,
-      details: error?.details,
-      hint: error?.hint,
       code: error?.code,
     })
     throw new Error('Failed to create session')
@@ -173,7 +179,8 @@ async function imageToBase64(file: File): Promise<{ mimeType: string; data: stri
 async function* streamGeminiResponse(
   messages: Array<{ role: string; content: string }>,
   userMessage: string,
-  imageData?: { mimeType: string; data: string }
+  imageData: { mimeType: string; data: string } | undefined,
+  companyId: string,
 ): AsyncGenerator<string> {
   if (!GEMINI_API_KEY) throw new Error('Gemini API key not configured')
 
@@ -199,7 +206,7 @@ async function* streamGeminiResponse(
     
     // If AI requested images but didn't provide URLs, query media_assets by detected tags
     if (imageUrls.length === 0 || imageUrls[0].startsWith('placeholder')) {
-      imageUrls = await fetchImagesByContext(fullText)
+      imageUrls = await fetchImagesByContext(fullText, companyId)
     }
   }
 
@@ -328,15 +335,23 @@ export async function POST(req: NextRequest) {
       })
     }
     
+    const companyId = resolveHostedChatCompanyId()
+    if (!companyId) {
+      return new Response(JSON.stringify({ error: 'Chat tenant not configured' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
     // Get or create session
     let sessionId: string
     try {
-      sessionId = await getOrCreateSession(clientId)
+      sessionId = await getOrCreateSession(clientId, companyId)
     } catch (error) {
       console.error('[AI Chat] Failed to get/create session:', error)
-      return new Response(JSON.stringify({ error: 'Failed to create session. Check if ai_sessions table exists.' }), { 
+      return new Response(JSON.stringify({ error: 'Failed to create session' }), {
         status: 500,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
       })
     }
     
@@ -369,7 +384,7 @@ export async function POST(req: NextRequest) {
           let chunkCount = 0
           let detectedImageUrls: string[] = []
           try {
-            for await (const chunk of streamGeminiResponse(history, message, imageData)) {
+            for await (const chunk of streamGeminiResponse(history, message, imageData, companyId)) {
               chunkCount++
               
               // Check if chunk contains image URLs
@@ -487,30 +502,37 @@ export async function GET(req: NextRequest) {
       })
     }
     
+    const companyId = resolveHostedChatCompanyId()
+    if (!companyId) {
+      return new Response(JSON.stringify({ error: 'Chat tenant not configured' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
     const clientId = await getClientId()
     const sessionTimeout = new Date(Date.now() - AI_CONFIG.sessionTimeoutHours * 60 * 60 * 1000).toISOString()
-    
-    // Find active session
+
     const { data: session } = await supabase
       .from('ai_sessions')
       .select('id')
+      .eq('company_id', companyId)
       .eq('client_id', clientId)
       .gte('last_activity', sessionTimeout)
       .order('last_activity', { ascending: false })
       .limit(1)
-      .single()
-    
+      .maybeSingle()
+
     if (!session) {
       return Response.json({ messages: [] })
     }
-    
-    // Get messages
+
     const { data: messages } = await supabase
       .from('ai_messages')
       .select('role, content, created_at')
       .eq('session_id', session.id)
       .order('created_at', { ascending: true })
-    
+
     return Response.json({ messages: messages || [] })
     
   } catch (error) {

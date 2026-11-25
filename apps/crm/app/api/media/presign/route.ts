@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { presignGetObject } from '@/lib/s3-upload'
+import { assertCompanyStorageKey } from '@/lib/gallery/company-scope'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,13 +24,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
+  const companyId = authCheck.context?.companyId
+  if (!companyId) {
+    return NextResponse.json({ error: 'Company ID not found' }, { status: 400 })
+  }
+
   const { keys = [] } = body
   if (!Array.isArray(keys) || keys.length === 0) {
     return NextResponse.json({ error: 'keys array is required' }, { status: 400 })
   }
 
-  // Cap at 50 keys per request to avoid timeout
   const limited = keys.slice(0, 50)
+  for (const key of limited) {
+    if (typeof key !== 'string') {
+      return NextResponse.json({ error: 'Invalid storage key' }, { status: 400 })
+    }
+    const check = assertCompanyStorageKey(companyId, key)
+    if ('error' in check) return check.error
+  }
 
   const entries = await Promise.all(
     limited.map(async (key) => {

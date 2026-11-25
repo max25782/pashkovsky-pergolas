@@ -5,6 +5,8 @@ import { uploadToS3, isS3Configured } from '@/lib/s3-upload'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { getSupabaseUrlForServiceRole } from '@/lib/supabase-admin-url'
 import { shouldAcceptImageUpload, describeAcceptedFormats } from '@/lib/gallery/accept-upload-image'
+import { buildCompanyGalleryStoragePath } from '@/lib/gallery/company-scope'
+import { consumeStorageBytes, STORAGE_QUOTA_EXCEEDED } from '@/lib/storage/quota'
 
 /** Allow slow Sharp + S3 for large images (Vercel / serverless). */
 export const maxDuration = 120
@@ -31,6 +33,9 @@ export async function POST(req: NextRequest) {
   if (!supabase) return jsonError('Missing Supabase env', 500)
   if (!isS3Configured()) return jsonError('S3 not configured', 500)
 
+  const companyId = authCheck.context?.companyId
+  if (!companyId) return jsonError('Company ID not found', 400)
+
   try {
     const formData = await req.formData()
     const categoryKey = formData.get('category_key') as string
@@ -46,11 +51,12 @@ export async function POST(req: NextRequest) {
     const { data: category, error: categoryError } = await supabase
       .from('gallery_categories')
       .select('key')
+      .eq('company_id', companyId)
       .eq('key', categoryKey)
-      .single()
+      .maybeSingle()
 
     if (categoryError || !category) {
-      return jsonError('Category not found', 404, categoryError?.message)
+      return jsonError('Category not found', 404)
     }
 
     const uploadedImages = []
@@ -72,7 +78,6 @@ export async function POST(req: NextRequest) {
         const arrayBuffer = await file.arrayBuffer()
         const buffer = Buffer.from(arrayBuffer)
 
-        // HEIC (iPhone) + JPEG/PNG/… → WebP (auto orientation via EXIF)
         const pipeline = sharp(buffer, { failOn: 'truncated' }).rotate()
         const metadata = await pipeline.metadata()
 
@@ -91,15 +96,28 @@ export async function POST(req: NextRequest) {
         const originalName = file.name.replace(/\.[^/.]+$/, '')
         const sanitizedName = originalName.replace(/[^a-zA-Z0-9-_]/g, '_')
         const filename = `${sanitizedName}_${timestamp}_${random}.webp`
-        const storagePath = folderName
-          ? `images/${categoryKey}/${folderName}/${filename}`
-          : `images/${categoryKey}/${filename}`
+        const storagePath = buildCompanyGalleryStoragePath(
+          companyId,
+          categoryKey,
+          filename,
+          folderName || undefined,
+        )
+        if (!storagePath.startsWith(`images/${companyId}/`)) {
+          skippedReasons.push(`${file.name}: storage path is outside the company`)
+          continue
+        }
+
+        const quota = await consumeStorageBytes(supabase, companyId, optimizedBuffer.length)
+        if (!quota.ok) {
+          return jsonError(quota.error ?? STORAGE_QUOTA_EXCEEDED, 413)
+        }
 
         const publicUrl = await uploadToS3(optimizedBuffer, storagePath, 'image/webp')
 
         const { data: imageData, error: dbError } = await supabase
           .from('gallery_images')
           .insert({
+            company_id: companyId,
             category_key: categoryKey,
             filename,
             url: publicUrl,
@@ -108,20 +126,22 @@ export async function POST(req: NextRequest) {
             width: metadata.width ?? null,
             height: metadata.height ?? null,
             mime_type: 'image/webp',
+            published: true,
           })
           .select()
           .single()
 
         if (dbError) {
           console.error(`[gallery/upload] DB error for ${file.name}:`, dbError.message)
-          return jsonError(`Database error for ${file.name}`, 500, dbError.message)
+          await consumeStorageBytes(supabase, companyId, -optimizedBuffer.length)
+          return jsonError(`Database error for ${file.name}`, 500)
         }
 
         uploadedImages.push(imageData)
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err)
         console.error(`[gallery/upload] Error processing ${file.name}:`, message)
-        return jsonError(`Error processing ${file.name}`, 500, message)
+        return jsonError(`Error processing ${file.name}`, 500)
       }
     }
 
@@ -145,6 +165,6 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Upload failed'
     console.error('[gallery/upload] Unexpected error:', message)
-    return jsonError(message, 500)
+    return jsonError('Upload failed', 500)
   }
 }

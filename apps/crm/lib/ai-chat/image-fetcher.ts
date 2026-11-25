@@ -18,15 +18,11 @@ const TAG_KEYWORDS: Array<{ keywords: string[]; tag: string }> = [
   { keywords: ['זכוכית', 'glass', 'יוקרה'], tag: 'פרגולה יוקרה עם כיסוי זכוכית' },
 ]
 
-// Single-tenant fallback — same company ID used across the app
-const DEFAULT_COMPANY_ID =
-  process.env.DEFAULT_COMPANY_ID ?? '6998295e-89ae-4e3d-afd2-8c2b0333eac2'
-
-export async function fetchImagesByContext(text: string): Promise<string[]> {
+export async function fetchImagesByContext(text: string, companyId: string): Promise<string[]> {
   const supabaseUrl = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-  if (!supabaseUrl || !serviceKey) {
+  if (!companyId || !supabaseUrl || !serviceKey) {
     console.warn('[AI Chat] Supabase not configured — skipping image fetch')
     return []
   }
@@ -44,7 +40,8 @@ export async function fetchImagesByContext(text: string): Promise<string[]> {
     const { data, error } = await supabase
       .from('media_assets')
       .select('s3_key')
-      .eq('company_id', DEFAULT_COMPANY_ID)
+      .eq('company_id', companyId)
+      .like('s3_key', `images/${companyId}/%`)
       .contains('tags', tagsToQuery)
       .limit(30)
 

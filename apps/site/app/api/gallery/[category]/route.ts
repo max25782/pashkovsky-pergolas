@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3'
 import { galleryLimiter, checkLimit, getClientIp } from '@/lib/rate-limit'
+import { getSiteCompanyId, siteCompanyPrefix } from '@/lib/site-company'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -48,8 +49,17 @@ export async function GET(
     return NextResponse.json({ items: [] })
   }
 
+  const companyId = getSiteCompanyId()
+  if (!companyId) {
+    return NextResponse.json({ items: [] })
+  }
+
+  if (!/^[a-z0-9_-]+$/i.test(category)) {
+    return NextResponse.json({ items: [] }, { status: 400 })
+  }
+
   try {
-    const prefix = `images/${category}/`
+    const prefix = `${siteCompanyPrefix(companyId)}${category}/`
 
     const command = new ListObjectsV2Command({
       Bucket: S3_BUCKET,

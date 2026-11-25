@@ -139,8 +139,16 @@ function promptForModel(message: string, language: string): string {
   return `${instruction}\n${message}`
 }
 
+class DirectorSessionNotFoundError extends Error {
+  constructor() {
+    super('Session not found')
+    this.name = 'DirectorSessionNotFoundError'
+  }
+}
+
 /**
- * Get or create AI Director session
+ * Get or create AI Director session.
+ * If sessionId is provided it must belong to companyId — otherwise 404 (no silent create).
  */
 async function getOrCreateDirectorSession(companyId: string, sessionId?: string): Promise<{ id: string }> {
   if (!supabase) {
@@ -153,17 +161,19 @@ async function getOrCreateDirectorSession(companyId: string, sessionId?: string)
       .select('id')
       .eq('id', sessionId)
       .eq('company_id', companyId)
-      .single()
+      .maybeSingle()
 
-    if (existing) {
-      // Update last_activity when reusing session
-      await supabase
-        .from('ai_director_sessions')
-        .update({ last_activity: new Date().toISOString() })
-        .eq('id', existing.id)
-      
-      return { id: existing.id }
+    if (!existing) {
+      throw new DirectorSessionNotFoundError()
     }
+
+    await supabase
+      .from('ai_director_sessions')
+      .update({ last_activity: new Date().toISOString() })
+      .eq('id', existing.id)
+      .eq('company_id', companyId)
+
+    return { id: existing.id }
   }
 
   const { data: newSession, error } = await supabase
@@ -175,7 +185,7 @@ async function getOrCreateDirectorSession(companyId: string, sessionId?: string)
     .single()
 
   if (error || !newSession) {
-    throw new Error(`Failed to create session: ${error?.message}`)
+    throw new Error('Failed to create session')
   }
 
   return { id: newSession.id }
@@ -446,6 +456,9 @@ export async function POST(req: NextRequest) {
       },
     })
   } catch (error: unknown) {
+    if (error instanceof DirectorSessionNotFoundError) {
+      return NextResponse.json({ error: 'Session not found' }, { status: 404 })
+    }
     console.error('[AI Director] Chat error:', error instanceof Error ? error.name : 'unknown')
     return NextResponse.json(
       { error: 'AI Director temporarily unavailable' },

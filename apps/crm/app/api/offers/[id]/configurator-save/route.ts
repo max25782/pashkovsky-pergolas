@@ -130,8 +130,18 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       const submissionId = inserted?.id as string
 
       let previewUrl: string | null = null
+      let previewStoragePath: string | null = null
       if (screenshot.startsWith('data:image/')) {
-        previewUrl = await uploadConfiguratorScreenshot(supabase, offerId, screenshot)
+        const uploaded = await uploadConfiguratorScreenshot(
+          supabase,
+          row.company_id as string,
+          offerId,
+          screenshot,
+        )
+        if (uploaded.ok) {
+          previewUrl = uploaded.signedUrl
+          previewStoragePath = uploaded.storagePath
+        }
       }
 
       const prevMeta =
@@ -147,6 +157,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         planWallIndices: bodyWithPin.planWallIndices,
         planParams: pinnedParams,
         previewImageUrl: previewUrl ?? prevMeta.previewImageUrl,
+        previewStoragePath: previewStoragePath ?? prevMeta.previewStoragePath,
         submissionId,
       }
       if (Object.prototype.hasOwnProperty.call(bodyWithPin, 'supportBeams')) {
@@ -230,8 +241,18 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const submissionId = inserted?.id as string
 
     let previewUrl: string | null = null
+    let previewStoragePath: string | null = null
     if (screenshot.startsWith('data:image/')) {
-      previewUrl = await uploadConfiguratorScreenshot(supabase, offerId, screenshot)
+      const uploaded = await uploadConfiguratorScreenshot(
+        supabase,
+        row.company_id as string,
+        offerId,
+        screenshot,
+      )
+      if (uploaded.ok) {
+        previewUrl = uploaded.signedUrl
+        previewStoragePath = uploaded.storagePath
+      }
     }
 
     const { data: offerSnap } = await supabase
@@ -300,6 +321,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const { skippedNonRectangle } = await applyConfiguratorSyncToOffer(supabase, offerId, {
       params: pergolaParams,
       previewImageUrl: previewUrl,
+      previewStoragePath,
       editUrl,
       customerViewUrl: customerUrl,
       submissionId,

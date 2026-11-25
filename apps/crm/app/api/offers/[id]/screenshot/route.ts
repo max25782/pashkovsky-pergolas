@@ -11,7 +11,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { requireCompanyAccess } from '@/lib/auth'
-import { uploadConfiguratorScreenshot } from '@/lib/configurator/upload-configurator-screenshot'
+import {
+  screenshotFailureStatus,
+  uploadConfiguratorScreenshot,
+} from '@/lib/configurator/upload-configurator-screenshot'
 
 export const runtime = 'nodejs'
 
@@ -47,15 +50,22 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ error: 'Invalid screenshot' }, { status: 400 })
   }
 
-  const previewUrl = await uploadConfiguratorScreenshot(supabase, offerId, screenshot)
-  if (!previewUrl) {
-    return NextResponse.json({ error: 'Failed to upload screenshot' }, { status: 500 })
+  const uploaded = await uploadConfiguratorScreenshot(
+    supabase,
+    row.company_id as string,
+    offerId,
+    screenshot,
+  )
+  if (!uploaded.ok) {
+    const failure = screenshotFailureStatus(uploaded)
+    return NextResponse.json({ error: failure.error }, { status: failure.status })
   }
 
   const existingMeta = (row.configurator_meta ?? {}) as Record<string, unknown>
   const updatedMeta = {
     ...existingMeta,
-    previewImageUrl: previewUrl,
+    previewImageUrl: uploaded.signedUrl,
+    previewStoragePath: uploaded.storagePath,
     updatedAt: new Date().toISOString(),
   }
 
@@ -68,5 +78,5 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ error: upErr.message }, { status: 500 })
   }
 
-  return NextResponse.json({ previewUrl })
+  return NextResponse.json({ previewUrl: uploaded.signedUrl, storagePath: uploaded.storagePath })
 }

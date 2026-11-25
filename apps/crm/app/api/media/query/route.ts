@@ -7,22 +7,17 @@
  * Provide at least one of `category` or `tags`.
  * Response: { items: Array<{ key, tags, caption, category, url }> }
  *
- * Auth: accepts both admin JWT (Authorization header) and internal server calls
- * (no auth header — used server-side from AI chat route which runs in same process).
- * For public/client calls, auth is always required.
+ * Auth: the caller's company comes from the verified session. There is no default company.
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { presignGetObject } from '@/lib/s3-upload'
 import { isValidCatalogCategory } from '@/lib/media/catalog-categories'
+import { companyGalleryPrefix } from '@/lib/gallery/company-scope'
 
 const SUPABASE_URL = process.env.SUPABASE_URL!
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
-
-// Default Pashkovsky company ID (single-tenant v1).
-// TODO (multi-tenant v2): remove this fallback; always require company_id from JWT.
-const DEFAULT_COMPANY_ID = process.env.DEFAULT_COMPANY_ID ?? '6998295e-89ae-4e3d-afd2-8c2b0333eac2'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,21 +30,11 @@ export interface MediaQueryItem {
 }
 
 export async function POST(req: NextRequest) {
-  // Allow server-side calls (from AI chat route) without auth header
-  const authHeader = req.headers.get('authorization')
-  let companyId: string
-
-  if (authHeader) {
-    const authCheck = await requireAuthAsync(req)
-    if (!authCheck.authorized) return authCheck.error
-    companyId = authCheck.context?.companyId ?? DEFAULT_COMPANY_ID
-  } else {
-    // Internal server-to-server call — use default company
-    companyId = DEFAULT_COMPANY_ID
-  }
-
+  const authCheck = await requireAuthAsync(req)
+  if (!authCheck.authorized) return authCheck.error
+  const companyId = authCheck.context?.companyId
   if (!companyId) {
-    return NextResponse.json({ error: 'Company ID not resolved' }, { status: 400 })
+    return NextResponse.json({ error: 'Company ID not found' }, { status: 400 })
   }
 
   let body: {
@@ -95,7 +80,12 @@ export async function POST(req: NextRequest) {
 
     // Optional S3 prefix filter (e.g. "images/pergulot/")
     if (prefix) {
+      if (!prefix.startsWith(companyGalleryPrefix(companyId))) {
+        return NextResponse.json({ error: 'Prefix is outside your company media root' }, { status: 403 })
+      }
       query = query.like('s3_key', `${prefix}%`)
+    } else {
+      query = query.like('s3_key', `${companyGalleryPrefix(companyId)}%`)
     }
 
     // Fetch more than needed to allow randomisation

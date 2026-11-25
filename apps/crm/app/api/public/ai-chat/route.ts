@@ -16,6 +16,7 @@ import { sendCalendarInvite, sendCallbackRequest } from '@/lib/ai-chat/calendar-
 import { fetchImagesByContext } from '@/lib/ai-chat/image-fetcher'
 import { generateSalesReply } from '@/lib/ai-chat/gemini-client'
 import { shouldPersistReply } from '@/lib/ai-chat/response-sanitizer'
+import { resolvePublicLeadCompany } from '@/lib/leads/resolve-public-company'
 
 // Environment variables
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -68,34 +69,47 @@ function getClientIp(request: NextRequest): string {
   )
 }
 
+/** Resolve marketing-site company from site token / origin — never from body.company_id. */
+function resolvePublicChatCompany(req: NextRequest, siteToken: string | null): string | null {
+  const resolved = resolvePublicLeadCompany({
+    formKey: siteToken,
+    origin: req.headers.get('origin'),
+    referer: req.headers.get('referer'),
+  })
+  return resolved.ok ? resolved.companyId : null
+}
+
 /** Get existing session only — does not create. Used for loading history. */
-async function getSession(clientId: string): Promise<string | null> {
+async function getSession(clientId: string, companyId: string): Promise<string | null> {
   if (!supabase) return null
   const { data } = await supabase
     .from('ai_sessions')
     .select('id')
+    .eq('company_id', companyId)
     .eq('client_id', clientId)
     .order('created_at', { ascending: false })
     .limit(1)
-    .single()
+    .maybeSingle()
   return data?.id ?? null
 }
 
 /** Get or create session — creates only when user sends first message. */
-async function getOrCreateSession(clientId: string, ip: string): Promise<string> {
+async function getOrCreateSession(clientId: string, companyId: string, ip: string): Promise<string> {
   if (!supabase) throw new Error('Supabase not configured')
-  const existing = await getSession(clientId)
+  const existing = await getSession(clientId, companyId)
   if (existing) {
     await supabase
       .from('ai_sessions')
       .update({ last_activity: new Date().toISOString() })
       .eq('id', existing)
+      .eq('company_id', companyId)
     return existing
   }
   const { data: newSession, error } = await supabase
     .from('ai_sessions')
     .insert({
       client_id: clientId,
+      company_id: companyId,
       metadata: { ip, source: 'website' },
     })
     .select('id')
@@ -130,7 +144,8 @@ async function saveMessage(sessionId: string, role: string, content: string): Pr
 async function* streamGeminiResponse(
   messages: Array<{ role: string; content: string }>,
   userMessage: string,
-  imageData?: { mimeType: string; data: string }
+  imageData: { mimeType: string; data: string } | undefined,
+  companyId: string,
 ): AsyncGenerator<string> {
   if (!GEMINI_API_KEY) throw new Error('Gemini API key not configured')
 
@@ -150,8 +165,8 @@ async function* streamGeminiResponse(
 
   if (imageMatch) {
     const raw = imageMatch[1].split(',').map((s) => s.trim()).filter((s) => s && !s.startsWith('placeholder'))
-    imageUrls = raw.length > 0 ? raw : await fetchImagesByContext(fullText)
-    if (imageUrls.length === 0) imageUrls = await fetchImagesByContext(fullText)
+    imageUrls = raw.length > 0 ? raw : await fetchImagesByContext(fullText, companyId)
+    if (imageUrls.length === 0) imageUrls = await fetchImagesByContext(fullText, companyId)
   }
 
   // Stream cleaned text in chunks
@@ -208,20 +223,23 @@ export async function OPTIONS(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  // Validate site token
   const siteToken = req.headers.get('x-site-token')
   if (!siteToken || siteToken !== SITE_TOKEN) {
     return jsonResponse({ error: 'Unauthorized' }, { status: 401 }, req)
   }
-  
-  // Get client ID from query
+
+  const companyId = resolvePublicChatCompany(req, siteToken)
+  if (!companyId) {
+    return jsonResponse({ error: 'Unauthorized' }, { status: 401 }, req)
+  }
+
   const clientId = req.nextUrl.searchParams.get('clientId')
   if (!clientId) {
     return jsonResponse({ error: 'clientId required' }, { status: 400 }, req)
   }
-  
+
   try {
-    const sessionId = await getSession(clientId)
+    const sessionId = await getSession(clientId, companyId)
     if (!sessionId) {
       return jsonResponse({ messages: [], sessionId: null }, {}, req)
     }
@@ -235,12 +253,16 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Validate site token
     const siteToken = req.headers.get('x-site-token')
     if (!siteToken || siteToken !== SITE_TOKEN) {
       return jsonResponse({ error: 'Unauthorized' }, { status: 401 }, req)
     }
-    
+
+    const companyId = resolvePublicChatCompany(req, siteToken)
+    if (!companyId) {
+      return jsonResponse({ error: 'Unauthorized' }, { status: 401 }, req)
+    }
+
     if (!supabase || !GEMINI_API_KEY) {
       return jsonResponse({ error: 'Service not configured' }, { status: 500 }, req)
     }
@@ -291,9 +313,9 @@ export async function POST(req: NextRequest) {
       )
     }
     
-    // 4. Get or create session
+    // 4. Get or create session (company from server mapping, not client)
     const ip = getClientIp(req)
-    const sessionId = await getOrCreateSession(clientId, ip)
+    const sessionId = await getOrCreateSession(clientId, companyId, ip)
     
     // 5. Get chat history
     const history = await getChatHistory(sessionId)
@@ -308,7 +330,7 @@ export async function POST(req: NextRequest) {
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          for await (const chunk of streamGeminiResponse(history, message, imageData)) {
+          for await (const chunk of streamGeminiResponse(history, message, imageData, companyId)) {
             // Intercept [IMAGES:...] marker and send as separate event
             const imgMatch = chunk.match(/\[IMAGES:([^\]]+)\]/)
             if (imgMatch) {

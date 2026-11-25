@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3'
 import { galleryLimiter, checkLimit, getClientIp } from '@/lib/rate-limit'
+import { getSiteCompanyId, siteCompanyPrefix } from '@/lib/site-company'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -44,7 +45,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ items: [] })
     }
 
-    const prefix = 'images/dgamim/'
+    const companyId = getSiteCompanyId()
+    if (!companyId) {
+      return NextResponse.json({ items: [] })
+    }
+
+    const prefix = `${siteCompanyPrefix(companyId)}dgamim/`
 
     const command = new ListObjectsV2Command({
       Bucket: S3_BUCKET,
@@ -63,7 +69,7 @@ export async function GET(req: NextRequest) {
 
     for (const folderPrefix of modelFolders) {
       if (!folderPrefix) continue
-      const modelName = folderPrefix.replace('images/dgamim/', '').replace('/', '')
+      const modelName = folderPrefix.replace(prefix, '').replace('/', '')
       if (!modelName) continue
 
       const imagesCommand = new ListObjectsV2Command({

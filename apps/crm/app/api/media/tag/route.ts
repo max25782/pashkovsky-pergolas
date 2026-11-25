@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { requireAuthAsync } from '@/lib/middleware/auth-async'
 import { isValidCatalogCategory } from '@/lib/media/catalog-categories'
+import { assertCompanyStorageKey } from '@/lib/gallery/company-scope'
 
 const SUPABASE_URL = process.env.SUPABASE_URL!
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -40,6 +41,9 @@ export async function POST(req: NextRequest) {
   if (!key || typeof key !== 'string') {
     return NextResponse.json({ error: 'key is required' }, { status: 400 })
   }
+
+  const keyCheck = assertCompanyStorageKey(companyId, key)
+  if ('error' in keyCheck) return keyCheck.error
 
   const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
 

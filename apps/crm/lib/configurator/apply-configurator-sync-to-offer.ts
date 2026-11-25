@@ -195,6 +195,7 @@ export async function applyConfiguratorSyncToOffer(
   input: {
     params: PergolaParamsPayload
     previewImageUrl?: string | null
+    previewStoragePath?: string | null
     editUrl?: string | null
     customerViewUrl?: string | null
     legacyViewUrl?: string | null
@@ -229,10 +230,15 @@ export async function applyConfiguratorSyncToOffer(
         ? [previewImageUrl, ...existingImages.filter((u) => u !== previewImageUrl)].slice(0, 20)
         : existingImages
 
+  const previousMeta =
+    row.configurator_meta && typeof row.configurator_meta === 'object'
+      ? (row.configurator_meta as { previewStoragePath?: string | null })
+      : null
   const configurator_meta = {
     viewUrl: customerViewUrl ?? null,
     editUrl: editUrl ?? null,
     previewImageUrl: previewImageUrl ?? null,
+    previewStoragePath: input.previewStoragePath ?? previousMeta?.previewStoragePath ?? null,
     lastSubmissionId: submissionId ?? null,
     updatedAt: new Date().toISOString(),
     skippedNonRectangle,
